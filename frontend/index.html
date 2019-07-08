@@ -7,6 +7,8 @@
   <script src="js/webxr-version-shim.js"></script>
   <!-- WebXR Button implements a button to toggle in and out of VR. -->
   <script src="js/webxr-button.js"></script>
+  <!-- WebXR Canvas Wrangler simplifies WebXR setup. -->
+  <script src="js/webxr-wrangler.js"></script>
 </head>
 <body style="background-color: black; color: white; text-emphasis-color: white;">
   <div style="text-align: center">
@@ -79,14 +81,7 @@ void main() {    // YOU MUST DEFINE main()
 }`;
 
     // Taken from K.P.'s lib1.js support library.
-    function initGL(canvas = null) {
-
-      // NOTE: Rendering to a WebXR session from a canvas
-      // element not in the DOM (!!!) is 100% okay.  
-      canvas = canvas || document.createElement('canvas');
-      gl = canvas.getContext('experimental-webgl', {
-        xrCompatible: true
-      });
+    function setup() {
 
       // Create shader program
       program = gl.createProgram();
@@ -141,252 +136,38 @@ void main() {    // YOU MUST DEFINE main()
     function onStartFrame(t) {
       if (!start) start = t;
       let now = (t - start) / 1000.;
-
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.uniform1f(time, now);
-    }
-
-    function onEndFrame() {
     }
 
     function onDraw(projMat, viewMat) {
       gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
       gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
       gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
-
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    function onEndFrame() {
     }
 
     //
     // (2) WEBXR BOILERPLATE
     //
-    
-    // Configure WebXR in "magic window" mode, i.e. rendering to a regular
-    // canvas when we're not in VR mode.  Based off examples provided on GitHub
-    // @immersive-web/webxr-examples/fallback.html.
-    (function (onStartFrame, onEndFrame, onDraw) {
-      'use strict';
-      
-      // Apply the version shim.  See comment in <head/> about usage.
-      var shim = new WebXRVersionShim();
-      
-      // XR globals.
-      let xrButton = null;
-      let xrImmersiveRefSpace = null;
-      let xrNonImmersiveRefSpace = null;
 
-      // Fallback globals.
-      let projectionMatrix = null;
-      let viewMatrix = null;
+    // Apply the version shim.  This shouldn't be needed once WebXR is widely adopted.
+    var shim = new WebXRVersionShim();
 
-      // Math (from gl-matrix mat4.js).  NOTE: Can I just include that instead?
-      function perspective(out, fovy, aspect, near, far) {
-        let f = 1.0 / Math.tan(fovy / 2), nf;
-        out[0] = f / aspect;
-        out[1] = 0;
-        out[2] = 0;
-        out[3] = 0;
-        out[4] = 0;
-        out[5] = f;
-        out[6] = 0;
-        out[7] = 0;
-        out[8] = 0;
-        out[9] = 0;
-        out[11] = -1;
-        out[12] = 0;
-        out[13] = 0;
-        out[15] = 0;
-        if (far != null && far !== Infinity) {
-          nf = 1 / (near - far);
-          out[10] = (far + near) * nf;
-          out[14] = (2 * far * near) * nf;
-        } else {
-          out[10] = -1;
-          out[14] = -2 * near;
-        }
-        return out;
-      }
+    // Wrangle them canvases!
+    var wrangler = new XRCanvasWrangler(document.querySelector('#output-canvas'), {
+      onStartFrame: onStartFrame,
+      onEndFrame: onEndFrame,
+      onDraw: onDraw
+    });
+    // The wrangler should have bound itself to canvas#output-canvas - we may safely request
+    // access to the WebGL context.
+    gl = wrangler.gl;
 
-      function initXR() {
-        // Creates a "click-to-start" XR button for easy jumping in and out of VR.
-        xrButton = new XRDeviceButton({
-          onRequestSession: onRequestSession,
-          onEndSession: onEndSession
-        });
-        // TODO: It would be nice if this button hovered over the canvas.  Perhaps a
-        // sibling to the canvas w/ abs positioning?
-        document.querySelector('body').prepend(xrButton.domElement);
-        
-        // We detect the presence of WebXR by checking for the `navigator.xr` object;
-        // when WebXR is not available (i.e. when flag disabled, web context is
-        // insecure (not "https://" or "localhost"), or note on a VR device), this
-        // object will be undefined!
-        if (navigator.xr) {
+    setup();
 
-          // WebXR is present AND supports the VR modality - enable our VR button.
-          navigator.xr.supportsSessionMode('immersive-vr').then(() => {
-            xrButton.enabled = true;
-          })
-          
-          // From GitHub:
-          //   "In order for a non-immersive session to be used we must provide
-          //    an outputContext, which indicates the canvas that will contain
-          //    results of the session's rendering."
-          // TL;DR: specify the "magic window" canvas.
-          let outputCanvas = document.querySelector('#output-canvas');
-          let ctx = outputCanvas.getContext('xrpresent');
-          // Use an 'xrpresent' context BECAUSE outputCanvas merely mirrors
-          // content rendered to the main WebGL canvas (defined later).
-          
-          // From GitHub:
-          //   "Pick an arbitrary device for the magic window content and start
-          //    up a non-immersive session if possible."
-          navigator.xr.requestSession({ outputContext: ctx }).then((session) => {
-            onSessionStarted(session);
-          });
-
-          // NOTE: here we query for an ID'd canvas; we may prefer to parameterize
-          // outputCanvas OR instantiate & place in DOM ourselves.
-          
-        }  else {
-          // If navigator.xr isn't present in the browser then we need to use the
-          // fallback rendering path.  This should rarely ever be the case, as an
-          // increasing number of browsers implement navigator.xr and a reasonable
-          // default non-immersive session type.
-          initFallback();
-        }
-      }
-      
-      // The "fallback" method uses the window.requestAnimationFrame
-      // callback to handle animation loops.  We are responsible for
-      // maintaining projection and viewport matrices.
-      function initFallback() {
-        console.log('WebXR not supported, falling back ...');
-
-        viewMatrix = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
-        projectionMatrix = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
-
-        initGL(document.querySelector('#output-canvas'));
-
-        function onResize() {
-          gl.canvas.width = gl.canvas.offsetWidth * window.devicePixelRatio;
-          gl.canvas.height = gl.canvas.offsetHeight * window.devicePixelRatio;
-          perspective(projectionMatrix, Math.PI*0.5,
-                      gl.canvas.width / gl.canvas.height,
-                      0.1, 1000.0);
-          gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-        }
-        window.addEventListener('resize', onResize);
-        onResize();
-
-        window.requestAnimationFrame(onWindowFrame);
-      }      
-      
-      // Called when xrButton is clicked.  Instantiates the canvas which
-      // presents to the XR display.  Here, we assume display supports
-      // 'immersive-vr' sessions.
-      function onRequestSession() {
-        let mainCanvas = document.createElement('canvas');
-        let ctx = mainCanvas.getContext('xrpresent');
-
-        mainCanvas.setAttribute('id', 'main-canvas');
-        // NOTE: appending child to canvas may not be required.
-        document.body.appendChild(mainCanvas);
-        
-        navigator.xr.requestSession({
-          mode: 'immersive-vr',
-          outputContext: ctx
-        }).then((session) => {
-          xrButton.setSession(session);
-          onSessionStarted(session);
-        });
-      }
-      
-      // Once a WebXR session has been started, we setup a WebGL context
-      // to handle the actual rendering.  Uses WebXR's session.requestAnimationFrame
-      // callback to handle animation loop.
-      function onSessionStarted(session) {
-
-        session.addEventListener('end', onSessionEnded);
-
-        initGL();
-                
-        // Add a rendering layer
-        // TODO: can we have more than one!?!?!?
-        session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl) });
-        
-        // TODO investigate 'stationary' vs 'roomscale'
-        session.requestReferenceSpace({
-          type: 'stationary',
-          subtype: 'eye-level'
-        }).then((refSpace) => {
-          if (session.mode == 'immersive-vr') {
-            xrImmersiveRefSpace = refSpace;
-          } else {
-            xrNonImmersiveRefSpace = refSpace;
-          }
-          session.requestAnimationFrame(onXRFrame);
-        });
-      }
-      
-      // Called when xrButton is clicked (again?) to end session.
-      function onEndSession(session) {
-        session.end();
-      }
-      
-      function onSessionEnded(event) {
-        if (event.session.mode == 'immersive-vr') {
-          // For immersive sessions, we will have created a mirror canvas;
-          // delete this canvas on session termination.
-          // NOTE again, is this necessary?  We could easily just not have
-          // a canvas in the DOM at all...
-          document.body.removeChild(document.querySelector('#main-canvas'));
-          xrButton.setSession(null);
-        }
-      }
-
-      // Animation loop functions (more-or-less the same).
-
-      function onXRFrame(t, frame) {
-        let session = frame.session;
-        let refSpace = session.mode == 'immersive-vr' ?
-        xrImmersiveRefSpace :
-        xrNonImmersiveRefSpace;
-        let pose = frame.getViewerPose(refSpace);
-        
-        // Recursive draw call
-        session.requestAnimationFrame(onXRFrame);
-        
-        // Using scene abstraction, draw everything!
-        onStartFrame(t);
-        if (pose) {
-          let glLayer = session.renderState.baseLayer;
-          gl.bindFramebuffer(gl.FRAMEBUFFER, glLayer.framebuffer);
-          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-          // Draws to the canvas.  Called once for non-immersive (mirror) and twice
-          // for immersive content (once per eye).
-          for (let view of pose.views) {
-            // Set the view viewport.
-            let viewport = glLayer.getViewport(view);
-            gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-            
-            // Draw given P & V matrices.
-            onDraw(view.projectionMatrix, view.viewMatrix);
-          }
-        }
-        onEndFrame();
-      }
-
-      function onWindowFrame(t) {
-        window.requestAnimationFrame(onWindowFrame);
-        onStartFrame(t);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        onDraw(projectionMatrix, viewMatrix);
-        onEndFrame();
-      }
-      
-      initXR();
-
-    })(onStartFrame, onEndFrame, onDraw);
   </script>
 </body>
