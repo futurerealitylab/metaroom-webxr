@@ -128,7 +128,7 @@ window.XRCanvasWrangler = (function () {
       this._fallbackProjMat = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
       window.addEventListener('resize', this._onResize.bind(this));
       this._onResize();
-      window.requestAnimationFrame(this._onWindowFrame.bind(this));
+      window.requestAnimationFrame(this.options.onWindowFrame);
     }
 
     _onRequestSession() {
@@ -147,7 +147,7 @@ window.XRCanvasWrangler = (function () {
 
     _onSessionStarted(session) {
       session.addEventListener('end', this._onSessionEnded.bind(this));
-      session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl /* bug? */) });
+      session.updateRenderState({ baseLayer: new XRWebGLLayer(session, this._gl) });
       session.requestReferenceSpace({
         type: 'stationary',
         subtype: 'eye-level'
