@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<head>
+  <!-- WebXR Shim is taken from @immersive-web/webxr-examples; it attempts to
+    patch browser inconsistencies similar to the webxr-polyfill.js.  According
+    to its authors, it will be unnecessary soon after the production WebXR impl
+    is shipped. -->
+  <script src="js/webxr-version-shim.js"></script>
+  <!-- WebXR Button implements a button to toggle in and out of VR. -->
+  <script src="js/webxr-button.js"></script>
+  <!-- WebXR Canvas Wrangler simplifies WebXR setup. -->
+  <script src="js/webxr-support.js"></script>
+</head>
+<body style="background-color: black; color: white; text-emphasis-color: white;">
+  <div style="text-align: center">
+    <canvas id="output-canvas" style="width: 400px; height: 400px"></canvas>
+  </div>
+  <script>
+    // README
+    //
+    // This page's javascript is broken into two sections:
+    // (1) WebGL + content setup (to be played with by student);
+    // (2) WebXR setup (boilerplate).
+    //
+    // I hope to eventually move all boilerplate to a standalone
+    // javascript file (perhaps "webxr-support.js") at a later date.
+
+    //
+    // (1) WEBGL + CONTENT SETUP
+    //
+
+    // Global vars for rendered content.
+    let gl = null;
+    let program = null;
+    let vert = null;
+    let frag = null;
+
+    let model = null;  // uniform
+    let view = null;   // uniform
+    let proj = null;   // uniform
+    let time = null;   // uniform
+
+    let start = null;
+    
+    // A simple vertex / fragment shader from K.P. lib1.js.
+    vert = `
+attribute vec3 aPos;
+varying   vec3 vPos;
+uniform   mat4 uModel;
+uniform   mat4 uView;
+uniform   mat4 uProj;
+
+void main() {
+  gl_Position = uProj * uView * uModel * vec4(aPos, 1.);
+  vPos = aPos;
+}`;
+
+    frag = `
+precision highp float;
+uniform float uTime;   // TIME, IN SECONDS
+  
+varying vec3 vPos;     // -1 < vPos.x < +1
+// -1 < vPos.y < +1
+//      vPos.z == 0
+  
+void main() {    // YOU MUST DEFINE main()
+    
+  // HERE YOU CAN WRITE ANY CODE TO
+  // DEFINE A COLOR FOR THIS FRAGMENT
+
+  float red   = max(0., vPos.x);
+  float green = max(0., vPos.y);
+  float blue  = max(0., sin(5. * uTime));
+  
+  // R,G,B EACH RANGE FROM 0.0 TO 1.0
+    
+  vec3 color = vec3(red, green, blue);
+    
+  // THIS LINE OUTPUTS THE FRAGMENT COLOR
+    
+  gl_FragColor = vec4(sqrt(color), 1.0);
+}`;
+
+    // Taken from K.P.'s lib1.js support library.
+    function setup() {
+
+      // Create shader program
+      program = gl.createProgram();
+      function addShader(type, src) {
+        var shader = gl.createShader(type);
+        gl.shaderSource(shader, src);
+        gl.compileShader(shader);
+        if (! gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          let msg = gl.getShaderInfoLog(shader);
+          console.error("Cannot compile shader:\n\n" + msg);
+        } else {
+          gl.attachShader(program, shader);
+        }
+      }
+      addShader(gl.VERTEX_SHADER, vert);
+      addShader(gl.FRAGMENT_SHADER, frag);
+      gl.linkProgram(program);
+      if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        let msg = gl.getProgramInfoLog(program);
+        console.error("Cannot link program:\n\n" + msg);
+      } else {
+        gl.useProgram(program);
+      }
+
+      // Create a square as a triangle strip consisting of two triangles
+      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0, 1,1,0, -1,-1,0, 1,-1,0]), gl.STATIC_DRAW);
+
+      // Assign aPos attribute to each vertex
+      let aPos = gl.getAttribLocation(program, 'aPos');
+      gl.enableVertexAttribArray(aPos);
+      gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+
+      // Assign MVP matrices
+      model = gl.getUniformLocation(program, 'uModel');
+      view = gl.getUniformLocation(program, 'uView');
+      proj = gl.getUniformLocation(program, 'uProj');
+      time = gl.getUniformLocation(program, 'uTime');
+    }
+
+    // My WebXR boilerplate requires a few arguments:
+    // (1) a handle to the WebGL (not 'xrpresent') context;
+    // (2) callbacks for
+    //     - onStartFrame(t) : called once per frame
+    //     - onEndFrame()    : called once per frame
+    //     - onDraw(p,v)     : called once per viewport (i.e. 2x on VR)
+    //
+    // In the future, I envision these three functions are left to the
+    // enduser to implement.  They could easily be mapped to functions
+    // of some 'renderer' class.  We shall see...
+
+    function onStartFrame(t) {
+      if (!start) start = t;
+      let now = (t - start) / 1000.;
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.uniform1f(time, now);
+    }
+
+    function onDraw(projMat, viewMat) {
+      gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
+      gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
+      gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    function onEndFrame() {
+    }
+
+    //
+    // (2) WEBXR BOILERPLATE
+    //
+
+    // Apply the version shim.  This shouldn't be needed once WebXR is widely adopted.
+    var shim = new WebXRVersionShim();
+
+    // Wrangle them canvases!
+    var wrangler = new XRCanvasWrangler(document.querySelector('#output-canvas'), {
+      onStartFrame: onStartFrame,
+      onEndFrame: onEndFrame,
+      onDraw: onDraw
+    });
+    // The wrangler should have bound itself to canvas#output-canvas - we may safely request
+    // access to the WebGL context.
+    gl = wrangler.gl;
+
+    setup();
+
+  </script>
+</body>
