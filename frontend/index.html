@@ -189,6 +189,7 @@ void main() {    // YOU MUST DEFINE main()
     wrangler.simulateCanvasTransition = function() {
       wrangler.options.onDraw = onDraw2;
       wrangler._onWorldEnter();
+      gl = wrangler.gl;
       setup(); // (KTR) For the testing, I need to redo the WebGL initialization
     }
 

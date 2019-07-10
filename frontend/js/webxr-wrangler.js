@@ -95,9 +95,6 @@ window.XRCanvasWrangler = (function () {
       options.onWindowFrame = options.onWindowFrame || this._onWindowFrame.bind(this);
 
       this.canvasGenerationID = 0;
-
-      console.log(this.options);
-
       //this.canvases = [];
       //this.canvasSwapIdx = 0;
 
@@ -180,9 +177,9 @@ window.XRCanvasWrangler = (function () {
       let contextOptions = this.options.contextOptions;
 
       for (let i = 0; i < contextNames.length; ++i) {
-        gl = target.getContext(contextNames[i], contextOptions);
-        if (gl != null) { // non-null indicates success
-          this._gl       = gl;
+        const glCtx = target.getContext(contextNames[i], contextOptions);
+        if (glCtx != null) { // non-null indicates success
+          this._gl       = glCtx;
           this._version  = contextNames[i];
           break;
         }
