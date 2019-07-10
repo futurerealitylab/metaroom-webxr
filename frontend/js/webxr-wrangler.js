@@ -35,26 +35,100 @@ window.XRCanvasWrangler = (function () {
     return out;
   }
 
+  let CanvasUtil = (function() {
+    function resizeToDisplaySize(canvas, scale = 1) {
+      const realToCSSPixels = window.devicePixelRatio;
+
+      const displayWidth = Math.floor(canvas.clientWidth * realToCSSPixels * scale);
+      const displayHeight = Math.floor(canvas.clientHeight * realToCSSPixels * scale);
+
+      if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+          canvas.width = displayWidth;
+          canvas.height = displayHeight;
+      }
+    }
+
+    function createCanvasOnElement(canvasName, parentName = 'output-element', width = 400, height = 400) {
+      const parent = document.querySelector('#' + parentName);
+      if (!parent) {
+        return null;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.id = canvasName;
+
+      parent.appendChild(canvas);
+
+      canvas.width = width;
+      canvas.height = height;
+
+
+      //resizeToDisplaySize(canvas);
+
+      return {parent : parent, canvas : canvas};
+    }
+
+    let _out = {
+      resizeToDisplaySize : resizeToDisplaySize,
+      createCanvasOnElement : createCanvasOnElement
+    };
+
+    return _out;
+
+  }())
+
+
   //
   // Export
   //
 
   class XRBasicCanvasWrangler {
-    constructor(canvas, options) {
-      options = options || {};
+    constructor(options) {
+      this.options = options || {};
 
       options.contextOptions = options.contextOptions || { xrCompatible: true };
       options.contextNames = options.contextNames || ['webgl2', 'webgl', 'experimental-webgl'];
-      options.onStartFrame = options.onStartFrame || (function() {});
-      options.onEndFrame = options.onEndFrame || (function() {});
-      options.onDraw = options.onDraw || (function(p, v) {}); // projMat, viewMat
+      options.onStartFrame = options.onStartFrame || (function(t) {});
+      options.onEndFrame = options.onEndFrame || (function(t) {});
+      options.onDraw = options.onDraw || (function(t, p, v) {}); // projMat, viewMat
       options.onXRFrame = options.onXRFrame || this._onXRFrame.bind(this);
       options.onWindowFrame = options.onWindowFrame || this._onWindowFrame.bind(this);
 
-      this.options = options;
+      this.canvasGenerationID = 0;
 
-      this._canvas = canvas;
-      this._glCanvas = null;
+      console.log(this.options);
+
+      //this.canvases = [];
+      //this.canvasSwapIdx = 0;
+
+      this._canvas = null;
+      {
+        const parentCanvasPair = CanvasUtil.createCanvasOnElement(
+          'active' + this.canvasGenerationID,
+          options.outputSurfaceName || 'output-element',
+          options.outputWidth || 400,
+          options.outputHeight || 400
+        );
+        console.assert(parentCanvasPair !== null);
+        console.assert(parentCanvasPair.parent !== null);
+        console.assert(parentCanvasPair.canvas !== null);
+
+        this._parent = parentCanvasPair.parent;
+        this._canvas = parentCanvasPair.canvas;
+      }
+      // {
+      //   const parentCanvasPair = CanvasUtil.createCanvasOnElement(
+      //     'inactive',
+      //     options.outputSurfaceName || 'output-element',
+      //     options.outputWidth || 400,
+      //     options.outputHeight || 400
+      //   );
+      //   console.assert(parentCanvasPair !== null);
+      //   this._parent = parentCanvasPair.parent;
+      //   this._canvas = parentCanvasPair.canvas;
+      // }
+
+      //this._canvas = canvas;
       this._mirrorCanvas = null;
       this._immersiveCanvas = null;
       this._gl = null;
@@ -64,6 +138,9 @@ window.XRCanvasWrangler = (function () {
       this._xrNonImmersiveRefSpace = null;
       this._fallbackViewMat = null;
       this._fallbackProjMat = null;
+
+      this.animationHandle = null;
+      this.isFallback = false; 
 
       this._init();
     }
@@ -86,6 +163,8 @@ window.XRCanvasWrangler = (function () {
         this._initGLContext(this._canvas);
         this._initFallback();
       }
+
+      console.log("GL Version: " + this._version);
     }
 
     _initButton() {
@@ -97,15 +176,12 @@ window.XRCanvasWrangler = (function () {
     }
 
     _initGLContext(target) {
-      if (this._gl) return;
-
       let contextNames = this.options.contextNames;
       let contextOptions = this.options.contextOptions;
 
       for (let i = 0; i < contextNames.length; ++i) {
         gl = target.getContext(contextNames[i], contextOptions);
         if (gl != null) { // non-null indicates success
-          this._glCanvas = target;
           this._gl       = gl;
           this._version  = contextNames[i];
           break;
@@ -114,6 +190,7 @@ window.XRCanvasWrangler = (function () {
     }
 
     _onResize() {
+      return; // temp
       let gl = this._gl;
       gl.canvas.width = gl.canvas.offsetWidth * window.devicePixelRatio;
       gl.canvas.height = gl.canvas.offsetHeight * window.devicePixelRatio;
@@ -124,11 +201,12 @@ window.XRCanvasWrangler = (function () {
     }
 
     _initFallback() {
+      this.isFallback = true;
       this._fallbackViewMat = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
       this._fallbackProjMat = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
       window.addEventListener('resize', this._onResize.bind(this));
       this._onResize();
-      window.requestAnimationFrame(this.options.onWindowFrame);
+      this.animationHandle = window.requestAnimationFrame(this.options.onWindowFrame);
     }
 
     _onRequestSession() {
@@ -147,6 +225,8 @@ window.XRCanvasWrangler = (function () {
 
     _onSessionStarted(session) {
       session.addEventListener('end', this._onSessionEnded.bind(this));
+
+
       session.updateRenderState({ baseLayer: new XRWebGLLayer(session, this._gl) });
       session.requestReferenceSpace({
         type: 'stationary',
@@ -157,11 +237,63 @@ window.XRCanvasWrangler = (function () {
         } else {
           this._xrNonImmersiveRefSpace = refSpace;
         }
-        session.requestAnimationFrame(this.options.onXRFrame);
+        this.animationHandle = session.requestAnimationFrame(this.options.onXRFrame);
+      });
+    }
+
+    _onWorldEnter(session) {
+      if (this._canvas !== null) {
+        //document.body.removeChild(this._canvas);
+        this._gl = null;
+      }
+      if (this.animationHandle !== null) {
+        window.cancelAnimationFrame(this.animationHandle);
+      }
+
+      this._canvas = null;
+      this.canvasGenerationID += 1;
+      {
+        const parentCanvasPair = CanvasUtil.createCanvasOnElement(
+          'active' + this.canvasGenerationID,
+          this.options.outputSurfaceName || 'output-element',
+          this.options.outputWidth || 400,
+          this.options.outputHeight || 400
+        );
+        console.assert(parentCanvasPair !== null);
+        console.assert(parentCanvasPair.parent !== null);
+        console.assert(parentCanvasPair.canvas !== null);
+
+        this._parent = parentCanvasPair.parent;
+        this._canvas = parentCanvasPair.canvas;
+      }
+
+      this._initGLContext(this._canvas);
+
+      if (this.isFallback) {
+        this._fallbackViewMat = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+        this._fallbackProjMat = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+
+        this.animationHandle = window.requestAnimationFrame(this.options.onWindowFrame);
+
+        return;
+      }
+
+      session.updateRenderState({ baseLayer: new XRWebGLLayer(session, this._gl) });
+      session.requestReferenceSpace({
+        type: 'stationary',
+        subtype: 'eye-level'
+      }).then((refSpace) => {
+        if (session.mode == 'immersive-vr') {
+          this._xrImmersiveRefSpace = refSpace;
+        } else {
+          this._xrNonImmersiveRefSpace = refSpace;
+        }
+        this.animationHandle = session.requestAnimationFrame(this.options.onXRFrame);
       });
     }
 
     _onEndSession(session) {
+      session.cancelAnimationFrame(this.animationHandle);
       session.end();
     }
 
@@ -169,6 +301,7 @@ window.XRCanvasWrangler = (function () {
       if (event.session.mode == 'immersive-vr') {
         document.body.removeChild(this._immersiveCanvas);
         this._xrButton.setSession(null);
+        this.parent.removeChild(this._canvas);
       }
     }
 
@@ -177,7 +310,7 @@ window.XRCanvasWrangler = (function () {
       let refSpace = session.mode == 'immersive-vr' ?
       this._xrImmersiveRefSpace : this._xrNonImmersiveRefSpace;
       let pose = frame.getViewerPose(refSpace);
-      session.requestAnimationFrame(this.options.onXRFrame);
+      this.animationHandle = session.requestAnimationFrame(this.options.onXRFrame);
       if (pose) {
         let glLayer = session.renderState.baseLayer;
         this._gl.bindFramebuffer(gl.FRAMEBUFFER, glLayer.framebuffer);
@@ -185,17 +318,17 @@ window.XRCanvasWrangler = (function () {
         for (let view of pose.views) {
           let viewport = glLayer.getViewport(view);
           this._gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-          this.options.onDraw(view.projectionMatrix, view.viewMatrix);
+          this.options.onDraw(t, view.projectionMatrix, view.viewMatrix);
         }
-        this.options.onEndFrame();
+        this.options.onEndFrame(t);
       }
     }
 
     _onWindowFrame(t) {
-      window.requestAnimationFrame(this.options.onWindowFrame);
+      this.animationHandle = window.requestAnimationFrame(this.options.onWindowFrame);
       this.options.onStartFrame(t);
-      this.options.onDraw(this._fallbackProjMat, this._fallbackViewMat);
-      this.options.onEndFrame();
+      this.options.onDraw(t, this._fallbackProjMat, this._fallbackViewMat);
+      this.options.onEndFrame(t);
     }
 
     get canvas() { return this._canvas; }

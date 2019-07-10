@@ -12,7 +12,7 @@
 </head>
 <body style="background-color: black; color: white; text-emphasis-color: white;">
   <div style="text-align: center">
-    <canvas id="output-canvas" style="width: 400px; height: 400px"></canvas>
+    <div style="text-align: center;" id=output-element></div>
   </div>
   <script>
     // README
@@ -126,8 +126,8 @@ void main() {    // YOU MUST DEFINE main()
     // (1) a handle to the WebGL (not 'xrpresent') context;
     // (2) callbacks for
     //     - onStartFrame(t) : called once per frame
-    //     - onEndFrame()    : called once per frame
-    //     - onDraw(p,v)     : called once per viewport (i.e. 2x on VR)
+    //     - onEndFrame(t)    : called once per frame
+    //     - onDraw(t, p,v)     : called once per viewport (i.e. 2x on VR)
     //
     // In the future, I envision these three functions are left to the
     // enduser to implement.  They could easily be mapped to functions
@@ -140,34 +140,57 @@ void main() {    // YOU MUST DEFINE main()
       gl.uniform1f(time, now);
     }
 
-    function onDraw(projMat, viewMat) {
+    function onDraw(t, projMat, viewMat) {
       gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
       gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
       gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
 
-    function onEndFrame() {
+    function onEndFrame(t) {
     }
+
+    function onDraw2(t, projMat, viewMat) {
+      gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
+      gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
+      gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+
 
     //
     // (2) WEBXR BOILERPLATE
     //
 
     // Apply the version shim.  This shouldn't be needed once WebXR is widely adopted.
-    var shim = new WebXRVersionShim();
+    const shim = new WebXRVersionShim();
 
     // Wrangle them canvases!
-    var wrangler = new XRCanvasWrangler(document.querySelector('#output-canvas'), {
+    // const wrangler = new XRCanvasWrangler(document.querySelector('#output-canvas'), {
+    //   onStartFrame: onStartFrame,
+    //   onEndFrame: onEndFrame,
+    //   onDraw: onDraw
+    // });
+    const wrangler = new XRCanvasWrangler({
+      outputSurfaceName: 'output-element',
       onStartFrame: onStartFrame,
       onEndFrame: onEndFrame,
-      onDraw: onDraw
+      onDraw: onDraw,
+      outputWidth: 400,
+      outputHeight: 400
     });
     // The wrangler should have bound itself to canvas#output-canvas - we may safely request
     // access to the WebGL context.
     gl = wrangler.gl;
 
     setup();
+
+    wrangler.simulateCanvasTransition = function() {
+      wrangler.options.onDraw = onDraw2;
+      wrangler._onWorldEnter();
+      setup(); // (KTR) For the testing, I need to redo the WebGL initialization
+    }
 
   </script>
 </body>
