@@ -1,3 +1,9 @@
+"use strict";
+
+function onWorldVisit(wrangler) {
+  wrangler._resetGfxContext(wrangler.session);
+}
+
 // XRCanvasWrangler provides quick-and-easy setup for WebXR.  Supports session
 // mirroring (for 2D display) and a fallback for when WebXR is not available.
 // All rendering details (resource management, etc.) is left to the user!
@@ -55,7 +61,7 @@ window.XRCanvasWrangler = (function () {
       }
 
       const canvas = document.createElement("canvas");
-      canvas.id = canvasName;
+      canvas.setAttribute('id', canvasName);
 
       parent.appendChild(canvas);
 
@@ -65,10 +71,13 @@ window.XRCanvasWrangler = (function () {
 
       //resizeToDisplaySize(canvas);
 
-      return {parent : parent, canvas : canvas};
+      return {
+        parent : parent, 
+        canvas : canvas
+      };
     }
 
-    let _out = {
+    const _out = {
       resizeToDisplaySize : resizeToDisplaySize,
       createCanvasOnElement : createCanvasOnElement
     };
@@ -128,6 +137,8 @@ window.XRCanvasWrangler = (function () {
       //this._canvas = canvas;
       this._mirrorCanvas = null;
       this._immersiveCanvas = null;
+
+
       this._gl = null;
       this._version = null;
       this._xrButton = null;
@@ -136,8 +147,10 @@ window.XRCanvasWrangler = (function () {
       this._fallbackViewMat = null;
       this._fallbackProjMat = null;
 
-      this.animationHandle = null;
+      this.animationHandle = 0;
       this.isFallback = false; 
+
+      this.session = null;
 
       this._init();
     }
@@ -220,7 +233,39 @@ window.XRCanvasWrangler = (function () {
       });
     }
 
+    onSelect(ev) {
+      let refSpace = ev.frame.session.mode == "immersive-vr" ?
+                       xrImmersiveRefSpace :
+                       xrNonImmersiveRefSpace;
+
+      let inputSources = xrSession.getInputSources();
+      for (let xrInputSource of inputSources) {
+        let inputPose = xrFrameOfRef.getInputPose(inputSource, xrFrameOfRef);
+        if (!inputPose) {
+          console.log("No input pose");
+          continue;
+        }
+        console.log("Has input pose");
+        // Update the position of the input devices. e.g. when rendering them (TODO) (KTR) this should probably happen
+        // via user-specified callback
+      }
+
+      let inputPose = ev.frame.getInputPose(ev.inputSource, refSpace);
+      if (!inputPose) {
+        return;
+      }
+
+
+    }
+
     _onSessionStarted(session) {
+      this.session = session;
+
+      // By listening for the 'select' event we can find out when the user has
+      // performed some sort of primary input action and respond to it.
+      session.addEventListener('selectstart', function() {});
+      session.addEventListener('select', onSelect);
+      session.addEventListener('selectend', function() {});
       session.addEventListener('end', this._onSessionEnded.bind(this));
 
 
@@ -238,13 +283,18 @@ window.XRCanvasWrangler = (function () {
       });
     }
 
-    _onWorldEnter(session) {
+    _resetGfxContext(session = null) {
       if (this._canvas !== null) {
         //document.body.removeChild(this._canvas);
         this._gl = null;
       }
-      if (this.animationHandle !== null) {
-        window.cancelAnimationFrame(this.animationHandle);
+      if (this.animationHandle !== 0) {
+        if (session !== null) { // TODO pass window or session to avoid branch clutter?
+          session.cancelAnimationFrame(this.animationHandle);
+        }
+        else {
+          window.cancelAnimationFrame(this.animationHandle);
+        }
       }
 
       this._canvas = null;
@@ -303,17 +353,17 @@ window.XRCanvasWrangler = (function () {
     }
 
     _onXRFrame(t, frame) {
-      let session = frame.session;
-      let refSpace = session.mode == 'immersive-vr' ?
-      this._xrImmersiveRefSpace : this._xrNonImmersiveRefSpace;
-      let pose = frame.getViewerPose(refSpace);
+      const session = frame.session;
+      const refSpace = session.mode == 'immersive-vr' ?
+                      this._xrImmersiveRefSpace : this._xrNonImmersiveRefSpace;
+      const pose = frame.getViewerPose(refSpace);
       this.animationHandle = session.requestAnimationFrame(this.options.onXRFrame);
       if (pose) {
-        let glLayer = session.renderState.baseLayer;
+        const glLayer = session.renderState.baseLayer;
         this._gl.bindFramebuffer(gl.FRAMEBUFFER, glLayer.framebuffer);
         this.options.onStartFrame(t);
         for (let view of pose.views) {
-          let viewport = glLayer.getViewport(view);
+          const viewport = glLayer.getViewport(view);
           this._gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
           this.options.onDraw(t, view.projectionMatrix, view.viewMatrix);
         }
@@ -335,3 +385,5 @@ window.XRCanvasWrangler = (function () {
 
   return XRBasicCanvasWrangler;
 })();
+
+

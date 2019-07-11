@@ -15,6 +15,7 @@
     <div style="text-align: center;" id=output-element></div>
   </div>
   <script>
+    "use strict";
     // README
     //
     // This page's javascript is broken into two sections:
@@ -39,7 +40,14 @@
     let proj = null;   // uniform
     let time = null;   // uniform
 
+    let compileCount = null; // uniform
+
+    let localCompileCount = 0;
+
     let start = null;
+
+    // (KTR) TODO, need to reset the clock upon loading a new world -- 
+    // will need to track "now" and update "start"
     
     // A simple vertex / fragment shader from K.P. lib1.js.
     vert = `
@@ -80,8 +88,53 @@ void main() {    // YOU MUST DEFINE main()
   gl_FragColor = vec4(sqrt(color), 1.0);
 }`;
 
+    // (KTR) Rewrite in modern GLSL ES,  A simple vertex / fragment shader from K.P. lib1.js.
+    let vertModern = `#version 300 es
+in vec3 aPos; // attributes replaced with "in"
+out   vec3 vPos; // varying output replaced with "out"
+uniform   mat4 uModel;
+uniform   mat4 uView;
+uniform   mat4 uProj;
+
+uniform   int uCompileCount;
+uniform   float uTime;
+
+void main() {
+  float translation = float(uCompileCount) * uTime + (10.0 * float(uCompileCount));
+  gl_Position = uProj * uView * uModel * vec4(vec3(aPos.x + sin(translation), aPos.y - sin(translation), aPos.z), 1.);
+  vPos = aPos;
+}`;
+
+    let fragModern = `#version 300 es
+precision highp float;
+uniform float uTime;   // TIME, IN SECONDS
+// varying input replaced with "in"  
+in vec3 vPos;     // -1 < vPos.x < +1
+// -1 < vPos.y < +1
+//      vPos.z == 0
+
+out vec4 fragColor; // gl_FragColor replaced with an explicit "out" vec4 that you set in the shader
+  
+void main() {    // YOU MUST DEFINE main()
+    
+  // HERE YOU CAN WRITE ANY CODE TO
+  // DEFINE A COLOR FOR THIS FRAGMENT
+
+  float red   = max(0., vPos.x);
+  float green = max(0., vPos.y);
+  float blue  = max(0., sin(5. * uTime));
+  
+  // R,G,B EACH RANGE FROM 0.0 TO 1.0
+    
+  vec3 color = vec3(red, green, blue);
+    
+  // THIS LINE OUTPUTS THE FRAGMENT COLOR
+    
+  fragColor = vec4(sqrt(color), 1.0);
+}`;
+
     // Taken from K.P.'s lib1.js support library.
-    function setup() {
+    function setup(modern = false) {
 
       // Create shader program
       program = gl.createProgram();
@@ -91,13 +144,34 @@ void main() {    // YOU MUST DEFINE main()
         gl.compileShader(shader);
         if (! gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
           let msg = gl.getShaderInfoLog(shader);
-          console.error("Cannot compile shader:\n\n" + msg);
+
+          let shaderTypename = '';
+          switch (type) {
+          case gl.VERTEX_SHADER: {
+            shaderTypename = "vertex";
+            break;
+          }
+          case gl.FRAGMENT_SHADER: {
+            shaderTypename = "fragment";
+            break;
+          }
+          default:
+            break;
+          }
+          console.error("Cannot compile " + shaderTypename + " shader:\n\n" + msg);
         } else {
           gl.attachShader(program, shader);
         }
       }
-      addShader(gl.VERTEX_SHADER, vert);
-      addShader(gl.FRAGMENT_SHADER, frag);
+
+      if (modern) {
+        addShader(gl.VERTEX_SHADER, vertModern);
+        addShader(gl.FRAGMENT_SHADER, fragModern);
+      }
+      else {
+        addShader(gl.VERTEX_SHADER, vert);
+        addShader(gl.FRAGMENT_SHADER, frag);
+      }
       gl.linkProgram(program);
       if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
         let msg = gl.getProgramInfoLog(program);
@@ -120,6 +194,11 @@ void main() {    // YOU MUST DEFINE main()
       view = gl.getUniformLocation(program, 'uView');
       proj = gl.getUniformLocation(program, 'uProj');
       time = gl.getUniformLocation(program, 'uTime');
+      compileCount = gl.getUniformLocation(program, 'uCompileCount');
+
+      gl.uniform1i(compileCount, localCompileCount);
+
+      localCompileCount += 1;
     }
 
     // My WebXR boilerplate requires a few arguments:
@@ -134,7 +213,10 @@ void main() {    // YOU MUST DEFINE main()
     // of some 'renderer' class.  We shall see...
 
     function onStartFrame(t) {
-      if (!start) start = t;
+      if (!start) {
+        start = t;
+      }
+
       let now = (t - start) / 1000.;
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.uniform1f(time, now);
@@ -188,9 +270,11 @@ void main() {    // YOU MUST DEFINE main()
 
     wrangler.simulateCanvasTransition = function() {
       wrangler.options.onDraw = onDraw2;
-      wrangler._onWorldEnter();
-      gl = wrangler.gl;
-      setup(); // (KTR) For the testing, I need to redo the WebGL initialization
+      onWorldVisit(wrangler);
+      if (gl !== undefined) {
+        gl = wrangler.gl;
+      }
+      setup(true); // (KTR) For the testing, I need to redo the WebGL initialization
     }
 
   </script>
