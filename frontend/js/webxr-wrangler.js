@@ -103,6 +103,11 @@ window.XRCanvasWrangler = (function () {
       options.onXRFrame = options.onXRFrame || this._onXRFrame.bind(this);
       options.onWindowFrame = options.onWindowFrame || this._onWindowFrame.bind(this);
 
+      // selection
+      options.onSelectStart = options.onSelectStart || (function(t, state) {});
+      options.onSelect = options.onSelect || (function(t, state) {});
+      options.onSelectEnd = options.onSelectEnd || (function(t, state) {});
+
       this.canvasGenerationID = 0;
       //this.canvases = [];
       //this.canvasSwapIdx = 0;
@@ -122,6 +127,8 @@ window.XRCanvasWrangler = (function () {
         this._parent = parentCanvasPair.parent;
         this._canvas = parentCanvasPair.canvas;
       }
+
+      this._glCanvas = null;
       // {
       //   const parentCanvasPair = CanvasUtil.createCanvasOnElement(
       //     'inactive',
@@ -138,7 +145,6 @@ window.XRCanvasWrangler = (function () {
       this._mirrorCanvas = null;
       this._immersiveCanvas = null;
 
-
       this._gl = null;
       this._version = null;
       this._xrButton = null;
@@ -150,7 +156,11 @@ window.XRCanvasWrangler = (function () {
       this.animationHandle = 0;
       this.isFallback = false; 
 
-      this.session = null;
+      this._session = null;
+
+      this._frameOfRef = null;
+
+      this._customState = null;
 
       this._init();
     }
@@ -161,8 +171,24 @@ window.XRCanvasWrangler = (function () {
         navigator.xr.supportsSessionMode('immersive-vr').then(() => {
           this._xrButton.enabled = true;
         });
-        let glCanvas = document.createElement('canvas');
-        this._initGLContext(glCanvas);
+
+        {
+          const parentCanvasPair = CanvasUtil.createCanvasOnElement(
+            'active_xr_gl' + this.canvasGenerationID,
+            this.options.outputSurfaceName || 'output-element',
+            this.options.outputWidth || 400,
+            this.options.outputHeight || 400
+          );
+          console.assert(parentCanvasPair !== null);
+          console.assert(parentCanvasPair.parent !== null);
+          console.assert(parentCanvasPair.canvas !== null);
+
+          this._parent = parentCanvasPair.parent;
+          this._glCanvas = parentCanvasPair.canvas;
+        }
+
+        this._initGLContext(this._glCanvas);
+
         this._presentCanvas = this._canvas;
         let ctx = this._presentCanvas.getContext('xrpresent');
         navigator.xr.requestSession({ outputContext: ctx }).then((session) => {
@@ -194,9 +220,11 @@ window.XRCanvasWrangler = (function () {
         if (glCtx != null) { // non-null indicates success
           this._gl       = glCtx;
           this._version  = contextNames[i];
-          break;
+          return true;
         }
       }
+
+      return false;
     }
 
     _onResize() {
@@ -233,43 +261,71 @@ window.XRCanvasWrangler = (function () {
       });
     }
 
-    onSelect(ev) {
-      let refSpace = ev.frame.session.mode == "immersive-vr" ?
-                       xrImmersiveRefSpace :
-                       xrNonImmersiveRefSpace;
-
-      let inputSources = xrSession.getInputSources();
-      for (let xrInputSource of inputSources) {
-        let inputPose = xrFrameOfRef.getInputPose(inputSource, xrFrameOfRef);
-        if (!inputPose) {
-          console.log("No input pose");
-          continue;
-        }
-        console.log("Has input pose");
-        // Update the position of the input devices. e.g. when rendering them (TODO) (KTR) this should probably happen
-        // via user-specified callback
-      }
-
-      let inputPose = ev.frame.getInputPose(ev.inputSource, refSpace);
-      if (!inputPose) {
-        return;
-      }
+    // onSelectStart(ev) {
+    //   // Q: Is this the same as getting the views from the reference space?
+    //   // API is unclear
 
 
-    }
+    //   // const refSpace = ev.frame.session.mode == "immersive-vr" ?
+    //   //                  this._xrImmersiveRefSpace :
+    //   //                  this._xrNonImmersiveRefSpace;
+
+    //   // const inputSources = this._session.getInputSources();
+    //   // for (let xrInputSource of inputSources) {
+    //   //   let inputPose = xrFrameOfRef.getInputPose(inputSource, xrFrameOfRef);
+    //   //   if (!inputPose) {
+    //   //     console.log("No input pose");
+    //   //     continue;
+    //   //   }
+    //   //   console.log("Has input pose");
+    //   //   // Update the position of the input devices. e.g. when rendering them (TODO) (KTR) this should probably happen
+    //   //   // via user-specified callback
+    //   // }
+
+    //   // console inputPose = ev.frame.getInputPose(ev.inputSource, refSpace);
+    //   // if (!inputPose) {
+    //   //   console.log("No input pose");
+    //   //   return;
+    //   // }
+
+    //   // console.log("Have input pose");
+
+
+    // }
 
     _onSessionStarted(session) {
-      this.session = session;
+      this._session = session;
 
       // By listening for the 'select' event we can find out when the user has
       // performed some sort of primary input action and respond to it.
-      session.addEventListener('selectstart', function() {});
-      session.addEventListener('select', onSelect);
-      session.addEventListener('selectend', function() {});
+      session.addEventListener('selectstart', this.options.onSelectStart);
+      session.addEventListener('select', this.options.onSelect);
+      session.addEventListener('selectend', this.options.onSelectEnd);
       session.addEventListener('end', this._onSessionEnded.bind(this));
 
 
+      // (KTR) TODO let the user pass around some state between functions
+      // instead of using globals (if they so choose)
+      if (this.options.customState) {
+        this._customState = this.options.customState;
+      }
+
+      // (KTR) TODO give user the ability to do add event listeners or other objects 
+      // before the session starts, as well as do any other initialization of
+      // their custom state
+      if (this.options.init) {
+        this.options.init(this._customState, this, this._session);
+      }
+
+
       session.updateRenderState({ baseLayer: new XRWebGLLayer(session, this._gl) });
+      
+      // ??? webxr-version-shim.js:423 Uncaught (in promise) TypeError: Cannot read property 'call' of undefined 
+      // session.requestFrameOfReference('eye-level')
+      // .then((frameOfRef) => {
+      //   this._frameOfRef = frameOfRef;
+      // })
+
       session.requestReferenceSpace({
         type: 'stationary',
         subtype: 'eye-level'
@@ -284,24 +340,68 @@ window.XRCanvasWrangler = (function () {
     }
 
     _resetGfxContext(session = null) {
-      if (this._canvas !== null) {
-        //document.body.removeChild(this._canvas);
-        this._gl = null;
-      }
-      if (this.animationHandle !== 0) {
-        if (session !== null) { // TODO pass window or session to avoid branch clutter?
-          session.cancelAnimationFrame(this.animationHandle);
+      // fallback path /////////////////////////////////////
+      if (this.isFallback) {  
+        if (this.animationHandle !== 0) {
+          //window.cancelAnimationFrame(this.animationHandle);
         }
-        else {
-          window.cancelAnimationFrame(this.animationHandle);
+
+        if (this._canvas !== null) {
+          this._parent.removeChild(this._canvas);
+          this._gl.clear(this._gl.DEPTH_BUFFER_BIT | this._gl.COLOR_BUFFER_BIT | this._gl.STENCIL_BUFFER_BIT);
+          this._gl = null;
+
+          this._canvas = null;
+        }
+
+        this.canvasGenerationID += 1;
+        {
+          const parentCanvasPair = CanvasUtil.createCanvasOnElement(
+            'active' + this.canvasGenerationID,
+            this.options.outputSurfaceName || 'output-element',
+            this.options.outputWidth || 400,
+            this.options.outputHeight || 400
+          );
+          console.assert(parentCanvasPair !== null);
+          console.assert(parentCanvasPair.parent !== null);
+          console.assert(parentCanvasPair.canvas !== null);
+
+          this._parent = parentCanvasPair.parent;
+          this._canvas = parentCanvasPair.canvas;
+        }
+
+        this._initGLContext(this._canvas);
+
+        this._fallbackViewMat = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+        this._fallbackProjMat = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+
+        //this.animationHandle = window.requestAnimationFrame(this.options.onWindowFrame);
+      }
+
+      // WebXR path //////////////////////////////////////
+      if (this.animationHandle !== 0) {
+        //session.cancelAnimationFrame(this.animationHandle);
+      }
+
+      if (this._glCanvas !== null) {
+        this._parent.removeChild(this._glCanvas);
+        this._gl.clear(this._gl.DEPTH_BUFFER_BIT | this._gl.COLOR_BUFFER_BIT | this._gl.STENCIL_BUFFER_BIT);
+        this._gl = null;
+
+        this._glCanvas = null;
+      }
+
+      if (this.animationHandle !== 0) {
+        if (session !== null) {
+          //session.cancelAnimationFrame(this.animationHandle);
         }
       }
 
-      this._canvas = null;
+      this._glCanvas = null;
       this.canvasGenerationID += 1;
       {
         const parentCanvasPair = CanvasUtil.createCanvasOnElement(
-          'active' + this.canvasGenerationID,
+          'active_xr_gl' + this.canvasGenerationID,
           this.options.outputSurfaceName || 'output-element',
           this.options.outputWidth || 400,
           this.options.outputHeight || 400
@@ -311,44 +411,36 @@ window.XRCanvasWrangler = (function () {
         console.assert(parentCanvasPair.canvas !== null);
 
         this._parent = parentCanvasPair.parent;
-        this._canvas = parentCanvasPair.canvas;
+        this._glCanvas = parentCanvasPair.canvas;
       }
 
-      this._initGLContext(this._canvas);
-
-      if (this.isFallback) {
-        this._fallbackViewMat = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
-        this._fallbackProjMat = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
-
-        this.animationHandle = window.requestAnimationFrame(this.options.onWindowFrame);
-
-        return;
+      if (!this._initGLContext(this._glCanvas)) {
+        console.log("ERROR: GL CONTEXT LOAD UNSUCCESSFUL");
       }
+
 
       session.updateRenderState({ baseLayer: new XRWebGLLayer(session, this._gl) });
-      session.requestReferenceSpace({
-        type: 'stationary',
-        subtype: 'eye-level'
-      }).then((refSpace) => {
-        if (session.mode == 'immersive-vr') {
-          this._xrImmersiveRefSpace = refSpace;
-        } else {
-          this._xrNonImmersiveRefSpace = refSpace;
-        }
-        this.animationHandle = session.requestAnimationFrame(this.options.onXRFrame);
-      });
+      //this.animationHandle = session.requestAnimationFrame(this.options.onXRFrame);
+
+      // (KTR) TODO maybe have a default transition animation in-between that
+      // loads a shader into the current context
+      // then replaces the context (or something simpler)
+
+
     }
 
     _onEndSession(session) {
+      console.log("ENDING SESSION");
       session.cancelAnimationFrame(this.animationHandle);
       session.end();
     }
 
     _onSessionEnded(event) {
       if (event.session.mode == 'immersive-vr') {
+        console.log("IMMERSIVE VR ENDING");
         document.body.removeChild(this._immersiveCanvas);
         this._xrButton.setSession(null);
-        this.parent.removeChild(this._canvas);
+        this._parent.removeChild(this._canvas);
       }
     }
 
@@ -369,6 +461,9 @@ window.XRCanvasWrangler = (function () {
         }
         this.options.onEndFrame(t);
       }
+      else {
+        console.log("no pose");
+      }
     }
 
     _onWindowFrame(t) {
@@ -381,6 +476,7 @@ window.XRCanvasWrangler = (function () {
     get canvas() { return this._canvas; }
     get gl() { return this._gl; }
     get version() { return this._version; }
+    get session() { return this._session; }
   }
 
   return XRBasicCanvasWrangler;

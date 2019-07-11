@@ -227,6 +227,8 @@ void main() {    // YOU MUST DEFINE main()
       gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
       gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      console.log("onDraw1");
     }
 
     function onEndFrame(t) {
@@ -237,6 +239,8 @@ void main() {    // YOU MUST DEFINE main()
       gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
       gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      console.log("onDraw2: " + t);
     }
 
 
@@ -259,8 +263,12 @@ void main() {    // YOU MUST DEFINE main()
       onStartFrame: onStartFrame,
       onEndFrame: onEndFrame,
       onDraw: onDraw,
+      onSelectStart: function(t, state) {
+        console.log("selected");
+        wrangler.simulateCanvasTransition();
+      },
       outputWidth: 400,
-      outputHeight: 400
+      outputHeight: 400,
     });
     // The wrangler should have bound itself to canvas#output-canvas - we may safely request
     // access to the WebGL context.
