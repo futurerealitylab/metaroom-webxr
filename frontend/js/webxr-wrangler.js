@@ -105,8 +105,8 @@ window.XRCanvasWrangler = (function () {
     }
 
     configure(options) {
-
-      _clearConfig();
+      this._clearConfig();
+      this._reset();
       
       options = options || {};
       this.config = options;
@@ -130,6 +130,8 @@ window.XRCanvasWrangler = (function () {
 
       options.contextOptions = options.contextOptions || { xrCompatible: true };
       options.contextNames = options.contextNames || ['webgl2', 'webgl', 'experimental-webgl'];
+
+      this.main = options.main;
 
       this._canvas = null;
       {
@@ -204,7 +206,7 @@ window.XRCanvasWrangler = (function () {
 
         this._presentCanvas = this._canvas;
         let ctx = this._presentCanvas.getContext('xrpresent');
-        return navigator.xr.requestSession({ outputContext: ctx }).then((session) => {
+        navigator.xr.requestSession({ outputContext: ctx }).then((session) => {
           this._onSessionStarted(session);
         });
 
@@ -218,8 +220,6 @@ window.XRCanvasWrangler = (function () {
         console.log("GL Version: " + this._version);
 
         this._initFallback();
-
-        return Promise.resolve();
       }
 
     }
@@ -314,6 +314,7 @@ window.XRCanvasWrangler = (function () {
     // }
 
     start() {
+
       // (KTR) TODO let the user pass around some state between functions
       // instead of using globals (if they so choose)
       if (this.config.customState) {
@@ -343,6 +344,7 @@ window.XRCanvasWrangler = (function () {
 
       // By listening for the 'select' event we can find out when the user has
       // performed some sort of primary input action and respond to it.
+
       session.addEventListener('selectstart', this.config.onSelectStart);
       session.addEventListener('select', this.config.onSelect);
       session.addEventListener('selectend', this.config.onSelectEnd);
@@ -362,6 +364,8 @@ window.XRCanvasWrangler = (function () {
           this._xrNonImmersiveRefSpace = refSpace;
         }
         console.log("session is ready");
+
+        this.main();
       });
     }
 
@@ -421,10 +425,12 @@ window.XRCanvasWrangler = (function () {
         const glLayer = session.renderState.baseLayer;
         this._gl.bindFramebuffer(gl.FRAMEBUFFER, glLayer.framebuffer); // TODO make this bind optional
         this.config.onStartFrame(t);
+        let i = 0;
         for (let view of pose.views) {
           const viewport = glLayer.getViewport(view);
           this._gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-          this.config.onDraw(t, view.projectionMatrix, view.viewMatrix);
+          this.config.onDraw(t, view.projectionMatrix, view.viewMatrix, i);
+          i += 1;
         }
         this.config.onEndFrame(t);
       }

@@ -9,6 +9,65 @@
   <script src="js/webxr-button.js"></script>
   <!-- WebXR Canvas Wrangler simplifies WebXR setup. -->
   <script src="js/webxr-wrangler.js"></script>
+
+
+<script id="Connor_shader2_vertex" type="x-shader/x-vertex">
+   precision highp float;
+   attribute vec3 aPos;
+   varying   vec3 vPosition;
+   uniform   mat4 uModel;
+   uniform   mat4 uView;
+   uniform   mat4 uProj;
+   uniform   float uTime;
+
+   void main() {
+      vec3 aPosition = aPos;
+      gl_Position = uView * 1.0 * vec4(aPosition, 1.0);
+      vPosition = aPosition;
+   }
+</script>
+<script id="Connor_shader2_fragment" type="x-shader/x-fragment">
+    precision highp float;
+    uniform float uTime;
+    uniform float uIntensity;
+    varying vec3  vPosition;
+
+    #define M_PI 3.1415926535897932384626433832795
+
+    // is v within a circle of center c and radius r?
+    bool circle(vec2 v, vec2 c, float r) {
+        return distance(v, c) <= r;
+    }
+
+    vec3 func(vec2 pos, float t, vec3 c) {
+        vec3 color = vec3(0);
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
+                float minx = float(i) / 5.0 - 1.0;
+                float maxx = float(i+1) / 5.0 - 1.0;
+                float miny = 2.0 * sin((t + float(i) / 20. - float(j) / 20.0) * M_PI / 3.) / 2.0 + float(j) / 5.0 - 2.0;
+                float maxy = 4.0 * sin((t + float(i) / 20. - float(j) / 20.0) * M_PI / 3.) / 2.0 + float(j) / 5.0 - 2.0;
+                if (pos.x >= minx && pos.x < maxx && pos.y >= miny && pos.y < maxy) {
+                    color = vec3(1.0 - float(i) / 10.0, float(j) / 10.0, float(i+j) / 20.0);
+                }
+            }
+        }
+        return color;
+    }
+
+    void main() {
+        vec2 pos = vPosition.xy;
+        vec3 color = vec3(0.0);
+        
+        float t = uTime;
+        color += func(pos, t, color);
+        gl_FragColor = vec4(color, 1.0);
+    }
+
+</script>
+
+
+
 </head>
 <body style="background-color: black; color: white; text-emphasis-color: white;">
   <div style="text-align: center">
@@ -131,6 +190,14 @@ void main() {    // YOU MUST DEFINE main()
     
   fragColor = vec4(sqrt(color), 1.0);
 }`;
+
+
+
+
+const vertConnor = document.getElementById('Connor_shader2_vertex').innerHTML;
+const fragConnor = document.getElementById('Connor_shader2_fragment').innerHTML;
+
+
 
     function addShader(type, src) {
       const shader = gl.createShader(type);
@@ -262,6 +329,58 @@ void main() {    // YOU MUST DEFINE main()
       });
 
 
+      setupFunctions.push(
+      function (modern = false) {
+        // Create shader program
+        program = gl.createProgram();
+
+        let vshader = null;
+        let fshader = null;
+        if (modern) {
+          vshader = addShader(gl.VERTEX_SHADER, vertConnor);
+          fshader = addShader(gl.FRAGMENT_SHADER, fragConnor);
+        }
+        else {
+          vshader = addShader(gl.VERTEX_SHADER, vertConnor);
+          fshader = addShader(gl.FRAGMENT_SHADER, fragConnor);
+        }
+        gl.linkProgram(program);
+        if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
+          let msg = gl.getProgramInfoLog(program);
+          console.error("Cannot link program:\n\n" + msg);
+        } else {
+          gl.detachShader(program, vshader);
+          gl.detachShader(program, fshader);
+          gl.deleteShader(vshader);
+          gl.deleteShader(fshader);
+
+          gl.deleteShader(vshader);
+
+          gl.useProgram(program);
+        }
+        // Create a square as a triangle strip consisting of two triangles
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0, 1,1,0, -1,-1,0, 1,-1,0]), gl.STATIC_DRAW);
+
+        // Assign aPos attribute to each vertex
+        let aPos = gl.getAttribLocation(program, 'aPos');
+        gl.enableVertexAttribArray(aPos);
+        gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+
+        // Assign MVP matrices
+        model = gl.getUniformLocation(program, 'uModel');
+        view = gl.getUniformLocation(program, 'uView');
+        proj = gl.getUniformLocation(program, 'uProj');
+        time = gl.getUniformLocation(program, 'uTime');
+        compileCount = gl.getUniformLocation(program, 'uCompileCount');
+
+        gl.uniform1i(compileCount, localCompileCount);
+
+        localCompileCount += 1;
+      });
+
+
+
 
 
     // My WebXR boilerplate requires a few arguments:
@@ -298,6 +417,13 @@ void main() {    // YOU MUST DEFINE main()
         gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
         gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      },
+
+      function (t, projMat, viewMat) {
+        gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
+        gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
+        gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
     ];
     let worldIdx = 0;
@@ -322,52 +448,47 @@ void main() {    // YOU MUST DEFINE main()
     // });
     const wrangler = new XRCanvasWrangler();
 
-
     wrangler.init({
-      outputSurfaceName: 'output-element',
-      outputWidth: 400,
-      outputHeight: 400,
-      glUseGlobalContext: true
-    }).then((window) => {
+      outputSurfaceName : 'output-element',
+      outputWidth : 400,
+      outputHeight : 400,
+      glUseGlobalContext : true,
+      main : () => {
+        // system calls user program after the initial set-up is complete
+        // (e.g. wait for the XR promise to resolve)
 
-      // system calls user program after the initial set-up is complete
-      // (e.g. wait for the XR promise to resolve)
-
-      const myWorld = wrangler;
-
-      myWorld.configure({
-        setup: setupFunctions[0],
-        onStartFrame: onStartFrame,
-        onEndFrame: onEndFrame,
-        onDraw: drawFunctions[0],
-        onSelectStart: function(t, state) {
-          console.log("selected");
-          wrangler.simulateCanvasTransition();
-        },
-      });
-
-      myWorld.start();
-
-      wrangler.simulateCanvasTransition = function() {
-
-        worldIdx = (worldIdx + 1) % drawFunctions.length;
-
-        wrangler._reset();
+        const myWorld = wrangler;
 
         myWorld.configure({
-          setup: function() { setupFunctions[worldIdx](true); },
+          setup: setupFunctions[0],
           onStartFrame: onStartFrame,
           onEndFrame: onEndFrame,
-          onDraw: drawFunctions[worldIdx],
+          onDraw: drawFunctions[0],
           onSelectStart: function(t, state) {
             console.log("selected");
             wrangler.simulateCanvasTransition();
           },
         });
 
-        
+        myWorld.start();
 
-        wrangler.start();
+        wrangler.simulateCanvasTransition = function() {
+
+          worldIdx = (worldIdx + 1) % drawFunctions.length;
+
+          myWorld.configure({
+            setup: function() { setupFunctions[worldIdx](true); },
+            onStartFrame: onStartFrame,
+            onEndFrame: onEndFrame,
+            onDraw: drawFunctions[worldIdx],
+            onSelectStart: function(t, state) {
+              console.log("selected");
+              wrangler.simulateCanvasTransition();
+            },
+          });
+
+          wrangler.start();
+        }
       }
 
     });
