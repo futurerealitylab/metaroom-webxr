@@ -105,6 +105,9 @@ window.XRCanvasWrangler = (function () {
     }
 
     configure(options) {
+
+      _clearConfig();
+      
       options = options || {};
       this.config = options;
 
