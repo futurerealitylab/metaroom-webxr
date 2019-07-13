@@ -30,7 +30,6 @@
     //
 
     // Global vars for rendered content.
-    let gl = null;
     let program = null;
     let vert = null;
     let frag = null;
@@ -133,73 +132,137 @@ void main() {    // YOU MUST DEFINE main()
   fragColor = vec4(sqrt(color), 1.0);
 }`;
 
-    // Taken from K.P.'s lib1.js support library.
-    function setup(modern = false) {
+    function addShader(type, src) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, src);
+      gl.compileShader(shader);
+      if (! gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        let msg = gl.getShaderInfoLog(shader);
 
-      // Create shader program
-      program = gl.createProgram();
-      function addShader(type, src) {
-        var shader = gl.createShader(type);
-        gl.shaderSource(shader, src);
-        gl.compileShader(shader);
-        if (! gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-          let msg = gl.getShaderInfoLog(shader);
-
-          let shaderTypename = '';
-          switch (type) {
-          case gl.VERTEX_SHADER: {
-            shaderTypename = "vertex";
-            break;
-          }
-          case gl.FRAGMENT_SHADER: {
-            shaderTypename = "fragment";
-            break;
-          }
-          default:
-            break;
-          }
-          console.error("Cannot compile " + shaderTypename + " shader:\n\n" + msg);
-        } else {
-          gl.attachShader(program, shader);
+        let shaderTypename = '';
+        switch (type) {
+        case gl.VERTEX_SHADER: {
+          shaderTypename = "vertex";
+          break;
         }
-      }
-
-      if (modern) {
-        addShader(gl.VERTEX_SHADER, vertModern);
-        addShader(gl.FRAGMENT_SHADER, fragModern);
-      }
-      else {
-        addShader(gl.VERTEX_SHADER, vert);
-        addShader(gl.FRAGMENT_SHADER, frag);
-      }
-      gl.linkProgram(program);
-      if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        let msg = gl.getProgramInfoLog(program);
-        console.error("Cannot link program:\n\n" + msg);
+        case gl.FRAGMENT_SHADER: {
+          shaderTypename = "fragment";
+          break;
+        }
+        default:
+          break;
+        }
+        console.error("Cannot compile " + shaderTypename + " shader:\n\n" + msg);
+        return null;
       } else {
-        gl.useProgram(program);
+        gl.attachShader(program, shader);
+        return shader;
       }
-
-      // Create a square as a triangle strip consisting of two triangles
-      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0, 1,1,0, -1,-1,0, 1,-1,0]), gl.STATIC_DRAW);
-
-      // Assign aPos attribute to each vertex
-      let aPos = gl.getAttribLocation(program, 'aPos');
-      gl.enableVertexAttribArray(aPos);
-      gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
-
-      // Assign MVP matrices
-      model = gl.getUniformLocation(program, 'uModel');
-      view = gl.getUniformLocation(program, 'uView');
-      proj = gl.getUniformLocation(program, 'uProj');
-      time = gl.getUniformLocation(program, 'uTime');
-      compileCount = gl.getUniformLocation(program, 'uCompileCount');
-
-      gl.uniform1i(compileCount, localCompileCount);
-
-      localCompileCount += 1;
     }
+
+
+    const setupFunctions = [];
+      // Taken from K.P.'s lib1.js support library.
+      setupFunctions.push(function (modern = false) {
+        // Create shader program
+        program = gl.createProgram();
+
+        let vshader = null;
+        let fshader = null;
+        if (modern) {
+          vshader = addShader(gl.VERTEX_SHADER, vertModern);
+          fshader = addShader(gl.FRAGMENT_SHADER, fragModern);
+        }
+        else {
+          vshader = addShader(gl.VERTEX_SHADER, vert);
+          fshader = addShader(gl.FRAGMENT_SHADER, frag);
+        }
+        gl.linkProgram(program);
+        if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
+          let msg = gl.getProgramInfoLog(program);
+          console.error("Cannot link program:\n\n" + msg);
+        } else {
+          gl.detachShader(program, vshader);
+          gl.detachShader(program, fshader);
+          gl.deleteShader(vshader);
+          gl.deleteShader(fshader);
+
+          gl.useProgram(program);
+        }
+
+        // Create a square as a triangle strip consisting of two triangles
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0, 1,1,0, -1,-1,0, 1,-1,0]), gl.STATIC_DRAW);
+
+        // Assign aPos attribute to each vertex
+        let aPos = gl.getAttribLocation(program, 'aPos');
+        gl.enableVertexAttribArray(aPos);
+        gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+
+        // Assign MVP matrices
+        model = gl.getUniformLocation(program, 'uModel');
+        view = gl.getUniformLocation(program, 'uView');
+        proj = gl.getUniformLocation(program, 'uProj');
+        time = gl.getUniformLocation(program, 'uTime');
+        compileCount = gl.getUniformLocation(program, 'uCompileCount');
+
+        gl.uniform1i(compileCount, localCompileCount);
+
+        localCompileCount += 1;
+      });
+
+      setupFunctions.push(
+      function (modern = false) {
+        // Create shader program
+        program = gl.createProgram();
+
+        let vshader = null;
+        let fshader = null;
+        if (modern) {
+          vshader = addShader(gl.VERTEX_SHADER, vertModern);
+          fshader = addShader(gl.FRAGMENT_SHADER, fragModern);
+        }
+        else {
+          vshader = addShader(gl.VERTEX_SHADER, vert);
+          fshader = addShader(gl.FRAGMENT_SHADER, frag);
+        }
+        gl.linkProgram(program);
+        if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
+          let msg = gl.getProgramInfoLog(program);
+          console.error("Cannot link program:\n\n" + msg);
+        } else {
+          gl.detachShader(program, vshader);
+          gl.detachShader(program, fshader);
+          gl.deleteShader(vshader);
+          gl.deleteShader(fshader);
+
+          gl.deleteShader(vshader);
+
+          gl.useProgram(program);
+        }
+        // Create a square as a triangle strip consisting of two triangles
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0, 1,1,0, -1,-1,0, 1,-1,0]), gl.STATIC_DRAW);
+
+        // Assign aPos attribute to each vertex
+        let aPos = gl.getAttribLocation(program, 'aPos');
+        gl.enableVertexAttribArray(aPos);
+        gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+
+        // Assign MVP matrices
+        model = gl.getUniformLocation(program, 'uModel');
+        view = gl.getUniformLocation(program, 'uView');
+        proj = gl.getUniformLocation(program, 'uProj');
+        time = gl.getUniformLocation(program, 'uTime');
+        compileCount = gl.getUniformLocation(program, 'uCompileCount');
+
+        gl.uniform1i(compileCount, localCompileCount);
+
+        localCompileCount += 1;
+      });
+
+
+
 
     // My WebXR boilerplate requires a few arguments:
     // (1) a handle to the WebGL (not 'xrpresent') context;
@@ -222,25 +285,24 @@ void main() {    // YOU MUST DEFINE main()
       gl.uniform1f(time, now);
     }
 
-    function onDraw(t, projMat, viewMat) {
-      gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
-      gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
-      gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    const drawFunctions = [
+      function (t, projMat, viewMat) {
+        gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
+        gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
+        gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      },
 
-      console.log("onDraw1");
-    }
+      function (t, projMat, viewMat) {
+        gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
+        gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
+        gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+    ];
+    let worldIdx = 0;
 
     function onEndFrame(t) {
-    }
-
-    function onDraw2(t, projMat, viewMat) {
-      gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
-      gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
-      gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-      console.log("onDraw2: " + t);
     }
 
 
@@ -258,32 +320,59 @@ void main() {    // YOU MUST DEFINE main()
     //   onEndFrame: onEndFrame,
     //   onDraw: onDraw
     // });
-    const wrangler = new XRCanvasWrangler({
+    const wrangler = new XRCanvasWrangler();
+
+
+    wrangler.init({
       outputSurfaceName: 'output-element',
-      onStartFrame: onStartFrame,
-      onEndFrame: onEndFrame,
-      onDraw: onDraw,
-      onSelectStart: function(t, state) {
-        console.log("selected");
-        wrangler.simulateCanvasTransition();
-      },
       outputWidth: 400,
       outputHeight: 400,
-    });
-    // The wrangler should have bound itself to canvas#output-canvas - we may safely request
-    // access to the WebGL context.
-    gl = wrangler.gl;
+      glUseGlobalContext: true
+    }).then((window) => {
 
-    setup();
+      console.log(window);
+      
+      // system calls user program after the initial set-up is complete
+      // (e.g. wait for the XR promise to resolve)
 
-    wrangler.simulateCanvasTransition = function() {
-      wrangler.options.onDraw = onDraw2;
-      onWorldVisit(wrangler);
-      if (gl !== undefined) {
-        gl = wrangler.gl;
+      const myWorld = wrangler;
+
+      myWorld.configure({
+        setup: setupFunctions[0],
+        onStartFrame: onStartFrame,
+        onEndFrame: onEndFrame,
+        onDraw: drawFunctions[0],
+        onSelectStart: function(t, state) {
+          console.log("selected");
+          wrangler.simulateCanvasTransition();
+        },
+      });
+
+      myWorld.start();
+
+      wrangler.simulateCanvasTransition = function() {
+
+        worldIdx = (worldIdx + 1) % drawFunctions.length;
+
+        wrangler._reset();
+
+        myWorld.configure({
+          setup: function() { setupFunctions[worldIdx](true); },
+          onStartFrame: onStartFrame,
+          onEndFrame: onEndFrame,
+          onDraw: drawFunctions[worldIdx],
+          onSelectStart: function(t, state) {
+            console.log("selected");
+            wrangler.simulateCanvasTransition();
+          },
+        });
+
+        
+
+        wrangler.start();
       }
-      setup(true); // (KTR) For the testing, I need to redo the WebGL initialization
-    }
+
+    });
 
   </script>
 </body>
