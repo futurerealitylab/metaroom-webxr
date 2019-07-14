@@ -117,10 +117,11 @@ window.XRCanvasWrangler = (function () {
       options.onXRFrame = options.onXRFrame || this._onXRFrame.bind(this);
       options.onWindowFrame = options.onWindowFrame || this._onWindowFrame.bind(this);
 
-      // selection
-      options.onSelectStart = options.onSelectStart || (function(t, state) {});
-      options.onSelect = options.onSelect || (function(t, state) {});
-      options.onSelectEnd = options.onSelectEnd || (function(t, state) {});
+        this._canvas.removeEventListener('mousedown', this.config.onSelectStart);
+
+        this._canvas.addEventListener('mousedown', this.config.onSelectStart);
+
+
     }
 
     constructor() {}
@@ -132,6 +133,8 @@ window.XRCanvasWrangler = (function () {
       options.contextNames = options.contextNames || ['webgl2', 'webgl', 'experimental-webgl'];
 
       this.main = options.main;
+
+      this.glDoResourceTracking = !!this.options.glDoResourceTracking;
 
       this._canvas = null;
       {
@@ -172,7 +175,7 @@ window.XRCanvasWrangler = (function () {
 
       this._clearConfig();
 
-      return this._init();
+      this._init();
     }
 
     _init() {
@@ -202,6 +205,10 @@ window.XRCanvasWrangler = (function () {
         if (this.options.glUseGlobalContext) {
           window.gl = this._gl;
         }
+        if (this.options.glDoResourceTracking) {
+          this._glAttachResourceTracking();
+        }
+
         console.log("GL Version: " + this._version);
 
         this._presentCanvas = this._canvas;
@@ -217,9 +224,15 @@ window.XRCanvasWrangler = (function () {
         if (this.options.glUseGlobalContext) {
           window.gl = this._gl;
         }
+        if (this.options.glDoResourceTracking) {
+          this._glAttachResourceTracking();
+        }
+
         console.log("GL Version: " + this._version);
 
         this._initFallback();
+
+        this.main();
       }
 
     }
@@ -239,8 +252,8 @@ window.XRCanvasWrangler = (function () {
       for (let i = 0; i < contextNames.length; ++i) {
         const glCtx = target.getContext(contextNames[i], contextOptions);
         if (glCtx != null) { // non-null indicates success
-          this._gl       = glCtx;
-          this._version  = contextNames[i];
+          this._gl      = glCtx;
+          this._version = contextNames[i];
           return true;
         }
       }
@@ -278,6 +291,17 @@ window.XRCanvasWrangler = (function () {
       }).then((session) => {
         this._xrButton.setSession(session);
         this._onSessionStarted(session);
+
+
+        console.log("adding event listeners");
+
+        this._session.removeEventListener('selectstart', this.config.onSelectStart);
+        this._session.removeEventListener('select', this.config.onSelect);
+        this._session.removeEventListener('selectend', this.config.onSelectEnd);
+
+        this._session.addEventListener('selectstart', this.config.onSelectStart);
+        this._session.addEventListener('select', this.config.onSelect);
+        this._session.addEventListener('selectend', this.config.onSelectEnd);
       });
     }
 
@@ -341,13 +365,6 @@ window.XRCanvasWrangler = (function () {
 
     _onSessionStarted(session) {
       this._session = session;
-
-      // By listening for the 'select' event we can find out when the user has
-      // performed some sort of primary input action and respond to it.
-
-      session.addEventListener('selectstart', this.config.onSelectStart);
-      session.addEventListener('select', this.config.onSelect);
-      session.addEventListener('selectend', this.config.onSelectEnd);
 
 
       session.addEventListener('end', this._onSessionEnded.bind(this));
@@ -444,6 +461,175 @@ window.XRCanvasWrangler = (function () {
       this.config.onStartFrame(t);
       this.config.onDraw(t, this._fallbackProjMat, this._fallbackViewMat);
       this.config.onEndFrame(t);
+    }
+
+    _glAttachResourceTracking() {
+      if (!this.glDoResourceTracking) {
+        return;
+      }
+
+      const GL = this._gl;
+
+      let funcNames = null;
+      let deleteFuncNames = null;
+      GL.deletionProcMap = new Map();
+
+      if (this._version = 'webgl2') {
+      /* WebGL2
+      createBuffer: ƒ createBuffer()
+      createFramebuffer: ƒ createFramebuffer()
+      createProgram: ƒ createProgram()
+      createQuery: ƒ createQuery()
+      createRenderbuffer: ƒ createRenderbuffer()
+      createSampler: ƒ createSampler()
+      createShader: ƒ createShader()
+      createTexture: ƒ createTexture()
+      createTransformFeedback: ƒ createTransformFeedback()
+      createVertexArray: ƒ createVertexArray()
+      */
+
+        funcNames = [
+          'createBuffer',
+          'createFramebuffer',
+          'createProgram',
+          'createQuery',
+          'createRenderbuffer',
+          'createSampler',
+          'createShader',
+          'createTexture',
+          'createTransformFeedback',
+          'createVertexArray'
+        ];
+
+        deleteFuncNames = [
+          'deleteBuffer',
+          'deleteFramebuffer',
+          'deleteProgram',
+          'deleteQuery',
+          'deleteRenderbuffer',
+          'deleteSampler',
+          'deleteShader',
+          'deleteTexture',
+          'deleteTransformFeedback',
+          'deleteVertexArray'
+        ];
+
+        for (let i = 0; i < funcNames.length; i += 1) {
+          GL.deletionProcMap.set(funcNames[i], deleteFuncNames[i]);
+        }
+
+      }
+      else {
+
+      /* WebGL1
+      createBuffer: ƒ createBuffer()
+      createFramebuffer: ƒ createFramebuffer()
+      createProgram: ƒ createProgram()
+      createRenderbuffer: ƒ createRenderbuffer()
+      createShader: ƒ createShader()
+      createTexture: ƒ createTexture()
+      */
+
+        funcNames = [
+          'createBuffer',
+          'createFramebuffer',
+          'createProgram',
+          'createRenderbuffer',
+          'createShader',
+          'createTexture'
+        ];
+
+        deleteFuncNames = [
+          'deleteBuffer',
+          'deleteFramebuffer',
+          'deleteProgram',
+          'deleteRenderbuffer',
+          'deleteShader',
+          'deleteTexture'
+        ];
+
+        for (let i = 0; i < funcNames.length; i += 1) {
+          GL.deletionProcMap.set(funcNames[i], deleteFuncNames[i]);
+        }
+
+      }
+
+      const len = funcNames.length;
+
+      const self = this;
+      this.deletionQueue = [];
+
+      for (let i = 0; i < len; i += 1) {
+        const funcName = funcNames[i];
+        GL['_' + funcName] = GL[funcName];
+        GL[funcName] = function(arg) {
+          //console.log("calling wrapper for: ");
+          console.log(GL['_' + funcName]);
+
+          const out = GL['_' + funcName](arg);
+
+          self.deletionQueue.push(function() {
+            //console.log("freeing resource created with: " + funcName);
+            GL[GL.deletionProcMap.get(funcName)](out);
+          });
+
+          return out;
+
+        }.bind(GL);
+      }
+
+    }
+
+    _glFreeResources() {
+      if (!this.glDoResourceTracking) {
+        return;
+      }
+
+      console.log("freeing resources");
+
+
+      const GL = this._gl;
+
+      // (KTR) TODO: may be more to delete / unbind for WebGL 2
+
+      const maxTextureUnitCount = GL.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
+      for (let unit = 0; unit < maxTextureUnitCount; unit += 1) {
+        GL.activeTexture(GL.TEXTURE0 + unit);
+        GL.bindTexture(GL.TEXTURE_2D, null);
+        GL.bindTexture(GL.TEXTURE_CUBE_MAP, null);
+      }
+
+      // unbind all binding points
+      GL.bindBuffer(GL.ARRAY_BUFFER, null);
+      GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null)
+      GL.bindRenderbuffer(GL.RENDERBUFFER, null);
+      GL.bindFramebuffer(GL.FRAMEBUFFER, null);
+
+      if (this._version = 'webgl2') {
+        GL.bindBuffer(GL.COPY_READ_BUFFER, null);
+        GL.bindBuffer(GL.COPY_WRITE_BUFFER, null);
+        GL.bindBuffer(GL.TRANSFORM_FEEDBACK_BUFFER, null);
+        GL.bindBuffer(GL.UNIFORM_BUFFER, null);
+        GL.bindBuffer(GL.PIXEL_PACK_BUFFER, null);
+        GL.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
+      }
+
+      // free resources
+      const Q = this.deletionQueue;
+      const len = Q.length;
+      for (let i = 0; i < len; i += 1) {
+        const deletionProc = Q.pop();
+        deletionProc();
+      }
+
+      // clear attributes
+      const tempBuf = GL._createBuffer();
+      GL.bindBuffer(GL.ARRAY_BUFFER, tempBuf);
+      const maxAttributeCount = GL.getParameter(GL.MAX_VERTEX_ATTRIBS);
+      for (let a = 0; a < maxAttributeCount; a += 1) {
+        GL.vertexAttribPointer(a, 1, GL.FLOAT, false, 0, 0);
+      }
+      GL.deleteBuffer(tempBuf);
     }
 
     get canvas() { return this._canvas; }
