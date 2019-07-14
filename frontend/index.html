@@ -67,206 +67,96 @@
 </script>
 
 <script id="KTR_a3-2017_fragment" type="x-shader/x-fragment">
-precision highp float;
-varying vec3 vPos;                               /* Position in image */
-uniform float uTime;                             /* Time */
+varying vec3 vPos;                             // Position in image
+uniform float uTime;                           // Time
+vec4 C;
+vec3 V, W, P, E, N;                                     
+#define EPSILON .01  // Surface Correction When Casting Shadow Rays
 
-#define MY_MAX_FLOAT (50.)
-
-/* light directions */
-
-/* enable specific light directions */
-#define BRIGHT_1 true
-#define BRIGHT_2 false
-#define BRIGHT_3 true
-
-vec3 LDir = normalize(vec3(1.,-sin(uTime),.5));  
-vec3 LDir2 = normalize(vec3(-cos(uTime),0.,.5));           
-vec3 LDir3 = normalize(vec3(1., sin(uTime), sin(uTime)));
-
-#define NUM_SPHERES (3)
-
-/* 
- * constants for calculating where to darken pixels for generating a "texture"
- * on the spheres
- */
-#define TEXTURE_CONST (uTime)
-#define TEXTURE_CONST_2 (-cos(uTime))
-
-/*
- * packages values required to
- * ray-trace and render a sphere
- */
-struct sphere {
-    vec3 V;
-    vec3 W;
-    vec4 S;
-    vec2 t;
-};
-
-/* holds each sphere struct */
-sphere spheres[NUM_SPHERES];
-
-/*
- * initializes a sphere struct, omitting t
- *
- * param:
- *     vec3, V
- *         ray origin
- *     vec3, W
- *         normalized ray direction
- *     vec4, S
- *         sphere coordinates and radius
- *         x, y, z, r
- * return:
- *     sphere struct
- */
-sphere init_sphere(vec3 V, vec3 W, vec4 S)
-{   
-    sphere s;
-    s.V = V;
-    s.W = W;
-    s.S = S;
-    return s;
+vec2 raytraceSphere(vec3 V, vec3 W, vec4 S) {
+   V -= S.xyz;
+   float B = 2. * dot(V, W);
+   float C = dot(V, V) - S.w * S.w;
+   float discrim = B*B - 4.*C;
+   vec2 t = vec2(1000., 1000.);
+   if (discrim > 0.)
+      t = vec2(-B - discrim, -B + discrim) / 2.;
+   return t.x > 0. ? t : vec2(1000., 1000.);
 }
 
-/*
- * ray-traces a sphere
- * 
- * param:
- *     sphere
- *         the sphere to ray-trace
- * return:
- *     vec2
- *         t vector
- */
-vec2 raytraceSphere(sphere s)
-{
-    vec3 V = s.V;
-    vec3 W = s.W;
-    vec4 S = s.S;
-
-    V -= S.xyz;
-    float B = 2. * dot(V, W);
-    float C = dot(V, V) - S.w * S.w;;
-    float discrim = B * B - 4. * C;
-    return ((discrim < 0.) ? vec2(-1., -1) 
-                          : vec2(-B - discrim, -B + discrim) / 2.);
+vec3 reflection(vec3 L, vec3 N) {
+   return 2. * dot(N, L) * N - L;
 }
 
-/* same as above, but individual values passed, created by Professor Perlin */
-vec2 raytraceSphere(vec3 V, vec3 W, vec4 S)
-{
-    V -= S.xyz;
-    float B = 2. * dot(V, W);
-    float C = dot(V, V) - S.w * S.w;;
-    float discrim = B * B - 4. * C;
-    return ((discrim < 0.) ? vec2(-1., -1)
-                           : vec2(-B - discrim, -B + discrim) / 2.);
+vec3 backgroundColor(vec3 dir) {
+   float t = .5 - .5 * dir.y;
+   return mix(vec3(.2,.01,.01), vec3(.01,.01,.1), 1. - t * t);
 }
 
-int get_idx_sphere_to_draw(void)
-{
-    int index = -1;
-    float min_t_x = MY_MAX_FLOAT;
-    
-    for (int i = 0; i < NUM_SPHERES; i++) {
-        float t_x = spheres[i].t.x;
-        if (t_x > 0. && t_x < min_t_x) {
-            index = i;
-            min_t_x = t_x;
-        }
-    }
-    return index;
+vec3 phong(vec3 N, vec3 E, vec3 A, vec3 D, vec4 S) {
+   vec3 c = A * backgroundColor(N);            // Ambient color
+
+   for (int i = 0 ; i < uLDirs_length ; i++) { // Loop through lights
+      bool is_shadowed = false;
+      vec3  LDir = normalize(uLDirs[i]);
+      
+      for (int s = 0; s < uSpheres_length; s++) {
+          vec4 sphere_comp = uSpheres[s];
+          vec2 collision = raytraceSphere(P + (N * EPSILON),
+                              LDir,
+            sphere_comp);
+          if (collision.x < 1000.) {
+              is_shadowed = true;
+        break;
+          }
+      }
+      
+      if (!is_shadowed) {
+          float d = max(0., dot(N, LDir));           // Diffuse value
+          vec3  R = reflection(LDir, N);
+          float s = pow(max(0., dot(E, R)), S.a);    // Specular value
+          c += uLColors[i] * (d * D + s * S.rgb * .1*S.a);
+      }
+   }
+   return c;
 }
 
-/*
- * calculates the brightness with hard-coded light directions
- * and a given normal
- * 
- * param:
- *     vec3 N
- *         the surface normal
- * return:
- *     float
- *         brightness value
- */
-float calc_brightness(vec3 N)
-{
-    float brightness  = (BRIGHT_1) ? max(0., dot(N, LDir)) : 0.;
-    float brightness2 = (BRIGHT_2) ? max(0., dot(N, LDir2)) : 0.;
-    float brightness3 = (BRIGHT_3) ? max(0., dot(N, LDir3)) : 0.;
-    return (mix(.1, brightness + brightness2 + brightness3, .5));
+bool raytrace() {
+   float distance = 1000.;
+   for (int i = 0 ; i < uSpheres_length ; i++) {
+      vec2 t = raytraceSphere(V, W, uSpheres[i]);
+      if (t.x < distance) {
+         C = uSColors[i];
+         P = V + t.x * W;                      // Point on sphere
+         E = -normalize(P);                    // Direction to eye
+         N = normalize(P - uSpheres[i].xyz);   // Surface normal
+         distance = t.x;
+      }
+   }
+   return distance < 1000.;
 }
 
-/* 
- * generates texture to mix into the sphere color
- *
- * param:
- *     vec2 p 
- *         manipulated x,y pixel coordinated value
- *         to be manipulated further
- * return
- *     float
- *         non-positive value will darken the pixel
- */
-float calc_pattern(vec2 p)
-{
-    return (sin(TEXTURE_CONST) 
-            + sin((TEXTURE_CONST_2 * p.y * p.x) 
-            + cos(p.x) * .01));
+void main() {
+   vec3 c = vec3(0.,0.,0.);
+
+   V = vec3(0.,0.,0.);                         // Ray origin
+   W = normalize(vec3(vPos.xy, -3.));          // Ray direction
+   if (! raytrace())
+      c = backgroundColor(vPos);
+   else
+      for (int bounce = 0 ; bounce < 5 ; bounce++) {
+   c += phong(N, E, .1*C.rgb, .5*C.rgb, C);
+   V = P + .001 * W;
+   W = reflection(-W, N);
+         if (! raytrace()) {
+            c += .05 * backgroundColor(W);
+      break;
+         }
+      }
+         
+   gl_FragColor = vec4(sqrt(c), 1.);           // Final pixel color
 }
 
-void main(void)
-{
-    /* dynamic background -- moving red-tinted gradient */
-    vec3 c = vec3(.1 * sin(vPos.y + uTime), .01, .04) + 0.005 * vPos.x;
-    
-    /* first sphere */
-    
-    /* ray origin */
-    /* ray direction */
-    /* animate sphere */
-    spheres[0] = init_sphere(vec3(0., 0., 0.), 
-                             normalize(vec3(vPos.xy, -3.)),  
-                             vec4(cos(uTime), sin(uTime), -5., .5));
-    /* ray trace sphere */
-    spheres[0].t = raytraceSphere(spheres[0]); 
-    
-    /* second sphere */
-    spheres[1] = init_sphere(vec3(0., 0., 0.), 
-                             normalize(vec3(vPos.xy, sin(uTime))),
-                             vec4(cos(uTime),sin(uTime), -5., .5));           
-    spheres[1].t = raytraceSphere(spheres[1]);
-
-    /* third sphere */
-    spheres[2] = init_sphere(vec3(0., 0., 9.), 
-                             normalize(vec3(vPos.xy, -3)),  
-                             vec4(cos(uTime), -sin(uTime), -3., .5));           
-    spheres[2].t = raytraceSphere(spheres[2]);
-
-    int sphere_idx = get_idx_sphere_to_draw();
-    if (sphere_idx != -1) {
-        for (int i = 0; i < NUM_SPHERES; i++) {
-            if (i == sphere_idx) {
-                /* point on sphere */
-                vec3 P = spheres[i].V + spheres[i].t.x * spheres[i].W;
-                /* Surface normal */
-                vec3 N = normalize(P - spheres[i].S.xyz);
-                /* brightness for diffuse surface */
-                float brightness = calc_brightness(N);
-                c = vec3(2. * vPos.y + sin(uTime), 0.0, .2) * brightness;
-
-                float z = calc_pattern(4. * vPos.xy);
-                if (z > 0.) {
-                    c = mix(c, vec3(1., 1., 1.), c);
-                }
-            }
-        }
-    }
-
-    gl_FragColor = vec4(sqrt(c), 1.);             // final pixel color
-}
 </script>
 
 
@@ -433,23 +323,19 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
       }
     }
 
-
+    let worldIdx = 0;
     const setupFunctions = [];
       // Taken from K.P.'s lib1.js support library.
-      setupFunctions.push(function (modern = false) {
+      setupFunctions.push(function() {
+        console.log("Hello world: " + worldIdx);
         // Create shader program
         program = gl.createProgram();
 
         let vshader = null;
         let fshader = null;
-        if (modern) {
-          vshader = addShader(gl.VERTEX_SHADER, vertModern);
-          fshader = addShader(gl.FRAGMENT_SHADER, fragModern);
-        }
-        else {
-          vshader = addShader(gl.VERTEX_SHADER, vert);
-          fshader = addShader(gl.FRAGMENT_SHADER, frag);
-        }
+        vshader = addShader(gl.VERTEX_SHADER, vert);
+        fshader = addShader(gl.FRAGMENT_SHADER, frag);
+
         gl.linkProgram(program);
         if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
           let msg = gl.getProgramInfoLog(program);
@@ -478,27 +364,26 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
         proj = gl.getUniformLocation(program, 'uProj');
         time = gl.getUniformLocation(program, 'uTime');
         compileCount = gl.getUniformLocation(program, 'uCompileCount');
-
         gl.uniform1i(compileCount, localCompileCount);
 
-        localCompileCount += 1;
+        localCompileCount = (localCompileCount + 1) % 14;
       });
+
+      ////////////////////////////////////////////
+      //"World 1"
 
       setupFunctions.push(
-      function (modern = false) {
+      function() {
+        console.log("Hello world using the modern 3.0 ES syntax: " + worldIdx);
         // Create shader program
         program = gl.createProgram();
 
         let vshader = null;
         let fshader = null;
-        if (modern) {
-          vshader = addShader(gl.VERTEX_SHADER, vertModern);
-          fshader = addShader(gl.FRAGMENT_SHADER, fragModern);
-        }
-        else {
-          vshader = addShader(gl.VERTEX_SHADER, vert);
-          fshader = addShader(gl.FRAGMENT_SHADER, frag);
-        }
+
+        vshader = addShader(gl.VERTEX_SHADER, vertModern);
+        fshader = addShader(gl.FRAGMENT_SHADER, fragModern);
+
         gl.linkProgram(program);
         if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
           let msg = gl.getProgramInfoLog(program);
@@ -531,25 +416,24 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
 
         gl.uniform1i(compileCount, localCompileCount);
 
-        localCompileCount += 1;
+        localCompileCount = (localCompileCount + 1) % 14;
       });
 
+      ////////////////////////////////////////////
+      //"World 2"
 
       setupFunctions.push(
-      function (modern = false) {
+      function() {
+        console.log("A shader from Connor's website: " + worldIdx);
+
         // Create shader program
         program = gl.createProgram();
 
         let vshader = null;
         let fshader = null;
-        if (modern) {
-          vshader = addShader(gl.VERTEX_SHADER, vertConnor);
-          fshader = addShader(gl.FRAGMENT_SHADER, fragConnor);
-        }
-        else {
-          vshader = addShader(gl.VERTEX_SHADER, vertConnor);
-          fshader = addShader(gl.FRAGMENT_SHADER, fragConnor);
-        }
+        vshader = addShader(gl.VERTEX_SHADER, vertConnor);
+        fshader = addShader(gl.FRAGMENT_SHADER, fragConnor);
+
         gl.linkProgram(program);
         if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
           let msg = gl.getProgramInfoLog(program);
@@ -578,29 +462,50 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
         view = gl.getUniformLocation(program, 'uView');
         proj = gl.getUniformLocation(program, 'uProj');
         time = gl.getUniformLocation(program, 'uTime');
-        compileCount = gl.getUniformLocation(program, 'uCompileCount');
-
-        gl.uniform1i(compileCount, localCompileCount);
-
-        localCompileCount += 1;
       });
 
-      setupFunctions.push(function (modern = false) {
 
-        console.log("KTR");
+      ////////////////////////////////////////////
+      //"World 3"
+
+      function declareUniform(name, type, size) {
+         uniformData[name] = {type:type, size:size};
+      }
+
+      function setUniform(name, data) {
+         uniformData[name].data = data;
+      }
+
+      function address(name) { return gl.getUniformLocation(program, name); }
+
+      setupFunctions.push(function () {
+        console.log("KTR assignment 3 from 2017: " + worldIdx);
+
+        window.uniformData = {};
+
+        declareUniform('uSpheres', 'vec4', 3);
+        declareUniform('uSColors', 'vec4', 3);
+        declareUniform('uLDirs', 'vec3', 2);
+        declareUniform('uLColors', 'vec3', 2);
+
         // Create shader program
         program = gl.createProgram();
 
+        let fragmentShaderHeader = 'precision highp float;\n';
+
+        for (let name in uniformData) {
+          let u = uniformData[name];
+          fragmentShaderHeader += '#define ' + name + '_length ' + u.size + '\n' +
+                                  '   uniform ' + u.type + ' ' + name + (u.size > 0 ? '[' + u.size + ']' : '') + ';\n';
+        }
+
+        let newFShader = fragmentShaderHeader + fragKTRa32017;
+
         let vshader = null;
         let fshader = null;
-        if (modern) {
-          vshader = addShader(gl.VERTEX_SHADER, vert);
-          fshader = addShader(gl.FRAGMENT_SHADER, fragKTRa32017);
-        }
-        else {
-          vshader = addShader(gl.VERTEX_SHADER, vert);
-          fshader = addShader(gl.FRAGMENT_SHADER, fragKTRa32017);
-        }
+        vshader = addShader(gl.VERTEX_SHADER, vert);
+        fshader = addShader(gl.FRAGMENT_SHADER, newFShader);
+
         gl.linkProgram(program);
         if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
           let msg = gl.getProgramInfoLog(program);
@@ -628,11 +533,6 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
         view = gl.getUniformLocation(program, 'uView');
         proj = gl.getUniformLocation(program, 'uProj');
         time = gl.getUniformLocation(program, 'uTime');
-        compileCount = gl.getUniformLocation(program, 'uCompileCount');
-
-        gl.uniform1i(compileCount, localCompileCount);
-
-        localCompileCount += 1;
       });
 
 
@@ -662,6 +562,8 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
 
     const drawFunctions = [
       function (t, projMat, viewMat) {
+        const sec = t / 1000;
+        
         gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
         gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
         gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
@@ -669,6 +571,8 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
       },
 
       function (t, projMat, viewMat) {
+        const sec = t / 1000;
+        
         gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
         gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
         gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
@@ -676,6 +580,8 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
       },
 
       function (t, projMat, viewMat) {
+        const sec = t / 1000;
+        
         gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
         gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
         gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
@@ -683,13 +589,30 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
       },
 
       function (t, projMat, viewMat) {
+        t /= 1000;
         gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
         gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
         gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
+
+        let s = .5 * Math.sin(2 * t);
+        setUniform('uSpheres', [-.5,.4,-4+s,.5, .5,.4,-4-s,.5, s,-.5,-4,.5]);
+        setUniform('uSColors', [1,.3,.3,2, .3,.3,1,6, 1,.7,0,10]);
+        setUniform('uLDirs', [1,1,1, -1,-1,-1]);
+        setUniform('uLColors', [.5,.5,1, .2,.1,.1]);
+
+        for (let name in uniformData) {
+          let u = uniformData[name];
+          switch (u.type) {
+            case 'float': gl.uniform1fv(address(name), u.data); break;
+            case 'vec2' : gl.uniform2fv(address(name), u.data); break;
+            case 'vec3' : gl.uniform3fv(address(name), u.data); break;
+            case 'vec4' : gl.uniform4fv(address(name), u.data); break;
+          }
+        }
+
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       },
     ];
-    let worldIdx = 0;
 
     function onEndFrame(t) {
     }
@@ -718,31 +641,35 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
       glUseGlobalContext : true,
       glDoResourceTracking : true,
       main : () => {
-        // system calls user program after the initial set-up is complete
-        // (e.g. wait for the XR promise to resolve)
+        // system calls user program "main" after the initial set-up is complete
 
         const myWorld = wrangler;
 
         myWorld.configure({
-          setup: setupFunctions[0],
-          onStartFrame: onStartFrame,
-          onEndFrame: onEndFrame,
-          onDraw: drawFunctions[0],
-          onSelectStart: function(t, state) {
-            console.log("on select start -- why is this fired twice???");
-            wrangler.simulateCanvasTransition();
+          setup : setupFunctions[0],
+          onStartFrame : onStartFrame,
+          onEndFrame : onEndFrame,
+          onDraw : drawFunctions[0],
+          onSelectStart : function(t, state) {
+            wrangler.simulateWorldTransition();
           },
-          onSelect: function(t, state) {
-            console.log("on select");
-            wrangler.simulateCanvasTransition();
-          }
+          onSelect : function(t, state) {
+            //console.log("on select world " + worldIdx);
+            //wrangler.simulateWorldTransition();
+          },
+          onSelectEnd : function(t, state) {
+            //console.log("on select end world " + worldIdx);
+            //wrangler.simulateWorldTransition();
+          },
         });
 
+        // call start to begin the world (may just move this to "configure" and rename the function)
         myWorld.start();
 
-        wrangler.simulateCanvasTransition = function() {
-
+        wrangler.simulateWorldTransition = function() {
           worldIdx = (worldIdx + 1) % drawFunctions.length;
+
+          console.log("transitioning to world: " + worldIdx);
 
           gl.useProgram(null);
 
@@ -750,14 +677,23 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
           wrangler._glFreeResources();
 
           myWorld.configure({
-            setup: function() { setupFunctions[worldIdx](true); },
-            onStartFrame: onStartFrame,
-            onEndFrame: onEndFrame,
-            onDraw: drawFunctions[worldIdx],
-            // onSelectStart: function(t, state) {
-            //   console.log("selected");
-            //   wrangler.simulateCanvasTransition();
-            // },
+            setup : setupFunctions[worldIdx],
+            onStartFrame : onStartFrame,
+            onEndFrame : onEndFrame,
+            onDraw : drawFunctions[worldIdx],
+            onSelectStart: function(t, state) {
+              //console.log("on select start world " + worldIdx);
+              
+              wrangler.simulateWorldTransition();
+            },
+            onSelect: function(t, state) {
+              //console.log("on select world " + worldIdx);
+              //wrangler.simulateWorldTransition();
+            },
+            onSelectEnd: function(t, state) {
+              //console.log("on select end world " + worldIdx);
+              //wrangler.simulateWorldTransition();
+            },
           });
 
           wrangler.start();

@@ -1,5 +1,8 @@
 "use strict";
 
+// Authors: Nick Vitovich, Karl Toby Rosenberg
+//  initial boilerplate based on publicly available documentation */
+
 // XRCanvasWrangler provides quick-and-easy setup for WebXR.  Supports session
 // mirroring (for 2D display) and a fallback for when WebXR is not available.
 // All rendering details (resource management, etc.) is left to the user!
@@ -117,11 +120,9 @@ window.XRCanvasWrangler = (function () {
       options.onXRFrame = options.onXRFrame || this._onXRFrame.bind(this);
       options.onWindowFrame = options.onWindowFrame || this._onWindowFrame.bind(this);
 
-        this._canvas.removeEventListener('mousedown', this.config.onSelectStart);
-
-        this._canvas.addEventListener('mousedown', this.config.onSelectStart);
-
-
+      options.onSelectStart = this.config.onSelectStart || (function(t, state) {});
+      options.onSelect = this.config.onSelect || (function(t, state) {});
+      options.onSelectEnd = this.config.selectEnd || (function(t, state) {});
     }
 
     constructor() {}
@@ -211,9 +212,55 @@ window.XRCanvasWrangler = (function () {
 
         console.log("GL Version: " + this._version);
 
+        this._selectionInProgress = false;
+        this.selectStart = (arg) => {
+          if (!this._selectionInProgress) {
+            console.log("(KTR) cancel erroneous selectStart, temp hack since selection seems to double-trigger");
+            return;
+          }
+
+          console.log("selectstart");
+          this.config.onSelectStart(arg, this.userID); // (KTR) TODO: should start using user IDs for interactions
+
+          if (this._frameOfRef) {
+            //console.log("have frame of ref");
+          } else {
+            //console.log("does NOT have frame of ref");
+            return;
+          }
+
+          let inputPose = arg.frame.getInputPose(arg.inputSource, this._frameOfRef);
+        };
+
+        this.select = (arg) => { 
+          console.log("select"); 
+          this._selectionInProgress = true;
+          this.config.onSelect(arg, this.userID); 
+        };
+        this.selectEnd = (arg) => {
+          if (!this._selectionInProgress) {
+            //console.log("(KTR) cancel erroneous selectEnd, temp hack since selection seems to double-trigger");
+            return;
+          }
+
+          console.log("selectEnd");
+          this.config.onSelectEnd(arg, this.userID); 
+          this._selectionInProgress = false;
+        };
+
         this._presentCanvas = this._canvas;
         let ctx = this._presentCanvas.getContext('xrpresent');
+
         navigator.xr.requestSession({ outputContext: ctx }).then((session) => {
+
+          // session.removeEventListener('selectstart', this.selectStart );
+          // session.removeEventListener('select', this.select);
+          // session.removeEventListener('selectend', this.selectEnd);
+
+          // session.addEventListener('selectstart', this.selectStart);
+          // session.addEventListener('select', this.select);
+          // session.addEventListener('selectend', this.selectEnd);
+
           this._onSessionStarted(session);
         });
 
@@ -231,6 +278,8 @@ window.XRCanvasWrangler = (function () {
         console.log("GL Version: " + this._version);
 
         this._initFallback();
+
+        this._canvas.addEventListener('mousedown', () => { this.config.onSelectStart() });
 
         this.main();
       }
@@ -285,23 +334,33 @@ window.XRCanvasWrangler = (function () {
       let ctx = this._immersiveCanvas.getContext('xrpresent');
       this._immersiveCanvas.setAttribute('id', 'immersive-canvas');
       document.body.appendChild(this._immersiveCanvas);
+
+      if (this._session) {
+        // this._session.removeEventListener('selectstart', this.selectStart );
+        // this._session.removeEventListener('select', this.select);
+        // this._session.removeEventListener('selectend', this.selectEnd);
+      }
+
       navigator.xr.requestSession({
         mode: 'immersive-vr',
         outputContext: ctx
       }).then((session) => {
+        console.log("adding event handlers");
+        session.addEventListener('selectstart', this.selectStart);
+        session.addEventListener('select', this.select);
+        session.addEventListener('selectend', this.selectEnd);
+
         this._xrButton.setSession(session);
         this._onSessionStarted(session);
 
-
-        console.log("adding event listeners");
-
-        this._session.removeEventListener('selectstart', this.config.onSelectStart);
-        this._session.removeEventListener('select', this.config.onSelect);
-        this._session.removeEventListener('selectend', this.config.onSelectEnd);
-
-        this._session.addEventListener('selectstart', this.config.onSelectStart);
-        this._session.addEventListener('select', this.config.onSelect);
-        this._session.addEventListener('selectend', this.config.onSelectEnd);
+        try {
+          session.requestFrameOfReference('eye-level')
+          .then((frameOfRef) => {
+            this._frameOfRef = frameOfRef;
+          });
+        } catch (e) {
+          console.log("Does not support requestFrameOfReference()");
+        }
       });
     }
 
@@ -371,6 +430,8 @@ window.XRCanvasWrangler = (function () {
 
       session.updateRenderState({ baseLayer: new XRWebGLLayer(session, this._gl) });
 
+      this._glFreeResources();
+
       session.requestReferenceSpace({
         type: 'stationary',
         subtype: 'eye-level'
@@ -432,12 +493,63 @@ window.XRCanvasWrangler = (function () {
       }
     }
 
+    updateInputSources(session, frame, refSpace) {
+      let inputSources = session.getInputSources();
+      for (let inputSource of inputSources) {
+        let inputPose = frame.getInputPose(inputSource, refSpace);
+        // We may not get a pose back in cases where the input source has lost
+        // tracking or does not know where it is relative to the given frame
+        // of reference.
+        if (!inputPose) {
+          continue;
+        }
+        if (inputPose.gripTransform.matrix) {
+          // If we have a grip matrix use it to render a mesh showing the
+          // position of the controller.
+          //console.log("inputPose.gripTransform.matrix");
+          //scene.inputRenderer.addController(inputPose.gripTransform.matrix);
+        }
+        if (inputPose.targetRay) {
+          if (inputSource.targetRayMode == 'tracked-pointer') {
+            // If we have a pointer matrix and the pointer origin is the users
+            // hand (as opposed to their head or the screen) use it to render
+            // a ray coming out of the input device to indicate the pointer
+            // direction.
+            //console.log("inputPose.tracked-pointer");
+            //scene.inputRenderer.addLaserPointer(inputPose.targetRay);
+          }
+          // If we have a pointer matrix we can also use it to render a cursor
+          // for both handheld and gaze-based input sources.
+          // Statically render the cursor 2 meters down the ray since we're
+          // not calculating any intersections in this sample.
+          let cursorDistance = 2.0;
+
+          //console.log("calculating position of pointer");
+          // let cursorPos = vec3.fromValues(
+          //     inputPose.targetRay.origin.x,
+          //     inputPose.targetRay.origin.y,
+          //     inputPose.targetRay.origin.z
+          //     );
+          // vec3.add(cursorPos, cursorPos, [
+          //     inputPose.targetRay.direction.x * cursorDistance,
+          //     inputPose.targetRay.direction.y * cursorDistance,
+          //     inputPose.targetRay.direction.z * cursorDistance,
+          //     ]);
+          // vec3.transformMat4(cursorPos, cursorPos, inputPose.targetRay.transformMatrix);
+          //scene.inputRenderer.addCursor(cursorPos);
+        }
+      }
+    }   
+
     _onXRFrame(t, frame) {
       const session = frame.session;
       const refSpace = session.mode == 'immersive-vr' ?
                       this._xrImmersiveRefSpace : this._xrNonImmersiveRefSpace;
       const pose = frame.getViewerPose(refSpace);
       this.animationHandle = session.requestAnimationFrame(this.config.onXRFrame);
+      
+      this.updateInputSources(session, frame, refSpace);
+      
       if (pose) {
         const glLayer = session.renderState.baseLayer;
         this._gl.bindFramebuffer(gl.FRAMEBUFFER, glLayer.framebuffer); // TODO make this bind optional
@@ -563,8 +675,7 @@ window.XRCanvasWrangler = (function () {
         const funcName = funcNames[i];
         GL['_' + funcName] = GL[funcName];
         GL[funcName] = function(arg) {
-          //console.log("calling wrapper for: ");
-          console.log(GL['_' + funcName]);
+          //console.log("calling " + funcName);
 
           const out = GL['_' + funcName](arg);
 
@@ -585,13 +696,14 @@ window.XRCanvasWrangler = (function () {
         return;
       }
 
-      console.log("freeing resources");
+      //console.log("Cleaning graphics context:");
 
 
       const GL = this._gl;
 
       // (KTR) TODO: may be more to delete / unbind for WebGL 2
 
+      //console.log("-unbinding texture units ...");
       const maxTextureUnitCount = GL.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
       for (let unit = 0; unit < maxTextureUnitCount; unit += 1) {
         GL.activeTexture(GL.TEXTURE0 + unit);
@@ -600,6 +712,7 @@ window.XRCanvasWrangler = (function () {
       }
 
       // unbind all binding points
+      //console.log("-unbinding buffers ...");
       GL.bindBuffer(GL.ARRAY_BUFFER, null);
       GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null)
       GL.bindRenderbuffer(GL.RENDERBUFFER, null);
@@ -615,6 +728,7 @@ window.XRCanvasWrangler = (function () {
       }
 
       // free resources
+      //console.log("-freeing resources ...");
       const Q = this.deletionQueue;
       const len = Q.length;
       for (let i = 0; i < len; i += 1) {
@@ -623,6 +737,7 @@ window.XRCanvasWrangler = (function () {
       }
 
       // clear attributes
+      //console.log("-clearing attributes ...");
       const tempBuf = GL._createBuffer();
       GL.bindBuffer(GL.ARRAY_BUFFER, tempBuf);
       const maxAttributeCount = GL.getParameter(GL.MAX_VERTEX_ATTRIBS);
@@ -630,6 +745,8 @@ window.XRCanvasWrangler = (function () {
         GL.vertexAttribPointer(a, 1, GL.FLOAT, false, 0, 0);
       }
       GL.deleteBuffer(tempBuf);
+
+      console.log("Done!");
     }
 
     get canvas() { return this._canvas; }
