@@ -417,6 +417,8 @@ class WebXRVersionShim {
     // We can't test for the existence of the enums in question directly, so this code
     // will just try to create the requested type and fall back if it fails.
     const NATIVE_REQUEST_FRAME_OF_REFERENCE = XRSession.prototype.requestFrameOfReference;
+    console.log("NATIVE_REQUEST_FRAME_OF_REFERENCE");
+    console.log(NATIVE_REQUEST_FRAME_OF_REFERENCE);
     XRSession.prototype.requestFrameOfReference = function(type, options) {
       let session = this;
       // Try the current type.

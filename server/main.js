@@ -24,7 +24,7 @@ var frontend = express.static('../frontend');
 
 app.use(frontend);
 
-var port = process.env.PORT || 443;
+var port = 3000;//process.env.PORT || 443;
 var server = https.createServer(options, app);
 
 server.listen(port, function() {

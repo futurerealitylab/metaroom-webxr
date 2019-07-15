@@ -9,12 +9,185 @@
   <script src="js/webxr-button.js"></script>
   <!-- WebXR Canvas Wrangler simplifies WebXR setup. -->
   <script src="js/webxr-wrangler.js"></script>
+
+
+<script id="Connor_shader2_vertex" type="x-shader/x-vertex">
+   precision highp float;
+   attribute vec3 aPos;
+   varying   vec3 vPosition;
+   uniform   mat4 uModel;
+   uniform   mat4 uView;
+   uniform   mat4 uProj;
+   uniform   float uTime;
+
+   void main() {
+      vec3 aPosition = aPos;
+      gl_Position = uProj * uView * uModel * vec4(aPosition, 1.0);
+      vPosition = aPosition;
+   }
+</script>
+<script id="Connor_shader2_fragment" type="x-shader/x-fragment">
+    precision highp float;
+    uniform float uTime;
+    uniform float uIntensity;
+    varying vec3  vPosition;
+
+    #define M_PI 3.1415926535897932384626433832795
+
+    // is v within a circle of center c and radius r?
+    bool circle(vec2 v, vec2 c, float r) {
+        return distance(v, c) <= r;
+    }
+
+    vec3 func(vec2 pos, float t, vec3 c) {
+        vec3 color = vec3(0);
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
+                float minx = float(i) / 5.0 - 1.0;
+                float maxx = float(i+1) / 5.0 - 1.0;
+                float miny = 2.0 * sin((t + float(i) / 20. - float(j) / 20.0) * M_PI / 3.) / 2.0 + float(j) / 5.0 - 2.0;
+                float maxy = 4.0 * sin((t + float(i) / 20. - float(j) / 20.0) * M_PI / 3.) / 2.0 + float(j) / 5.0 - 2.0;
+                if (pos.x >= minx && pos.x < maxx && pos.y >= miny && pos.y < maxy) {
+                    color = vec3(1.0 - float(i) / 10.0, float(j) / 10.0, float(i+j) / 20.0);
+                }
+            }
+        }
+        return color;
+    }
+
+    void main() {
+        vec2 pos = vPosition.xy;
+        vec3 color = vec3(0.0);
+        
+        float t = uTime;
+        color += func(pos, t, color);
+        gl_FragColor = vec4(color, 1.0);
+    }
+
+</script>
+
+<script id="KTR_a3-2017_fragment" type="x-shader/x-fragment">
+varying vec3 vPos;                             // Position in image
+varying vec3 vPosInterp;                            
+uniform float uTime;                           // Time
+uniform float uBG;
+vec4 C;
+vec3 V, W, P, E, N;                                     
+#define EPSILON .01  // Surface Correction When Casting Shadow Rays
+
+vec2 raytraceSphere(vec3 V, vec3 W, vec4 S) {
+   V -= S.xyz;
+   float B = 2. * dot(V, W);
+   float C = dot(V, V) - S.w * S.w;
+   float discrim = B*B - 4.*C;
+   vec2 t = vec2(1000., 1000.);
+   if (discrim > 0.)
+      t = vec2(-B - discrim, -B + discrim) / 2.;
+   return t.x > 0. ? t : vec2(1000., 1000.);
+}
+
+vec3 reflection(vec3 L, vec3 N) {
+   return 2. * dot(N, L) * N - L;
+}
+
+vec3 backgroundColor(vec3 dir) {
+   float t = .5 - .5 * dir.y;
+   return mix(vec3(.2,.01,.01), vec3(.01,.01,.1), 1. - t * t);
+}
+
+vec3 phong(vec3 N, vec3 E, vec3 A, vec3 D, vec4 S) {
+   vec3 c = A * backgroundColor(N);            // Ambient color
+
+   for (int i = 0 ; i < uLDirs_length ; i++) { // Loop through lights
+      bool is_shadowed = false;
+      vec3  LDir = normalize(uLDirs[i]);
+      
+      for (int s = 0; s < uSpheres_length; s++) {
+          vec4 sphere_comp = uSpheres[s];
+          vec2 collision = raytraceSphere(P + (N * EPSILON),
+                              LDir,
+            sphere_comp);
+          if (collision.x < 1000.) {
+              is_shadowed = true;
+        break;
+          }
+      }
+      
+      if (!is_shadowed) {
+          float d = max(0., dot(N, LDir));           // Diffuse value
+          vec3  R = reflection(LDir, N);
+          float s = pow(max(0., dot(E, R)), S.a);    // Specular value
+          c += uLColors[i] * (d * D + s * S.rgb * .1*S.a);
+      }
+   }
+   return c;
+}
+
+bool raytrace() {
+   float distance = 1000.;
+   for (int i = 0 ; i < uSpheres_length ; i++) {
+      vec2 t = raytraceSphere(V, W, uSpheres[i]);
+      if (t.x < distance) {
+         C = uSColors[i];
+         P = V + t.x * W;                      // Point on sphere
+         E = -normalize(P);                    // Direction to eye
+         N = normalize(P - uSpheres[i].xyz);   // Surface normal
+         distance = t.x;
+      }
+   }
+   return distance < 1000.;
+}
+
+void main() {
+  if (uBG > 0.) {
+    if (vPos.y > 0.0) {
+      gl_FragColor = vec4(0., 1., 1., 1.);
+      return;
+    }
+    else {
+      if (vPos.y < -0.5 && vPos.y > -.75) {
+        gl_FragColor = vec4(0., 0.0, 1.0, 1.0);
+      }
+      else {
+      gl_FragColor= vec4(0.0, 0.0, 0.0, 1.0);
+    }
+      //gl_FragColor = vec4(sqrt(vec3(0.0, 0.0, 1.0 + (vPos.y / 1000.0) )), 1.);
+      return;
+    }
+
+    return;
+  }
+   vec3 c = vec3(0.,0.,0.);
+
+   V = vec3(0.,0.,0.);                         // Ray origin
+   W = normalize(vec3(vPos.xy, -3.));          // Ray direction
+   if (! raytrace())
+      c = backgroundColor(vPos);
+   else
+      for (int bounce = 0 ; bounce < 5 ; bounce++) {
+   c += phong(N, E, .1*C.rgb, .5*C.rgb, C);
+   V = P + .001 * W;
+   W = reflection(-W, N);
+         if (! raytrace()) {
+            c += .05 * backgroundColor(W);
+      break;
+         }
+      }
+         
+   gl_FragColor = vec4(sqrt(c), 1.);           // Final pixel color
+}
+
+</script>
+
+
+
 </head>
 <body style="background-color: black; color: white; text-emphasis-color: white;">
   <div style="text-align: center">
-    <canvas id="output-canvas" style="width: 400px; height: 400px"></canvas>
+    <div style="text-align: center;" id=output-element></div>
   </div>
   <script>
+    "use strict";
     // README
     //
     // This page's javascript is broken into two sections:
@@ -29,7 +202,6 @@
     //
 
     // Global vars for rendered content.
-    let gl = null;
     let program = null;
     let vert = null;
     let frag = null;
@@ -39,12 +211,21 @@
     let proj = null;   // uniform
     let time = null;   // uniform
 
+    let compileCount = null; // uniform
+
+    let localCompileCount = 0;
+
     let start = null;
+
+    // (KTR) TODO, need to reset the clock upon loading a new world -- 
+    // will need to track "now" and update "start"
     
     // A simple vertex / fragment shader from K.P. lib1.js.
     vert = `
+precision highp float;
 attribute vec3 aPos;
 varying   vec3 vPos;
+varying   vec3 vPosInterp;
 uniform   mat4 uModel;
 uniform   mat4 uView;
 uniform   mat4 uProj;
@@ -52,6 +233,7 @@ uniform   mat4 uProj;
 void main() {
   gl_Position = uProj * uView * uModel * vec4(aPos, 1.);
   vPos = aPos;
+  vPosInterp = gl_Position.xyz;
 }`;
 
     frag = `
@@ -80,94 +262,483 @@ void main() {    // YOU MUST DEFINE main()
   gl_FragColor = vec4(sqrt(color), 1.0);
 }`;
 
-    // Taken from K.P.'s lib1.js support library.
-    function setup() {
+    // (KTR) Rewrite in modern GLSL ES,  A simple vertex / fragment shader from K.P. lib1.js.
+    let vertModern = `#version 300 es
+in vec3 aPos; // attributes replaced with "in"
+out   vec3 vPos; // varying output replaced with "out"
+uniform   mat4 uModel;
+uniform   mat4 uView;
+uniform   mat4 uProj;
 
-      // Create shader program
-      program = gl.createProgram();
-      function addShader(type, src) {
-        var shader = gl.createShader(type);
-        gl.shaderSource(shader, src);
-        gl.compileShader(shader);
-        if (! gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-          let msg = gl.getShaderInfoLog(shader);
-          console.error("Cannot compile shader:\n\n" + msg);
-        } else {
-          gl.attachShader(program, shader);
+uniform   int uCompileCount;
+uniform   float uTime;
+
+void main() {
+  float translation = float(uCompileCount) * uTime + (10.0 * float(uCompileCount));
+  gl_Position = uProj * uView * uModel * vec4(vec3(aPos.x + sin(translation), aPos.y - sin(translation), aPos.z), 1.);
+  vPos = aPos;
+}`;
+
+    let fragModern = `#version 300 es
+precision highp float;
+uniform float uTime;   // TIME, IN SECONDS
+// varying input replaced with "in"  
+in vec3 vPos;     // -1 < vPos.x < +1
+// -1 < vPos.y < +1
+//      vPos.z == 0
+
+out vec4 fragColor; // gl_FragColor replaced with an explicit "out" vec4 that you set in the shader
+  
+void main() {    // YOU MUST DEFINE main()
+    
+  // HERE YOU CAN WRITE ANY CODE TO
+  // DEFINE A COLOR FOR THIS FRAGMENT
+
+  float red   = max(0., vPos.x);
+  float green = max(0., vPos.y);
+  float blue  = max(0., sin(5. * uTime));
+  
+  // R,G,B EACH RANGE FROM 0.0 TO 1.0
+    
+  vec3 color = vec3(red, green, blue);
+    
+  // THIS LINE OUTPUTS THE FRAGMENT COLOR
+    
+  fragColor = vec4(sqrt(color), 1.0);
+}`;
+
+
+
+
+const vertConnor = document.getElementById('Connor_shader2_vertex').innerHTML;
+const fragConnor = document.getElementById('Connor_shader2_fragment').innerHTML;
+
+const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
+
+
+
+    function addShader(type, src) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, src);
+      gl.compileShader(shader);
+      if (! gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        let msg = gl.getShaderInfoLog(shader);
+
+        let shaderTypename = '';
+        switch (type) {
+        case gl.VERTEX_SHADER: {
+          shaderTypename = "vertex";
+          break;
         }
-      }
-      addShader(gl.VERTEX_SHADER, vert);
-      addShader(gl.FRAGMENT_SHADER, frag);
-      gl.linkProgram(program);
-      if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        let msg = gl.getProgramInfoLog(program);
-        console.error("Cannot link program:\n\n" + msg);
+        case gl.FRAGMENT_SHADER: {
+          shaderTypename = "fragment";
+          break;
+        }
+        default:
+          break;
+        }
+        console.error("Cannot compile " + shaderTypename + " shader:\n\n" + msg);
+        return null;
       } else {
-        gl.useProgram(program);
+        gl.attachShader(program, shader);
+        return shader;
+      }
+    }
+
+    let worldIdx = 0;
+    const setupFunctions = [];
+      // Taken from K.P.'s lib1.js support library.
+      setupFunctions.push(function() {
+        console.log("Hello world: " + worldIdx);
+        // Create shader program
+        program = gl.createProgram();
+
+        let vshader = null;
+        let fshader = null;
+        vshader = addShader(gl.VERTEX_SHADER, vert);
+        fshader = addShader(gl.FRAGMENT_SHADER, frag);
+
+        gl.linkProgram(program);
+        if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
+          let msg = gl.getProgramInfoLog(program);
+          console.error("Cannot link program:\n\n" + msg);
+        } else {
+          gl.detachShader(program, vshader);
+          gl.detachShader(program, fshader);
+          gl.deleteShader(vshader);
+          gl.deleteShader(fshader);
+
+          gl.useProgram(program);
+        }
+
+        // Create a square as a triangle strip consisting of two triangles
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0, 1,1,0, -1,-1,0, 1,-1,0]), gl.STATIC_DRAW);
+
+        // Assign aPos attribute to each vertex
+        let aPos = gl.getAttribLocation(program, 'aPos');
+        gl.enableVertexAttribArray(aPos);
+        gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+
+        // Assign MVP matrices
+        model = gl.getUniformLocation(program, 'uModel');
+        view = gl.getUniformLocation(program, 'uView');
+        proj = gl.getUniformLocation(program, 'uProj');
+        time = gl.getUniformLocation(program, 'uTime');
+        compileCount = gl.getUniformLocation(program, 'uCompileCount');
+        gl.uniform1i(compileCount, localCompileCount);
+
+        localCompileCount = (localCompileCount + 1) % 14;
+      });
+
+      ////////////////////////////////////////////
+      //"World 1"
+
+      setupFunctions.push(
+      function() {
+        console.log("Hello world using the modern 3.0 ES syntax: " + worldIdx);
+        // Create shader program
+        program = gl.createProgram();
+
+        let vshader = null;
+        let fshader = null;
+
+        vshader = addShader(gl.VERTEX_SHADER, vertModern);
+        fshader = addShader(gl.FRAGMENT_SHADER, fragModern);
+
+        gl.linkProgram(program);
+        if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
+          let msg = gl.getProgramInfoLog(program);
+          console.error("Cannot link program:\n\n" + msg);
+        } else {
+          gl.detachShader(program, vshader);
+          gl.detachShader(program, fshader);
+          gl.deleteShader(vshader);
+          gl.deleteShader(fshader);
+
+          gl.deleteShader(vshader);
+
+          gl.useProgram(program);
+        }
+        // Create a square as a triangle strip consisting of two triangles
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0, 1,1,0, -1,-1,0, 1,-1,0]), gl.STATIC_DRAW);
+
+        // Assign aPos attribute to each vertex
+        let aPos = gl.getAttribLocation(program, 'aPos');
+        gl.enableVertexAttribArray(aPos);
+        gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+
+        // Assign MVP matrices
+        model = gl.getUniformLocation(program, 'uModel');
+        view = gl.getUniformLocation(program, 'uView');
+        proj = gl.getUniformLocation(program, 'uProj');
+        time = gl.getUniformLocation(program, 'uTime');
+        compileCount = gl.getUniformLocation(program, 'uCompileCount');
+
+        gl.uniform1i(compileCount, localCompileCount);
+
+        localCompileCount = (localCompileCount + 1) % 14;
+      });
+
+      ////////////////////////////////////////////
+      //"World 2"
+
+      setupFunctions.push(
+      function() {
+        console.log("A shader from Connor's website: " + worldIdx);
+
+        // Create shader program
+        program = gl.createProgram();
+
+        let vshader = null;
+        let fshader = null;
+        vshader = addShader(gl.VERTEX_SHADER, vertConnor);
+        fshader = addShader(gl.FRAGMENT_SHADER, fragConnor);
+
+        gl.linkProgram(program);
+        if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
+          let msg = gl.getProgramInfoLog(program);
+          console.error("Cannot link program:\n\n" + msg);
+        } else {
+          gl.detachShader(program, vshader);
+          gl.detachShader(program, fshader);
+          gl.deleteShader(vshader);
+          gl.deleteShader(fshader);
+
+          gl.deleteShader(vshader);
+
+          gl.useProgram(program);
+        }
+        // Create a square as a triangle strip consisting of two triangles
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0, 1,1,0, -1,-1,0, 1,-1,0]), gl.STATIC_DRAW);
+
+        // Assign aPos attribute to each vertex
+        let aPos = gl.getAttribLocation(program, 'aPos');
+        gl.enableVertexAttribArray(aPos);
+        gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+
+        // Assign MVP matrices
+        model = gl.getUniformLocation(program, 'uModel');
+        view = gl.getUniformLocation(program, 'uView');
+        proj = gl.getUniformLocation(program, 'uProj');
+        time = gl.getUniformLocation(program, 'uTime');
+      });
+
+
+      ////////////////////////////////////////////
+      //"World 3"
+
+      function declareUniform(name, type, size) {
+         uniformData[name] = {type:type, size:size};
       }
 
-      // Create a square as a triangle strip consisting of two triangles
-      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0, 1,1,0, -1,-1,0, 1,-1,0]), gl.STATIC_DRAW);
+      function setUniform(name, data) {
+         uniformData[name].data = data;
+      }
 
-      // Assign aPos attribute to each vertex
-      let aPos = gl.getAttribLocation(program, 'aPos');
-      gl.enableVertexAttribArray(aPos);
-      gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+      function address(name) { return gl.getUniformLocation(program, name); }
 
-      // Assign MVP matrices
-      model = gl.getUniformLocation(program, 'uModel');
-      view = gl.getUniformLocation(program, 'uView');
-      proj = gl.getUniformLocation(program, 'uProj');
-      time = gl.getUniformLocation(program, 'uTime');
-    }
+      setupFunctions.push(function () {
+        console.log("KTR assignment 3 from 2017: " + worldIdx);
+
+        window.uniformData = {};
+
+        declareUniform('uSpheres', 'vec4', 3);
+        declareUniform('uSColors', 'vec4', 3);
+        declareUniform('uLDirs', 'vec3', 2);
+        declareUniform('uLColors', 'vec3', 2);
+
+        // Create shader program
+        program = gl.createProgram();
+
+        let fragmentShaderHeader = 'precision highp float;\n';
+
+        for (let name in uniformData) {
+          let u = uniformData[name];
+          fragmentShaderHeader += '#define ' + name + '_length ' + u.size + '\n' +
+                                  '   uniform ' + u.type + ' ' + name + (u.size > 0 ? '[' + u.size + ']' : '') + ';\n';
+        }
+
+        let newFShader = fragmentShaderHeader + fragKTRa32017;
+
+        let vshader = null;
+        let fshader = null;
+        vshader = addShader(gl.VERTEX_SHADER, vert);
+        fshader = addShader(gl.FRAGMENT_SHADER, newFShader);
+
+        gl.linkProgram(program);
+        if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
+          let msg = gl.getProgramInfoLog(program);
+          console.error("Cannot link program:\n\n" + msg);
+        } else {
+          gl.detachShader(program, vshader);
+          gl.detachShader(program, fshader);
+          gl.deleteShader(vshader);
+          gl.deleteShader(fshader);
+
+          gl.useProgram(program);
+        }
+
+        // Create a square as a triangle strip consisting of two triangles
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0, 1,1,0, -1,-1,0, 1,-1,0]), gl.STATIC_DRAW);
+
+        // Assign aPos attribute to each vertex
+        let aPos = gl.getAttribLocation(program, 'aPos');
+        gl.enableVertexAttribArray(aPos);
+        gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+
+        // Assign MVP matrices
+        model = gl.getUniformLocation(program, 'uModel');
+        view = gl.getUniformLocation(program, 'uView');
+        proj = gl.getUniformLocation(program, 'uProj');
+        time = gl.getUniformLocation(program, 'uTime');
+      });
+
+
+
+
 
     // My WebXR boilerplate requires a few arguments:
     // (1) a handle to the WebGL (not 'xrpresent') context;
     // (2) callbacks for
     //     - onStartFrame(t) : called once per frame
-    //     - onEndFrame()    : called once per frame
-    //     - onDraw(p,v)     : called once per viewport (i.e. 2x on VR)
+    //     - onEndFrame(t)    : called once per frame
+    //     - onDraw(t, p,v)     : called once per viewport (i.e. 2x on VR)
     //
     // In the future, I envision these three functions are left to the
     // enduser to implement.  They could easily be mapped to functions
     // of some 'renderer' class.  We shall see...
 
     function onStartFrame(t) {
-      if (!start) start = t;
+      if (!start) {
+        start = t;
+      }
+
       let now = (t - start) / 1000.;
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.uniform1f(time, now);
     }
 
-    function onDraw(projMat, viewMat) {
-      gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
-      gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
-      gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    const drawFunctions = [
+      function (t, projMat, viewMat) {
+        const sec = t / 1000;
+        
+        gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
+        gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
+        gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      },
+
+      function (t, projMat, viewMat) {
+        const sec = t / 1000;
+        
+        gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
+        gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
+        gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      },
+
+      function (t, projMat, viewMat) {
+        const sec = t / 1000;
+        
+        gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
+        gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
+        gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      },
+
+      function (t, projMat, viewMat, eyeIdx) {
+        t /= 1000;
+
+        gl.enable(gl.DEPTH_TEST); 
+
+        gl.uniform1f(gl.getUniformLocation(program, "uBG"), 0.0);
+
+        //gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
+        gl.uniformMatrix4fv(model, false, new Float32Array([.05,0,0,0, 0,.05,0,0, 0,0,.05,0, -.04,-.04,0.5,1]));
+        gl.uniformMatrix4fv(view, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
+        gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
+
+        let s = .5 * Math.sin(2 * t);
+        setUniform('uSpheres', [-.5,.4,-4+s,.5, .5,.4,-4-s,.5, s,-.5,-4,.5]);
+        setUniform('uSColors', [1,.3,.3,2, .3,.3,1,6, 1,.7,0,10]);
+        setUniform('uLDirs', [1,1,1, -1,-1,-1]);
+        setUniform('uLColors', [.5,.5,1, .2,.1,.1]);
+
+        for (let name in uniformData) {
+          let u = uniformData[name];
+          switch (u.type) {
+            case 'float': gl.uniform1fv(address(name), u.data); break;
+            case 'vec2' : gl.uniform2fv(address(name), u.data); break;
+            case 'vec3' : gl.uniform3fv(address(name), u.data); break;
+            case 'vec4' : gl.uniform4fv(address(name), u.data); break;
+          }
+        }
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-3.9,1]));
+        gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        gl.uniform1f(gl.getUniformLocation(program, "uBG"), 1.0);
+        gl.uniformMatrix4fv(model, false, new Float32Array([1000,0,0,0, 0,1000,0,0, 0,0,1,0, 0,0,-4,1]));
+        gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        gl.disable(gl.DEPTH_TEST); 
+      },
+    ];
+
+    function onEndFrame(t) {
     }
 
-    function onEndFrame() {
-    }
+
 
     //
-    // (2) WEBXR BOILERPLATE
+    // (2) WEBXR BOILERPLATE 
     //
 
     // Apply the version shim.  This shouldn't be needed once WebXR is widely adopted.
-    var shim = new WebXRVersionShim();
+    const shim = new WebXRVersionShim();
 
     // Wrangle them canvases!
-    var wrangler = new XRCanvasWrangler(document.querySelector('#output-canvas'), {
-      onStartFrame: onStartFrame,
-      onEndFrame: onEndFrame,
-      onDraw: onDraw
-    });
-    // The wrangler should have bound itself to canvas#output-canvas - we may safely request
-    // access to the WebGL context.
-    gl = wrangler.gl;
+    // const wrangler = new XRCanvasWrangler(document.querySelector('#output-canvas'), {
+    //   onStartFrame: onStartFrame,
+    //   onEndFrame: onEndFrame,
+    //   onDraw: onDraw
+    // });
+    const wrangler = new XRCanvasWrangler();
 
-    setup();
+    wrangler.init({
+      outputSurfaceName : 'output-element',
+      outputWidth : 400,
+      outputHeight : 400,
+      glUseGlobalContext : true,
+      glDoResourceTracking : true,
+      main : () => {
+        // system calls user program "main" after the initial set-up is complete
+
+        const myWorld = wrangler;
+
+        myWorld.configure({
+          setup : setupFunctions[0],
+          onStartFrame : onStartFrame,
+          onEndFrame : onEndFrame,
+          onDraw : drawFunctions[0],
+          onSelectStart : function(t, state) {
+            wrangler.simulateWorldTransition();
+          },
+          onSelect : function(t, state) {
+            //console.log("on select world " + worldIdx);
+            //wrangler.simulateWorldTransition();
+          },
+          onSelectEnd : function(t, state) {
+            //console.log("on select end world " + worldIdx);
+            //wrangler.simulateWorldTransition();
+          },
+        });
+
+        // call start to begin the world (may just move this to "configure" and rename the function)
+        myWorld.start();
+
+        wrangler.simulateWorldTransition = function() {
+          worldIdx = (worldIdx + 1) % drawFunctions.length;
+
+          console.log("transitioning to world: " + worldIdx);
+
+          gl.useProgram(null);
+
+          wrangler._reset();
+          wrangler._glFreeResources();
+
+          myWorld.configure({
+            setup : setupFunctions[worldIdx],
+            onStartFrame : onStartFrame,
+            onEndFrame : onEndFrame,
+            onDraw : drawFunctions[worldIdx],
+            onSelectStart: function(t, state) {
+              //console.log("on select start world " + worldIdx);
+              
+              wrangler.simulateWorldTransition();
+            },
+            onSelect: function(t, state) {
+              //console.log("on select world " + worldIdx);
+              //wrangler.simulateWorldTransition();
+            },
+            onSelectEnd: function(t, state) {
+              //console.log("on select end world " + worldIdx);
+              //wrangler.simulateWorldTransition();
+            },
+          });
+
+          wrangler.start();
+        }
+      }
+
+    });
 
   </script>
 </body>
