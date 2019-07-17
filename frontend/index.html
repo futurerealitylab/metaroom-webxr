@@ -220,10 +220,6 @@ void main() {
     let vert = null;
     let frag = null;
 
-    let localCompileCount = 1;
-
-    let start = null;
-
     // (KTR) TODO, need to reset the clock upon loading a new world -- 
     // will need to track "now" and update "start"
     
@@ -445,7 +441,7 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
         state.timeLoc         = gl.getUniformLocation(program, 'uTime');
         state.compileCountLoc = gl.getUniformLocation(program, 'uCompileCount');
 
-        const localCompileCount = state.persistent.localCompileCount || 0;
+        const localCompileCount = state.persistent.localCompileCount || 1;
         gl.uniform1i(state.compileCountLoc, localCompileCount);
         state.program = program;
         state.persistent.localCompileCount = (localCompileCount + 1) % 14;
@@ -586,17 +582,19 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
     // of some 'renderer' class.  We shall see...
 
     function onStartFrame(t, state) {
-      // (KTR) A person could pause and resume elapsed time this way
+      // (KTR) TODO implement option so a person could pause and resume elapsed time
       // if someone visits, leaves, and later returns
       let tStart = t;
-      if (!state.persistent.tStart) {
-        state.persistent.tStart = t;
-        tStart = t;
+      if (!state.tStart) {
+        state.tStart = t;
       }
-      tStart = state.persistent.tStart;
+
+      tStart = state.tStart;
 
       let now = (t - tStart) / 1000.;
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+      if (worldIdx == 1) {console.log(now); }
       gl.uniform1f(state.timeLoc, now);
     }
 
