@@ -4,6 +4,7 @@
     patch browser inconsistencies similar to the webxr-polyfill.js.  According
     to its authors, it will be unnecessary soon after the production WebXR impl
     is shipped. -->
+  <script src="js/lib/gfxutil.js"></script>
   <script src="js/webxr-version-shim.js"></script>
   <!-- WebXR Button implements a button to toggle in and out of VR. -->
   <script src="js/webxr-button.js"></script>
@@ -320,33 +321,7 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
 
 
 
-    function addShader(program, type, src) {
-      const shader = gl.createShader(type);
-      gl.shaderSource(shader, src);
-      gl.compileShader(shader);
-      if (! gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        let msg = gl.getShaderInfoLog(shader);
 
-        let shaderTypename = '';
-        switch (type) {
-        case gl.VERTEX_SHADER: {
-          shaderTypename = "vertex";
-          break;
-        }
-        case gl.FRAGMENT_SHADER: {
-          shaderTypename = "fragment";
-          break;
-        }
-        default:
-          break;
-        }
-        console.error("Cannot compile " + shaderTypename + " shader:\n\n" + msg);
-        return null;
-      } else {
-        gl.attachShader(program, shader);
-        return shader;
-      }
-    }
 
     function createShaderProgram(vertSrc, fragSrc) { }
 
@@ -354,28 +329,13 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
     worlds[0].setup = function(state, wrangler, session) {
         console.log("Hello world: " + worldIdx);
         // Create shader program
-        const program = gl.createProgram();
-
-        let vshader = null;
-        let fshader = null;
-        vshader = addShader(program, gl.VERTEX_SHADER, vert);
-        fshader = addShader(program, gl.FRAGMENT_SHADER, frag);
-
-        gl.linkProgram(program);
-        if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
-          let msg = gl.getProgramInfoLog(program);
-          console.error("Cannot link program:\n\n" + msg);
-        } else {
-          gl.detachShader(program, vshader);
-          gl.detachShader(program, fshader);
-          gl.deleteShader(vshader);
-          gl.deleteShader(fshader);
-
-          gl.useProgram(program);
-        }
+        const program = GFX.createShaderProgramFromStrings(vert, frag);
+        state.program = program;
+        gl.useProgram(program);
 
         // Create a square as a triangle strip consisting of two triangles
-        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        state.buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, state.buffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0, 1,1,0, -1,-1,0, 1,-1,0]), gl.STATIC_DRAW);
 
         // Assign aPos attribute to each vertex
@@ -402,31 +362,13 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
       worlds[1].setup = function(state, wrangler, session) {
         console.log("Hello world using the modern 3.0 ES syntax: " + worldIdx);
         // Create shader program
-        const program = gl.createProgram();
+        const program = GFX.createShaderProgramFromStrings(vertModern, fragModern);
         state.program = program;
+        gl.useProgram(program);
 
-        let vshader = null;
-        let fshader = null;
-
-        vshader = addShader(program, gl.VERTEX_SHADER, vertModern);
-        fshader = addShader(program, gl.FRAGMENT_SHADER, fragModern);
-
-        gl.linkProgram(program);
-        if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
-          let msg = gl.getProgramInfoLog(program);
-          console.error("Cannot link program:\n\n" + msg);
-        } else {
-          gl.detachShader(program, vshader);
-          gl.detachShader(program, fshader);
-          gl.deleteShader(vshader);
-          gl.deleteShader(fshader);
-
-          gl.deleteShader(vshader);
-
-          gl.useProgram(program);
-        }
         // Create a square as a triangle strip consisting of two triangles
-        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        state.buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, state.buffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0, 1,1,0, -1,-1,0, 1,-1,0]), gl.STATIC_DRAW);
 
         // Assign aPos attribute to each vertex
@@ -454,29 +396,13 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
         console.log("A shader from Connor's website: " + worldIdx);
 
         // Create shader program
-        const program = gl.createProgram();
+        const program = GFX.createShaderProgramFromStrings(vertConnor, fragConnor);
+        state.program = program;
+        gl.useProgram(program);
 
-        let vshader = null;
-        let fshader = null;
-        vshader = addShader(program, gl.VERTEX_SHADER, vertConnor);
-        fshader = addShader(program, gl.FRAGMENT_SHADER, fragConnor);
-
-        gl.linkProgram(program);
-        if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
-          let msg = gl.getProgramInfoLog(program);
-          console.error("Cannot link program:\n\n" + msg);
-        } else {
-          gl.detachShader(program, vshader);
-          gl.detachShader(program, fshader);
-          gl.deleteShader(vshader);
-          gl.deleteShader(fshader);
-
-          gl.deleteShader(vshader);
-
-          gl.useProgram(program);
-        }
         // Create a square as a triangle strip consisting of two triangles
-        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        state.buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, state.buffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0, 1,1,0, -1,-1,0, 1,-1,0]), gl.STATIC_DRAW);
 
         // Assign aPos attribute to each vertex
@@ -490,7 +416,7 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
         state.projLoc = gl.getUniformLocation(program, 'uProj');
         state.timeLoc = gl.getUniformLocation(program, 'uTime');
 
-        state.program = program;
+        gl.useProgram(program);
       };
 
 
@@ -518,8 +444,6 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
         declareUniform(state.uniformData, 'uLColors', 'vec3', 2);
 
         // Create shader program
-        const program = gl.createProgram();
-
         let fragmentShaderHeader = 'precision highp float;\n';
 
         for (let name in uniformData) {
@@ -530,26 +454,13 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
 
         let newFShader = fragmentShaderHeader + fragKTRa32017;
 
-        let vshader = null;
-        let fshader = null;
-        vshader = addShader(program, gl.VERTEX_SHADER, vert);
-        fshader = addShader(program, gl.FRAGMENT_SHADER, newFShader);
-
-        gl.linkProgram(program);
-        if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
-          let msg = gl.getProgramInfoLog(program);
-          console.error("Cannot link program:\n\n" + msg);
-        } else {
-          gl.detachShader(program, vshader);
-          gl.detachShader(program, fshader);
-          gl.deleteShader(vshader);
-          gl.deleteShader(fshader);
-
-          gl.useProgram(program);
-        }
+        const program = GFX.createShaderProgramFromStrings(vert, newFShader);
+        state.program = program;
+        gl.useProgram(program);
 
         // Create a square as a triangle strip consisting of two triangles
-        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        state.buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, state.buffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0, 1,1,0, -1,-1,0, 1,-1,0]), gl.STATIC_DRAW);
 
         // Assign aPos attribute to each vertex
@@ -562,10 +473,6 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
         state.viewLoc = gl.getUniformLocation(program, 'uView');
         state.projLoc = gl.getUniformLocation(program, 'uProj');
         state.timeLoc = gl.getUniformLocation(program, 'uTime');
-
-        console.log("timeloc: " + state.projLoc);
-
-        state.program = program;
       };
 
 
@@ -706,12 +613,16 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
       outputWidth : 400,
       outputHeight : 400,
       glUseGlobalContext : true,
+      // frees gl resources upon world switch
       glDoResourceTracking : true,
+      // main() is the system's entry point
       main : () => {
         // system calls user program "main" after the initial set-up is complete
 
         const myWorld = wrangler;
 
+        // the user should call configure with all the setup, frame, draw functions, etc.
+        // passed as properties of a config object. The world runs immediately after.
         myWorld.configure({
           name : worlds[0].name,
           setup : worlds[0].setup,
@@ -731,18 +642,22 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
           },
         });
 
-        // call start to begin the world (may just move this to "configure" and rename the function)
+        // If we support switching to and from worlds such that
+        // a world can save state between visits, maybe it's unnecessary to call
+        // configure each visit. So start is a separate function. (May change mind later)
         myWorld.start();
+
 
         wrangler.simulateWorldTransition = function() {
           worldIdx = (worldIdx + 1) % worlds.length;
 
           console.log("transitioning to world: [" + worldIdx + "]" + worlds[worldIdx].name);
 
+          // the wrangler will handle these lines
           gl.useProgram(null);
-
           wrangler._reset();
           wrangler._glFreeResources();
+          //
 
           myWorld.configure({
             name : worlds[worldIdx].name,
@@ -765,7 +680,7 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
             },
           });
 
-          wrangler.start();
+          myWorld.start();
         }
       }
 
