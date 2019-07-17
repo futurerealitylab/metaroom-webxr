@@ -110,6 +110,9 @@ window.XRCanvasWrangler = (function () {
     }
 
     configure(options) {
+      // (KTR) TODO: need to clear previous world state before the new world is loaded
+      // to prevent people from taking advantage of others' code or breaking state
+
       this._clearConfig();
       this._reset();
       
@@ -125,6 +128,21 @@ window.XRCanvasWrangler = (function () {
       options.onSelectStart = this.config.onSelectStart || (function(t, state) {});
       options.onSelect = this.config.onSelect || (function(t, state) {});
       options.onSelectEnd = this.config.selectEnd || (function(t, state) {});
+
+      this.name = options.name || "unnamed";
+
+      if (this.useCustomState) {
+        // retrieve persistent state for this world
+        let persistentState = this.persistentStateMap.get(options.name);
+        if (!persistentState) {
+          persistentState = {};
+          this.persistentStateMap.set(options.name, persistentState);
+        }
+
+        this.customState = {};
+        this.customState.persistent = persistentState;
+        this.customState.globalPersistent = this.globalPersistentState;
+      }
     }
 
     constructor() {}
@@ -185,6 +203,8 @@ window.XRCanvasWrangler = (function () {
       this.useCustomState = (options.useCustomState === false) ? false : true;
       if (this.useCustomState) {
         this.customState = {};
+        this.persistentStateMap = new Map();
+        this.globalPersistentState = {};
       }
 
       this._clearConfig();
@@ -410,13 +430,6 @@ window.XRCanvasWrangler = (function () {
     // }
 
     start() {
-
-      // (KTR) TODO let the user pass around some state between functions
-      // instead of using globals (if they so choose)
-      if (this.options.useCustomState) {
-        this.customState = this.config.customState;
-      }
-
       // (KTR) TODO give user the ability to do add event listeners or other objects 
       // before the session starts, as well as do any other initialization of
       // their custom state
@@ -759,7 +772,7 @@ window.XRCanvasWrangler = (function () {
       }
       GL.deleteBuffer(tempBuf);
 
-      console.log("Done!");
+      //console.log("Done!");
     }
 
     get canvas() { return this._canvas; }

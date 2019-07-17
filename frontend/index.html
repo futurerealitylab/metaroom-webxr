@@ -202,21 +202,25 @@ void main() {
     //
 
     let worldIdx = 0;
-    let worlds = [{}, {}, {}, {}];
+    let worlds = [
+      {
+        name : 'hello world'
+      }, 
+      {
+        name : 'hello world es 3.0'
+      }, 
+      {
+        name : 'Connor example'
+      }, 
+      {
+        name : 'KTR 2017'
+      }
+    ];
 
-    // Global vars for rendered content.
-    let program = null;
     let vert = null;
     let frag = null;
 
-    let model = null;  // uniform
-    let view = null;   // uniform
-    let proj = null;   // uniform
-    let time = null;   // uniform
-
-    let compileCount = null; // uniform
-
-    let localCompileCount = 0;
+    let localCompileCount = 1;
 
     let start = null;
 
@@ -320,7 +324,7 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
 
 
 
-    function addShader(type, src) {
+    function addShader(program, type, src) {
       const shader = gl.createShader(type);
       gl.shaderSource(shader, src);
       gl.compileShader(shader);
@@ -354,12 +358,12 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
     worlds[0].setup = function(state, wrangler, session) {
         console.log("Hello world: " + worldIdx);
         // Create shader program
-        program = gl.createProgram();
+        const program = gl.createProgram();
 
         let vshader = null;
         let fshader = null;
-        vshader = addShader(gl.VERTEX_SHADER, vert);
-        fshader = addShader(gl.FRAGMENT_SHADER, frag);
+        vshader = addShader(program, gl.VERTEX_SHADER, vert);
+        fshader = addShader(program, gl.FRAGMENT_SHADER, frag);
 
         gl.linkProgram(program);
         if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
@@ -384,14 +388,16 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
         gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
 
         // Assign MVP matrices
-        model = gl.getUniformLocation(program, 'uModel');
-        view = gl.getUniformLocation(program, 'uView');
-        proj = gl.getUniformLocation(program, 'uProj');
-        time = gl.getUniformLocation(program, 'uTime');
-        compileCount = gl.getUniformLocation(program, 'uCompileCount');
-        gl.uniform1i(compileCount, localCompileCount);
+        state.modelLoc        = gl.getUniformLocation(program, 'uModel');
+        state.viewLoc         = gl.getUniformLocation(program, 'uView');
+        state.projLoc         = gl.getUniformLocation(program, 'uProj');
+        state.timeLoc         = gl.getUniformLocation(program, 'uTime');
+        state.compileCountLoc = gl.getUniformLocation(program, 'uCompileCount');
 
-        localCompileCount = (localCompileCount + 1) % 14;
+        const localCompileCount = state.persistent.localCompileCount || 0;
+        gl.uniform1i(state.compileCountLoc, localCompileCount);
+        state.program = program;
+        state.persistent.localCompileCount = (localCompileCount + 1) % 14;
       };
 
       ////////////////////////////////////////////
@@ -400,13 +406,14 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
       worlds[1].setup = function(state, wrangler, session) {
         console.log("Hello world using the modern 3.0 ES syntax: " + worldIdx);
         // Create shader program
-        program = gl.createProgram();
+        const program = gl.createProgram();
+        state.program = program;
 
         let vshader = null;
         let fshader = null;
 
-        vshader = addShader(gl.VERTEX_SHADER, vertModern);
-        fshader = addShader(gl.FRAGMENT_SHADER, fragModern);
+        vshader = addShader(program, gl.VERTEX_SHADER, vertModern);
+        fshader = addShader(program, gl.FRAGMENT_SHADER, fragModern);
 
         gl.linkProgram(program);
         if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
@@ -432,15 +439,16 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
         gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
 
         // Assign MVP matrices
-        model = gl.getUniformLocation(program, 'uModel');
-        view = gl.getUniformLocation(program, 'uView');
-        proj = gl.getUniformLocation(program, 'uProj');
-        time = gl.getUniformLocation(program, 'uTime');
-        compileCount = gl.getUniformLocation(program, 'uCompileCount');
+        state.modelLoc        = gl.getUniformLocation(program, 'uModel');
+        state.viewLoc         = gl.getUniformLocation(program, 'uView');
+        state.projLoc         = gl.getUniformLocation(program, 'uProj');
+        state.timeLoc         = gl.getUniformLocation(program, 'uTime');
+        state.compileCountLoc = gl.getUniformLocation(program, 'uCompileCount');
 
-        gl.uniform1i(compileCount, localCompileCount);
-
-        localCompileCount = (localCompileCount + 1) % 14;
+        const localCompileCount = state.persistent.localCompileCount || 0;
+        gl.uniform1i(state.compileCountLoc, localCompileCount);
+        state.program = program;
+        state.persistent.localCompileCount = (localCompileCount + 1) % 14;
       };
 
       ////////////////////////////////////////////
@@ -450,12 +458,12 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
         console.log("A shader from Connor's website: " + worldIdx);
 
         // Create shader program
-        program = gl.createProgram();
+        const program = gl.createProgram();
 
         let vshader = null;
         let fshader = null;
-        vshader = addShader(gl.VERTEX_SHADER, vertConnor);
-        fshader = addShader(gl.FRAGMENT_SHADER, fragConnor);
+        vshader = addShader(program, gl.VERTEX_SHADER, vertConnor);
+        fshader = addShader(program, gl.FRAGMENT_SHADER, fragConnor);
 
         gl.linkProgram(program);
         if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
@@ -481,21 +489,23 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
         gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
 
         // Assign MVP matrices
-        model = gl.getUniformLocation(program, 'uModel');
-        view = gl.getUniformLocation(program, 'uView');
-        proj = gl.getUniformLocation(program, 'uProj');
-        time = gl.getUniformLocation(program, 'uTime');
+        state.modelLoc = gl.getUniformLocation(program, 'uModel');
+        state.viewLoc = gl.getUniformLocation(program, 'uView');
+        state.projLoc = gl.getUniformLocation(program, 'uProj');
+        state.timeLoc = gl.getUniformLocation(program, 'uTime');
+
+        state.program = program;
       };
 
 
       ////////////////////////////////////////////
       //"World 3"
 
-      function declareUniform(name, type, size) {
+      function declareUniform(uniformData, name, type, size) {
          uniformData[name] = {type : type, size : size};
       }
 
-      function setUniform(name, data) {
+      function setUniform(uniformData, name, data) {
          uniformData[name].data = data;
       }
 
@@ -503,15 +513,16 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
       worlds[3].setup = function(state, wrangler, session) {
         console.log("KTR assignment 3 from 2017: " + worldIdx);
 
-        window.uniformData = {};
+        const uniformData = {};
+        state.uniformData = uniformData;
 
-        declareUniform('uSpheres', 'vec4', 3);
-        declareUniform('uSColors', 'vec4', 3);
-        declareUniform('uLDirs', 'vec3', 2);
-        declareUniform('uLColors', 'vec3', 2);
+        declareUniform(state.uniformData, 'uSpheres', 'vec4', 3);
+        declareUniform(state.uniformData, 'uSColors', 'vec4', 3);
+        declareUniform(state.uniformData, 'uLDirs', 'vec3', 2);
+        declareUniform(state.uniformData, 'uLColors', 'vec3', 2);
 
         // Create shader program
-        program = gl.createProgram();
+        const program = gl.createProgram();
 
         let fragmentShaderHeader = 'precision highp float;\n';
 
@@ -525,8 +536,8 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
 
         let vshader = null;
         let fshader = null;
-        vshader = addShader(gl.VERTEX_SHADER, vert);
-        fshader = addShader(gl.FRAGMENT_SHADER, newFShader);
+        vshader = addShader(program, gl.VERTEX_SHADER, vert);
+        fshader = addShader(program, gl.FRAGMENT_SHADER, newFShader);
 
         gl.linkProgram(program);
         if (! gl.getProgramParameter(program, gl.LINK_STATUS)) {
@@ -551,10 +562,12 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
         gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
 
         // Assign MVP matrices
-        model = gl.getUniformLocation(program, 'uModel');
-        view = gl.getUniformLocation(program, 'uView');
-        proj = gl.getUniformLocation(program, 'uProj');
-        time = gl.getUniformLocation(program, 'uTime');
+        state.modelLoc = gl.getUniformLocation(program, 'uModel');
+        state.viewLoc = gl.getUniformLocation(program, 'uView');
+        state.projLoc = gl.getUniformLocation(program, 'uProj');
+        state.timeLoc = gl.getUniformLocation(program, 'uTime');
+
+        state.program = program;
       };
 
 
@@ -573,59 +586,75 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
     // of some 'renderer' class.  We shall see...
 
     function onStartFrame(t, state) {
-      if (!start) {
-        start = t;
+      // (KTR) A person could pause and resume elapsed time this way
+      // if someone visits, leaves, and later returns
+      let tStart = t;
+      if (!state.persistent.tStart) {
+        state.persistent.tStart = t;
+        tStart = t;
       }
+      tStart = state.persistent.tStart;
 
-      let now = (t - start) / 1000.;
+      let now = (t - tStart) / 1000.;
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      gl.uniform1f(time, now);
+      gl.uniform1f(state.timeLoc, now);
     }
 
     worlds[0].onDraw = function(t, projMat, viewMat, state, eyeIdx) {
       const sec = t / 1000;
+
+      const my = state;
       
-      gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
-      gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
-      gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
+      gl.uniformMatrix4fv(my.modelLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
+      gl.uniformMatrix4fv(my.viewLoc, false, new Float32Array(viewMat));
+      gl.uniformMatrix4fv(my.projLoc, false, new Float32Array(projMat));
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     };
 
     worlds[1].onDraw = function(t, projMat, viewMat, state, eyeIdx) {
       const sec = t / 1000;
+
+      const my = state;
       
-      gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
-      gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
-      gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
+      gl.uniformMatrix4fv(my.modelLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
+      gl.uniformMatrix4fv(my.viewLoc, false, new Float32Array(viewMat));
+      gl.uniformMatrix4fv(my.projLoc, false, new Float32Array(projMat));
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     };
 
     worlds[2].onDraw = function(t, projMat, viewMat, state, eyeIdx) {
       const sec = t / 1000;
+
+      const my = state;
       
-      gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
-      gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
-      gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
+      gl.uniformMatrix4fv(my.modelLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
+      gl.uniformMatrix4fv(my.viewLoc, false, new Float32Array(viewMat));
+      gl.uniformMatrix4fv(my.projLoc, false, new Float32Array(projMat));
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     };
 
     worlds[3].onDraw = function(t, projMat, viewMat, state, eyeIdx) {
       t /= 1000;
 
-      gl.enable(gl.DEPTH_TEST); 
+      const my = state;
+      const program = my.program;
+
+      gl.enable(gl.DEPTH_TEST);
 
       gl.uniform1f(gl.getUniformLocation(program, "uBG"), 0.0);
 
       //gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
-      gl.uniformMatrix4fv(model, false, new Float32Array([.05,0,0,0, 0,.05,0,0, 0,0,.05,0, -.04,-.04,0.5,1]));
-      gl.uniformMatrix4fv(view, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
-      gl.uniformMatrix4fv(proj, false, new Float32Array(projMat));
+      gl.uniformMatrix4fv(my.modelLoc, false, new Float32Array([.05,0,0,0, 0,.05,0,0, 0,0,.05,0, -.04,-.04,0.5,1]));
+      gl.uniformMatrix4fv(my.viewLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
+      gl.uniformMatrix4fv(my.projLoc, false, new Float32Array(projMat));
 
       let s = .5 * Math.sin(2 * t);
-      setUniform('uSpheres', [-.5,.4,-4+s,.5, .5,.4,-4-s,.5, s,-.5,-4,.5]);
-      setUniform('uSColors', [1,.3,.3,2, .3,.3,1,6, 1,.7,0,10]);
-      setUniform('uLDirs', [1,1,1, -1,-1,-1]);
-      setUniform('uLColors', [.5,.5,1, .2,.1,.1]);
+      setUniform(my.uniformData, 'uSpheres', [-.5,.4,-4+s,.5, .5,.4,-4-s,.5, s,-.5,-4,.5]);
+      setUniform(my.uniformData, 'uSColors', [1,.3,.3,2, .3,.3,1,6, 1,.7,0,10]);
+      setUniform(my.uniformData, 'uLDirs', [1,1,1, -1,-1,-1]);
+      setUniform(my.uniformData, 'uLColors', [.5,.5,1, .2,.1,.1]);
+
+      const uniformData = my.uniformData;
 
       for (let name in uniformData) {
         let u = uniformData[name];
@@ -639,13 +668,13 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
 
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-      gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-3.9,1]));
-      gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
+      gl.uniformMatrix4fv(my.modelLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-3.9,1]));
+      gl.uniformMatrix4fv(my.viewLoc, false, new Float32Array(viewMat));
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
       gl.uniform1f(gl.getUniformLocation(program, "uBG"), 1.0);
-      gl.uniformMatrix4fv(model, false, new Float32Array([1000,0,0,0, 0,1000,0,0, 0,0,1,0, 0,0,-4,1]));
-      gl.uniformMatrix4fv(view, false, new Float32Array(viewMat));
+      gl.uniformMatrix4fv(my.modelLoc, false, new Float32Array([1000,0,0,0, 0,1000,0,0, 0,0,1,0, 0,0,-4,1]));
+      gl.uniformMatrix4fv(my.viewLoc, false, new Float32Array(viewMat));
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
       gl.disable(gl.DEPTH_TEST); 
@@ -684,6 +713,7 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
         const myWorld = wrangler;
 
         myWorld.configure({
+          name : worlds[0].name,
           setup : worlds[0].setup,
           onStartFrame : onStartFrame,
           onEndFrame : onEndFrame,
@@ -707,7 +737,7 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
         wrangler.simulateWorldTransition = function() {
           worldIdx = (worldIdx + 1) % worlds.length;
 
-          console.log("transitioning to world: " + worldIdx);
+          console.log("transitioning to world: [" + worldIdx + "]" + worlds[worldIdx].name);
 
           gl.useProgram(null);
 
@@ -715,6 +745,7 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
           wrangler._glFreeResources();
 
           myWorld.configure({
+            name : worlds[0].name,
             setup : worlds[worldIdx].setup,
             onStartFrame : onStartFrame,
             onEndFrame : onEndFrame,
