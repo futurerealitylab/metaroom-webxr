@@ -1,5 +1,7 @@
 "use strict";
 
+
+
 const GFX = (function() {
     const _util = {};
 

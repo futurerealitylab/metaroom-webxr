@@ -12,6 +12,97 @@
   <script src="js/webxr-wrangler.js"></script>
 
 
+<script id="vert" type="x-shader/x-fragment">
+precision highp float;
+attribute vec3 aPos;
+varying   vec3 vPos;
+varying   vec3 vPosInterp;
+uniform   mat4 uModel;
+uniform   mat4 uView;
+uniform   mat4 uProj;
+
+void main() {
+  gl_Position = uProj * uView * uModel * vec4(aPos, 1.);
+  vPos = aPos;
+  vPosInterp = gl_Position.xyz;
+}
+
+</script>
+
+<script id="frag" type="x-shader/x-fragment">
+precision highp float;
+uniform float uTime;   // TIME, IN SECONDS
+  
+varying vec3 vPos;     // -1 < vPos.x < +1
+// -1 < vPos.y < +1
+//      vPos.z == 0
+  
+void main() {    // YOU MUST DEFINE main()
+    
+  // HERE YOU CAN WRITE ANY CODE TO
+  // DEFINE A COLOR FOR THIS FRAGMENT
+
+  float red   = max(0., vPos.x);
+  float green = max(0., vPos.y);
+  float blue  = max(0., sin(5. * uTime));
+  
+  // R,G,B EACH RANGE FROM 0.0 TO 1.0
+    
+  vec3 color = vec3(red, green, blue);
+    
+  // THIS LINE OUTPUTS THE FRAGMENT COLOR
+    
+  gl_FragColor = vec4(sqrt(color), 1.0);
+}
+</script>
+
+<script id="vertModern" type="x-shader/x-fragment">#version 300 es
+in vec3 aPos; // attributes replaced with "in"
+out   vec3 vPos; // varying output replaced with "out"
+uniform   mat4 uModel;
+uniform   mat4 uView;
+uniform   mat4 uProj;
+
+uniform   int uCompileCount;
+uniform   float uTime;
+
+void main() {
+  float translation = float(uCompileCount) * uTime + (10.0 * float(uCompileCount));
+  gl_Position = uProj * uView * uModel * vec4(vec3(aPos.x + sin(translation), aPos.y - sin(translation), aPos.z), 1.);
+  vPos = aPos;
+}
+</script>
+
+<script id="fragModern" type="x-shader/x-fragment">#version 300 es
+precision highp float;
+uniform float uTime;   // TIME, IN SECONDS
+// varying input replaced with "in"  
+in vec3 vPos;     // -1 < vPos.x < +1
+// -1 < vPos.y < +1
+//      vPos.z == 0
+
+out vec4 fragColor; // gl_FragColor replaced with an explicit "out" vec4 that you set in the shader
+  
+void main() {    // YOU MUST DEFINE main()
+    
+  // HERE YOU CAN WRITE ANY CODE TO
+  // DEFINE A COLOR FOR THIS FRAGMENT
+
+  float red   = max(0., vPos.x);
+  float green = max(0., vPos.y);
+  float blue  = max(0., sin(5. * uTime));
+  
+  // R,G,B EACH RANGE FROM 0.0 TO 1.0
+    
+  vec3 color = vec3(red, green, blue);
+    
+  // THIS LINE OUTPUTS THE FRAGMENT COLOR
+    
+  fragColor = vec4(sqrt(color), 1.0);
+}
+</script>
+
+
 <script id="Connor_shader2_vertex" type="x-shader/x-vertex">
    precision highp float;
    attribute vec3 aPos;
@@ -182,6 +273,8 @@ void main() {
 
 
 
+
+
 </head>
 <body style="background-color: black; color: white; text-emphasis-color: white;">
   <div style="text-align: center">
@@ -218,112 +311,32 @@ void main() {
       }
     ];
 
-    let vert = null;
-    let frag = null;
+
+    // ES2017 consumer
+// (async () => {
+//   const module = await (
+//     await import('./js/worlds/demo_1_0/bla.js')
+//   ).default;
+// })();
 
     // (KTR) TODO, need to reset the clock upon loading a new world -- 
     // will need to track "now" and update "start"
     
     // A simple vertex / fragment shader from K.P. lib1.js.
-    vert = `
-precision highp float;
-attribute vec3 aPos;
-varying   vec3 vPos;
-varying   vec3 vPosInterp;
-uniform   mat4 uModel;
-uniform   mat4 uView;
-uniform   mat4 uProj;
-
-void main() {
-  gl_Position = uProj * uView * uModel * vec4(aPos, 1.);
-  vPos = aPos;
-  vPosInterp = gl_Position.xyz;
-}`;
-
-    frag = `
-precision highp float;
-uniform float uTime;   // TIME, IN SECONDS
-  
-varying vec3 vPos;     // -1 < vPos.x < +1
-// -1 < vPos.y < +1
-//      vPos.z == 0
-  
-void main() {    // YOU MUST DEFINE main()
-    
-  // HERE YOU CAN WRITE ANY CODE TO
-  // DEFINE A COLOR FOR THIS FRAGMENT
-
-  float red   = max(0., vPos.x);
-  float green = max(0., vPos.y);
-  float blue  = max(0., sin(5. * uTime));
-  
-  // R,G,B EACH RANGE FROM 0.0 TO 1.0
-    
-  vec3 color = vec3(red, green, blue);
-    
-  // THIS LINE OUTPUTS THE FRAGMENT COLOR
-    
-  gl_FragColor = vec4(sqrt(color), 1.0);
-}`;
-
-    // (KTR) Rewrite in modern GLSL ES,  A simple vertex / fragment shader from K.P. lib1.js.
-    let vertModern = `#version 300 es
-in vec3 aPos; // attributes replaced with "in"
-out   vec3 vPos; // varying output replaced with "out"
-uniform   mat4 uModel;
-uniform   mat4 uView;
-uniform   mat4 uProj;
-
-uniform   int uCompileCount;
-uniform   float uTime;
-
-void main() {
-  float translation = float(uCompileCount) * uTime + (10.0 * float(uCompileCount));
-  gl_Position = uProj * uView * uModel * vec4(vec3(aPos.x + sin(translation), aPos.y - sin(translation), aPos.z), 1.);
-  vPos = aPos;
-}`;
-
-    let fragModern = `#version 300 es
-precision highp float;
-uniform float uTime;   // TIME, IN SECONDS
-// varying input replaced with "in"  
-in vec3 vPos;     // -1 < vPos.x < +1
-// -1 < vPos.y < +1
-//      vPos.z == 0
-
-out vec4 fragColor; // gl_FragColor replaced with an explicit "out" vec4 that you set in the shader
-  
-void main() {    // YOU MUST DEFINE main()
-    
-  // HERE YOU CAN WRITE ANY CODE TO
-  // DEFINE A COLOR FOR THIS FRAGMENT
-
-  float red   = max(0., vPos.x);
-  float green = max(0., vPos.y);
-  float blue  = max(0., sin(5. * uTime));
-  
-  // R,G,B EACH RANGE FROM 0.0 TO 1.0
-    
-  vec3 color = vec3(red, green, blue);
-    
-  // THIS LINE OUTPUTS THE FRAGMENT COLOR
-    
-  fragColor = vec4(sqrt(color), 1.0);
-}`;
-
-
-
-
-const vertConnor = document.getElementById('Connor_shader2_vertex').innerHTML;
-const fragConnor = document.getElementById('Connor_shader2_fragment').innerHTML;
-
-const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
 
 
 
 
 
-    function createShaderProgram(vertSrc, fragSrc) { }
+
+
+const vert = document.querySelector("#vert").innerHTML;
+const frag = document.querySelector("#frag").innerHTML;
+const vertModern = document.querySelector("#vertModern").innerHTML;
+const fragModern = document.querySelector("#fragModern").innerHTML;
+const vertConnor = document.querySelector('#Connor_shader2_vertex').innerHTML;
+const fragConnor = document.querySelector('#Connor_shader2_fragment').innerHTML;
+const fragKTRa32017 = document.querySelector('#KTR_a3-2017_fragment').innerHTML;
 
 
     worlds[0].setup = function(state, wrangler, session) {
@@ -501,6 +514,7 @@ const fragKTRa32017 = document.getElementById('KTR_a3-2017_fragment').innerHTML;
       tStart = state.tStart;
 
       let now = (t - tStart);
+      // different from t, since t is the total elapsed time in the entire system
       state.time = now;
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
