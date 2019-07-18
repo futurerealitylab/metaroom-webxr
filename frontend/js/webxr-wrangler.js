@@ -95,9 +95,9 @@ window.XRCanvasWrangler = (function () {
       this.config = this.config || {};
       const options = this.config;
 
-      options.onStartFrame = (function(t) {});
-      options.onEndFrame = (function(t) {});
-      options.onDraw = (function(t, p, v) {});
+      options.onStartFrame = (function(t, state) {});
+      options.onEndFrame = (function(t, state) {});
+      options.onDraw = (function(t, p, v, state, eyeIdx) {});
       options.onXRFrame = this._onXRFrame.bind(this);
       options.onWindowFrame = this._onWindowFrame.bind(this);
 
@@ -105,24 +105,44 @@ window.XRCanvasWrangler = (function () {
       options.onSelectStart = (function(t, state) {});
       options.onSelect = (function(t, state) {});
       options.onSelectEnd = (function(t, state) {});
+
+
     }
 
     configure(options) {
+      // (KTR) TODO: need to clear previous world state before the new world is loaded
+      // to prevent people from taking advantage of others' code or breaking state
+
       this._clearConfig();
       this._reset();
       
       options = options || {};
       this.config = options;
 
-      options.onStartFrame = options.onStartFrame || (function(t) {});
+      options.onStartFrame = options.onStartFrame || (function(t, state) {});
       options.onEndFrame = options.onEndFrame || (function(t) {});
-      options.onDraw = options.onDraw || (function(t, p, v) {}); // projMat, viewMat
+      options.onDraw = options.onDraw || (function(t, p, v, state, eyeIdx) {}); // projMat, viewMat
       options.onXRFrame = options.onXRFrame || this._onXRFrame.bind(this);
       options.onWindowFrame = options.onWindowFrame || this._onWindowFrame.bind(this);
 
       options.onSelectStart = this.config.onSelectStart || (function(t, state) {});
       options.onSelect = this.config.onSelect || (function(t, state) {});
       options.onSelectEnd = this.config.selectEnd || (function(t, state) {});
+
+      this.name = options.name || "unnamed";
+
+      if (this.useCustomState) {
+        // retrieve persistent state for this world
+        let persistentState = this.persistentStateMap.get(options.name);
+        if (!persistentState) {
+          persistentState = {};
+          this.persistentStateMap.set(options.name, persistentState);
+        }
+
+        this.customState = {};
+        this.customState.persistent = persistentState;
+        this.customState.globalPersistent = this.globalPersistentState;
+      }
     }
 
     constructor() {}
@@ -172,7 +192,20 @@ window.XRCanvasWrangler = (function () {
 
       this._frameOfRef = null;
 
-      this._customState = null;
+      this.customState = null;
+
+      if (options.useCustomState === false) {
+        this.useCustomState = false;
+      } else {
+        this.useCustomState = true;
+      }
+
+      this.useCustomState = (options.useCustomState === false) ? false : true;
+      if (this.useCustomState) {
+        this.customState = {};
+        this.persistentStateMap = new Map();
+        this.globalPersistentState = {};
+      }
 
       this._clearConfig();
 
@@ -397,18 +430,11 @@ window.XRCanvasWrangler = (function () {
     // }
 
     start() {
-
-      // (KTR) TODO let the user pass around some state between functions
-      // instead of using globals (if they so choose)
-      if (this.config.customState) {
-        this._customState = this.config.customState;
-      }
-
       // (KTR) TODO give user the ability to do add event listeners or other objects 
       // before the session starts, as well as do any other initialization of
       // their custom state
       if (this.config.setup) {
-        this.config.setup(this._customState, this, this._session);
+        this.config.setup(this.customState, this, this._session);
       }
 
       if (this.isFallback) {
@@ -553,15 +579,15 @@ window.XRCanvasWrangler = (function () {
       if (pose) {
         const glLayer = session.renderState.baseLayer;
         this._gl.bindFramebuffer(gl.FRAMEBUFFER, glLayer.framebuffer); // TODO make this bind optional
-        this.config.onStartFrame(t);
+        this.config.onStartFrame(t, this.customState);
         let i = 0;
         for (let view of pose.views) {
           const viewport = glLayer.getViewport(view);
           this._gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-          this.config.onDraw(t, view.projectionMatrix, view.viewMatrix, i);
+          this.config.onDraw(t, view.projectionMatrix, view.viewMatrix, this.customState, i);
           i += 1;
         }
-        this.config.onEndFrame(t);
+        this.config.onEndFrame(t, this.customState);
       }
       else {
         console.log("no pose");
@@ -570,8 +596,8 @@ window.XRCanvasWrangler = (function () {
 
     _onWindowFrame(t) {
       this.animationHandle = window.requestAnimationFrame(this.config.onWindowFrame);
-      this.config.onStartFrame(t);
-      this.config.onDraw(t, this._fallbackProjMat, this._fallbackViewMat);
+      this.config.onStartFrame(t, this.customState);
+      this.config.onDraw(t, this._fallbackProjMat, this._fallbackViewMat, this.customState);
       this.config.onEndFrame(t);
     }
 
@@ -746,7 +772,7 @@ window.XRCanvasWrangler = (function () {
       }
       GL.deleteBuffer(tempBuf);
 
-      console.log("Done!");
+      //console.log("Done!");
     }
 
     get canvas() { return this._canvas; }
