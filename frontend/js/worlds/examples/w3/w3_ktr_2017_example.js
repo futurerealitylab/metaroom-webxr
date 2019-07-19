@@ -186,16 +186,22 @@ MR.registerWorld((function() {
         let tStart = t;
         if (!state.tStart) {
             state.tStart = t;
+            state.time = t;
         }
 
         tStart = state.tStart;
 
         let now = (t - tStart);
+
+        // save delta time
+        state.deltaTime = now - state.time;
         // different from t, since t is the total elapsed time in the entire system, best to use "state.time"
         state.time = now;
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         gl.uniform1f(state.timeLoc, now / 1000.0);
+
+        gl.enable(gl.DEPTH_TEST);
     }
 
     function onEndFrame(t, state) {
@@ -206,8 +212,6 @@ MR.registerWorld((function() {
 
         const my = state;
         const program = my.program;
-
-        gl.enable(gl.DEPTH_TEST);
 
         gl.uniform1f(gl.getUniformLocation(program, "uBG"), 0.0);
 
@@ -244,8 +248,6 @@ MR.registerWorld((function() {
         gl.uniformMatrix4fv(my.modelLoc, false, new Float32Array([1000,0,0,0, 0,1000,0,0, 0,0,1,0, 0,0,-4,1]));
         gl.uniformMatrix4fv(my.viewLoc, false, new Float32Array(viewMat));
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-        gl.disable(gl.DEPTH_TEST); 
     }
 
     function main(myWorld) {

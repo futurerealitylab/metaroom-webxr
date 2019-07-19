@@ -83,16 +83,22 @@ MR.registerWorld((function() {
         let tStart = t;
         if (!state.tStart) {
             state.tStart = t;
+            state.time = t;
         }
 
         tStart = state.tStart;
 
         let now = (t - tStart);
+
+        // save delta time
+        state.deltaTime = now - state.time;
         // different from t, since t is the total elapsed time in the entire system, best to use "state.time"
         state.time = now;
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         gl.uniform1f(state.timeLoc, now / 1000.0);
+
+        gl.enable(gl.DEPTH_TEST);
     }
 
     function onEndFrame(t, state) {

@@ -447,7 +447,7 @@ window.XRCanvasWrangler = (function () {
       }
     }
 
-
+    
     _onSessionStarted(session) {
       this._session = session;
 
