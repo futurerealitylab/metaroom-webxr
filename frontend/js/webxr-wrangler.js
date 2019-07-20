@@ -352,20 +352,31 @@ window.XRCanvasWrangler = (function () {
     }
 
     _onResize() {
-      return; // temp
       let gl = this._gl;
       gl.canvas.width = gl.canvas.offsetWidth * window.devicePixelRatio;
       gl.canvas.height = gl.canvas.offsetHeight * window.devicePixelRatio;
-      perspective(this._fallbackProjMat, Math.PI*0.5,
+      perspective(this._fallbackProjMat, Math.PI/4,
         gl.canvas.width / gl.canvas.height,
-        0.1, 1000.0);
+        0.01, 1000.0);
       gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     }
 
     _initFallback() {
       this.isFallback = true;
       this._fallbackViewMat = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
-      this._fallbackProjMat = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+
+      const projOut = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+      perspective(
+        projOut, 
+        Math.PI/4,
+        this._gl.canvas.width / this._gl.canvas.height,
+        0.01, 1000.0
+      );
+
+      this._fallbackProjMat = new Float32Array(projOut);
+
+      return;
+
       window.addEventListener('resize', this._onResize.bind(this));
       this._onResize();
     }
@@ -489,10 +500,17 @@ window.XRCanvasWrangler = (function () {
         }
         {
           const mat = this._fallbackProjMat;
-          mat[0]  = 1; mat[1]  = 0; mat[2]  = 0; mat[3]  = 0;
-          mat[4]  = 0; mat[5]  = 1; mat[6]  = 0; mat[7]  = 0;
-          mat[8]  = 0; mat[9]  = 0; mat[10] = 1; mat[11] = 0;
-          mat[12] = 0; mat[13] = 0; mat[14] = 0; mat[15] = 1;
+          // mat[0]  = 1; mat[1]  = 0; mat[2]  = 0; mat[3]  = 0;
+          // mat[4]  = 0; mat[5]  = 1; mat[6]  = 0; mat[7]  = 0;
+          // mat[8]  = 0; mat[9]  = 0; mat[10] = 1; mat[11] = 0;
+          // mat[12] = 0; mat[13] = 0; mat[14] = 0; mat[15] = 1;
+
+          this._fallbackProjMat = perspective(
+            mat, 
+            Math.PI/4,
+            this._gl.canvas.width / this._gl.canvas.height,
+            0.1, 1000.0
+          );
         }
 
       } else {
@@ -730,6 +748,7 @@ window.XRCanvasWrangler = (function () {
 
       GL.disable(gl.CULL_FACE);
       GL.disable(gl.DEPTH_TEST);
+      GL.disable(gl.BLEND);
 
       // (KTR) TODO: may be more to delete / unbind for WebGL 2
 

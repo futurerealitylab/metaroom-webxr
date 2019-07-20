@@ -10,6 +10,7 @@ MR.registerWorld((function() {
     uniform   mat4 uModel;
     uniform   mat4 uView;
     uniform   mat4 uProj;
+    uniform   float uTime;
 
     void main() {
         gl_Position = uProj * uView * uModel * vec4(aPos, 1.);

@@ -216,7 +216,7 @@ MR.registerWorld((function() {
         gl.uniform1f(gl.getUniformLocation(program, "uBG"), 0.0);
 
         //gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
-        gl.uniformMatrix4fv(my.modelLoc, false, new Float32Array([.05,0,0,0, 0,.05,0,0, 0,0,.05,0, -.04,-.04,0.5,1]));
+        gl.uniformMatrix4fv(my.modelLoc, false, new Float32Array([.05,0,0,0, 0,.05,0,0, 0,0,.05,0, -.04,-.04,0-1,1]));
         gl.uniformMatrix4fv(my.viewLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
         gl.uniformMatrix4fv(my.projLoc, false, new Float32Array(projMat));
 
