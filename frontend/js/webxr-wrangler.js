@@ -728,6 +728,9 @@ window.XRCanvasWrangler = (function () {
 
       const GL = this._gl;
 
+      GL.disable(gl.CULL_FACE);
+      GL.disable(gl.DEPTH_TEST);
+
       // (KTR) TODO: may be more to delete / unbind for WebGL 2
 
       //console.log("-unbinding texture units ...");
@@ -752,6 +755,7 @@ window.XRCanvasWrangler = (function () {
         GL.bindBuffer(GL.UNIFORM_BUFFER, null);
         GL.bindBuffer(GL.PIXEL_PACK_BUFFER, null);
         GL.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
+        GL.bindVertexArray(null);
       }
 
       // free resources
@@ -772,6 +776,8 @@ window.XRCanvasWrangler = (function () {
         GL.vertexAttribPointer(a, 1, GL.FLOAT, false, 0, 0);
       }
       GL.deleteBuffer(tempBuf);
+
+
 
       //console.log("Done!");
     }

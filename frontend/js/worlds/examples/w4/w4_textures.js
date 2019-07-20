@@ -76,7 +76,6 @@ MR.registerWorld((function() {
     }
 
     function loadImage(url, callback) {
-        console.log("in loadImage");
         const image = new Image();
         image.src = url;
         image.onload = callback;
@@ -212,7 +211,7 @@ MR.registerWorld((function() {
     ]);
 
 
-    function setup(state, myworld, session) {
+    function setup(state, myWorld, session) {
         // load initial images, then do gl setup (alternative is to do setup with placeholder
         // texture or to allow user to set a new draw function programmatically
         loadImages([
@@ -220,6 +219,7 @@ MR.registerWorld((function() {
             window.location + "js/worlds/examples/w4/resources/textures/polkadots.jpg",    
         ],
         (images) => {
+        myWorld.start();
         
         state.attribData  = {};
         state.uniformData = {};
@@ -315,7 +315,6 @@ MR.registerWorld((function() {
             }
             */
 
-            myworld.start();
         }
         });
     }
