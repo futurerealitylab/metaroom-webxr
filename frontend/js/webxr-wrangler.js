@@ -109,6 +109,10 @@ window.XRCanvasWrangler = (function () {
 
     }
 
+    beginSetup(options) {
+      this.configure(options);
+    }
+
     configure(options) {
       // (KTR) TODO: need to clear previous world state before the new world is loaded
       // to prevent people from taking advantage of others' code or breaking state
@@ -142,6 +146,10 @@ window.XRCanvasWrangler = (function () {
         this.customState = {};
         this.customState.persistent = persistentState;
         this.customState.globalPersistent = this.globalPersistentState;
+      }
+
+      if (options.setup) {
+        options.setup(this.customState, this, this._session);
       }
     }
 
@@ -430,13 +438,6 @@ window.XRCanvasWrangler = (function () {
     // }
 
     start() {
-      // (KTR) TODO give user the ability to do add event listeners or other objects 
-      // before the session starts, as well as do any other initialization of
-      // their custom state
-      if (this.config.setup) {
-        this.config.setup(this.customState, this, this._session);
-      }
-
       if (this.isFallback) {
         this.animationHandle = window.requestAnimationFrame(this.config.onWindowFrame);
       } else {
@@ -447,7 +448,7 @@ window.XRCanvasWrangler = (function () {
       }
     }
 
-    
+
     _onSessionStarted(session) {
       this._session = session;
 

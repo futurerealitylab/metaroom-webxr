@@ -268,7 +268,7 @@ MR.registerWorld((function() {
             },
         };
 
-        myWorld.configure(def);
+        myWorld.beginSetup(def);
         myWorld.start();
     }
 

@@ -35,9 +35,83 @@ MR.registerWorld((function() {
     out vec4 fragColor;
 
     void main() {
-       fragColor = texture(uTex0, vUV);
+        vec4 color0 = texture(uTex0, vUV);
+        vec4 color1 = texture(uTex0, vUV);
+
+        fragColor = mix(color0, color1, sin(uTime));
     }
     `;
+
+    function loadImagePromise(url) {
+        return new Promise(resolve => {
+            const image = new Image();
+            image.onload = () => {
+                resolve(image);
+            };
+
+            image.src = url;
+        });
+    }
+
+    function loadImagesPromise(urls) {
+        let urlCount = urls.length;
+        let images = [];
+
+        return new Promise(() => {
+            const onImageLoad = () => {
+                urlCount -= 1;
+
+                if (urlCount === 0) {
+                    resolve(images);
+                    images = null;
+                }
+            };
+
+            for (let i = 0; i < urlCount; i += 1) {
+                loadImage(urls[i]).then((image) => {
+                    images.push(image);
+                });
+            }
+        });
+    }
+
+    function loadImage(url, callback) {
+        console.log("in loadImage");
+        const image = new Image();
+        image.src = url;
+        image.onload = callback;
+        image.onerror = () => { console.error("failed to load: " + url); callback(); };
+        console.log(callback);
+        return image;
+    }
+
+    function loadImages(urls, callback) {
+        let urlCount = urls.length;
+        let images = [];
+
+        function onImageLoad() {
+            urlCount -= 1;
+
+            console.log("loaded");
+
+            if (urlCount === 0) {
+                console.log("all loaded");
+                callback(images);
+                images = null;
+            }
+        };
+
+        for (let i = 0; i < urlCount; i += 1) {
+            console.log("loading: " + urls[i]);
+            const image = loadImage(urls[i], onImageLoad);
+            images.push(image);
+        }
+
+
+
+
+
+    }
 
 
     function declareUniform(uniformData, name, type, size) {
@@ -137,10 +211,21 @@ MR.registerWorld((function() {
         1,0,
     ]);
 
-    function setup(state, wrangler, session) {
+
+    function setup(state, myworld, session) {
+        // load initial images, then do gl setup (alternative is to do setup with placeholder
+        // texture or to allow user to set a new draw function programmatically
+        loadImages([
+            window.location + "js/worlds/examples/w4/resources/textures/brick.png",
+            window.location + "js/worlds/examples/w4/resources/textures/polkadots.jpg",    
+        ],
+        (images) => {
+        
         state.attribData  = {};
         state.uniformData = {};
         state.textureData = {};
+
+        state.images = images;
 
         state.program = GFX.createShaderProgramFromStrings(vert, frag);
         gl.useProgram(state.program);
@@ -217,14 +302,22 @@ MR.registerWorld((function() {
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
 
             let img = new Image();
-            // img.src = "url";
-            // img.addEventListener('load', () => {
-            //     gl.activeTexture(gl.TEXTURE0 + 0);
-            //     gl.bindTexture(gl.TEXTURE_2D, state.textureData.texture);
-            //     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-            //     gl.generateMipmap(gl.TEXTURE_2D);
-            // }}
+            /*
+            const imgCount = state.images.length;
+            for (let i = 0; i < imgCount; i += 1) {
+                gl.activeTexture(gl.TEXTURE0 + 0);
+                gl.bindTexture(gl.TEXTURE_2D, state.textureData.texture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+                
+                gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+                gl.generateMipmap(gl.TEXTURE_2D);
+            }
+            */
+
+            myworld.start();
         }
+        });
     }
 
     function onStartFrame(t, state) {
@@ -298,8 +391,7 @@ MR.registerWorld((function() {
             },
         };
 
-        myWorld.configure(def);
-        myWorld.start();
+        myWorld.beginSetup(def);
     }
 
     return main;
