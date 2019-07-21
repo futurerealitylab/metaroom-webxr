@@ -347,7 +347,7 @@ MR.registerWorld((function() {
         // this line only executes after the images are loaded asynchronously
         // "await" is syntactic sugar that makes the code continue to look linear (avoid messy callbacks or "then" clauses)
 
-        {
+        
         
         state.attribData  = {};
         state.uniformData = {};
@@ -547,7 +547,6 @@ MR.registerWorld((function() {
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         
-        };
     }
 
     function onStartFrame(t, state) {
