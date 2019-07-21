@@ -8,9 +8,10 @@ MR.registerWorld((function() {
     uniform   mat4 uModel;
     uniform   mat4 uView;
     uniform   mat4 uProj;
+    uniform   float uTime;
 
     void main() {
-        gl_Position = uProj * uView * uModel * vec4(aPos, 1.);
+        gl_Position = uProj * uView * uModel * vec4(aPos + vec3(0.0, sin(0.0), 0.0), 1.);
         vPos = aPos;
         vPosInterp = gl_Position.xyz;
     }`;
@@ -90,11 +91,12 @@ MR.registerWorld((function() {
 
     void main() {
       if (uBG > 0.) {
-
-        float s = step(0.0, vPos.y);
+        vec3 pos = vec3(vPosInterp.xy / vec2(1280., 720.), 0.0) + vec3(vPos.xy, 0.0);
+        float s = step(0.0, pos.y);
         vec3 c1 = vec3(vec3(0.0, 0.0, 0.0));
-        vec3 c2 = vec3(vec3(0.0, vPos.y * 0.7, vPos.y * 0.94));
-        gl_FragColor = vec4(mix(c1, c2, (vPos.y + 1.0) / 2.0), 1.0);
+        vec3 c2 = vec3(vec3(0.0, pos.y * 0.7, pos.y * 0.94));
+        vec3 c3 = vec3(0.0, 0.0, 1.0);
+        gl_FragColor = vec4(((s + 0.01) * mix(c1, c2, ((pos.y) / 2.0) + 1.0)) + (1.-s) * mix(c3, c1, ((pos.y) / 2.0) + 1.0), 1.0);
 
         return;
 
@@ -238,7 +240,7 @@ MR.registerWorld((function() {
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
         gl.uniform1f(gl.getUniformLocation(program, "uBG"), 1.0);
-        gl.uniformMatrix4fv(my.uModelLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-5,1]));
+        gl.uniformMatrix4fv(my.uModelLoc, false, new Float32Array([1000,0,0,0, 0,2,0,0, 0,0,1,0, 0,0,-5,1]));
         gl.uniformMatrix4fv(my.uViewLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
