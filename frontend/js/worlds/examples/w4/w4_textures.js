@@ -99,12 +99,15 @@ MR.registerWorld((function() {
     function loadImagesPromise(urls) {
         let urlCount = urls.length;
         let images = [];
+        for (let i = 0; i < urlCount; i += 1) {
+            images.push(null);
+        }
 
         const pending = [];
         for (let i = 0; i < urlCount; i += 1) {
             pending.push(loadImagePromise(urls[i]).then((image) => {
                 console.log("loaded: " + urls[i]);
-                images.push(image);
+                images[i] = image;
             }));
         }
         return Promise.all(pending).then(data => {
@@ -612,7 +615,7 @@ MR.registerWorld((function() {
 
             // TEMP use these handlers for simulating world transitions
             onSelectStart : function(t, state) {
-                wrangler.simulateWorldTransition();
+                myWorld.simulateWorldTransition();
             },
             onSelect : function(t, state) {
             },
@@ -620,7 +623,8 @@ MR.registerWorld((function() {
             },
         };
 
-        myWorld.beginSetup(def);
+        //myWorld.beginSetup(def);
+        return def;
     }
 
     return main;

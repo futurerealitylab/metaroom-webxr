@@ -255,7 +255,7 @@ MR.registerWorld((function() {
 
             // TEMP use these handlers for simulating world transitions
             onSelectStart : function(t, state) {
-                wrangler.simulateWorldTransition();
+                myWorld.simulateWorldTransition();
             },
             onSelect : function(t, state) {
             },
@@ -263,7 +263,8 @@ MR.registerWorld((function() {
             },
         };
 
-        myWorld.beginSetup(def);
+        //myWorld.beginSetup(def);
+        return def;
     }
 
     return main;

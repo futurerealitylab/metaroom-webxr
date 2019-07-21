@@ -109,7 +109,7 @@
       main : () => {
 
         // call the main function of the selected world
-        MR.worlds[0](MR.wrangler);
+        MR.wrangler.beginSetup(MR.worlds[MR.worldIdx](MR.wrangler));
 
         // this is just a temporary function
         wrangler.simulateWorldTransition = function() {
@@ -129,10 +129,17 @@
 
             try {
               // call the main function of the selected world
-              MR.worlds[MR.worldIdx](MR.wrangler);
+
+              MR.wrangler.beginSetup(MR.worlds[MR.worldIdx](MR.wrangler));
+
               ok = true;
             } catch (e) {
               console.error(e);
+
+              if (typeof MR.worlds[MR.worldIdx] !== "function") {
+                console.error("must return a main initialization function");
+              }
+
 
               setTimeout(function(){ 
                 console.log("Trying another world");
