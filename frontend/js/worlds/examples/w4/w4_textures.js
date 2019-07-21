@@ -377,6 +377,10 @@ MR.registerWorld((function() {
         // NOTE: individual as opposed to the uniform buffers that may be added in an example later
         getAndStoreIndividualUniformLocations(gl, state.program, state.uniformData);
 
+        // commented line would give you the maximum number of 
+        // texture image units availabl on your hardware
+        // const maxTextureUnitCount = GL.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
+
         gl.uniform1i(state.uniformData.uTex0Loc, 0); // set texture unit 0 at uTex0
         gl.uniform1i(state.uniformData.uTex1Loc, 1); // set texture unit 1 at uTex1
 
@@ -546,7 +550,6 @@ MR.registerWorld((function() {
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-        
     }
 
     function onStartFrame(t, state) {
