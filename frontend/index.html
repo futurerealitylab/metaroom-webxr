@@ -11,6 +11,7 @@
   <script src="js/webxr-button.js"></script>
   <!-- WebXR Canvas Wrangler simplifies WebXR setup. -->
   <script src="js/webxr-wrangler.js"></script>
+  <script src="js/webvr-wrangler.js"></script>
 
 </head>
 <body style="background-color: black; color: white; text-emphasis-color: white;">
@@ -20,9 +21,6 @@
   <script>
     "use strict";
     // TODO(KTR): Very temporary way of keeping files separated
-
-    // Apply the version shim. This shouldn't be needed once WebXR is widely adopted.
-    const shim = new WebXRVersionShim();
 
     function Metaroom() {
       this.worldIdx = 0;
@@ -43,8 +41,9 @@
       }
     };
 
-
-
+    // NGV220 says: we need to document the API boundary of the Metaroom, Metaroom_*, and
+    // MetaroomBackend (currently 'wrangler').  The passing back-and-forth of worlds, funcs,
+    // et al is difficult to follow.
     
     function Metaroom_WebXR() {
       //this.type = METAROOM_TYPES.WEBXR;
@@ -69,12 +68,29 @@
       }
     );
 
+    // Metaroom impl using WebVR backend.  See `js/webxr-wrangler.js` for
+    // details. 
+    function Metaroom_WebVR() {
+      Metaroom.call(this);
+      window.wrangler = this.wrangler;
+      window.MR = this;
+    }
+    Metaroom_WebVR.prototype = Object.create(
+      Metaroom.prototype,
+      {
+        type : {value : Metaroom.BACKEND_TYPE.WEBVR},
+        wrangler : {value : new VRCanvasWrangler()},
+      }
+    );
 
     Metaroom.create = function(type = Metaroom.BACKEND_TYPE.WEBXR) {
       this.type = type;
       switch (type) {
       case Metaroom.BACKEND_TYPE.WEBXR: {
         return new Metaroom_WebXR();
+        break;
+      } case Metaroom.BACKEND_TYPE.WEBVR: {
+        return new Metaroom_WebVR();
         break;
       } default: {
         console.error("ERROR: unsupported type");
@@ -83,7 +99,24 @@
       }
     }
 
-    const MR = Metaroom.create();
+    // Argument defaults
+    let type = Metaroom.BACKEND_TYPE.WEBXR;
+
+    // Parse URL arguments
+    var urlParams = new URLSearchParams(window.location.search);
+
+    // (1) useShim - when present and set to '1', applies the WebXR version
+    //     shim.  This will become unnecessary once the WebXR becomes stable. 
+    if (urlParams.has('useShim') && urlParams.get('useShim') == '1') {
+        const shim = new WebXRVersionShim();
+    }
+    // (2) mrBackend - specify the Metaroom backend type.  Valid options are
+    //     '0' for WebXR and '1' for WebVR (default).
+    if (urlParams.has('mrBackend')) {
+      type = parseInt(urlParams.get('mrBackend'))
+    }
+
+    const MR = Metaroom.create(type);
 
   // Register MR.worlds (in final, probably enough to register the first world before init time and defer the rest until load) 
   // TEMP hard-coded
