@@ -451,6 +451,18 @@ MR.registerWorld((function() {
                 );
                 gl.enableVertexAttribArray(state.attribData.aUVLoc); // enable the attribute
             }
+
+            // TODO(KTR): Helper function?
+            // function setAndEnableVertexAttribute(attribLoc, size, type, normalize, stride, offset) {
+            //     // set how the data is accessed in the buffer
+            //     gl.vertexAttribPointer( 
+            //         attribLoc, size, type, normalize, stride, offset
+            //     );
+            //     gl.enableVertexAttribArray(attribLoc); // enable the attribute
+            // }
+            //
+            //  setAndEnableVertexAttribute(state.attribData.aUVLoc, size, type, normalize, stride, offset);
+
         }
         // Version 2: (OLD)
         // This version uses 2 buffers to store position and UV/texture coord
