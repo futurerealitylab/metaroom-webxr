@@ -16,6 +16,7 @@ MR.registerWorld((function() {
     }`;
 
     const frag = `
+    precision highp float;
     varying vec3 vPos;                             // Position in image
     varying vec3 vPosInterp;                            
     uniform float uTime;                           // Time
@@ -89,22 +90,14 @@ MR.registerWorld((function() {
 
     void main() {
       if (uBG > 0.) {
-        if (vPos.y > 0.0) {
-          gl_FragColor = vec4(0., 1., 1., 1.);
-          return;
-        }
-        else {
-          if (vPos.y < -0.5 && vPos.y > -.75) {
-            gl_FragColor = vec4(0., 0.0, 1.0, 1.0);
-          }
-          else {
-          gl_FragColor= vec4(0.0, 0.0, 0.0, 1.0);
-        }
-          //gl_FragColor = vec4(sqrt(vec3(0.0, 0.0, 1.0 + (vPos.y / 1000.0) )), 1.);
-          return;
-        }
+
+        float s = step(0.0, vPos.y);
+        vec3 c1 = vec3(vec3(0.0, 0.0, 0.0));
+        vec3 c2 = vec3(vec3(0.0, vPos.y * 0.7, vPos.y * 0.94));
+        gl_FragColor = vec4(mix(c1, c2, (vPos.y + 1.0) / 2.0), 1.0);
 
         return;
+
       }
        vec3 c = vec3(0.,0.,0.);
 
@@ -170,10 +163,10 @@ MR.registerWorld((function() {
         gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
 
         // Assign MVP matrices
-        state.modelLoc = gl.getUniformLocation(program, 'uModel');
-        state.viewLoc = gl.getUniformLocation(program, 'uView');
-        state.projLoc = gl.getUniformLocation(program, 'uProj');
-        state.timeLoc = gl.getUniformLocation(program, 'uTime');
+        state.uModelLoc = gl.getUniformLocation(program, 'uModel');
+        state.uViewLoc = gl.getUniformLocation(program, 'uView');
+        state.uProjLoc = gl.getUniformLocation(program, 'uProj');
+        state.uTimeLoc = gl.getUniformLocation(program, 'uTime');
     }
 
 
@@ -199,7 +192,7 @@ MR.registerWorld((function() {
         state.time = now;
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        gl.uniform1f(state.timeLoc, now / 1000.0);
+        gl.uniform1f(state.uTimeLoc, now / 1000.0);
 
         gl.enable(gl.DEPTH_TEST);
     }
@@ -216,9 +209,9 @@ MR.registerWorld((function() {
         gl.uniform1f(gl.getUniformLocation(program, "uBG"), 0.0);
 
         //gl.uniformMatrix4fv(model, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
-        gl.uniformMatrix4fv(my.modelLoc, false, new Float32Array([.05,0,0,0, 0,.05,0,0, 0,0,.05,0, -.04,-.04,0-1,1]));
-        gl.uniformMatrix4fv(my.viewLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
-        gl.uniformMatrix4fv(my.projLoc, false, new Float32Array(projMat));
+        gl.uniformMatrix4fv(my.uModelLoc, false, new Float32Array([.05,0,0,0, 0,.05,0,0, 0,0,.05,0, -.04,-.04,0-1,1]));
+        gl.uniformMatrix4fv(my.uViewLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
+        gl.uniformMatrix4fv(my.uProjLoc, false, new Float32Array(projMat));
 
         let s = .5 * Math.sin(2 * sec);
         setUniform(my.uniformData, 'uSpheres', [-.5,.4,-4+s,.5, .5,.4,-4-s,.5, s,-.5,-4,.5]);
@@ -240,13 +233,13 @@ MR.registerWorld((function() {
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-        gl.uniformMatrix4fv(my.modelLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-3.9,1]));
-        gl.uniformMatrix4fv(my.viewLoc, false, new Float32Array(viewMat));
+        gl.uniformMatrix4fv(my.uModelLoc, false, new Float32Array([.5,0,0,0, 0,.5,0,0, 0,0,.5,0, 0,0,-3.9,1]));
+        gl.uniformMatrix4fv(my.uViewLoc, false, new Float32Array(viewMat));
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
         gl.uniform1f(gl.getUniformLocation(program, "uBG"), 1.0);
-        gl.uniformMatrix4fv(my.modelLoc, false, new Float32Array([1000,0,0,0, 0,1000,0,0, 0,0,1,0, 0,0,-4,1]));
-        gl.uniformMatrix4fv(my.viewLoc, false, new Float32Array(viewMat));
+        gl.uniformMatrix4fv(my.uModelLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-5,1]));
+        gl.uniformMatrix4fv(my.uViewLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
 
@@ -269,7 +262,6 @@ MR.registerWorld((function() {
         };
 
         myWorld.beginSetup(def);
-        myWorld.start();
     }
 
     return main;

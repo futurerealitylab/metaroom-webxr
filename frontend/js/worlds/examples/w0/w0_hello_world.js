@@ -6,16 +6,14 @@ MR.registerWorld((function() {
     precision highp float;
     attribute vec3 aPos;
     varying   vec3 vPos;
-    varying   vec3 vPosInterp;
     uniform   mat4 uModel;
     uniform   mat4 uView;
     uniform   mat4 uProj;
     uniform   float uTime;
 
     void main() {
-        gl_Position = uProj * uView * uModel * vec4(aPos, 1.);
+        gl_Position = uProj * uView * uModel * vec4(aPos * vec3(0.25, 0.25, 1.0), 1.);
         vPos = aPos;
-        vPosInterp = gl_Position.xyz;
     }`;
 
     const frag = `
@@ -61,14 +59,14 @@ MR.registerWorld((function() {
         gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
 
         // Assign MVP matrices
-        state.modelLoc        = gl.getUniformLocation(program, 'uModel');
-        state.viewLoc         = gl.getUniformLocation(program, 'uView');
-        state.projLoc         = gl.getUniformLocation(program, 'uProj');
-        state.timeLoc         = gl.getUniformLocation(program, 'uTime');
-        state.compileCountLoc = gl.getUniformLocation(program, 'uCompileCount');
+        state.uModelLoc        = gl.getUniformLocation(program, 'uModel');
+        state.uViewLoc         = gl.getUniformLocation(program, 'uView');
+        state.uProjLoc         = gl.getUniformLocation(program, 'uProj');
+        state.uTimeLoc         = gl.getUniformLocation(program, 'uTime');
+        state.uCompileCountLoc = gl.getUniformLocation(program, 'uCompileCount');
 
         const localCompileCount = state.persistent.localCompileCount || 0;
-        gl.uniform1i(state.compileCountLoc, localCompileCount);
+        gl.uniform1i(state.uCompileCountLoc, localCompileCount);
         state.program = program;
         state.persistent.localCompileCount = (localCompileCount + 1) % 14;
     }
@@ -93,7 +91,7 @@ MR.registerWorld((function() {
 
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        gl.uniform1f(state.timeLoc, now / 1000.0);
+        gl.uniform1f(state.uTimeLoc, now / 1000.0);
 
         gl.enable(gl.DEPTH_TEST);
     }
@@ -106,9 +104,9 @@ MR.registerWorld((function() {
 
         const my = state;
       
-        gl.uniformMatrix4fv(my.modelLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
-        gl.uniformMatrix4fv(my.viewLoc, false, new Float32Array(viewMat));
-        gl.uniformMatrix4fv(my.projLoc, false, new Float32Array(projMat));
+        gl.uniformMatrix4fv(my.uModelLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));
+        gl.uniformMatrix4fv(my.uViewLoc, false, new Float32Array(viewMat));
+        gl.uniformMatrix4fv(my.uProjLoc, false, new Float32Array(projMat));
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     };
 
@@ -132,7 +130,6 @@ MR.registerWorld((function() {
         };
 
         myWorld.beginSetup(def);
-        myWorld.start();
     }
 
     return main;

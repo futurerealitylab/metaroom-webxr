@@ -113,7 +113,7 @@ window.XRCanvasWrangler = (function () {
       this.configure(options);
     }
 
-    configure(options) {
+    async configure(options) {
       // (KTR) TODO: need to clear previous world state before the new world is loaded
       // to prevent people from taking advantage of others' code or breaking state
 
@@ -149,8 +149,10 @@ window.XRCanvasWrangler = (function () {
       }
 
       if (options.setup) {
-        options.setup(this.customState, this, this._session);
+        await options.setup(this.customState, this, this._session);
       }
+
+      this.start();
     }
 
     constructor() {}
@@ -170,8 +172,8 @@ window.XRCanvasWrangler = (function () {
         const parentCanvasPair = CanvasUtil.createCanvasOnElement(
           'active',
           options.outputSurfaceName || 'output-element',
-          options.outputWidth || 400,
-          options.outputHeight || 400
+          options.outputWidth || 1280,
+          options.outputHeight || 720
         );
         console.assert(parentCanvasPair !== null);
         console.assert(parentCanvasPair.parent !== null);
@@ -231,8 +233,8 @@ window.XRCanvasWrangler = (function () {
           const parentCanvasPair = CanvasUtil.createCanvasOnElement(
             'active-xr-gl',
             this.options.outputSurfaceName || 'output-element',
-            this.options.outputWidth || 400,
-            this.options.outputHeight || 400
+            this.options.outputWidth || 1280,
+            this.options.outputHeight || 720
           );
           console.assert(parentCanvasPair !== null);
           console.assert(parentCanvasPair.parent !== null);
@@ -366,6 +368,7 @@ window.XRCanvasWrangler = (function () {
       this._fallbackViewMat = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
 
       const projOut = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+
       perspective(
         projOut, 
         Math.PI/4,

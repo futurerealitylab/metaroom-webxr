@@ -11,6 +11,8 @@ MR.registerWorld((function() {
     uniform mat4 uProj;
     uniform float uTime;
 
+    uniform vec2 uResolution;
+
     out vec2 vUV;
     out vec2 vUV2;
 
@@ -42,7 +44,7 @@ MR.registerWorld((function() {
 
     void main() {
       // Multiply the position by the matrix.
-      gl_Position = uProj * uView * uModel * vec4(aPos + vec3(0., 0., -2.0 * (sin01(uTime) + 1.0)), 1.0);
+      gl_Position = uProj * uView * uModel * vec4(aPos + vec3(2.0 * cos(uTime), 0., -2.0 * (sin01(uTime) + 1.0)), 1.0);
 
       vNor = aNor;
       // Pass the texcoord to the fragment shader.
@@ -88,6 +90,7 @@ MR.registerWorld((function() {
             image.onload = () => {
                 resolve(image);
             };
+            image.onerror = () => { console.error("failed to load: " + url); reject(); };
 
             image.src = url;
         });
@@ -97,21 +100,16 @@ MR.registerWorld((function() {
         let urlCount = urls.length;
         let images = [];
 
-        return new Promise(() => {
-            const onImageLoad = () => {
-                urlCount -= 1;
-
-                if (urlCount === 0) {
-                    resolve(images);
-                    images = null;
-                }
-            };
-
-            for (let i = 0; i < urlCount; i += 1) {
-                loadImage(urls[i]).then((image) => {
-                    images.push(image);
-                });
-            }
+        const pending = [];
+        for (let i = 0; i < urlCount; i += 1) {
+            pending.push(loadImagePromise(urls[i]).then((image) => {
+                console.log("loaded: " + urls[i]);
+                images.push(image);
+            }));
+        }
+        return Promise.all(pending).then(data => {
+            console.log("loaded all images");
+            return images;
         });
     }
 
@@ -128,10 +126,10 @@ MR.registerWorld((function() {
         let urlCount = urls.length;
         let images = [];
 
-        function onImageLoad() {
+        function onImageLoad(url) {
             urlCount -= 1;
 
-            console.log("loaded");
+            console.log("loaded: " + url);
 
             if (urlCount === 0) {
                 console.log("all loaded");
@@ -142,7 +140,7 @@ MR.registerWorld((function() {
 
         for (let i = 0; i < urlCount; i += 1) {
             console.log("loading: " + urls[i]);
-            const image = loadImage(urls[i], onImageLoad);
+            const image = loadImage(urls[i], function() { onImageLoad(urls[i]); } );
             images.push(image);
         }
 
@@ -307,14 +305,46 @@ MR.registerWorld((function() {
     ]);
 
 
+    function getAndStoreAttributeLocations(_gl, program, data, suffix = "Loc") {
+        const dataCount = _gl.getProgramParameter(program, _gl.ACTIVE_ATTRIBUTES);
+        for (let i = 0; i < dataCount; i += 1) {
+            const info = _gl.getActiveAttrib(program, i);
+            const idx = _gl.getAttribLocation(program, info.name);
+            data[info.name + suffix] = idx;
+        }
+    }
 
-    function setup(state, myWorld, session) {
-        // load initial images, then continue setup
-        loadImages([
-            window.location + "js/worlds/examples/w4/resources/textures/brick.png",
-            window.location + "js/worlds/examples/w4/resources/textures/polkadots_transparent.png",    
-        ],
-        (images) => {
+    function getAndStoreIndividualUniformLocations(_gl, program, data, suffix = "Loc") {
+        const dataCount = _gl.getProgramParameter(program, _gl.ACTIVE_UNIFORMS);
+        for (let i = 0; i < dataCount; i += 1) {
+            const info = _gl.getActiveUniform(program, i);
+            const idx = _gl.getUniformLocation(program, info.name);
+            data[info.name + suffix] = idx;
+        }
+    }
+
+    // TODO(KTR): helper object to keep offsets correct as you set attribute pointers ?
+    function AttributePointerState() {
+        this.bytePtr = 0;
+    }
+
+    function worldPath() {
+        return window.location + "js/worlds/examples/w4/";
+    }
+
+    // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
+    // (return JavaScript "Promises" like in loadImages())
+    async function setup(state, myWorld, session) {
+        // load initial images, then continue setup after waiting is done
+        const images = await loadImagesPromise([
+            worldPath() + "resources/textures/brick.png",
+            worldPath() + "resources/textures/polkadots_transparent.png",    
+        ]);
+
+        // this line only executes after the images are loaded asynchronously
+        // "await" is syntactic sugar that makes the code continue to look linear (avoid messy callbacks or "then" clauses)
+
+        {
         
         state.attribData  = {};
         state.uniformData = {};
@@ -327,22 +357,25 @@ MR.registerWorld((function() {
 
         // save all attribute and uniform locations
 
-        state.attribData.posAttribLoc = gl.getAttribLocation(state.program, "aPos");
-        state.attribData.norAttribLoc = gl.getAttribLocation(state.program, "aNor");
-        state.attribData.uvAttribLoc  = gl.getAttribLocation(state.program, "aUV");
-        console.log(state.attribData.posAttribLoc, state.attribData.norAttribLoc, state.attribData.uvAttribLoc);
+        // state.attribData.aPosLoc = gl.getAttribLocation(state.program, "aPos");
+        // state.attribData.aNorLoc = gl.getAttribLocation(state.program, "aNor");
+        // state.attribData.aUVLoc  = gl.getAttribLocation(state.program, "aUV");
+        getAndStoreAttributeLocations(gl, state.program, state.attribData);
 
         // note: could also use a uniform buffer instead of individual uniforms
         // to share uniforms across shader programs
-        state.uniformData.modelLoc = gl.getUniformLocation(state.program, "uModel");
-        state.uniformData.viewLoc  = gl.getUniformLocation(state.program, "uView");
-        state.uniformData.projLoc  = gl.getUniformLocation(state.program, "uProj");
-        state.uniformData.timeLoc  = gl.getUniformLocation(state.program, "uTime");
-        state.uniformData.tex0Loc  = gl.getUniformLocation(state.program, "uTex0");
-        state.uniformData.tex1Loc  = gl.getUniformLocation(state.program, "uTex1");
+        // state.uniformData.uModelLoc = gl.getUniformLocation(state.program, "uModel");
+        // state.uniformData.uViewLoc  = gl.getUniformLocation(state.program, "uView");
+        // state.uniformData.uProjLoc  = gl.getUniformLocation(state.program, "uProj");
+        // state.uniformData.uTimeLoc  = gl.getUniformLocation(state.program, "uTime");
+        // state.uniformData.uTex0Loc  = gl.getUniformLocation(state.program, "uTex0");
+        // state.uniformData.uTex1Loc  = gl.getUniformLocation(state.program, "uTex1");
 
-        gl.uniform1i(state.uniformData.tex0Loc, 0); // set texture unit 0 at uTex0
-        gl.uniform1i(state.uniformData.tex1Loc, 1); // set texture unit 1 at uTex1
+        // NOTE: individual as opposed to the uniform buffers that may be added in an example later
+        getAndStoreIndividualUniformLocations(gl, state.program, state.uniformData);
+
+        gl.uniform1i(state.uniformData.uTex0Loc, 0); // set texture unit 0 at uTex0
+        gl.uniform1i(state.uniformData.uTex1Loc, 1); // set texture unit 1 at uTex1
 
         // attribute state
         state.vao = gl.createVertexArray();
@@ -351,6 +384,8 @@ MR.registerWorld((function() {
         // create buffer for attributes
         // Version 1: (RECOMMENDED)
         {
+            // Step 1: create GPU buffers
+
             // create buffer for vertex attribute data
             state.vertexBuf = gl.createBuffer();
             // set this to be the buffer we're currently looking at
@@ -365,9 +400,10 @@ MR.registerWorld((function() {
             // upload data to buffer
             gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, cubeIndexData, gl.STATIC_DRAW, 0);
 
-            // specify the attributes
+            // Step 2: specify the attributes
+
             // TODO(KTR): possible helper function call
-            //function setAttribPointers(state.attribData.posAttribLoc, size, type, normalize, stride, offset, bytesPerElement);
+            //function setAttribPointers(state.attribData.aPosLoc, size, type, normalize, stride, offset, bytesPerElement);
             
             // position
             {
@@ -378,9 +414,9 @@ MR.registerWorld((function() {
                 const offset = Float32Array.BYTES_PER_ELEMENT * 0;
                 // set how the data is accessed in the buffer
                 gl.vertexAttribPointer( 
-                    state.attribData.posAttribLoc, size, type, normalize, stride, offset
+                    state.attribData.aPosLoc, size, type, normalize, stride, offset
                 );
-                gl.enableVertexAttribArray(state.attribData.posAttribLoc); // enable the attribute
+                gl.enableVertexAttribArray(state.attribData.aPosLoc); // enable the attribute
             }
             // normals
             {
@@ -391,9 +427,9 @@ MR.registerWorld((function() {
                 const offset = Float32Array.BYTES_PER_ELEMENT * 3;
                 // set how the data is accessed in the buffer
                 gl.vertexAttribPointer( 
-                    state.attribData.norAttribLoc, size, type, normalize, stride, offset
+                    state.attribData.aNorLoc, size, type, normalize, stride, offset
                 );
-                gl.enableVertexAttribArray(state.attribData.norAttribLoc); // enable the attribute
+                gl.enableVertexAttribArray(state.attribData.aNorLoc); // enable the attribute
             }
             // uv coords
             {
@@ -404,9 +440,9 @@ MR.registerWorld((function() {
                 const offset = Float32Array.BYTES_PER_ELEMENT * 6;
                 // set how the data is accessed in the buffer
                 gl.vertexAttribPointer( 
-                    state.attribData.uvAttribLoc, size, type, normalize, stride, offset
+                    state.attribData.aUVLoc, size, type, normalize, stride, offset
                 );
-                gl.enableVertexAttribArray(state.attribData.uvAttribLoc); // enable the attribute
+                gl.enableVertexAttribArray(state.attribData.aUVLoc); // enable the attribute
             }
         }
         // Version 2: (OLD)
@@ -429,9 +465,9 @@ MR.registerWorld((function() {
         //         const offset = 0;        // start at beginning of the buffer
         //         // set how the data is accessed in the buffer
         //         gl.vertexAttribPointer( 
-        //             state.attribData.posAttribLoc, size, type, normalize, stride, offset
+        //             state.attribData.aPosLoc, size, type, normalize, stride, offset
         //         );
-        //         gl.enableVertexAttribArray(state.attribData.posAttribLoc); // enable the attribute
+        //         gl.enableVertexAttribArray(state.attribData.aPosLoc); // enable the attribute
         //     }
 
         //     {
@@ -448,13 +484,13 @@ MR.registerWorld((function() {
         //         const stride = 0;
         //         const offset = 0;
         //         gl.vertexAttribPointer(
-        //             state.attribData.uvAttribLoc, size, type, normalize, stride, offset
+        //             state.attribData.aUVLoc, size, type, normalize, stride, offset
         //         );
-        //         gl.enableVertexAttribArray(state.attribData.uvAttribLoc); // enable the attribute
+        //         gl.enableVertexAttribArray(state.attribData.aUVLoc); // enable the attribute
         //     }
         // }
 
-        // load textures,
+        // Step 3: load textures if you have any,
         // alternatively could combine the images into one and use an atlas
         {
             state.textureData.textures = [];
@@ -507,11 +543,8 @@ MR.registerWorld((function() {
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
-        // don't forget to start the world!
-        myWorld.start();
         
-        });
+        };
     }
 
     function onStartFrame(t, state) {
@@ -539,13 +572,13 @@ MR.registerWorld((function() {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         gl.enable(gl.DEPTH_TEST);
-        //gl.enable(gl.CULL_FACE);
+        gl.enable(gl.CULL_FACE);
         
             gl.bindVertexArray(state.vao);
 
             gl.useProgram(state.program);
 
-            gl.uniform1f(state.uniformData.timeLoc, now / 1000.0);
+            gl.uniform1f(state.uniformData.uTimeLoc, now / 1000.0);
     }
 
     function onEndFrame(t, state) {
@@ -556,9 +589,9 @@ MR.registerWorld((function() {
         const sec = state.time / 1000;
 
 
-        gl.uniformMatrix4fv(state.uniformData.modelLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));           
-        gl.uniformMatrix4fv(state.uniformData.viewLoc, false, new Float32Array(viewMat));
-        gl.uniformMatrix4fv(state.uniformData.projLoc, false, new Float32Array(projMat));
+        gl.uniformMatrix4fv(state.uniformData.uModelLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));           
+        gl.uniformMatrix4fv(state.uniformData.uViewLoc, false, new Float32Array(viewMat));
+        gl.uniformMatrix4fv(state.uniformData.uProjLoc, false, new Float32Array(projMat));
 
         const primitive = gl.TRIANGLES;
         const offset    = 0;
