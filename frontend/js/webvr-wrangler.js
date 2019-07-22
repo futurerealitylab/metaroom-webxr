@@ -82,6 +82,11 @@ window.VRCanvasWrangler = (function() {
       this._viewMatrix = mat4.create();
       this._animationHandle = 0;
 
+      // Bound functions
+      this.onVRRequestPresent = this._onVRRequestPresent.bind(this);
+      this.onVRExitPresent = this._onVRExitPresent.bind(this);
+      this.onVRPresentChange = this._onVRPresentChange.bind(this);
+
       // Uninitialized member variables (see _init()).
       this._parent = null;
       this._canvas = null;
@@ -211,9 +216,12 @@ window.VRCanvasWrangler = (function() {
     _initWebVR() {
       if (navigator.getVRDisplays) {
         this._frameData = new VRFrameData();
+        var button = this._button;
+        var me = this;
         navigator.getVRDisplays().then(function(displays) {
           if (displays.length > 0) {
             var vrDisplay = displays[displays.length - 1]; // ?
+            me._vrDisplay = vrDisplay;
 
             // It's highly recommended that you set the near and far planes to somethin
             // appropriate for your scene so the projection matrices WebVR produces
@@ -225,20 +233,18 @@ window.VRCanvasWrangler = (function() {
             // user has a VRDisplay capable of presenting connected before adding UI that
             // advertizes VR features.
             if (vrDisplay.capabilities.canPresent) {
-              // TODO create button
+              button.enabled = true;
             }
 
             // The UA may kick us out of VR present mode for any reason, so to ensure we
             // always know when we gegin/end presenting we need to listen for events.
-            window.addEventListener('vrdisplaypresentchange', onVRPresentChange, false);
+            window.addEventListener('vrdisplaypresentchange', me.onVRPresentChange, false);
 
             // These events fire when the user agent has had some indication that it would
             // be appropriate to enter or exit VR presentation mode, such as the user putting
             // on a headset and triggering a proximity sensor.
-            window.addEventListener('vrdisplayactivate', onVRRequestPresent, false);
-            window.addEventListener('vrdisplaydeactivate', onVRExitPresent, false);
-
-            this._button.enabled = true;
+            window.addEventListener('vrdisplayactivate', me.onVRRequestPresent, false);
+            window.addEventListener('vrdisplaydeactivate', me.onVRExitPresent, false);
           } else {
             console.error('WebVR supported, but no displays found.');
             // TODO route error modes to fallback display
@@ -299,17 +305,20 @@ window.VRCanvasWrangler = (function() {
       });
     }
 
+    _onVRPresentChange() {
+    }
+
     _onAnimationFrame(t) {
       let gl = this._gl;
       let vrDisplay = this._vrDisplay;
       let frame = this._frameData;
 
-      this.animationHandle = window.requestAnimationFrame(this.config.onAnimationFrame);
-
       if (vrDisplay) {
 
         vrDisplay.getFrameData(frame);
         if (vrDisplay.isPresenting) {
+
+          this._animationHandle = vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
 
           this.config.onStartFrame(t, this.customState);
 
@@ -323,6 +332,7 @@ window.VRCanvasWrangler = (function() {
           vrDisplay.submitFrame();
 
         } else {
+          this._animationHandle = window.requestAnimationFrame(this.config.onAnimationFrame);
           gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
           mat4.identity(this._viewMatrix);
           mat4.perspective(this._projectionMatrix, Math.PI/4,
@@ -335,7 +345,7 @@ window.VRCanvasWrangler = (function() {
         }
 
       } else {
-
+        this._animationHandle = window.requestAnimationFrame(this.config.onAnimationFrame);
         gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
         mat4.identity(this._viewMatrix);
         mat4.perspective(this._projectionMatrix, Math.PI/4,
