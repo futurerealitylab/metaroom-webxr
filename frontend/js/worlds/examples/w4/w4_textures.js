@@ -332,7 +332,7 @@ MR.registerWorld((function() {
     }
 
     function worldPath() {
-        return window.location + "js/worlds/examples/w4/";
+        return window.location.href.split('?')[0] + "js/worlds/examples/w4/";
     }
 
     // note: mark your setup function as "async" if you need to "await" any asynchronous tasks

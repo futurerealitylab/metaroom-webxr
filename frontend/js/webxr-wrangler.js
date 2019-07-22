@@ -6,39 +6,13 @@
 // XRCanvasWrangler provides quick-and-easy setup for WebXR.  Supports session
 // mirroring (for 2D display) and a fallback for when WebXR is not available.
 // All rendering details (resource management, etc.) is left to the user!
+
+// Assuming mat4 (see gl-matrix-min.js) is in global namespace
 window.XRCanvasWrangler = (function () {
 
   //
   // Helpers
   //
-
-  // Math (from gl-matrix mat4.js).  NOTE: Can I just include that instead?
-  function perspective(out, fovy, aspect, near, far) {
-    let f = 1.0 / Math.tan(fovy / 2), nf;
-    out[0] = f / aspect;
-    out[1] = 0;
-    out[2] = 0;
-    out[3] = 0;
-    out[4] = 0;
-    out[5] = f;
-    out[6] = 0;
-    out[7] = 0;
-    out[8] = 0;
-    out[9] = 0;
-    out[11] = -1;
-    out[12] = 0;
-    out[13] = 0;
-    out[15] = 0;
-    if (far != null && far !== Infinity) {
-      nf = 1 / (near - far);
-      out[10] = (far + near) * nf;
-      out[14] = (2 * far * near) * nf;
-    } else {
-      out[10] = -1;
-      out[14] = -2 * near;
-    }
-    return out;
-  }
 
   let CanvasUtil = (function() {
     function resizeToDisplaySize(canvas, scale = 1) {
@@ -85,7 +59,6 @@ window.XRCanvasWrangler = (function () {
 
   }())
 
-
   //
   // Export
   //
@@ -105,8 +78,6 @@ window.XRCanvasWrangler = (function () {
       options.onSelectStart = (function(t, state) {});
       options.onSelect = (function(t, state) {});
       options.onSelectEnd = (function(t, state) {});
-
-
     }
 
     beginSetup(options) {
@@ -192,8 +163,8 @@ window.XRCanvasWrangler = (function () {
       this._xrButton = null;
       this._xrImmersiveRefSpace = null;
       this._xrNonImmersiveRefSpace = null;
-      this._fallbackViewMat = null;
-      this._fallbackProjMat = null;
+      this._fallbackViewMat = mat4.create();
+      this._fallbackProjMat = mat4.create();
 
       this.animationHandle = 0;
       this.isFallback = false; 
@@ -357,7 +328,7 @@ window.XRCanvasWrangler = (function () {
       let gl = this._gl;
       gl.canvas.width = gl.canvas.offsetWidth * window.devicePixelRatio;
       gl.canvas.height = gl.canvas.offsetHeight * window.devicePixelRatio;
-      perspective(this._fallbackProjMat, Math.PI/4,
+      mat4.perspective(this._fallbackProjMat, Math.PI/4,
         gl.canvas.width / gl.canvas.height,
         0.01, 1000.0);
       gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
@@ -365,20 +336,13 @@ window.XRCanvasWrangler = (function () {
 
     _initFallback() {
       this.isFallback = true;
-      this._fallbackViewMat = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
-
-      const projOut = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
-
-      perspective(
-        projOut, 
-        Math.PI/4,
+      mat4.identity(this._fallbackViewMat);
+      mat4.perspective(this._fallbackProjMat, Math.PI/4,
         this._gl.canvas.width / this._gl.canvas.height,
         0.01, 1000.0
       );
 
-      this._fallbackProjMat = new Float32Array(projOut);
-
-      return;
+      return; // ?
 
       window.addEventListener('resize', this._onResize.bind(this));
       this._onResize();
@@ -494,27 +458,12 @@ window.XRCanvasWrangler = (function () {
         target = window;
         animationCallback = this.config.onWindowFrame;
 
-        {
-          const mat = this._fallbackViewMat;
-          mat[0]  = 1; mat[1]  = 0; mat[2]  = 0; mat[3]  = 0;
-          mat[4]  = 0; mat[5]  = 1; mat[6]  = 0; mat[7]  = 0;
-          mat[8]  = 0; mat[9]  = 0; mat[10] = 1; mat[11] = 0;
-          mat[12] = 0; mat[13] = 0; mat[14] = 0; mat[15] = 1;
-        }
-        {
-          const mat = this._fallbackProjMat;
-          // mat[0]  = 1; mat[1]  = 0; mat[2]  = 0; mat[3]  = 0;
-          // mat[4]  = 0; mat[5]  = 1; mat[6]  = 0; mat[7]  = 0;
-          // mat[8]  = 0; mat[9]  = 0; mat[10] = 1; mat[11] = 0;
-          // mat[12] = 0; mat[13] = 0; mat[14] = 0; mat[15] = 1;
-
-          this._fallbackProjMat = perspective(
-            mat, 
-            Math.PI/4,
-            this._gl.canvas.width / this._gl.canvas.height,
-            0.1, 1000.0
-          );
-        }
+        mat4.perspective(
+          this._fallbackProjMat,
+          Math.PI/4,
+          this._gl.canvas.width / this._gl.canvas.height,
+          0.1, 1000.0
+        );
 
       } else {
         target = this._session;
