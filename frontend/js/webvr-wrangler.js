@@ -164,7 +164,7 @@ window.VRCanvasWrangler = (function() {
     // Private member functions (if we can claim such a thing...)
     //
 
-    _init() {
+    async _init() {
       this._initButton();
       this._initCanvasOnParentElement();
       this._initCustomState();
@@ -181,7 +181,8 @@ window.VRCanvasWrangler = (function() {
         this._glAttachResourceTracking();
       }
 
-      if (!this._initWebVR()) {
+      const status = await this._initWebVR();
+      if (!status) {
         console.log('Initializing fallback ...');
         this._initFallback();
       }
