@@ -107,18 +107,14 @@ window.VRCanvasWrangler = (function() {
     }
 
     start() {
-      if (this._animationHandle > 0) {
-        let target;
+        let target = null;
         if (this._vrDisplay) {
-          this._vrDisplay.cancelAnimationFrame(this._animationHandle);
-          target = this._vrDisplay;
+            this._vrDisplay.cancelAnimationFrame(this._animationHandle);
+            this._animationHandle = this._vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
+        } else {
+            window.cancelAnimationFrame(this._animationHandle);          
+            this._animationHandle = window.requestAnimationFrame(this.config.onAnimationFrame);
         }
-        else {
-          window.cancelAnimationFrame(this._animationHandle);          
-          target = window;
-        }
-      }
-      this._animationHandle = target.requestAnimationFrame(this.config.onAnimationFrame);
     }
 
     beginSetup(options) {
