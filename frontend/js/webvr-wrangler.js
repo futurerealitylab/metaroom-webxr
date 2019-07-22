@@ -101,14 +101,24 @@ window.VRCanvasWrangler = (function() {
       this.persistentStateMap = null;
       this.globalPersistentState = null;
 
+      this._clearConfig();
+
       this._init();
     }
 
     start() {
       if (this._animationHandle > 0) {
-        window.cancelAnimationFrame(this._animationHandle);
+        let target;
+        if (this._vrDisplay) {
+          this._vrDisplay.cancelAnimationFrame(this._animationHandle);
+          target = this._vrDisplay;
+        }
+        else {
+          window.cancelAnimationFrame(this._animationHandle);          
+          target = window;
+        }
       }
-      this._animationHandle = window.requestAnimationFrame(this.config.onAnimationFrame);
+      this._animationHandle = target.requestAnimationFrame(this.config.onAnimationFrame);
     }
 
     beginSetup(options) {
@@ -116,6 +126,9 @@ window.VRCanvasWrangler = (function() {
     }
 
     async configure(options) {
+
+      this._clearConfig();
+      this._reset();
 
       options = options || {};
 
@@ -216,11 +229,11 @@ window.VRCanvasWrangler = (function() {
     _initWebVR() {
       if (navigator.getVRDisplays) {
         this._frameData = new VRFrameData();
-        var button = this._button;
-        var me = this;
+        const button = this._button;
+        const me = this;
         navigator.getVRDisplays().then(function(displays) {
           if (displays.length > 0) {
-            var vrDisplay = displays[displays.length - 1]; // ?
+            const vrDisplay = displays[displays.length - 1]; // ?
             me._vrDisplay = vrDisplay;
 
             // It's highly recommended that you set the near and far planes to somethin
@@ -246,16 +259,16 @@ window.VRCanvasWrangler = (function() {
             window.addEventListener('vrdisplayactivate', me.onVRRequestPresent, false);
             window.addEventListener('vrdisplaydeactivate', me.onVRExitPresent, false);
           } else {
-            console.error('WebVR supported, but no displays found.');
+            console.warn('WebVR supported, but no displays found.');
             // TODO route error modes to fallback display
           }
         }, function() {
-          console.error('Your browser does not support WebVR.');
+          console.warn('Your browser does not support WebVR.');
           // TODO route error modes to fallback display
         });
         return true;
       } else if (navigator.getVRDevices) {
-        console.warn('Your browser supports WebVR, but not the latest version.')
+          console.warn('Your browser supports WebVR, but not the latest version.')
         return false;
       } else {
         return false;
@@ -282,9 +295,29 @@ window.VRCanvasWrangler = (function() {
     }
 
     _clearConfig() {
+      this.config = this.config || {};
+      const options = this.config;
+
+      options.onStartFrame = (function(t, state) {});
+      options.onEndFrame = (function(t, state) {});
+      options.onDraw = (function(t, p, v, state, eyeIdx) {});
+      options.onAnimationFrame = this._onAnimationFrame.bind(this);
+      //options.onWindowFrame = this._onWindowFrame.bind(this);
+
+      // selection
+      options.onSelectStart = (function(t, state) {});
+      options.onSelect = (function(t, state) {});
+      options.onSelectEnd = (function(t, state) {});
     }
 
     _reset() {
+      if (this._vrDisplay) {
+        this._vrDisplay.cancelAnimationFrame(this._animationHandle);
+      } else {
+        window.cancelAnimationFrame(this._animationHandle);
+      }
+
+
     }
 
     _onVRRequestPresent () {
