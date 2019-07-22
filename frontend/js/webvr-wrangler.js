@@ -166,10 +166,13 @@ window.VRCanvasWrangler = (function() {
 
     _init() {
       this._initButton();
-      this._initParentCanvasPair();
+      this._initCanvasOnParentElement();
       this._initCustomState();
 
-      console.assert(this._initGLContext(this._canvas));
+      const ctx = GFX.initGLContext(this._canvas, this.options.contextNames, this.options.contextOptions);
+      console.assert(ctx.isValid);
+      this._gl      = ctx.gl;
+      this._version = ctx.version;
 
       if (this.options.glUseGlobalContext) {
         window.gl = this._gl;
@@ -197,29 +200,28 @@ window.VRCanvasWrangler = (function() {
       document.querySelector('body').prepend(this._button.domElement);
     }
 
-    _initParentCanvasPair() {
-      console.log('Initializing canvas pair');
-      const pair = CanvasUtil.createCanvasOnElement(
-        'active',
-        this.options.outputSurfaceName,
-        this.options.outputWidth,
-        this.options.outputHeight
-      );
-      console.assert(pair !== null);
-      console.assert(pair.parent !== null);
-      console.assert(pair.canvas !== null);
+    _initCanvasOnParentElement(parent = 'active') {
+        const parentCanvasRecord = CanvasUtil.createCanvasOnElement(
+            'active',
+            this.options.outputSurfaceName,
+            this.options.outputWidth,
+            this.options.outputHeight
+        );
+        console.assert(parentCanvasRecord !== null);
+        console.assert(parentCanvasRecord.parent !== null);
+        console.assert(parentCanvasRecord.canvas !== null);
 
-      this._parent = pair.parent;
-      this._canvas = pair.canvas;
+        this._parent = parentCanvasRecord.parent;
+        this._canvas = parentCanvasRecord.canvas;
     }
 
     _initCustomState() {
-      if (this.useCustomState) {
-        console.log('Initializing custom state');
-        this.customState = {};
-        this.persistentStateMap = new Map();
-        this.globalPersistent = {};
-      }
+        if (this.useCustomState) {
+            console.log('Initializing custom state');
+            this.customState = {};
+            this.persistentStateMap = new Map();
+            this.globalPersistent = {};
+        }
     }
 
     _initWebVR() {
@@ -265,29 +267,13 @@ window.VRCanvasWrangler = (function() {
         return true;
       } else if (navigator.getVRDevices) {
           console.warn('Your browser supports WebVR, but not the latest version.')
-        return false;
+          return false;
       } else {
-        return false;
+          return false;
       }
     }
 
     _initFallback() {
-    }
-
-    _initGLContext(target) {
-      console.log('Initializing WebGL ...');
-      let contextNames = this.options.contextNames;
-      let contextOptions = this.options.contextOptions;
-
-      for (let i = 0; i < contextNames.length; ++i) {
-        const glCtx = target.getContext(contextNames[i], contextOptions);
-        if (glCtx != null) { // non-null indicates success
-          this._gl      = glCtx;
-          this._version = contextNames[i];
-          return true;
-        }
-      }
-      return false;
     }
 
     _clearConfig() {

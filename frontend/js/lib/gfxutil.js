@@ -5,15 +5,33 @@
 const GFX = (function() {
     const _util = {};
 
-    // (KTR) TODO
     // shader and GL utilities
+
+    class GLContextResult {
+        constructor(isValid, _gl, _version) {
+            this.isValid = isValid;
+            this.gl      = _gl;
+            this.version = _version;
+        }
+    }
+
+    function initGLContext(target, contextNames, contextOptions) {
+        for (let i = 0; i < contextNames.length; ++i) {
+            const glCtx = target.getContext(contextNames[i], contextOptions);
+            if (glCtx != null) { // non-null indicates success
+                return new GLContextResult(true, glCtx, contextNames[i]);
+            }
+        }
+        return new GLContextResult(false);
+    }
+    _util.initGLContext = initGLContext;
 
     function addShader(program, type, src) {
       const shader = gl.createShader(type);
       gl.shaderSource(shader, src);
       gl.compileShader(shader);
       if (! gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        let msg = gl.getShaderInfoLog(shader);
+        const msg = gl.getShaderInfoLog(shader);
 
         let shaderTypename = '';
         switch (type) {
