@@ -15,6 +15,7 @@ MR.registerWorld((function() {
 
     out vec2 vUV;
     out vec2 vUV2;
+    out vec3 vPos;
 
     out vec3 vNor;
 
@@ -45,13 +46,15 @@ MR.registerWorld((function() {
     void main() {
       // Multiply the position by the matrix.
       gl_Position = uProj * uView * uModel * vec4(aPos + vec3(2.0 * cos(uTime), 0., -2.0 * (sin01(uTime) + 1.0)), 1.0);
-
+      
       vNor = aNor;
       // Pass the texcoord to the fragment shader.
       vUV = aUV;
 
       // re-add the origin
       vUV2 = rotate_2D_point_around(aUV, vec2(0.5), uTime);
+
+      vPos = gl_Position.xyz;
     }
     `;
 
@@ -62,6 +65,7 @@ MR.registerWorld((function() {
     in vec3 vNor;
     in vec2 vUV;
     in vec2 vUV2;
+    in vec3 vPos;
 
 
     // The texture(s).
@@ -79,8 +83,6 @@ MR.registerWorld((function() {
         color1 = mix(color1, vec4(0.0), cos(uTime) * cos(uTime));
 
         fragColor = mix(color0, color1, sin(uTime));
-
-        //fragColor = color0;
     }
     `;
 
@@ -360,10 +362,10 @@ MR.registerWorld((function() {
 
         // save all attribute and uniform locations
 
-        // state.attribData.aPosLoc = gl.getAttribLocation(state.program, "aPos");
-        // state.attribData.aNorLoc = gl.getAttribLocation(state.program, "aNor");
-        // state.attribData.aUVLoc  = gl.getAttribLocation(state.program, "aUV");
-        getAndStoreAttributeLocations(gl, state.program, state.attribData);
+        state.attribData.aPosLoc = 0;
+        state.attribData.aNorLoc = 1;
+        state.attribData.aUVLoc  = 2;
+        //getAndStoreAttributeLocations(gl, state.program, state.attribData);
 
         // note: could also use a uniform buffer instead of individual uniforms
         // to share uniforms across shader programs
@@ -589,8 +591,8 @@ MR.registerWorld((function() {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         gl.enable(gl.DEPTH_TEST);
-        gl.enable(gl.CULL_FACE);
-        
+        // gl.enable(gl.CULL_FACE);
+        gl.disable(gl.CULL_FACE);
             gl.bindVertexArray(state.vao);
 
             gl.useProgram(state.program);
@@ -605,17 +607,17 @@ MR.registerWorld((function() {
     function onDraw(t, projMat, viewMat, state, eyeIdx) {
         const sec = state.time / 1000;
 
-
-        gl.uniformMatrix4fv(state.uniformData.uModelLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1]));           
+        gl.uniformMatrix4fv(state.uniformData.uModelLoc, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0, -1.0,1]));           
         gl.uniformMatrix4fv(state.uniformData.uViewLoc, false, new Float32Array(viewMat));
         gl.uniformMatrix4fv(state.uniformData.uProjLoc, false, new Float32Array(projMat));
 
         const primitive = gl.TRIANGLES;
         const offset    = 0;
         const count     = cubeIndexCount;
+
         // Note: we could choose to optimize memory use further by using UNSIGNED_BYTE since we have so few indices (< 255),
         // but most of the time you would use UNSIGNED_SHORT or UNSIGNED_INT
-        gl.drawElements(primitive, cubeIndexCount, gl.UNSIGNED_SHORT, offset);
+        gl.drawElements(primitive, count, gl.UNSIGNED_SHORT, offset);
     }
 
 
