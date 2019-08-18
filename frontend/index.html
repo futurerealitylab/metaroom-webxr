@@ -1,9 +1,39 @@
 <!DOCTYPE html>
 <head>
+  <style type="text/css" media="screen">
+    textarea {
+      margin: 0;
+      border-radius: 0;
+      font:20px courier;
+      min-height: 0%;
+      /* min-width: 100%; */
+      /* max-height: 50vh; */
+      resize: vertical;
+    }
+
+
+  .textAreaColumn div span {
+    display:block;
+    font:20px courier;
+    color: red;
+  }
+
+  .text_area_block {
+      font-family:    courier;
+      font-size:      12px;
+      font-weight:    bold;
+  }
+/*
+  body.noScroll {
+    overflow: hidden;
+  }*/
+
+  </style>
   <!-- WebXR Shim is taken from @immersive-web/webxr-examples; it attempts to
     patch browser inconsistencies similar to the webxr-polyfill.js.  According
     to its authors, it will be unnecessary soon after the production WebXR impl
     is shipped. -->
+  <script src="js/lib/htmlutil.js"></script>
   <script src="js/third-party/gl-matrix-min.js"></script>
   <script src="js/lib/gfxutil.js"></script>
   <script src="js/webxr-version-shim.js"></script>
@@ -128,8 +158,50 @@
   <script src=js/worlds/examples/w3/w3_ktr_2017_example.js></script>
   <script src=js/worlds/examples/w4/w4_textures.js></script>
 
+  <tr>
+  <div class="text_area_block" id=text-areas></div>
+  </tr>
+
   <script>
     "use strict";
+
+    let autoExpand = function(field) {
+      // field.style.height = "inherit";
+
+      // var computed = window.getComputedStyle(field);
+
+      // var height = parseInt(computed.getPropertyValue('border-top-width'), 10) +
+      //              parseInt(computed.getPropertyValue('padding-top'), 10) +
+      //              field.scrollHeight +
+      //              parseInt(computed.getPropertyValue('padding-bottom'), 10) +
+      //              parseInt(computed.getPropertyValue('border-bottom-width'), 10);
+
+
+      // field.style.height = height + 'px';
+
+      let text = field.value.split('\n');
+      let cols = 0;
+      for (let i = 0; i < text.length; i += 1) {
+          cols = Math.max(cols, text[i].length);
+      }
+
+      field.rows = text.length + 1;
+      field.cols = cols;
+    }
+    document.addEventListener('input', function (event) {
+      if (event.target.tagName.toLowerCase() !== 'textarea') return;
+      autoExpand(event.target);
+    }, false);   
+
+
+    function tempShaderEditingInit() {
+        // TODO(KTR): make cleaner
+        MR.shaderMap = new Map();
+        const _tareas = document.getElementById("text-areas");
+        while (_tareas && _tareas.firstChild) {
+            _tareas.removeChild(_tareas.firstChild);
+        }
+    }
     
 
     MR.wrangler.init({
@@ -141,6 +213,8 @@
       glDoResourceTracking : true,
       // main() is the system's entry point
       main : () => {
+
+        tempShaderEditingInit();
 
         // call the main function of the selected world
         MR.wrangler.beginSetup(MR.worlds[MR.worldIdx](MR.wrangler));
@@ -163,6 +237,8 @@
 
             try {
               // call the main function of the selected world
+
+              tempShaderEditingInit();
 
               MR.wrangler.beginSetup(MR.worlds[MR.worldIdx](MR.wrangler));
 

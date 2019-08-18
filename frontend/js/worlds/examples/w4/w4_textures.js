@@ -310,32 +310,12 @@ MR.registerWorld((function() {
     ]);
 
 
-    function getAndStoreAttributeLocations(_gl, program, data, suffix = "Loc") {
-        const dataCount = _gl.getProgramParameter(program, _gl.ACTIVE_ATTRIBUTES);
-        for (let i = 0; i < dataCount; i += 1) {
-            const info = _gl.getActiveAttrib(program, i);
-            const idx = _gl.getAttribLocation(program, info.name);
-            data[info.name + suffix] = idx;
-        }
-    }
 
-    function getAndStoreIndividualUniformLocations(_gl, program, data, suffix = "Loc") {
-        const dataCount = _gl.getProgramParameter(program, _gl.ACTIVE_UNIFORMS);
-        for (let i = 0; i < dataCount; i += 1) {
-            const info = _gl.getActiveUniform(program, i);
-            const idx = _gl.getUniformLocation(program, info.name);
-            data[info.name + suffix] = idx;
-        }
-    }
-
-    // TODO(KTR): helper object to keep offsets correct as you set attribute pointers ?
-    function AttributePointerState() {
-        this.bytePtr = 0;
-    }
 
     function worldPath() {
         return window.location.href.split('?')[0] + "js/worlds/examples/w4/";
     }
+
 
     // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
     // (return JavaScript "Promises" like in loadImages())
@@ -360,12 +340,62 @@ MR.registerWorld((function() {
         state.program = GFX.createShaderProgramFromStrings(vert, frag);
         gl.useProgram(state.program);
 
+        GFX.registerShaderForLiveEditing(gl, "mainShader", {
+            vertex    : vert, 
+            fragment  : frag,
+            sharedLib : "this is just a test, not code"
+
+        }, (args) => {
+            const vertex    = args.vertex;
+            const fragment  = args.fragment;
+            const sharedLib = args.sharedLib;
+
+            // (KTR): TODO here you could do some string parsing to incorporate 
+            // the shared shared library into the main shader code,
+            // we'd like to be able to edit that shader code separately
+            
+            const errRecord = {};
+            const program = GFX.createShaderProgramFromStrings(args.vertex, args.fragment, errRecord);
+            if (!program) {
+                console.error("Could not compile shader");
+                console.error(errRecord);
+
+                args.clearLogErrors();
+                args.logError(errRecord);
+
+                gl.useProgram(null);
+                state.program = null;
+
+                return;
+            }
+            args.clearLogErrors();
+
+            const prevProgram = state.program;
+            gl.deleteProgram(prevProgram);
+            state.program = program;
+
+            // bind the newly compiled program
+            gl.useProgram(state.program);
+
+            // re-initialize uniforms
+
+            GFX.getAndStoreIndividualUniformLocations(gl, state.program, state.uniformData);
+
+            // commented line would give you the maximum number of 
+            // texture image units availabl on your hardware
+            // const maxTextureUnitCount = GL.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
+
+            gl.uniform1i(state.uniformData.uTex0Loc, 0); // set texture unit 0 at uTex0
+            gl.uniform1i(state.uniformData.uTex1Loc, 1); // set texture unit 1 at uTex1
+        });
+
+
         // save all attribute and uniform locations
 
         state.attribData.aPosLoc = 0;
         state.attribData.aNorLoc = 1;
         state.attribData.aUVLoc  = 2;
-        //getAndStoreAttributeLocations(gl, state.program, state.attribData);
+        //GFX.getAndStoreAttributeLocations(gl, state.program, state.attribData);
 
         // note: could also use a uniform buffer instead of individual uniforms
         // to share uniforms across shader programs
@@ -377,7 +407,7 @@ MR.registerWorld((function() {
         // state.uniformData.uTex1Loc  = gl.getUniformLocation(state.program, "uTex1");
 
         // NOTE: individual as opposed to the uniform buffers that may be added in an example later
-        getAndStoreIndividualUniformLocations(gl, state.program, state.uniformData);
+        GFX.getAndStoreIndividualUniformLocations(gl, state.program, state.uniformData);
 
         // commented line would give you the maximum number of 
         // texture image units availabl on your hardware
@@ -589,10 +619,10 @@ MR.registerWorld((function() {
 
 
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
         gl.enable(gl.DEPTH_TEST);
-        // gl.enable(gl.CULL_FACE);
-        gl.disable(gl.CULL_FACE);
+        gl.enable(gl.CULL_FACE);
             gl.bindVertexArray(state.vao);
 
             gl.useProgram(state.program);
