@@ -139,6 +139,265 @@ const GFX = (function() {
     }
     _util.getAndStoreIndividualUniformLocations = getAndStoreIndividualUniformLocations;
 
+    function ShaderLibIncludeRecord(idxBegin, idxEndExclusive, libRecord) {
+      this.idxBegin        = idxBegin;
+      this.idxEndExclusive = idxEndExclusive;
+      this.libRecord       = libRecord;
+    }
+    function ShaderLibIncluderState(stream) {
+      this.stream = stream;
+      this.i = 0;
+      this.len = stream.length;
+      this.inRegularComment = false;
+      this.inBlockComment = false;
+      this.preprocessor = false;
+
+      this.includes = [];
+    }
+
+    function assembleShader(pstate, output) {
+      const shaderBase = pstate.stream;
+      const includes = pstate.includes;
+
+      const count = includes.length;
+      if (count == 0) {
+        output.isValid = true;
+        output.shaderSource = shaderBase;
+        return output;
+      }
+
+
+      const shaderSections = [];
+      let shaderBaseCursor = 0;
+      for (let i = 0; i < count; i += 1) {
+        const include = includes[i];
+
+        shaderSections.push(shaderBase.substring(shaderBaseCursor, include.idxBegin));
+        shaderSections.push(include.libRecord);
+        shaderBaseCursor = include.idxEndExclusive;
+      }
+      if (shaderBaseCursor < shaderBase.length) {
+        shaderSections.push(shaderBase.substring(shaderBaseCursor));
+      } 
+
+      output.isValid = true;
+      output.shaderSource = shaderSections.join('');
+
+      console.log(output.shaderSource);
+
+      return output;
+    }
+    function shaderPreprocessor(string, libMap) {
+
+       const pr = console.log;
+
+       pr("stream=[" + string + "]");
+
+       const pstate = new ShaderLibIncluderState(string);
+
+       const output = {isValid : false, shaderSource : null};
+
+       function seek(pstate, symbol) {
+          return pstate.stream.indexOf(symbol, pstate.i);
+       }
+
+       function inComment(pstate) {
+          return pstate.inRegularComment || pstate.inBlockComment;
+       }
+
+       function skipWhitespace(pstate) {
+          console.assert(pstate.i < pstate.len);
+          let whiteChar = pstate.stream.charAt(pstate.i);
+          while (whiteChar === ' ' || 
+                  whiteChar === '\t' || 
+                  whiteChar === '\n' || 
+                  whiteChar === '\r') {
+            pstate.i += 1;
+            
+            console.assert(pstate.i < pstate.len);
+
+            whiteChar = pstate.stream.charAt(pstate.i);
+          } 
+        }
+
+       let prevC = '';
+       while (pstate.i < pstate.len) {
+          const c = pstate.stream.charAt(pstate.i);
+          switch (c) {
+              case '#': {
+                if (prevC != '' && prevC != '\n' && prevC != '\r' && prevC != '\t' && prevC != ' ') {
+                    break;
+                }
+                pstate.preprocessor = true;
+                pr(pstate.i, '# preprocessor_begin');
+
+                const directivePos = pstate.i;
+
+                // find keyword
+                let whiteChar = '';
+                do {
+                  pstate.i += 1;
+                  
+                  console.assert(pstate.i < pstate.len);
+
+                  whiteChar = pstate.stream.charAt(pstate.i);
+                } while (whiteChar === ' ' || 
+                        whiteChar === '\t');
+
+                console.log(pstate.stream.charAt(pstate.i));
+
+
+                // look for include directive
+                //const includePos = seek(pstate, 'include');
+                const isIncludeDirective = 
+                  (pstate.stream.substring(pstate.i, pstate.i + 7) === 'include') ?
+                                                                                  0 : -1;
+
+                pr("found: " + pstate.stream.substring(pstate.i, pstate.i + 7));
+
+
+                if (isIncludeDirective) { // different preprocessor directive found
+                  const newlinePos = seek(pstate, '\n');
+                  if (newlinePos == -1) {
+                    console.warn("WARNING: No newline at assumed EOF");
+                    assembleShader(pstate, out);
+                    return out;
+                  } else {
+                    pstate.i = newlinePos - 1;
+                    prevC = pstate.stream.charAt(pstate.i);
+                  }
+                } else { // include directive found
+
+                  const includePos = pstate.i;
+                  // go to index of 'e' in "include"
+                  pstate.i = includePos + 7;
+                  // seek past whitespace
+
+                  console.log("include :" + pstate.stream.charAt(pstate.i));
+
+                  skipWhitespace(pstate);
+
+                  console.log(pstate.stream.charAt(pstate.i));
+                  console.assert(pstate.stream.charAt(pstate.i) === '<');
+
+
+                  // extract the library name
+                  pstate.i += 1;
+
+                  const includeEndPos = seek(pstate, '>');
+                  const newlineEndPosSyntaxTest = seek(pstate, '\n');
+
+                  if (includeEndPos == -1 || newlineEndPosSyntaxTest < includeEndPos) {
+                    console.error("ERROR: include syntax");
+                    return output;
+                  }
+
+                  const libName = pstate.stream.substring(pstate.i, includeEndPos);
+
+                  const libRecord = libMap.get(libName.trim());
+                  if (libRecord) {
+                    pr("including lib=<" + libName.trim() + ">");
+                    pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, libRecord))
+                  } else {
+                    console.error("ERROR: [Metaroom Shader Preprocessor] cannot find lib=<" + libName + ">");
+                  }
+
+                  pstate.i = includeEndPos;
+                  // seek to newline or EOF
+                  const endPos = seek(pstate, '\n');
+                  if (endPos == -1) {
+                    console.warn("WARNING: No newline at assumed EOF");
+
+                    assembleShader(pstate, output);
+                    return output;
+                  } else {
+                    pstate.i = endPos;
+                    prevC = '\n'
+                  }
+                }
+                break;
+              }
+              case '/': {
+                pr(pstate.i, c);
+                if (prevC == '/') {
+                  pr('begin regular comment');
+                  pstate.inRegularComment = true;
+
+                  if (pstate.inRegularComment) {
+                    let pos = seek(pstate, '\n');
+                    if (pos != -1) {
+                      pstate.i = pos + 1;
+                      pstate.inRegularComment = false;
+                      prevC = '\n';
+
+                      pr("endRegularComment at: " + pstate.i);
+
+                      continue;
+                    } else {
+                      // assumed end of file
+                      console.warn("WARNING: No newline at assumed EOF");
+
+                      assembleShader(pstate, output);
+                      return output;
+                    }
+                  }
+                }
+                break;
+              }                 
+              case '*': {
+                pr(pstate.i, c);
+                if (prevC == '/') {
+                  pr('begin block comment');
+                  pstate.inBlockComment = true;
+
+                  if (pstate.inBlockComment) {
+                    let pos = seek(pstate, '*/');
+                    if (pos != -1) {
+                      pstate.i = pos + 2;
+                      pstate.inBlockComment = false;
+                      prevC = '/';
+
+                      pr("endBlockComment");
+
+                      continue;
+                    }
+                    else {
+                      console.error("ERROR block comment doesn't end");
+                      return output;
+                    }
+
+                  }
+                }
+                break;
+              }
+              case '<': {
+                pr(pstate.i, c);
+                break;
+              }
+              case '>': {
+                pr(pstate.i, c);
+                break;
+              }
+              case '\n': {
+                if (pstate.preprocessor) {
+                  pr(pstate.i, 'preprocessor_end');
+                }
+                pstate.preprocessor = false;
+                break;
+              }
+              default: {
+                break;
+              }
+          }
+          pstate.i += 1;
+          prevC = c;
+       }
+
+        assembleShader(pstate, output);
+        return output;
+    }
+    _util.shaderPreprocessor = shaderPreprocessor;
+
     function glAttachResourceTracking(GL, version) {
 
         let funcNames = null;
