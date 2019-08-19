@@ -653,7 +653,6 @@ MR.registerWorld((function() {
         //         gl.enableVertexAttribArray(state.attribData.aUVLoc); // enable the attribute
         //     }
         // }
-
         // Step 3: load textures if you have any,
         // alternatively could combine the images into one and use an atlas
         {
