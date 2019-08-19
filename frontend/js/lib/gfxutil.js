@@ -187,7 +187,7 @@ const GFX = (function() {
 
       return output;
     }
-    function shaderPreprocessor(string, libMap) {
+    function preprocessShader(string, libMap) {
 
        const pr = console.log;
 
@@ -396,7 +396,8 @@ const GFX = (function() {
         assembleShader(pstate, output);
         return output;
     }
-    _util.shaderPreprocessor = shaderPreprocessor;
+    _util.preprocessShader = preprocessShader;
+    _util.scc = _util.preprocessShader;
 
     function glAttachResourceTracking(GL, version) {
 
@@ -565,7 +566,7 @@ const GFX = (function() {
 
 
 
-    function registerShaderForLiveEditing(_gl, key, args, callback) {
+    function registerShaderForLiveEditing(_gl, key, libMap, args, callback) {
         console.assert(key);
 
         // TODO(KTR): make a div per shader program in addition to the blocks per shader pass
@@ -710,11 +711,15 @@ const GFX = (function() {
                                 const textE = textAreaElements[prop]; 
                                 if (textE) {
                                     record.args[prop] = textE.value;
+                                    if (prop != 'vertex' && prop != 'fragment') {
+                                        libMap.set(prop, textE.value);
+                                    }
                                 }
+
                             }
                         } 
 
-                        callback(record.args); 
+                        callback(record.args, libMap); 
                     }
 
                 });

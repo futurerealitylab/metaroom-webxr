@@ -76,7 +76,7 @@ MR.registerWorld((function() {
         GFX.registerShaderForLiveEditing(gl, "mainShader", {
             vertex    : vert, 
             fragment  : frag,
-        }, (args) => {
+        }, (args, libMap) => {
             const vertex    = args.vertex;
             const fragment  = args.fragment;
 
