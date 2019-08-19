@@ -43,114 +43,15 @@
   <script src="js/webxr-wrangler.js"></script>
   <script src="js/webvr-wrangler.js"></script>
 
+  <script src="js/metaroom.js"></script>
+
 </head>
 <body style="background-color: black; color: white; text-emphasis-color: white;">
   <div style="text-align: center">
     <div style="text-align: center;" id=output-element></div>
   </div>
-  <script>
-    "use strict";
-    // TODO(KTR): Very temporary way of keeping files separated
-
-    function Metaroom() {
-      this.worldIdx = 0;
-      this.worlds = [];
-    }
-    Metaroom.BACKEND_TYPE = {
-      WEBXR: 0,
-      WEBVR: 1,
-    };
-    Metaroom.TYPE_TO_NAME = {
-      [Metaroom.BACKEND_TYPE.WEBXR] : "WebXR",
-      [Metaroom.BACKEND_TYPE.WEBVR] : "WebVR",
-    };
-
-    Metaroom.prototype = {
-      registerWorld : function(world) {
-        this.worlds.push(world);
-      }
-    };
-
-    // NGV220 says: we need to document the API boundary of the Metaroom, Metaroom_*, and
-    // MetaroomBackend (currently 'wrangler').  The passing back-and-forth of worlds, funcs,
-    // et al is difficult to follow.
-    
-    function Metaroom_WebXR() {
-      //this.type = METAROOM_TYPES.WEBXR;
-      //this.wrangler = new XRCanvasWrangler();
-
-      //this.worldIdx = 0;
-      //this.MR.worlds = [];
-
-      Metaroom.call(this);
-
-      // TODO(KTR): temp still make the global var wrangler, but
-      // considering making the wrangler a component of the full MetaRoom struct,
-      // and separating the animation handling from the canvas wrangling
-      window.wrangler = this.wrangler;
-      window.MR = this;
-    }
-    Metaroom_WebXR.prototype = Object.create(
-      Metaroom.prototype,
-      {
-        type : {value : Metaroom.BACKEND_TYPE.WEBXR},
-        wrangler : {value : new XRCanvasWrangler()},
-      }
-    );
-
-    // Metaroom impl using WebVR backend.  See `js/webxr-wrangler.js` for
-    // details. 
-    function Metaroom_WebVR() {
-      Metaroom.call(this);
-      window.wrangler = this.wrangler;
-      window.MR = this;
-    }
-    Metaroom_WebVR.prototype = Object.create(
-      Metaroom.prototype,
-      {
-        type : {value : Metaroom.BACKEND_TYPE.WEBVR},
-        wrangler : {value : new VRCanvasWrangler()},
-      }
-    );
-
-    Metaroom.create = function(type = Metaroom.BACKEND_TYPE.WEBXR) {
-      this.type = type;
-      switch (type) {
-      case Metaroom.BACKEND_TYPE.WEBXR: {
-        return new Metaroom_WebXR();
-        break;
-      } case Metaroom.BACKEND_TYPE.WEBVR: {
-        return new Metaroom_WebVR();
-        break;
-      } default: {
-        console.error("ERROR: unsupported type");
-        break;
-      }
-      }
-    }
-
-    // Argument defaults
-    let type = Metaroom.BACKEND_TYPE.WEBVR;
-
-    // Parse URL arguments
-    var urlParams = new URLSearchParams(window.location.search);
-
-    // (1) useShim - when present and set to '1', applies the WebXR version
-    //     shim.  This will become unnecessary once the WebXR becomes stable. 
-    if (urlParams.has('useShim') && urlParams.get('useShim') == '1') {
-        const shim = new WebXRVersionShim();
-    }
-    // (2) mrBackend - specify the Metaroom backend type.  Valid options are
-    //     '0' for WebXR and '1' for WebVR (default).
-    if (urlParams.has('mrBackend')) {
-      type = parseInt(urlParams.get('mrBackend'))
-    }
-
-    const MR = Metaroom.create(type);
-
-  // Register MR.worlds (in final, probably enough to register the first world before init time and defer the rest until load) 
-  // TEMP hard-coded
-  </script>
+  <div class="text_area_block" id=text-areas></div>
+  </tr>
 
   <script src=js/worlds/examples/w0/w0_hello_world.js></script>
   <script src=js/worlds/examples/w1/w1_hello_world_es3.js></script>
@@ -158,109 +59,6 @@
   <script src=js/worlds/examples/w3/w3_ktr_2017_example.js></script>
   <script src=js/worlds/examples/w4/w4_textures.js></script>
 
-  <tr>
-  <div class="text_area_block" id=text-areas></div>
-  </tr>
 
-  <script>
-    "use strict";
-
-    let autoExpand = function(field) {
-      // field.style.height = "inherit";
-
-      // var computed = window.getComputedStyle(field);
-
-      // var height = parseInt(computed.getPropertyValue('border-top-width'), 10) +
-      //              parseInt(computed.getPropertyValue('padding-top'), 10) +
-      //              field.scrollHeight +
-      //              parseInt(computed.getPropertyValue('padding-bottom'), 10) +
-      //              parseInt(computed.getPropertyValue('border-bottom-width'), 10);
-
-
-      // field.style.height = height + 'px';
-
-      let text = field.value.split('\n');
-      let cols = 0;
-      for (let i = 0; i < text.length; i += 1) {
-          cols = Math.max(cols, text[i].length);
-      }
-
-      field.rows = text.length + 1;
-      field.cols = cols;
-    }
-    document.addEventListener('input', function (event) {
-      if (event.target.tagName.toLowerCase() !== 'textarea') return;
-      autoExpand(event.target);
-    }, false);   
-
-
-    function tempShaderEditingInit() {
-        // TODO(KTR): make cleaner
-        MR.shaderMap = new Map();
-        const _tareas = document.getElementById("text-areas");
-        while (_tareas && _tareas.firstChild) {
-            _tareas.removeChild(_tareas.firstChild);
-        }
-    }
-    
-
-    MR.wrangler.init({
-      outputSurfaceName : 'output-element',
-      outputWidth : 1280,
-      outputHeight : 720,
-      glUseGlobalContext : true,
-      // frees gl resources upon world switch
-      glDoResourceTracking : true,
-      // main() is the system's entry point
-      main : () => {
-
-        tempShaderEditingInit();
-
-        // call the main function of the selected world
-        MR.wrangler.beginSetup(MR.worlds[MR.worldIdx](MR.wrangler));
-
-        // this is just a temporary function
-        wrangler.simulateWorldTransition = function() {
-          let ok = false;
-
-          // try to transition to the next world
-          while (!ok) {
-            MR.worldIdx = (MR.worldIdx + 1) % MR.worlds.length;
-
-            console.log("transitioning to world: [" + MR.worldIdx + "]");
-
-            // TODO(KTR): TEMP, the wrangler will handle these lines
-            gl.useProgram(null);
-            MR.wrangler._reset();
-            MR.wrangler._glFreeResources();
-            //
-
-            try {
-              // call the main function of the selected world
-
-              tempShaderEditingInit();
-
-              MR.wrangler.beginSetup(MR.worlds[MR.worldIdx](MR.wrangler));
-
-              ok = true;
-            } catch (e) {
-              console.error(e);
-
-              if (typeof MR.worlds[MR.worldIdx] !== "function") {
-                console.error("must return a main initialization function");
-              }
-
-
-              setTimeout(function(){ 
-                console.log("Trying another world");
-              }, 2000);
-
-              // TODO(KTR) some sort of shader animation to indicate error?
-            }
-          }
-        }
-      }
-    });
-
-  </script>
+  <script src="js/run.js"></script>
 </body>

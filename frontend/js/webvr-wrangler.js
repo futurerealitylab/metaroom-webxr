@@ -188,7 +188,6 @@ window.VRCanvasWrangler = (function() {
       }
 
       // After initialization, begin main program
-      console.log(this._canvas);
       this._canvas.addEventListener('mousedown', () => { this.config.onSelectStart() });
       this.main();
     }

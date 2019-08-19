@@ -309,13 +309,10 @@ const GFX = (function() {
     function registerShaderForLiveEditing(_gl, key, args, callback) {
         console.assert(key);
 
-        console.log("REGISTER");
-
         // TODO(KTR): make a div per shader program in addition to the blocks per shader pass
 
         let record = MR.shaderMap.get(key);
         if (!record) {
-            console.log("no record found");
             record = {args : args, prevVals : {}, textAreas : {}, errorMessageNodes : {}};
             MR.shaderMap.set(key, record);
             for (var prop in args) {
