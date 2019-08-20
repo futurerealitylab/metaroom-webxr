@@ -279,16 +279,21 @@ window.VRCanvasWrangler = (function() {
     }
 
     _initFallback() {
+      this.keyboardEventCallback = (ev) => {
 
-      this._canvas.addEventListener('contextmenu', (ev) => {
-          ev.preventDefault();
-
+        if (ev.key === 'Control') {
           if (this._canvas.width !== this.options.outputWidth) {
             this._canvas.width = this.options.outputWidth;
             this._canvas.height = this.options.outputHeight;
           } else {
             CanvasUtil.resizeToDisplaySize(this._canvas, 0.22);
-          }
+          }          
+        }
+      }
+
+      document.addEventListener('keyup', (ev) => {
+          this.keyboardEventCallback(ev);
+
           return false;
       }, false);
     }
