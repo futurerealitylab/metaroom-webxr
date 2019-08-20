@@ -253,10 +253,10 @@ const GFX = (function() {
                   (pstate.stream.substring(pstate.i, pstate.i + 7) === 'include') ?
                                                                                   0 : -1;
 
-                pr("found: " + pstate.stream.substring(pstate.i, pstate.i + 7));
 
 
                 if (isIncludeDirective) { // different preprocessor directive found
+                  pr("found: " + pstate.stream.substring(pstate.i, pstate.i + 7));
                   const newlinePos = seek(pstate, '\n');
                   if (newlinePos == -1) {
                     console.warn("WARNING: No newline at assumed EOF");
