@@ -229,7 +229,7 @@ const GFX = (function() {
                     break;
                 }
                 pstate.preprocessor = true;
-                pr(pstate.i, '# preprocessor_begin');
+                pr(pstate.i, '# preprocessor_directive_begin');
 
                 const directivePos = pstate.i;
 
@@ -380,7 +380,7 @@ const GFX = (function() {
               }
               case '\n': {
                 if (pstate.preprocessor) {
-                  pr(pstate.i, 'preprocessor_end');
+                  pr(pstate.i, '# preprocessor_directive_end');
                 }
                 pstate.preprocessor = false;
                 break;
