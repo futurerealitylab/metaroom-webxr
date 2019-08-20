@@ -303,14 +303,14 @@ const GFX = (function() {
                     pr("including lib=<" + libName.trim() + ">");
 
 
-                    pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, libRecord))
+                    //pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, libRecord))
 
-                    // const subInclude = preprocessShader(libRecord, libMap);
-                    // if (!subInclude.isValid) {
-                    //     return output;
-                    // }
+                    const subInclude = preprocessShader(libRecord, libMap);
+                    if (!subInclude.isValid) {
+                        return output;
+                    }
 
-                    // pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, subInclude.shaderSource))
+                    pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, subInclude.shaderSource))
 
                   } else {
                     console.error("ERROR: [Metaroom Shader Preprocessor] cannot find lib=<" + libName + ">");
