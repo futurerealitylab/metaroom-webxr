@@ -1,5 +1,13 @@
 "use strict";
 
+////
+
+
+
+////
+
+
+
 let autoExpand = function(field) {
   // field.style.height = "inherit";
 
@@ -28,13 +36,22 @@ document.addEventListener('input', function (event) {
   autoExpand(event.target);
 }, false);   
 
-
 function tempShaderEditingInit() {
     // TODO(KTR): make cleaner
-    MR.shaderMap = new Map();
-    const _tareas = document.getElementById("text-areas");
-    while (_tareas && _tareas.firstChild) {
-        _tareas.removeChild(_tareas.firstChild);
+    {
+      MR.shaderMap = new Map();
+      const _tareas = document.getElementById("text-areas");
+      while (_tareas && _tareas.firstChild) {
+          _tareas.removeChild(_tareas.firstChild);
+      }
+    }
+    {
+      if (window.externalWindow) {
+        const _tareas = window.externalWindow.document.getElementById("text-areas");
+        while (_tareas && _tareas.firstChild) {
+            _tareas.removeChild(_tareas.firstChild);
+        }
+      }
     }
 }
 

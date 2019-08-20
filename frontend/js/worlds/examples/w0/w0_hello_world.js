@@ -76,7 +76,7 @@ MR.registerWorld((function() {
         GFX.registerShaderForLiveEditing(gl, "mainShader", {
             vertex    : vert, 
             fragment  : frag,
-        }, (args) => {
+        }, (args, libMap) => {
             const vertex    = args.vertex;
             const fragment  = args.fragment;
 
@@ -117,7 +117,8 @@ MR.registerWorld((function() {
 
             const localCompileCount = state.persistent.localCompileCount;
             gl.uniform1i(state.uCompileCountLoc, localCompileCount);
-        });
+        },
+        null);
 
 
 
