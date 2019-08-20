@@ -418,9 +418,6 @@ float ray_sphere(vec3 V, vec3 W, vec4 sphere) {
     in vec2 vUV2;
     in vec3 vPos;
 
-    #include <pnoise.glsl>
-
-
     // The texture(s).
     uniform sampler2D uTex0;
     uniform sampler2D uTex1;
@@ -438,11 +435,12 @@ float ray_sphere(vec3 V, vec3 W, vec4 sphere) {
         fragColor = mix(color0, color1, sin(uTime));
     }
     `
+    let preprocessedVertRecord = GFX.preprocessShader(vert, libMap);
     let preprocessedFragRecord = GFX.preprocessShader(fragWithIncludes, libMap);
 
-    console.assert(preprocessedFragRecord.isValid);
+    console.assert(preprocessedVertRecord && preprocessedFragRecord.isValid);
 
-    state.program = GFX.createShaderProgramFromStrings(vert, preprocessedFragRecord.shaderSource);
+    state.program = GFX.createShaderProgramFromStrings(preprocessedVertRecord.shaderSource, preprocessedFragRecord.shaderSource);
     gl.useProgram(state.program);
 
 

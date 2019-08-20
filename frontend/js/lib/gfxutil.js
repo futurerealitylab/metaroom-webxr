@@ -154,6 +154,12 @@ const GFX = (function() {
 
       this.includes = [];
     }
+    function pstateCharAt(pstate, i) {
+        return pstate.stream.charAt(i);
+    }
+    function pstateChar(pstate) {
+        return pstate.stream.charAt(pstate.i);
+    }
 
     function assembleShader(pstate, output) {
       const shaderBase = pstate.stream;
@@ -187,14 +193,17 @@ const GFX = (function() {
 
       return output;
     }
-    function preprocessShader(string, libMap, errRecord) {
+
+    const pr      = console.log;
+    const passert = console.assert;
+
+    function preprocessShader(string, libMap, alreadyIncludedSet) {
         if (!libMap) {
             libMap = new Map();
         }
-
-       const pr = console.log;
-
-       pr("stream=[" + string + "]");
+        if (!alreadyIncludedSet) {
+            alreadyIncludedSet = new Set();
+        }
 
        const pstate = new ShaderLibIncluderState(string);
 
@@ -247,19 +256,29 @@ const GFX = (function() {
                 } while (whiteChar === ' ' || 
                         whiteChar === '\t');
 
-                console.log(pstate.stream.charAt(pstate.i));
-
 
                 // look for include directive
-                //const includePos = seek(pstate, 'include');
-                const isIncludeDirective = 
-                  (pstate.stream.substring(pstate.i, pstate.i + 7) === 'include') ?
-                                                                                  true : false;
+
+                const tokenBeginIdx = pstate.i;
+
+                // const isIncludeDirective = 
+                //   (pstate.stream.substring(pstate.i, pstate.i + 7) === 'include');
 
 
+                let cursor = pstate.i;
+                let charAt = pstateCharAt(pstate, cursor);
+                while (charAt !== ' '  &&
+                       charAt !== '\n' &&
+                       charAt !== '\r' &&
+                       charAt !== '\t' &&
+                       charAt !== '<') {
+                    cursor += 1;
+                    charAt = pstateCharAt(pstate, cursor);
+                }
+                const directiveToken = pstate.stream.substring(pstate.i , cursor);
+                pr("directive found: " + directiveToken);
 
-                if (!isIncludeDirective) { // different preprocessor directive found
-                  pr("found: " + pstate.stream.substring(pstate.i, pstate.i + 7));
+                if (directiveToken !== 'include') { // different pre-processor directive found
                   const newlinePos = seek(pstate, '\n');
                   if (newlinePos == -1) {
                     console.warn("WARNING: No newline at assumed EOF");
@@ -276,12 +295,9 @@ const GFX = (function() {
                   pstate.i = includePos + 7;
                   // seek past whitespace
 
-                  console.log("include :" + pstate.stream.charAt(pstate.i));
-
                   skipWhitespace(pstate);
 
-                  console.log(pstate.stream.charAt(pstate.i));
-                  console.assert(pstate.stream.charAt(pstate.i) === '<');
+                  console.assert(pstateChar(pstate) === '<');
 
 
                   // extract the library name
@@ -291,21 +307,28 @@ const GFX = (function() {
                   const newlineEndPosSyntaxTest = seek(pstate, '\n');
 
                   if (includeEndPos == -1 || newlineEndPosSyntaxTest < includeEndPos) {
-                    console.error("ERROR: include syntax");
+                    pr("ERROR: include syntax");
                     return output;
                   }
 
-                  const libName = pstate.stream.substring(pstate.i, includeEndPos);
+                  const libName = pstate.stream.substring(pstate.i, includeEndPos).trim();
 
-                  const libRecord = libMap.get(libName.trim());
+                  const libRecord = libMap.get(libName);
                   if (libRecord) {
-                    pr("including lib=<" + libName.trim() + ">");
+                    if (alreadyIncludedSet.has(libName)) {
+                        pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, ''));
+                    } else {
+                        pr("including lib=<" + libName + ">");
+                        
+                        alreadyIncludedSet.add(libName);
 
-                    const subInclude = preprocessShader(libRecord, libMap);
-                    if (!subInclude.isValid) {
-                        return output;
+                        const subInclude = preprocessShader(libRecord, libMap, alreadyIncludedSet);
+                        if (!subInclude.isValid) {
+                            return output;
+                        }
+
+                        pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, subInclude.shaderSource))
                     }
-                    pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, subInclude.shaderSource))
 
                   } else {
                     console.error("ERROR: [Metaroom Shader Preprocessor] cannot find lib=<" + libName + ">");
@@ -321,14 +344,14 @@ const GFX = (function() {
                     assembleShader(pstate, output);
                     return output;
                   } else {
-                    pstate.i = endPos;
-                    prevC = '\n'
+                    pstate.i = endPos - 1;
+                    prevC = pstate.stream.charAt(pstate.i);
                   }
                 }
                 break;
               }
               case '/': {
-                pr(pstate.i, c);
+                //pr(pstate.i, c);
                 if (prevC == '/') {
                   pr('begin regular comment');
                   pstate.inRegularComment = true;
@@ -355,7 +378,7 @@ const GFX = (function() {
                 break;
               }                 
               case '*': {
-                pr(pstate.i, c);
+                //pr(pstate.i, c);
                 if (prevC == '/') {
                   pr('begin block comment');
                   pstate.inBlockComment = true;
@@ -381,11 +404,9 @@ const GFX = (function() {
                 break;
               }
               case '<': {
-                pr(pstate.i, c);
                 break;
               }
               case '>': {
-                pr(pstate.i, c);
                 break;
               }
               case '\n': {
