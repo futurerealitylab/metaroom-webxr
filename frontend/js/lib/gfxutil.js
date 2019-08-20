@@ -194,7 +194,7 @@ const GFX = (function() {
 
        const pr = console.log;
 
-       pr("stream=[" + string + "]");
+       // pr("stream=[" + string + "]");
 
        const pstate = new ShaderLibIncluderState(string);
 
@@ -229,6 +229,7 @@ const GFX = (function() {
           switch (c) {
               case '#': {
                 if (prevC != '' && prevC != '\n' && prevC != '\r' && prevC != '\t' && prevC != ' ') {
+                    console.log("PREV CHAR: " + prevC);
                     break;
                 }
                 pstate.preprocessor = true;
@@ -301,11 +302,15 @@ const GFX = (function() {
                   if (libRecord) {
                     pr("including lib=<" + libName.trim() + ">");
 
-                    const subInclude = preprocessShader(libRecord, libMap);
-                    if (!subInclude.isValid) {
-                        return output;
-                    }
-                    pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, subInclude.shaderSource))
+
+                    pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, libRecord))
+
+                    // const subInclude = preprocessShader(libRecord, libMap);
+                    // if (!subInclude.isValid) {
+                    //     return output;
+                    // }
+
+                    // pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, subInclude.shaderSource))
 
                   } else {
                     console.error("ERROR: [Metaroom Shader Preprocessor] cannot find lib=<" + libName + ">");
@@ -321,14 +326,14 @@ const GFX = (function() {
                     assembleShader(pstate, output);
                     return output;
                   } else {
-                    pstate.i = endPos;
-                    prevC = '\n'
+                    pstate.i = endPos - 1;
+                    prevC = pstate.stream.charAt(pstate.i);
                   }
                 }
                 break;
               }
               case '/': {
-                pr(pstate.i, c);
+                //pr(pstate.i, c);
                 if (prevC == '/') {
                   pr('begin regular comment');
                   pstate.inRegularComment = true;
@@ -355,7 +360,7 @@ const GFX = (function() {
                 break;
               }                 
               case '*': {
-                pr(pstate.i, c);
+                //pr(pstate.i, c);
                 if (prevC == '/') {
                   pr('begin block comment');
                   pstate.inBlockComment = true;
@@ -381,11 +386,9 @@ const GFX = (function() {
                 break;
               }
               case '<': {
-                pr(pstate.i, c);
                 break;
               }
               case '>': {
-                pr(pstate.i, c);
                 break;
               }
               case '\n': {
