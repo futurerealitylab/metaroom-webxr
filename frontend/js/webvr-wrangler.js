@@ -188,7 +188,12 @@ window.VRCanvasWrangler = (function() {
       }
 
       // After initialization, begin main program
-      this._canvas.addEventListener('mousedown', () => { this.config.onSelectStart() });
+      this._canvas.addEventListener('mousedown', (ev) => { 
+        if (ev.button === 2) { 
+          return; 
+        } 
+        this.config.onSelectStart() 
+      });
       this.main();
     }
 
@@ -274,6 +279,18 @@ window.VRCanvasWrangler = (function() {
     }
 
     _initFallback() {
+
+      this._canvas.addEventListener('contextmenu', (ev) => {
+          ev.preventDefault();
+
+          if (this._canvas.width !== this.options.outputWidth) {
+            this._canvas.width = this.options.outputWidth;
+            this._canvas.height = this.options.outputHeight;
+          } else {
+            CanvasUtil.resizeToDisplaySize(this._canvas, 0.22);
+          }
+          return false;
+      }, false);
     }
 
     _clearConfig() {
