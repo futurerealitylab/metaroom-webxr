@@ -117,7 +117,8 @@ MR.registerWorld((function() {
 
             const localCompileCount = state.persistent.localCompileCount;
             gl.uniform1i(state.uCompileCountLoc, localCompileCount);
-        });
+        },
+        null);
 
 
 

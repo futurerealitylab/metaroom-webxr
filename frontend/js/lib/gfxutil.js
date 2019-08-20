@@ -187,7 +187,10 @@ const GFX = (function() {
 
       return output;
     }
-    function preprocessShader(string, libMap) {
+    function preprocessShader(string, libMap, errRecord) {
+        if (!libMap) {
+            libMap = new Map();
+        }
 
        const pr = console.log;
 
@@ -251,11 +254,11 @@ const GFX = (function() {
                 //const includePos = seek(pstate, 'include');
                 const isIncludeDirective = 
                   (pstate.stream.substring(pstate.i, pstate.i + 7) === 'include') ?
-                                                                                  0 : -1;
+                                                                                  true : false;
 
 
 
-                if (isIncludeDirective) { // different preprocessor directive found
+                if (!isIncludeDirective) { // different preprocessor directive found
                   pr("found: " + pstate.stream.substring(pstate.i, pstate.i + 7));
                   const newlinePos = seek(pstate, '\n');
                   if (newlinePos == -1) {
@@ -297,9 +300,16 @@ const GFX = (function() {
                   const libRecord = libMap.get(libName.trim());
                   if (libRecord) {
                     pr("including lib=<" + libName.trim() + ">");
-                    pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, libRecord))
+
+                    const subInclude = preprocessShader(libRecord, libMap);
+                    if (!subInclude.isValid) {
+                        return output;
+                    }
+                    pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, subInclude.shaderSource))
+
                   } else {
                     console.error("ERROR: [Metaroom Shader Preprocessor] cannot find lib=<" + libName + ">");
+                    return output;
                   }
 
                   pstate.i = includeEndPos;
@@ -566,7 +576,7 @@ const GFX = (function() {
 
 
 
-    function registerShaderForLiveEditing(_gl, key, libMap, args, callback) {
+    function registerShaderForLiveEditing(_gl, key, args, callback, libMap) {
         console.assert(key);
 
         // TODO(KTR): make a div per shader program in addition to the blocks per shader pass
@@ -711,7 +721,7 @@ const GFX = (function() {
                                 const textE = textAreaElements[prop]; 
                                 if (textE) {
                                     record.args[prop] = textE.value;
-                                    if (prop != 'vertex' && prop != 'fragment') {
+                                    if (libMap && prop != 'vertex' && prop != 'fragment') {
                                         libMap.set(prop, textE.value);
                                     }
                                 }

@@ -446,16 +446,19 @@ float ray_sphere(vec3 V, vec3 W, vec4 sphere) {
     gl.useProgram(state.program);
 
 
-
+        libMap.set("wee.glsl",
+            "void do_procedural_graphics(void) { }"
+        );
 
         // TODO(KTR): implement GFX.registerSharedShaderLibraryMapForLiveEditing(gl, "libraries", libMap);
         // Need to separate libraries from shaders (or have multiple text boxes for the library be updated)
         // with the same text at the same time - I think that I prefer the first alternative
 
-        GFX.registerShaderForLiveEditing(gl, "mainShader", libMap, {
+        GFX.registerShaderForLiveEditing(gl, "mainShader", {
             vertex    : vert, 
             fragment  : fragWithIncludes,
-            "pnoise.glsl" : pnoiseLibSource
+            "pnoise.glsl" : pnoiseLibSource,
+            "wee.glsl" : "void do_procedural_graphics(void) { }"
 
         }, (args, libMap) => {
             const vertex    = args.vertex;
@@ -499,7 +502,8 @@ float ray_sphere(vec3 V, vec3 W, vec4 sphere) {
 
             gl.uniform1i(state.uniformData.uTex0Loc, 0); // set texture unit 0 at uTex0
             gl.uniform1i(state.uniformData.uTex1Loc, 1); // set texture unit 1 at uTex1
-        });
+        },
+        libMap);
 
 
         // save all attribute and uniform locations
