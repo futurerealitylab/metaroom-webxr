@@ -183,7 +183,7 @@ window.VRCanvasWrangler = (function() {
 
       const status = await this._initWebVR();
       if (!status) {
-        console.log('Initializing fallback ...');
+        console.log('Initializing PC browser mode ...');
         this._initFallback();
       }
 
