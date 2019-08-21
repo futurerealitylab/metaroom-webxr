@@ -761,7 +761,7 @@ const GFX = (function() {
         const doc = (MR.wrangler.externalWindow) ? MR.wrangler.externalWindow.document : document;
         const textAreas = doc.getElementById("text-areas");
 
-        textAreas.innerHTML = '';
+        //textAreas.innerHTML = '';
 
         const textAreaElements = record.textAreas;
 
