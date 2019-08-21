@@ -61,6 +61,65 @@ window.VRCanvasWrangler = (function() {
 
     // Initialization.
     init(options) {
+
+      if (options.useExternalWindow) {
+        this.externalWindow = window.open('', "Editor", 
+          "height=640,width=640,menubar=no,toolbar=no,resizable=no,menu=no");
+
+        if (!this.externalWindow) {
+          console.warn("failed to load external window");
+        } else {
+
+          this.externalWindow.document.head.innerHTML = `
+            <title>Editor</title>
+            <style type="text/css" media="screen">
+              textarea {
+                margin: 0;
+                border-radius: 0;
+                font:20px courier;
+                min-height: 0%;
+                /* min-width: 100%; */
+                /* max-height: 50vh; */
+                resize: vertical;
+              }
+
+
+            .textAreaColumn div span {
+              display:block;
+              font:20px courier;
+              color: red;
+            }
+
+            .text_area_block {
+                font-family:    courier;
+                font-size:      12px;
+                font-weight:    bold;
+            }
+            /*
+            body.noScroll {
+              overflow: hidden;
+            }*/
+
+            </style>
+          `
+
+          this.externalWindow.document.body.innerHTML = `
+          <body style="background-color: black; color: white; text-emphasis-color: white;">
+            <div style="float: left;" class="text_area_block" id=text-areas></div>
+          </body>`
+
+
+
+          this.externalWindow.document.body.style.backgroundColor = 'black';
+          this.externalWindow.document.body.style.color = 'white';
+
+          window.onunload = () => { this.externalWindow.close(); };
+
+        }
+
+      }
+
+
       // Set default options.
       options = options || {};
       options.contextOptions = options.contextOptions || { xrCompatible: true };

@@ -46,8 +46,8 @@ function tempShaderEditingInit() {
       }
     }
     {
-      if (window.externalWindow) {
-        const _tareas = window.externalWindow.document.getElementById("text-areas");
+      if (wrangler.externalWindow) {
+        const _tareas = wrangler.externalWindow.document.getElementById("text-areas");
         while (_tareas && _tareas.firstChild) {
             _tareas.removeChild(_tareas.firstChild);
         }
@@ -111,5 +111,6 @@ MR.wrangler.init({
         }
       }
     }
-  }
+  },
+  useExternalWindow : (new URLSearchParams(window.location.search)).has('externWin')
 });

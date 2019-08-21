@@ -758,30 +758,31 @@ const GFX = (function() {
                         ' height='  + height + '><tr><td>&nbsp;</td></tr></table>';
         }
 
-        const textAreas = document.getElementById("text-areas");
+        const doc = (MR.wrangler.externalWindow) ? MR.wrangler.externalWindow.document : document;
+        const textAreas = doc.getElementById("text-areas");
 
         textAreas.innerHTML = '';
 
         const textAreaElements = record.textAreas;
 
             // create shader container
-            const SHADER_DIV = document.createElement("div");
+            const SHADER_DIV = doc.createElement("div");
             SHADER_DIV.setAttribute("id", key + "-shader container");
             textAreas.appendChild(SHADER_DIV);
 
                 // create header
-                const HEADER_DIV = document.createElement("div");
+                const HEADER_DIV = doc.createElement("div");
                 HEADER_DIV.setAttribute("id", key + "header");
                 SHADER_DIV.appendChild(HEADER_DIV); 
-                const hOuter = document.createElement("H1");
-                const tOuter = document.createTextNode(key + '\n');
+                const hOuter = doc.createElement("H1");
+                const tOuter = doc.createTextNode(key + '\n');
                 hOuter.appendChild(tOuter);
                 HEADER_DIV.appendChild(hOuter);
 
             SHADER_DIV.appendChild(HEADER_DIV);
 
                 // create hideable container
-                const SHADER_STAGE_DIV = document.createElement("div");
+                const SHADER_STAGE_DIV = doc.createElement("div");
                 SHADER_STAGE_DIV.setAttribute("id", key + "hideable container");
 
             SHADER_DIV.appendChild(SHADER_STAGE_DIV);
@@ -789,66 +790,69 @@ const GFX = (function() {
                 let shaderInfoIsHidden = false;
                 hOuter.style.color = 'white';
                 HEADER_DIV.style.cursor = 'pointer';
-                HEADER_DIV.onclick = (function(event) {
+                HEADER_DIV.onclick = () => {
+                    const isHidden = !propHiddenState.get('main');
+                    propHiddenState.set('main', isHidden);
+                    switch (isHidden) {
+                    case true: {
+                        HTMLUtil.hideElement(SHADER_STAGE_DIV);
+                        if (errorState) {
+                            return;
+                        }
+                        hOuter.style.color = 'gray';
 
-                    return function() {
-                        console.log(hOuter.style.color);
-                        shaderInfoIsHidden = !shaderInfoIsHidden;
-                        switch (shaderInfoIsHidden) {
-                        case true: {
-                            HTMLUtil.hideElement(SHADER_STAGE_DIV);
-                            hOuter.style.color = 'gray';
-                            return;
-                        }
-                        case false: {
-                            HTMLUtil.showElement(SHADER_STAGE_DIV);
-                            hOuter.style.color = 'white';
-                            return;
-                        }
-                        default: {
-                            return;
-                        }
-                        }
+                        return;
                     }
-                }());
+                    case false: {
+                        HTMLUtil.showElement(SHADER_STAGE_DIV);
+                        if (errorState) {
+                            return;
+                        }
+                        hOuter.style.color = 'white';
 
+                        return;
+                    }
+                    default: {
+                        return;
+                    }
+                    }
+                }
 
+                let errorState = false;
+                HEADER_DIV.onmouseover = (event) => {
+                    const isHidden = propHiddenState.get('main');
+
+                    if (hOuter.style.color !== 'red') {
+                        hOuter.style.color = (isHidden) ? 'white' : 'gray';
+                    } else {
+                        hOuter.style.color = 'gray'
+                    }
+                };
+                HEADER_DIV.onmouseleave = (event) => {
+                    if (hOuter.style.color !== 'red') {
+                        hOuter.style.color = (propHiddenState.get('main') === true) ? 'gray' :
+                                                       'white';
+                    }
+                }
+
+        
+        const propHiddenState = new Map();
+        propHiddenState.set("main", false);
         for (let prop in args) {
             if (Object.prototype.hasOwnProperty.call(args, prop)) {
-                // const innerHTML = ['',
-                // '<center><font size=6, color=#b0b0b0>' + key + ' ' + prop + '</center>',
-                // '<TABLE cellspacing=0 cellpadding=0><TR>',
-                // '<td width=50></td><td><font color=red size=5><div id=errorMessage>&nbsp;</div></font></td>',
-                // '</TR><TR>',
-                // '<table cellspacing=10>',
-                // '<tr>',
-                // //'</td><td valign=top>' + document.body.innerHTML + '</td>',
-                // '<td valign=top><font size=2 color=red><div id=errorMarker>&nbsp;</div></font></td>',
-                // '<td valign=top>',
-                // '<textArea id=textArea' + textAreaID + ' spellcheck=false ',
-                // 'style="font:20px courier;outline-width:0;border-style:none;resize:none;overflow:scroll;"',
-                // '></textArea>',
-                // '</tr></table>',
-                // '</TR></TABLE>'
-                // ].join('');
+                propHiddenState.set(key + prop, false);
 
 
-
-
-
-
-
-
-                let DIV = document.createElement("div");
+                let DIV = doc.createElement("div");
                 DIV.setAttribute("id", key + " : " + prop + "_div");
 
-                let h = document.createElement("H1");                // Create a <h1> element
-                let t = document.createTextNode(key + " : " + prop + '\n');
+                let h = doc.createElement("H1");                // Create a <h1> element
+                let t = doc.createTextNode(key + " : " + prop + '\n');
                 h.appendChild(t);
 
-                let hErr = document.createElement('H1');
+                let hErr = doc.createElement('H1');
                 hErr.style.color = 'red';
-                let tErr = document.createTextNode('');
+                let tErr = doc.createTextNode('');
                 hErr.appendChild(tErr);
 
                 record.errorMessageNodes[prop] = tErr;
@@ -858,7 +862,7 @@ const GFX = (function() {
 
                 SHADER_STAGE_DIV.appendChild(DIV);
 
-                const thisTextArea = document.createElement("textarea");
+                const thisTextArea = doc.createElement("textarea");
                 thisTextArea.spellcheck = false;
                 textAreaElements[prop] = thisTextArea;
                 DIV.appendChild(thisTextArea);
@@ -870,37 +874,50 @@ const GFX = (function() {
 
 
                 h.style.cursor = 'pointer';
-                h.onclick = (function(event) {
-                    let isHidden = false;
+                h.onmouseover = (event) => {
+                    const isHidden = propHiddenState.get(key + prop);
 
-                    return function() {
-                        isHidden = !isHidden;
-                        switch (isHidden) {
-                        case true: {
-                            HTMLUtil.hideElement(thisTextArea);
-                            HTMLUtil.hideElement(hErr);
-                            if (textAreaElements[prop].parentElement.style.color == 'red') {
-                                return;
-                            }
-                            parentElement.style.color = 'gray';
-                            return;
-                        }
-                        case false: {
-                            HTMLUtil.showElement(thisTextArea);
-                            HTMLUtil.showElement(hErr);
-                            if (textAreaElements[prop].parentElement.style.color == 'red') {
-                                return;
-                            }
-                            parentElement.style.color = 'white';
-                            return;
-                        }
-                        default: {
-                            return;
-                        }
-                        }
+                    if (parentElement.style.color !== 'red') {
+                        parentElement.style.color = (isHidden) ? 'white' : 'gray';
                     }
-                }());
+                };
+                h.onmouseleave = (event) => {
+                    if (parentElement.style.color !== 'red') {
+                        parentElement.style.color = (propHiddenState.get(key + prop) === true) ? 'gray' :
+                                                       'white';
+                    }
+                };
 
+                h.onclick = () => {
+                    const isHidden = !propHiddenState.get(key + prop);
+                    propHiddenState.set(key + prop, isHidden);
+
+                    switch (isHidden) {
+                    case true: {
+                        HTMLUtil.hideElement(thisTextArea);
+                        HTMLUtil.hideElement(hErr);
+                        if (textAreaElements[prop].parentElement.style.color == 'red') {
+                            return;
+                        }
+                        parentElement.style.color = 'gray';
+
+                        return;
+                    }
+                    case false: {
+                        HTMLUtil.showElement(thisTextArea);
+                        HTMLUtil.showElement(hErr);
+                        if (textAreaElements[prop].parentElement.style.color == 'red') {
+                            return;
+                        }
+                        parentElement.style.color = 'white';
+                        return;
+                    }
+                    default: {
+                        return;
+                    }
+                    }
+                };
+                
                 let text = args[prop].split('\n');
                 let cols = 0;
                 for (let i = 0; i < text.length; i += 1) {
@@ -921,10 +938,10 @@ const GFX = (function() {
                     const cursor = textarea.selectionStart;
                     if(event.key == "Tab"){
                         event.preventDefault();
-                        document.execCommand("insertText", false, '\t');//appends a tab and makes the browser's default undo/redo aware and automatically moves cursor
+                        doc.execCommand("insertText", false, '\t');//appends a tab and makes the browser's default undo/redo aware and automatically moves cursor
                     } else if (event.key == "Enter") {
                         event.preventDefault();
-                        document.execCommand("insertText", false, '\n');
+                        doc.execCommand("insertText", false, '\n');
                     } else if (event.key == '`') {
                         event.preventDefault();
                         //record.args[prop] = thisTextArea.value;
@@ -967,11 +984,13 @@ const GFX = (function() {
                             errMsgNode.nodeValue = args[prop];
                             textAreaElements[prop].parentElement.style.color = 'red';
                             hasError = true;
+
                         }
                     }
                 }
                 if (hasError) {
                     hOuter.style.color = 'red';
+                    errorState = true;
                 }
             };
             record.args.logError = logError;
@@ -985,11 +1004,12 @@ const GFX = (function() {
                         if (errMsgNode) {
                             errMsgNode.nodeValue = '';
                             textAreaElements[prop].parentElement.style.color = 
-                            (textAreaElements[prop].parentElement.style.display == 'none') ? 'gray' : 'white';
+                            (propHiddenState.get(key + prop)) ? 'gray' : 'white';
                         }
                     }
                 }
-                hOuter.style.color = (shaderInfoIsHidden) ? 'gray' : 'white';                
+                hOuter.style.color = (shaderInfoIsHidden) ? 'gray' : 'white';
+                            
             };
         }
     }
