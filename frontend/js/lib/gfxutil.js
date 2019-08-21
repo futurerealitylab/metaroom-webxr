@@ -764,6 +764,55 @@ const GFX = (function() {
 
         const textAreaElements = record.textAreas;
 
+            // create shader container
+            const SHADER_DIV = document.createElement("div");
+            SHADER_DIV.setAttribute("id", key + "-shader container");
+            textAreas.appendChild(SHADER_DIV);
+
+                // create header
+                const HEADER_DIV = document.createElement("div");
+                HEADER_DIV.setAttribute("id", key + "header");
+                SHADER_DIV.appendChild(HEADER_DIV); 
+                const hOuter = document.createElement("H1");
+                const tOuter = document.createTextNode(key + '\n');
+                hOuter.appendChild(tOuter);
+                HEADER_DIV.appendChild(hOuter);
+
+            SHADER_DIV.appendChild(HEADER_DIV);
+
+                // create hideable container
+                const SHADER_STAGE_DIV = document.createElement("div");
+                SHADER_STAGE_DIV.setAttribute("id", key + "hideable container");
+
+            SHADER_DIV.appendChild(SHADER_STAGE_DIV);
+
+                let shaderInfoIsHidden = false;
+                hOuter.style.color = 'white';
+                HEADER_DIV.style.cursor = 'pointer';
+                HEADER_DIV.onclick = (function(event) {
+
+                    return function() {
+                        console.log(hOuter.style.color);
+                        shaderInfoIsHidden = !shaderInfoIsHidden;
+                        switch (shaderInfoIsHidden) {
+                        case true: {
+                            HTMLUtil.hideElement(SHADER_STAGE_DIV);
+                            hOuter.style.color = 'gray';
+                            return;
+                        }
+                        case false: {
+                            HTMLUtil.showElement(SHADER_STAGE_DIV);
+                            hOuter.style.color = 'white';
+                            return;
+                        }
+                        default: {
+                            return;
+                        }
+                        }
+                    }
+                }());
+
+
         for (let prop in args) {
             if (Object.prototype.hasOwnProperty.call(args, prop)) {
                 // const innerHTML = ['',
@@ -783,6 +832,13 @@ const GFX = (function() {
                 // '</TR></TABLE>'
                 // ].join('');
 
+
+
+
+
+
+
+
                 let DIV = document.createElement("div");
                 DIV.setAttribute("id", key + " : " + prop + "_div");
 
@@ -800,7 +856,7 @@ const GFX = (function() {
                 DIV.appendChild(h);
                 DIV.appendChild(hErr);
 
-                textAreas.appendChild(DIV);
+                SHADER_STAGE_DIV.appendChild(DIV);
 
                 const thisTextArea = document.createElement("textarea");
                 thisTextArea.spellcheck = false;
@@ -810,6 +866,8 @@ const GFX = (function() {
                 thisTextArea.setAttribute("class", "tabSupport");
 
                 let parentElement = thisTextArea.parentElement;
+
+
 
                 h.style.cursor = 'pointer';
                 h.onclick = (function(event) {
@@ -895,35 +953,44 @@ const GFX = (function() {
                 // };
                 
 
-                const logError = function(args) {
-                    const errorMessageNodes = record.errorMessageNodes;
-                    for (let prop in args) {
-                        if (Object.prototype.hasOwnProperty.call(args, prop)) {
-                            const errMsgNode = errorMessageNodes[prop]
-                            if (errMsgNode) {
-                                errMsgNode.nodeValue = args[prop];
-                                textAreaElements[prop].parentElement.style.color = 'red';
-                            }
+
+            }
+
+            const logError = function(args) {
+                const errorMessageNodes = record.errorMessageNodes;
+                let hasError = false;
+                for (let prop in args) {
+                    if (Object.prototype.hasOwnProperty.call(args, prop)) {
+                        const errMsgNode = errorMessageNodes[prop]
+                        console.log(errMsgNode);
+                        if (errMsgNode) {
+                            errMsgNode.nodeValue = args[prop];
+                            textAreaElements[prop].parentElement.style.color = 'red';
+                            hasError = true;
                         }
                     }
-                };
-                record.args.logError = logError;
+                }
+                if (hasError) {
+                    hOuter.style.color = 'red';
+                }
+            };
+            record.args.logError = logError;
 
-                record.args.clearLogErrors = function() {
-                    const errorMessageNodes = record.errorMessageNodes;
-                    for (let prop in errorMessageNodes) {
-                        if (Object.prototype.hasOwnProperty.call(errorMessageNodes, prop)) {
-                            const errMsgNode = errorMessageNodes[prop]
-                            if (errMsgNode) {
-                                errMsgNode.nodeValue = '';
-                                textAreaElements[prop].parentElement.style.color = 
-                                (textAreaElements[prop].parentElement.style.display == 'none') ? 'gray' : 'white';
-                                //DIV.parentElement.style.color = 'white';
-                            }
+            record.args.clearLogErrors = function() {
+                const errorMessageNodes = record.errorMessageNodes;
+                let hasError = false;
+                for (let prop in errorMessageNodes) {
+                    if (Object.prototype.hasOwnProperty.call(errorMessageNodes, prop)) {
+                        const errMsgNode = errorMessageNodes[prop]
+                        if (errMsgNode) {
+                            errMsgNode.nodeValue = '';
+                            textAreaElements[prop].parentElement.style.color = 
+                            (textAreaElements[prop].parentElement.style.display == 'none') ? 'gray' : 'white';
                         }
-                    }                    
-                };
-            }
+                    }
+                }
+                hOuter.style.color = (shaderInfoIsHidden) ? 'gray' : 'white';                
+            };
         }
     }
 
