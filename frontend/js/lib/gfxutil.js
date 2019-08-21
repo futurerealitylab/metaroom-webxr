@@ -139,6 +139,18 @@ const GFX = (function() {
     }
     _util.getAndStoreIndividualUniformLocations = getAndStoreIndividualUniformLocations;
 
+
+    const pr      = console.log;
+    const passert = console.assert;
+    const pwarn   = console.warn;
+    const perr    = console.error;
+
+    const DIRECTIVE_INCLUDE  = 'include';
+    const DIRECTIVE_VERTEX   = 'vertex';
+    const DIRECTIVE_FRAGMENT = 'fragment';
+    const DIRECTIVE_SHARED   = 'shared';
+    const DIRECTIVE_SHADER_STAGES = [DIRECTIVE_VERTEX, DIRECTIVE_FRAGMENT];
+
     function ShaderLibIncludeRecord(idxBegin, idxEndExclusive, libRecord) {
       this.idxBegin        = idxBegin;
       this.idxEndExclusive = idxEndExclusive;
@@ -154,6 +166,12 @@ const GFX = (function() {
 
       this.includes = [];
     }
+    function DirectiveState() {
+        this.braceCount = 0;
+        this.type = '';
+        this.inProgressStack = [];
+        this.directivesUsed = new Set();
+    }
     function pstateCharAt(pstate, i) {
         return pstate.stream.charAt(i);
     }
@@ -163,46 +181,65 @@ const GFX = (function() {
 
     function assembleShader(pstate, output) {
       const shaderBase = pstate.stream;
-      const includes = pstate.includes;
 
-      const count = includes.length;
-      if (count == 0) {
-        output.isValid = true;
-        output.shaderSource = shaderBase;
-        return output;
+      // // handle vertex, fragment
+      // {
+      //   pwarn("shader stage directives not yet fully implemented, ignoring directives");
+
+
+      //   const stageCount = DIRECTIVE_SHADER_STAGES.length;
+      //   for (let i = 0; i < stageCount; i += 1) {
+      //       const stage = pstate[DIRECTIVE_SHADER_STAGES[i]];
+      //       if (!stage) {
+      //           continue;
+      //       }
+      //   }
+      // }
+      // handle include 
+      {
+          const includes = pstate.includes;
+
+          const count = includes.length;
+          if (count == 0) {
+            output.isValid = true;
+            output.shaderSource = shaderBase;
+            return output;
+          }
+
+          const shaderSections = [];
+          let shaderBaseCursor = 0;
+          for (let i = 0; i < count; i += 1) {
+            const include = includes[i];
+
+            shaderSections.push(shaderBase.substring(shaderBaseCursor, include.idxBegin));
+            shaderSections.push(include.libRecord);
+            shaderBaseCursor = include.idxEndExclusive;
+          }
+          if (shaderBaseCursor < shaderBase.length) {
+            shaderSections.push(shaderBase.substring(shaderBaseCursor));
+          } 
+
+          output.isValid = true;
+          output.shaderSource = shaderSections.join('');
+
+          console.log(output.shaderSource);
+
       }
-
-
-      const shaderSections = [];
-      let shaderBaseCursor = 0;
-      for (let i = 0; i < count; i += 1) {
-        const include = includes[i];
-
-        shaderSections.push(shaderBase.substring(shaderBaseCursor, include.idxBegin));
-        shaderSections.push(include.libRecord);
-        shaderBaseCursor = include.idxEndExclusive;
-      }
-      if (shaderBaseCursor < shaderBase.length) {
-        shaderSections.push(shaderBase.substring(shaderBaseCursor));
-      } 
-
-      output.isValid = true;
-      output.shaderSource = shaderSections.join('');
-
-      console.log(output.shaderSource);
 
       return output;
     }
 
-    const pr      = console.log;
-    const passert = console.assert;
 
-    function preprocessShader(string, libMap, alreadyIncludedSet) {
+
+    function preprocessShader(string, libMap, alreadyIncludedSet, directiveState) {
         if (!libMap) {
             libMap = new Map();
         }
         if (!alreadyIncludedSet) {
             alreadyIncludedSet = new Set();
+        }
+        if (!directiveState) {
+            directiveState = new DirectiveState();
         }
 
        const pstate = new ShaderLibIncluderState(string);
@@ -210,6 +247,14 @@ const GFX = (function() {
        const output = {isValid : false, shaderSource : null};
 
        function seek(pstate, symbol) {
+          return pstate.stream.indexOf(symbol, pstate.i);
+       }
+
+       function seekCommit(pstate, symbol) {
+          const symbolIdx = pstate.stream.indexOf(symbol, pstate.i); 
+          if (symbolIdx !== -1) {
+            pstate.i = symbolIdx;
+          }
           return pstate.stream.indexOf(symbol, pstate.i);
        }
 
@@ -271,14 +316,16 @@ const GFX = (function() {
                        charAt !== '\n' &&
                        charAt !== '\r' &&
                        charAt !== '\t' &&
-                       charAt !== '<') {
+                       charAt !== '<' &&
+                       charAt !== '{') {
                     cursor += 1;
                     charAt = pstateCharAt(pstate, cursor);
                 }
                 const directiveToken = pstate.stream.substring(pstate.i , cursor);
                 pr("directive found: " + directiveToken);
 
-                if (directiveToken !== 'include') { // different pre-processor directive found
+                switch (directiveToken) { 
+                default: { // unhandled pre-processor directive found
                   const newlinePos = seek(pstate, '\n');
                   if (newlinePos == -1) {
                     console.warn("WARNING: No newline at assumed EOF");
@@ -288,8 +335,9 @@ const GFX = (function() {
                     pstate.i = newlinePos - 1;
                     prevC = pstate.stream.charAt(pstate.i);
                   }
-                } else { // include directive found
-
+                  break;
+                } 
+                case DIRECTIVE_INCLUDE: { // include directive found
                   const includePos = pstate.i;
                   // go to index of 'e' in "include"
                   pstate.i = includePos + 7;
@@ -322,7 +370,7 @@ const GFX = (function() {
                         
                         alreadyIncludedSet.add(libName);
 
-                        const subInclude = preprocessShader(libRecord, libMap, alreadyIncludedSet);
+                        const subInclude = preprocessShader(libRecord, libMap, alreadyIncludedSet, directiveState);
                         if (!subInclude.isValid) {
                             return output;
                         }
@@ -347,8 +395,69 @@ const GFX = (function() {
                     pstate.i = endPos - 1;
                     prevC = pstate.stream.charAt(pstate.i);
                   }
+                  break;
+                }
+                case DIRECTIVE_VERTEX: {
+                    pwarn(DIRECTIVE_VERTEX + " directive not fully implemented");
+
+                    if (directiveState.directivesUsed.has(DIRECTIVE_VERTEX)) {
+                        perr("CANNOT USE DIRECTIVE " + DIRECTIVE_VERTEX + " MORE THAN ONCE");
+                        return output;
+                    }
+                    if (-1 !== directiveState.inProgressStack.indexOf(DIRECTIVE_FRAGMENT)) {
+                        perr("CANNOT NEST SHADER STAGES");
+                        return output;
+                    }
+
+                    directiveState.directivesUsed.add(DIRECTIVE_VERTEX);
+                    directiveState.inProgressStack.push(DIRECTIVE_VERTEX);
+
+                    directiveState.beginIdx = directivePos;
+
+
+                    seekCommit(pstate, '{');
+
+                    directiveState.openingBracketIdx = pstate.i; 
+
+                    console.log(pstate.stream.substring(directivePos, pstate.i));
+
+                    passert(directiveState.braceCount === 0);
+                    directiveState.braceCount = 1;
+
+                    break;
+                }
+                case DIRECTIVE_FRAGMENT: {
+                    pwarn(DIRECTIVE_FRAGMENT + " directive not fully implemented");
+
+                    if (directiveState.directivesUsed.has(DIRECTIVE_FRAGMENT)) {
+                        perr("CANNOT USE DIRECTIVE " + DIRECTIVE_FRAGMENT + " MORE THAN ONCE");
+                        return output;
+                    }
+                    if (-1 !==  directiveState.inProgressStack.indexOf(DIRECTIVE_VERTEX)) {
+                        perr("CANNOT NEST SHADER STAGES");
+                        return output;
+                    }
+                    
+                    directiveState.directivesUsed.add(DIRECTIVE_FRAGMENT);
+                    directiveState.inProgressStack.push(DIRECTIVE_FRAGMENT);
+
+                    directiveState.beginIdx = directivePos;
+
+                    seekCommit(pstate, '{');
+
+                    directiveState.openingBracketIdx = pstate.i; 
+
+                    passert(directiveState.braceCount === 0);
+                    directiveState.braceCount = 1;
+
+                    break;
+                }
+                case DIRECTIVE_SHARED: {
+                    perr(DIRECTIVE_SHARED + " directive not implemented");
+                    break;
                 }
                 break;
+              }
               }
               case '/': {
                 //pr(pstate.i, c);
@@ -403,6 +512,32 @@ const GFX = (function() {
                 }
                 break;
               }
+              case '{': {
+                pr("begin brace found");
+                if (directiveState.braceCount > 0) {
+                    directiveState.braceCount += 1;
+                }
+                break;
+              }
+              case '}': {
+                pr("end brace found");
+                pr(directiveState.braceCount);
+                if (directiveState.braceCount > 0) {
+                    directiveState.braceCount -= 1;
+
+                    if (directiveState.braceCount === 0) {
+                        const directiveType = directiveState.inProgressStack.pop();
+                        const beginIdx = directiveState.beginIdx;
+                        const endIdx   = pstate.i;
+
+                        pstate[directiveType] = {beginIdx : beginIdx, endIdxExclusive : endIdx + 1};
+
+                        pr(directiveType + " block found: " + pstate.stream.substring(beginIdx, endIdx + 1));
+
+                    }
+                }
+                break;
+              }
               case '<': {
                 break;
               }
@@ -411,7 +546,7 @@ const GFX = (function() {
               }
               case '\n': {
                 if (pstate.preprocessor) {
-                  pr(pstate.i, '# preprocessor_directive_end');
+                  // pr(pstate.i, '# preprocessor_directive_end');
                 }
                 pstate.preprocessor = false;
                 break;
