@@ -455,8 +455,8 @@ float ray_sphere(vec3 V, vec3 W, vec4 sphere) {
         GFX.registerShaderForLiveEditing(gl, "mainShader", {
             vertex    : vert, 
             fragment  : fragWithIncludes,
-            "pnoise.glsl" : pnoiseLibSource,
-            "wee.glsl" : "void do_procedural_graphics(void) { }"
+            "pnoise.glsl" : "",
+            "wee.glsl" : ""
 
         }, (args, libMap) => {
             const vertex    = args.vertex;
@@ -502,6 +502,57 @@ float ray_sphere(vec3 V, vec3 W, vec4 sphere) {
             gl.uniform1i(state.uniformData.uTex1Loc, 1); // set texture unit 1 at uTex1
         },
         libMap);
+
+        // GFX.registerShaderForLiveEditing(gl, "mainShader2", {
+        //     vertex    : vert, 
+        //     fragment  : fragWithIncludes,
+        //     "pnoise.glsl" : pnoiseLibSource,
+        //     "wee.glsl" : "void do_procedural_graphics(void) { }"
+
+        // }, (args, libMap) => {
+        //     const vertex    = args.vertex;
+        //     const fragment  = args.fragment;
+
+        //     const ppcVertexRecord   = GFX.preprocessShader(vertex, libMap);
+        //     const ppcFragmentRecord = GFX.preprocessShader(fragment, libMap);
+
+        //     console.assert(ppcVertexRecord.isValid && ppcFragmentRecord.isValid);
+            
+        //     const errRecord = {};
+        //     const program = GFX.createShaderProgramFromStrings(ppcVertexRecord.shaderSource, ppcFragmentRecord.shaderSource, errRecord);
+        //     if (!program) {
+        //         console.error("Could not compile shader");
+        //         console.error(errRecord);
+
+        //         args.clearLogErrors();
+        //         args.logError(errRecord);
+
+        //         gl.useProgram(null);
+        //         state.program = null;
+
+        //         return;
+        //     }
+        //     args.clearLogErrors();
+
+        //     const prevProgram = state.program;
+        //     gl.deleteProgram(prevProgram);
+        //     state.program = program;
+
+        //     // bind the newly compiled program
+        //     gl.useProgram(state.program);
+
+        //     // re-initialize uniforms
+
+        //     GFX.getAndStoreIndividualUniformLocations(gl, state.program, state.uniformData);
+
+        //     // commented line would give you the maximum number of 
+        //     // texture image units availabl on your hardware
+        //     // const maxTextureUnitCount = GL.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
+
+        //     gl.uniform1i(state.uniformData.uTex0Loc, 0); // set texture unit 0 at uTex0
+        //     gl.uniform1i(state.uniformData.uTex1Loc, 1); // set texture unit 1 at uTex1
+        // },
+        // libMap);
 
 
         // save all attribute and uniform locations

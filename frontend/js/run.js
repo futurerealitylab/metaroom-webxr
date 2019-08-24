@@ -41,19 +41,40 @@ function tempShaderEditingInit() {
     {
       MR.shaderMap = new Map();
       const _tareas = document.getElementById("text-areas");
-      while (_tareas && _tareas.firstChild) {
-          _tareas.removeChild(_tareas.firstChild);
+      if (!_tareas) {
+        return;
+      }
+      const _children = _tareas.children;
+      for (let i = 0; i < _children.length; i += 1) {
+        let _subtareas = _children[i];
+        while (_subtareas && _subtareas.firstChild) {
+            _subtareas.removeChild(_subtareas.firstChild);
+        }
       }
     }
     {
       if (wrangler.externalWindow) {
         const _tareas = wrangler.externalWindow.document.getElementById("text-areas");
-        while (_tareas && _tareas.firstChild) {
-            _tareas.removeChild(_tareas.firstChild);
+        if (!_tareas) {
+          return;
+        }
+        const _children = _tareas.children;
+        for (let i = 0; i < _children.length; i += 1) {
+          let _subtareas = _children[i];
+          while (_subtareas && _subtareas.firstChild) {
+              _subtareas.removeChild(_subtareas.firstChild);
+          }
         }
       }
     }
 }
+
+
+db.initLoggerSystem({
+  redirect : true,
+  logger : new db.LoggerGUIDefault()
+});
+
 
 
 MR.wrangler.init({

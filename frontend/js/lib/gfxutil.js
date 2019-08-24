@@ -727,39 +727,65 @@ const GFX = (function() {
     _util.glFreeResources = glFreeResources;
 
 
+    function registerShaderLibsForLiveEditing(_gl, keys, libMap) {
+        if (!keys) {
+            console.error("No library keys specified");
+            return;
+        }
 
+        libMap = libMap || new Map();
+        let record = MR.libMap.get(key);
+        if (!record) {
+            record = {args : args, originals : {}, textAreas : {}, errorMessageNodes : {}};
+            MR.shaderMap.set(key, record);
+            for (var prop in args) {
+                if (Object.prototype.hasOwnProperty.call(args, prop)) {
+                    record.originals[prop] = args[prop];
+                }
+            }
+        }
 
+        const doc = (MR.wrangler.externalWindow) ? MR.wrangler.externalWindow.document : document;
+        const textAreas = doc.getElementById("text-areas");
 
-
+        const textAreaElements = record.textAreas;
+    }
 
     function registerShaderForLiveEditing(_gl, key, args, callback, libMap) {
-        console.assert(key);
+        if (!key) {
+            console.error("No shader key specified");
+            return;
+        }
 
         // TODO(KTR): make a div per shader program in addition to the blocks per shader pass
 
         let record = MR.shaderMap.get(key);
         if (!record) {
-            record = {args : args, prevVals : {}, textAreas : {}, errorMessageNodes : {}};
+            record = {args : args, originals : {}, textAreas : {}, errorMessageNodes : {}};
             MR.shaderMap.set(key, record);
             for (var prop in args) {
                 if (Object.prototype.hasOwnProperty.call(args, prop)) {
-                    record.prevVals[prop] = args[prop];
+                    record.originals[prop] = args[prop];
                 }
             }
         }
-        else {
 
-        }
+        //     // create shader container
+        //     const SHADER_DIV = doc.createElement("div");
+        //     SHADER_DIV.setAttribute("id", key + "-shader lib container");
+        //     textAreas.appendChild(SHADER_DIV);
 
 
-        function spacer(color, width, height) {
-           return '<table bgcolor=' + color +
-                        ' width='   + width +
-                        ' height='  + height + '><tr><td>&nbsp;</td></tr></table>';
-        }
+        // function spacer(color, width, height) {
+        //    return '<table bgcolor=' + color +
+        //                 ' width='   + width +
+        //                 ' height='  + height + '><tr><td>&nbsp;</td></tr></table>';
+        // }
 
         const doc = (MR.wrangler.externalWindow) ? MR.wrangler.externalWindow.document : document;
-        const textAreas = doc.getElementById("text-areas");
+
+
+        const textAreas = doc.getElementById("shader-programs-container");
 
         //textAreas.innerHTML = '';
 
@@ -767,7 +793,7 @@ const GFX = (function() {
 
             // create shader container
             const SHADER_DIV = doc.createElement("div");
-            SHADER_DIV.setAttribute("id", key + "-shader container");
+            SHADER_DIV.setAttribute("id", key + "-shader-container");
             textAreas.appendChild(SHADER_DIV);
 
                 // create header
@@ -840,6 +866,20 @@ const GFX = (function() {
         propHiddenState.set("main", false);
         for (let prop in args) {
             if (Object.prototype.hasOwnProperty.call(args, prop)) {
+
+                let text = '';
+                let code = '';
+                if (prop === 'vertex' || prop === 'fragment') {
+                    code = args[prop];
+                    text = code.split('\n');
+                } else {
+                    code = (libMap) ? (libMap.get(prop) || '') : '';
+                    text = code.split('\n');
+                }
+                if (text === '') {
+                    continue;
+                }
+
                 propHiddenState.set(key + prop, false);
 
 
@@ -918,7 +958,9 @@ const GFX = (function() {
                     }
                 };
                 
-                let text = args[prop].split('\n');
+
+
+                 
                 let cols = 0;
                 for (let i = 0; i < text.length; i += 1) {
                     cols = Math.max(cols, text[i].length);
@@ -926,7 +968,7 @@ const GFX = (function() {
 
                 thisTextArea.rows = text.length + 1;
                 thisTextArea.cols = cols;
-                thisTextArea.value = args[prop];
+                thisTextArea.value = code;
                 thisTextArea.style.backgroundColor = '#808080';
 
                 const textarea = thisTextArea;
@@ -968,10 +1010,8 @@ const GFX = (function() {
                 //     record.args[prop] = thisTextArea.value;
                 //     callback(record.args); 
                 // };
-                
-
-
             }
+
 
             const logError = function(args) {
                 const errorMessageNodes = record.errorMessageNodes;
@@ -979,12 +1019,11 @@ const GFX = (function() {
                 for (let prop in args) {
                     if (Object.prototype.hasOwnProperty.call(args, prop)) {
                         const errMsgNode = errorMessageNodes[prop]
-                        console.log(errMsgNode);
+
                         if (errMsgNode) {
                             errMsgNode.nodeValue = args[prop];
                             textAreaElements[prop].parentElement.style.color = 'red';
                             hasError = true;
-
                         }
                     }
                 }
