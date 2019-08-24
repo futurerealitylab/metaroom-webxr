@@ -2,7 +2,7 @@
 "use strict";
 
 export function loadImagePromise(url) {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
         const image = new Image();
         image.onload = () => {
             resolve(image);

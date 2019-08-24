@@ -112,9 +112,14 @@ MR.wrangler.init({
 
           tempShaderEditingInit();
 
-          MR.wrangler.beginSetup(MR.worlds[MR.worldIdx](MR.wrangler));
+          let hadError = false;
+
+          MR.wrangler.beginSetup(MR.worlds[MR.worldIdx](MR.wrangler)).catch((e) => {
+              wrangler.simulateWorldTransition();
+          });
 
           ok = true;
+
         } catch (e) {
           console.error(e);
 

@@ -261,8 +261,8 @@ MR.registerWorld((function() {
     async function setup(state, myWorld, session) {
         // load initial images, then continue setup after waiting is done
         const images = await imgutil.loadImagesPromise([
-            worldPath() + "resources/textures/brick.png",
-            worldPath() + "resources/textures/polkadots_transparent.png",    
+            "/resources/textures/brick.png",
+            "/resources/textures/polkadots_transparent.png",    
         ]);
 
         // this line only executes after the images are loaded asynchronously
