@@ -141,6 +141,8 @@ window.VRCanvasWrangler = (function() {
       this._viewMatrix = mat4.create();
       this._animationHandle = 0;
 
+      this.buttonsCache = [];
+
       // Bound functions
       this.onVRRequestPresent = this._onVRRequestPresent.bind(this);
       this.onVRExitPresent = this._onVRExitPresent.bind(this);
@@ -457,6 +459,32 @@ window.VRCanvasWrangler = (function() {
         this.config.onEndFrame(t);
 
         vrDisplay.submitFrame();
+
+        // For now, all VR gamepad button presses trigger a world
+        // transition.
+        var gamepads = navigator.getGamepads();
+        var vrGamepadCount = 0;
+        var doTransition = false;
+        for (var i = 0; i < gamepads.length; ++i) {
+          var gamepad = gamepads[i];
+          if (gamepad) { /* `gamepads` may contain null-valued entries (eek!) */
+            if (gamepad.pose || gamepad.displayId ) { /* VR gamepads will have one or both of these properties. */
+              var cache = this.buttonsCache[vrGamepadCount] || [];
+              for (var j = 0; j < gamepad.buttons.length; j++) {
+                // Check for any buttons that are pressed and previously were not.
+                if (cache[j] != null && !cache[j] && gamepad.buttons[j].pressed) {
+                  doTransition = true;
+                }
+                cache[j] = gamepad.buttons[j].pressed;
+              }
+              this.buttonsCache[vrGamepadCount] = cache;
+              vrGamepadCount++;
+            }
+          }
+        }
+        if (doTransition) {
+          this.simulateWorldTransition();
+        }
     }
 
     _glAttachResourceTracking() {
