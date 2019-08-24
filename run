@@ -1,0 +1,4 @@
+pushd server
+node main.js
+popd server
+
