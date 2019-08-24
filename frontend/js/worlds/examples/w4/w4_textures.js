@@ -1,4 +1,7 @@
 "use strict"
+
+import * as imgutil from '/js/lib/imageutil.js';
+
 MR.registerWorld((function() {
     const vert = `#version 300 es
     precision highp float;
@@ -85,75 +88,6 @@ MR.registerWorld((function() {
         fragColor = mix(color0, color1, sin(uTime));
     }
     `;
-
-    function loadImagePromise(url) {
-        return new Promise(resolve => {
-            const image = new Image();
-            image.onload = () => {
-                resolve(image);
-            };
-            image.onerror = () => { console.error("failed to load: " + url); reject(); };
-
-            image.src = url;
-        });
-    }
-
-    function loadImagesPromise(urls) {
-        let urlCount = urls.length;
-        let images = [];
-        for (let i = 0; i < urlCount; i += 1) {
-            images.push(null);
-        }
-
-        const pending = [];
-        for (let i = 0; i < urlCount; i += 1) {
-            pending.push(loadImagePromise(urls[i]).then((image) => {
-                console.log("loaded: " + urls[i]);
-                images[i] = image;
-            }));
-        }
-        return Promise.all(pending).then(data => {
-            console.log("loaded all images");
-            return images;
-        });
-    }
-
-    function loadImage(url, callback) {
-        const image = new Image();
-        image.src = url;
-        image.onload = callback;
-        image.onerror = () => { console.error("failed to load: " + url); callback(); };
-        console.log(callback);
-        return image;
-    }
-
-    function loadImages(urls, callback) {
-        let urlCount = urls.length;
-        let images = [];
-
-        function onImageLoad(url) {
-            urlCount -= 1;
-
-            console.log("loaded: " + url);
-
-            if (urlCount === 0) {
-                console.log("all loaded");
-                callback(images);
-                images = null;
-            }
-        };
-
-        for (let i = 0; i < urlCount; i += 1) {
-            console.log("loading: " + urls[i]);
-            const image = loadImage(urls[i], function() { onImageLoad(urls[i]); } );
-            images.push(image);
-        }
-
-
-
-
-
-    }
 
 
     function declareUniform(uniformData, name, type, size) {
@@ -315,13 +249,18 @@ MR.registerWorld((function() {
     function worldPath() {
         return window.location.href.split('?')[0] + "js/worlds/examples/w4/";
     }
+    console.log(worldPath());
 
+
+    const mydata = {
+        mainShader : null
+    };
 
     // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
     // (return JavaScript "Promises" like in loadImages())
     async function setup(state, myWorld, session) {
         // load initial images, then continue setup after waiting is done
-        const images = await loadImagesPromise([
+        const images = await imgutil.loadImagesPromise([
             worldPath() + "resources/textures/brick.png",
             worldPath() + "resources/textures/polkadots_transparent.png",    
         ]);
@@ -341,19 +280,6 @@ MR.registerWorld((function() {
 
 
     const libMap = new Map();
-// libMap.set("mylib.glsl", `
-//   #ifndef MYLIB_H
-//   #define MYLIB_H
-
-//   #define NOISE2(a, b) // Making noise
-//   void do_procedural_graphics(void);
-  
-//   #ifdef MYLIB_IMPL
-//     void do_procedural_graphics(void) {
-//       // TODO;
-//     }
-//   #endif
-// `);
 
     const pnoiseLibSource = `
 vec3 mod289(vec3 x) { return x - floor(x * (1. / 289.)) * 289.; }
@@ -397,13 +323,7 @@ float turbulence(vec3 P) {
   }
   return f;
 }
-float ray_sphere(vec3 V, vec3 W, vec4 sphere) {
-  V -= sphere.xyz;
-  float r = sphere.w;
-  float WV = dot(W, V);
-  float discr = WV * WV - dot(V, V) + r * r;
-  return discr >= 0. ? -WV - sqrt(discr) : -1.;
-}`;
+`;
 
     libMap.set("pnoise.glsl",
         pnoiseLibSource
@@ -452,108 +372,77 @@ float ray_sphere(vec3 V, vec3 W, vec4 sphere) {
         // Need to separate libraries from shaders (or have multiple text boxes for the library be updated)
         // with the same text at the same time - I think that I prefer the first alternative
 
+        GFX.registerShaderLibrariesForLiveEditing(gl, "libraries", [
+            { name : "wee.glsl",    code : "void do_procedural_graphics(void) { }" },
+            { name : "pnoise.glsl", code : pnoiseLibSource }
+        ]);
+
         GFX.registerShaderForLiveEditing(gl, "mainShader", {
             vertex    : vert, 
             fragment  : fragWithIncludes,
             "pnoise.glsl" : "",
             "wee.glsl" : ""
+        }, {
+            doCompilationAfterFirstSetup : false,
+            enablePreprocessor : true,
 
-        }, (args, libMap) => {
-            const vertex    = args.vertex;
-            const fragment  = args.fragment;
+            onNeedsCompilation : (args, libMap, logs) => {
+                const vertex    = args.vertex;
+                const fragment  = args.fragment;
 
-            const ppcVertexRecord   = GFX.preprocessShader(vertex, libMap);
-            const ppcFragmentRecord = GFX.preprocessShader(fragment, libMap);
+                const vertRecord = GFX.preprocessShader(vertex,   libMap);
+                const fragRecord = GFX.preprocessShader(fragment, libMap);
 
-            console.assert(ppcVertexRecord.isValid && ppcFragmentRecord.isValid);
-            
-            const errRecord = {};
-            const program = GFX.createShaderProgramFromStrings(ppcVertexRecord.shaderSource, ppcFragmentRecord.shaderSource, errRecord);
-            if (!program) {
-                console.error("Could not compile shader");
-                console.error(errRecord);
+                if (!vertRecord.isValid || !fragRecord.isValid) {
+                    return false;
+                }
+                
+                const errRecord = {};
+                const program = GFX.createShaderProgramFromStrings(
+                    vertRecord.shaderSource, 
+                    fragRecord.shaderSource, 
+                    errRecord
+                );
 
-                args.clearLogErrors();
-                args.logError(errRecord);
 
-                gl.useProgram(null);
-                state.program = null;
 
-                return;
+                if (!program) {
+                    console.error("Could not compile shader");
+                    console.error(errRecord);
+
+                    logs.clearLogErrors();
+                    logs.logError(errRecord);
+
+                    return false;
+                }
+                logs.clearLogErrors();
+
+                const prevProgram = state.program;
+                gl.deleteProgram(prevProgram);
+                state.program = program;
+
+                return true;
+            },
+            // Use this callback to set any state that needs
+            // to be set or updated after compiling the shader
+            onAfterCompilation : (args, libMap, logs) => {
+                // bind the newly compiled program
+                gl.useProgram(state.program);
+
+                // initialize uniforms
+                GFX.getAndStoreIndividualUniformLocations(gl, state.program, state.uniformData);
+
+                // commented line would give you the maximum number of 
+                // texture image units availabl on your hardware
+                // const maxTextureUnitCount = GL.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
+
+                // set texture unit 0 at uTex0
+                gl.uniform1i(state.uniformData.uTex0Loc, 0);
+                // set texture unit 1 at uTex1
+                gl.uniform1i(state.uniformData.uTex1Loc, 1); 
             }
-            args.clearLogErrors();
-
-            const prevProgram = state.program;
-            gl.deleteProgram(prevProgram);
-            state.program = program;
-
-            // bind the newly compiled program
-            gl.useProgram(state.program);
-
-            // re-initialize uniforms
-
-            GFX.getAndStoreIndividualUniformLocations(gl, state.program, state.uniformData);
-
-            // commented line would give you the maximum number of 
-            // texture image units availabl on your hardware
-            // const maxTextureUnitCount = GL.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
-
-            gl.uniform1i(state.uniformData.uTex0Loc, 0); // set texture unit 0 at uTex0
-            gl.uniform1i(state.uniformData.uTex1Loc, 1); // set texture unit 1 at uTex1
         },
         libMap);
-
-        // GFX.registerShaderForLiveEditing(gl, "mainShader2", {
-        //     vertex    : vert, 
-        //     fragment  : fragWithIncludes,
-        //     "pnoise.glsl" : pnoiseLibSource,
-        //     "wee.glsl" : "void do_procedural_graphics(void) { }"
-
-        // }, (args, libMap) => {
-        //     const vertex    = args.vertex;
-        //     const fragment  = args.fragment;
-
-        //     const ppcVertexRecord   = GFX.preprocessShader(vertex, libMap);
-        //     const ppcFragmentRecord = GFX.preprocessShader(fragment, libMap);
-
-        //     console.assert(ppcVertexRecord.isValid && ppcFragmentRecord.isValid);
-            
-        //     const errRecord = {};
-        //     const program = GFX.createShaderProgramFromStrings(ppcVertexRecord.shaderSource, ppcFragmentRecord.shaderSource, errRecord);
-        //     if (!program) {
-        //         console.error("Could not compile shader");
-        //         console.error(errRecord);
-
-        //         args.clearLogErrors();
-        //         args.logError(errRecord);
-
-        //         gl.useProgram(null);
-        //         state.program = null;
-
-        //         return;
-        //     }
-        //     args.clearLogErrors();
-
-        //     const prevProgram = state.program;
-        //     gl.deleteProgram(prevProgram);
-        //     state.program = program;
-
-        //     // bind the newly compiled program
-        //     gl.useProgram(state.program);
-
-        //     // re-initialize uniforms
-
-        //     GFX.getAndStoreIndividualUniformLocations(gl, state.program, state.uniformData);
-
-        //     // commented line would give you the maximum number of 
-        //     // texture image units availabl on your hardware
-        //     // const maxTextureUnitCount = GL.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
-
-        //     gl.uniform1i(state.uniformData.uTex0Loc, 0); // set texture unit 0 at uTex0
-        //     gl.uniform1i(state.uniformData.uTex1Loc, 1); // set texture unit 1 at uTex1
-        // },
-        // libMap);
-
 
         // save all attribute and uniform locations
 
@@ -661,7 +550,7 @@ float ray_sphere(vec3 V, vec3 W, vec4 sphere) {
             //  setAndEnableVertexAttribute(state.attribData.aUVLoc, size, type, normalize, stride, offset);
 
         }
-        // Version 2: (OLD)
+        // Version 2: (Separate Buffers Per Attribute)
         // This version uses 2 buffers to store position and UV/texture coord
         // attributes separately, but usually we may want to use a single
         // buffer with interleaved data

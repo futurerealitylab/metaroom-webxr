@@ -41,14 +41,15 @@
   <script src="js/lib/htmlutil.js"></script>
   <script src="js/third-party/gl-matrix-min.js"></script>
   <script src="js/lib/gfxutil.js"></script>
-  <script src="js/webxr-version-shim.js"></script>
+  <script type="module" src="js/lib/imageutil.js"></script>
   <!-- WebXR Button implements a button to toggle in and out of VR. -->
-  <script src="js/webxr-button.js"></script>
+  <script src="js/lib/webxr-button.js"></script>
   <!-- WebXR Canvas Wrangler simplifies WebXR setup. -->
-  <script src="js/webxr-wrangler.js"></script>
-  <script src="js/webvr-wrangler.js"></script>
+  <script src="js/core/webxr-wrangler.js"></script>
+  <script src="js/core/webvr-wrangler.js"></script>
 
-  <script src="js/metaroom.js"></script>
+  <script src="js/core/metaroom.js"></script>
+  <script src="js/lib/mteditor.js"></script>
 
 </head>
 <body style="background-color: black; color: white; text-emphasis-color: white;">
@@ -60,12 +61,12 @@
     <div style="float: left;" class="text_area_block" id="shader-libs-container"></div>
   </div>
 
-  <script src=js/worlds/examples/w0/w0_hello_world.js></script>
+<!--   <script src=js/worlds/examples/w0/w0_hello_world.js></script>
   <script src=js/worlds/examples/w1/w1_hello_world_es3.js></script>
   <script src=js/worlds/examples/w2/w2_connor_example.js></script>
-  <script src=js/worlds/examples/w3/w3_ktr_2017_example.js></script>
-  <script src=js/worlds/examples/w4/w4_textures.js></script>
+  <script src=js/worlds/examples/w3/w3_ktr_2017_example.js></script> -->
+  <script type="module" src=js/worlds/examples/w4/w4_textures.js></script>
 
 
-  <script src="js/run.js"></script>
+  <script type="module" src="js/run.js"></script>
 </body>

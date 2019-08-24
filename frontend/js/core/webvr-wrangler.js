@@ -240,6 +240,8 @@ window.VRCanvasWrangler = (function() {
         this._glAttachResourceTracking();
       }
 
+      this.timeStart = 0;
+
       const status = await this._initWebVR();
       if (!status) {
         console.log('Initializing PC browser mode ...');
@@ -408,6 +410,9 @@ window.VRCanvasWrangler = (function() {
     }
 
     _onAnimationFrameWindow(t) {
+        this.time = t / 1000.0;
+        this.timeMS = t;
+
         this._animationHandle = window.requestAnimationFrame(this.config.onAnimationFrame);
         gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
         mat4.identity(this._viewMatrix);
@@ -421,6 +426,9 @@ window.VRCanvasWrangler = (function() {
     }
 
     _onAnimationFrame(t) {
+        this.time = t / 1000.0;
+        this.timeMS = t;
+
         // revert to windowed rendering if there is no VR display
         // or if the VR display is not presenting
         const vrDisplay = this._vrDisplay;

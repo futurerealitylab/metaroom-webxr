@@ -1,7 +1,5 @@
 "use strict";
 
-
-
 const GFX = (function() {
     const _util = {};
 
@@ -727,14 +725,21 @@ const GFX = (function() {
     _util.glFreeResources = glFreeResources;
 
 
-    function registerShaderLibsForLiveEditing(_gl, keys, libMap) {
+    function registerShaderLibrariesForLiveEditing(_gl, keys, libMap) {
         if (!keys) {
             console.error("No library keys specified");
             return;
         }
+        if (!libMap) {
+            console.warn("No library map specified. Libraries section will be empty.");
+        }
+
+
+        db.warn("REGISTER SHADER LIBRARIES TODO");
+        return;
 
         libMap = libMap || new Map();
-        let record = MR.libMap.get(key);
+        let record = libMap.get(key);
         if (!record) {
             record = {args : args, originals : {}, textAreas : {}, errorMessageNodes : {}};
             MR.shaderMap.set(key, record);
@@ -750,18 +755,30 @@ const GFX = (function() {
 
         const textAreaElements = record.textAreas;
     }
+    _util.registerShaderLibrariesForLiveEditing = registerShaderLibrariesForLiveEditing;
 
-    function registerShaderForLiveEditing(_gl, key, args, callback, libMap) {
+
+    let libMap;
+
+    function registerShaderForLiveEditing(_gl, key, args, callbacks, TEMPMAPSLOT) {
         if (!key) {
             console.error("No shader key specified");
             return;
         }
 
+        if (TEMPMAPSLOT) {
+            libMap = TEMPMAPSLOT;
+        }
+
+        const onNeedsCompilation = callbacks.onNeedsCompilation;
+        const onAfterCompilation = callbacks.onAfterCompilation;
+
+
         // TODO(KTR): make a div per shader program in addition to the blocks per shader pass
 
         let record = MR.shaderMap.get(key);
         if (!record) {
-            record = {args : args, originals : {}, textAreas : {}, errorMessageNodes : {}};
+            record = {args : args, originals : {}, textAreas : {}, logs: {}, errorMessageNodes : {}};
             MR.shaderMap.set(key, record);
             for (var prop in args) {
                 if (Object.prototype.hasOwnProperty.call(args, prop)) {
@@ -976,7 +993,7 @@ const GFX = (function() {
                 textarea.style.display = "block";
 
 
-                thisTextArea.addEventListener('keydown', function (event) {
+                thisTextArea.addEventListener('keydown', (event) => {
                     const cursor = textarea.selectionStart;
                     if(event.key == "Tab"){
                         event.preventDefault();
@@ -1002,7 +1019,20 @@ const GFX = (function() {
                             }
                         } 
 
-                        callback(record.args, libMap); 
+                        let hasError = false;
+                        if (onNeedsCompilation) {
+                            hasError = !onNeedsCompilation(record.args, libMap, record.logs);
+                        } else {
+                            db.warn("onNeedsCompilation unspecified");
+                        }
+
+                        if (onAfterCompilation) {
+                            if (!hasError) {
+                                onAfterCompilation(record.args, libMap, record.logs);
+                            }
+                        } else {
+                            db.warn("onAfterCompilation unspecified");
+                        }
                     }
 
                 });
@@ -1031,10 +1061,10 @@ const GFX = (function() {
                     hOuter.style.color = 'red';
                     errorState = true;
                 }
-            };
-            record.args.logError = logError;
+            }
+            record.logs.logError = logError;
 
-            record.args.clearLogErrors = function() {
+            function clearLogErrors() {
                 const errorMessageNodes = record.errorMessageNodes;
                 let hasError = false;
                 for (let prop in errorMessageNodes) {
@@ -1049,7 +1079,8 @@ const GFX = (function() {
                 }
                 hOuter.style.color = (shaderInfoIsHidden) ? 'gray' : 'white';
                             
-            };
+            }
+            record.logs.clearLogErrors = clearLogErrors;
         }
     }
 

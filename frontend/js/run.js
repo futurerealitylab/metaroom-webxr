@@ -1,5 +1,3 @@
-"use strict";
-
 ////
 
 
@@ -79,11 +77,12 @@ db.initLoggerSystem({
 
 MR.wrangler.init({
   outputSurfaceName : 'output-element',
-  outputWidth : 1280,
-  outputHeight : 720,
+  outputWidth : 1280 / 2,
+  outputHeight : 720 / 2,
   glUseGlobalContext : true,
   // frees gl resources upon world switch
   glDoResourceTracking : true,
+  glEnableEditorHook : true,
   // main() is the system's entry point
   main : () => {
 
