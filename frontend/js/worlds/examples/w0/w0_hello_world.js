@@ -73,52 +73,52 @@ MR.registerWorld((function() {
 
         // register for editing TODO(KTR): do some of the re-compilation behind-the-scenes perhaps,
         // or do uniform setting only once and immediately call this function to reduce code lines
-        GFX.registerShaderForLiveEditing(gl, "mainShader", {
-            vertex    : vert, 
-            fragment  : frag,
-        }, (args, libMap) => {
-            const vertex    = args.vertex;
-            const fragment  = args.fragment;
+        // GFX.registerShaderForLiveEditing(gl, "mainShader", {
+        //     vertex    : vert, 
+        //     fragment  : frag,
+        // }, (args, libMap) => {
+        //     const vertex    = args.vertex;
+        //     const fragment  = args.fragment;
 
-            // (KTR): TODO here you could do some string parsing to incorporate 
-            // the shared shared library into the main shader code,
-            // we'd like to be able to edit that shader code separately
+        //     // (KTR): TODO here you could do some string parsing to incorporate 
+        //     // the shared shared library into the main shader code,
+        //     // we'd like to be able to edit that shader code separately
             
-            const errRecord = {};
-            const program = GFX.createShaderProgramFromStrings(args.vertex, args.fragment, errRecord);
-            if (!program) {
-                console.error("Could not compile shader");
-                console.error(errRecord);
+        //     const errRecord = {};
+        //     const program = GFX.createShaderProgramFromStrings(args.vertex, args.fragment, errRecord);
+        //     if (!program) {
+        //         console.error("Could not compile shader");
+        //         console.error(errRecord);
 
-                args.clearLogErrors();
-                args.logError(errRecord);
+        //         args.clearLogErrors();
+        //         args.logError(errRecord);
 
-                gl.useProgram(null);
-                state.program = null;
+        //         gl.useProgram(null);
+        //         state.program = null;
 
-                return;
-            }
-            args.clearLogErrors();
+        //         return;
+        //     }
+        //     args.clearLogErrors();
 
-            const prevProgram = state.program;
-            gl.deleteProgram(prevProgram);
-            state.program = program;
+        //     const prevProgram = state.program;
+        //     gl.deleteProgram(prevProgram);
+        //     state.program = program;
 
-            // bind the newly compiled program
-            gl.useProgram(state.program);
+        //     // bind the newly compiled program
+        //     gl.useProgram(state.program);
 
-            // re-initialize uniforms
-            // Assign MVP matrices
-            state.uModelLoc        = gl.getUniformLocation(program, 'uModel');
-            state.uViewLoc         = gl.getUniformLocation(program, 'uView');
-            state.uProjLoc         = gl.getUniformLocation(program, 'uProj');
-            state.uTimeLoc         = gl.getUniformLocation(program, 'uTime');
-            state.uCompileCountLoc = gl.getUniformLocation(program, 'uCompileCount');
+        //     // re-initialize uniforms
+        //     // Assign MVP matrices
+        //     state.uModelLoc        = gl.getUniformLocation(program, 'uModel');
+        //     state.uViewLoc         = gl.getUniformLocation(program, 'uView');
+        //     state.uProjLoc         = gl.getUniformLocation(program, 'uProj');
+        //     state.uTimeLoc         = gl.getUniformLocation(program, 'uTime');
+        //     state.uCompileCountLoc = gl.getUniformLocation(program, 'uCompileCount');
 
-            const localCompileCount = state.persistent.localCompileCount;
-            gl.uniform1i(state.uCompileCountLoc, localCompileCount);
-        },
-        null);
+        //     const localCompileCount = state.persistent.localCompileCount;
+        //     gl.uniform1i(state.uCompileCountLoc, localCompileCount);
+        // },
+        // null);
 
 
 

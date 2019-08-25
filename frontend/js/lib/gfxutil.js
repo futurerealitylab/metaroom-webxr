@@ -5,6 +5,8 @@ const GFX = (function() {
 
     // shader and GL utilities
 
+    _util.errRecord = {};
+
     class GLContextResult {
         constructor(isValid, _gl, _version) {
             this.isValid = isValid;
@@ -46,7 +48,8 @@ const GFX = (function() {
             }
             console.error("Cannot compile " + shaderTypename + " shader:\n\n" + msg);
 
-            errRecord[shaderTypename] = msg;
+            const errRecord_ = (errRecord) ? errRecord : _util.errRecord;
+            errRecord_[shaderTypename] = msg;
             return null;
         } else {
             gl.attachShader(program, shader);
@@ -57,6 +60,7 @@ const GFX = (function() {
 
     function createShaderProgramFromStrings(vertSrc, fragSrc, errRecord) {
         const program = gl.createProgram();
+
         const vshader = GFX.addShader(program, gl.VERTEX_SHADER, vertSrc, errRecord);
         const fshader = GFX.addShader(program, gl.FRAGMENT_SHADER, fragSrc, errRecord);
 
@@ -116,6 +120,14 @@ const GFX = (function() {
         return {program : program, vshader : vshader, fshader : fshader};
     }
     _util.createShaderProgramFromStringsAndGetIndivShaders = createShaderProgramFromStringsAndGetIndivShaders;
+
+    function extendAPI(funName, funProc) {
+        if (!funName || !funProc) {
+            return;
+        }
+
+        _util[funName] = funProc;
+    };
 
     function getAndStoreAttributeLocations(_gl, program, data, suffix = "Loc") {
         const dataCount = _gl.getProgramParameter(program, _gl.ACTIVE_ATTRIBUTES);
@@ -724,6 +736,12 @@ const GFX = (function() {
     }
     _util.glFreeResources = glFreeResources;
 
+    function setErrRecordGetSetClear(callbackGet, callbackSet, callbackClear) {
+         _util.getErrRecord   = callbackGet   || function() { return GFX.errRecord; };
+         _util.setErrRecord   = callbackSet   || function(val) { GFX.errRecord = val; };
+         _util.clearErrRecord = callbackClear || function() { GFX.errRecord = {}; };
+    }
+    setErrRecordGetSetClear();
 
     function registerShaderLibrariesForLiveEditing(_gl, keys, libMap) {
         if (!keys) {
@@ -760,6 +778,45 @@ const GFX = (function() {
 
     let libMap;
 
+    let tempCompiledShader = null;
+
+    function onNeedsCompilationDefault(args, libMap, logs, userData) {
+        const vertex    = args.vertex;
+        const fragment  = args.fragment;
+
+        const vertRecord = GFX.preprocessShader(vertex,   libMap);
+        const fragRecord = GFX.preprocessShader(fragment, libMap);
+
+        if (!vertRecord.isValid || !fragRecord.isValid) {
+            return false;
+        }
+        
+        const errRecord = {};
+        const program = GFX.createShaderProgramFromStrings(
+            vertRecord.shaderSource, 
+            fragRecord.shaderSource, 
+            errRecord
+        );
+
+        return [errRecord, program];
+    }
+    _util.onNeedsCompilationDefault;
+
+    function onNeedsCompilationNoPreprocessorDefault(args, libMap, logs, userData) {
+        const vertex    = args.vertex;
+        const fragment  = args.fragment;
+        
+        const errRecord = {};
+        const program = GFX.createShaderProgramFromStrings(
+            vertRecord.shaderSource, 
+            fragRecord.shaderSource, 
+            errRecord
+        );
+
+        return [errRecord, program];        
+    }
+    _util.onNeedsCompilationNoPreprocessorDefault;
+
     function registerShaderForLiveEditing(_gl, key, args, callbacks, TEMPMAPSLOT) {
         if (!key) {
             console.error("No shader key specified");
@@ -770,17 +827,18 @@ const GFX = (function() {
             libMap = TEMPMAPSLOT;
         }
 
-        const onNeedsCompilation = callbacks.onNeedsCompilation;
+
+        const onNeedsCompilation = callbacks.onNeedsCompilation || onNeedsCompilationDefault;
         const onAfterCompilation = callbacks.onAfterCompilation;
 
 
         // TODO(KTR): make a div per shader program in addition to the blocks per shader pass
 
-        let record = MR.shaderMap.get(key);
+        let record = MREditor.shaderMap.get(key);
         if (!record) {
-            record = {args : args, originals : {}, textAreas : {}, logs: {}, errorMessageNodes : {}};
-            MR.shaderMap.set(key, record);
-            for (var prop in args) {
+            record = {args : args, originals : {}, textAreas : {}, logs: {}, errorMessageNodes : {}, program : null};
+            MREditor.shaderMap.set(key, record);
+            for (let prop in args) {
                 if (Object.prototype.hasOwnProperty.call(args, prop)) {
                     record.originals[prop] = args[prop];
                 }
@@ -881,6 +939,46 @@ const GFX = (function() {
         
         const propHiddenState = new Map();
         propHiddenState.set("main", false);
+
+        const logError = function(args) {
+            const errorMessageNodes = record.errorMessageNodes;
+            let hasError = false;
+            for (let prop in args) {
+                if (Object.prototype.hasOwnProperty.call(args, prop)) {
+                    const errMsgNode = errorMessageNodes[prop]
+
+                    if (errMsgNode) {
+                        errMsgNode.nodeValue = args[prop];
+                        textAreaElements[prop].parentElement.style.color = 'red';
+                        hasError = true;
+                    }
+                }
+            }
+            if (hasError) {
+                hOuter.style.color = 'red';
+                errorState = true;
+            }
+        }
+        record.logs.logError = logError;
+
+        function clearLogErrors() {
+            const errorMessageNodes = record.errorMessageNodes;
+            let hasError = false;
+            for (let prop in errorMessageNodes) {
+                if (Object.prototype.hasOwnProperty.call(errorMessageNodes, prop)) {
+                    const errMsgNode = errorMessageNodes[prop]
+                    if (errMsgNode) {
+                        errMsgNode.nodeValue = '';
+                        textAreaElements[prop].parentElement.style.color = 
+                        (propHiddenState.get(key + prop)) ? 'gray' : 'white';
+                    }
+                }
+            }
+            hOuter.style.color = (shaderInfoIsHidden) ? 'gray' : 'white';
+            GFX.clearErrRecord();
+        }
+        record.logs.clearLogErrors = clearLogErrors;
+
         for (let prop in args) {
             if (Object.prototype.hasOwnProperty.call(args, prop)) {
 
@@ -995,7 +1093,7 @@ const GFX = (function() {
 
                 thisTextArea.addEventListener('keydown', (event) => {
                     const cursor = textarea.selectionStart;
-                    if(event.key == "Tab"){
+                    if(event.key == "Tab") {
                         event.preventDefault();
                         doc.execCommand("insertText", false, '\t');//appends a tab and makes the browser's default undo/redo aware and automatically moves cursor
                     } else if (event.key == "Enter") {
@@ -1019,68 +1117,81 @@ const GFX = (function() {
                             }
                         } 
 
-                        let hasError = false;
-                        if (onNeedsCompilation) {
-                            hasError = !onNeedsCompilation(record.args, libMap, record.logs);
-                        } else {
-                            db.warn("onNeedsCompilation unspecified");
-                        }
-
-                        if (onAfterCompilation) {
-                            if (!hasError) {
-                                onAfterCompilation(record.args, libMap, record.logs);
-                            }
-                        } else {
-                            db.warn("onAfterCompilation unspecified");
-                        }
+                        compile();
                     }
 
                 });
-                // thisTextArea.onkeyup = () => {
-                //     record.args[prop] = thisTextArea.value;
-                //     callback(record.args); 
-                // };
             }
 
 
-            const logError = function(args) {
-                const errorMessageNodes = record.errorMessageNodes;
-                let hasError = false;
-                for (let prop in args) {
-                    if (Object.prototype.hasOwnProperty.call(args, prop)) {
-                        const errMsgNode = errorMessageNodes[prop]
-
-                        if (errMsgNode) {
-                            errMsgNode.nodeValue = args[prop];
-                            textAreaElements[prop].parentElement.style.color = 'red';
-                            hasError = true;
+            function compile() {
+                for (let prop in record.args) {
+                    if (Object.prototype.hasOwnProperty.call(record.args, prop)) {
+                        const textE = textAreaElements[prop]; 
+                        if (textE) {
+                            record.args[prop] = textE.value;
+                            if (libMap && prop != 'vertex' && prop != 'fragment') {
+                                libMap.set(prop, textE.value);
+                            }
                         }
-                    }
-                }
-                if (hasError) {
-                    hOuter.style.color = 'red';
-                    errorState = true;
-                }
-            }
-            record.logs.logError = logError;
 
-            function clearLogErrors() {
-                const errorMessageNodes = record.errorMessageNodes;
-                let hasError = false;
-                for (let prop in errorMessageNodes) {
-                    if (Object.prototype.hasOwnProperty.call(errorMessageNodes, prop)) {
-                        const errMsgNode = errorMessageNodes[prop]
-                        if (errMsgNode) {
-                            errMsgNode.nodeValue = '';
-                            textAreaElements[prop].parentElement.style.color = 
-                            (propHiddenState.get(key + prop)) ? 'gray' : 'white';
-                        }
                     }
+                } 
+
+                let hasError  = false;
+                let status    = null;
+                let program   = null;
+                let errRecord = null;
+                if (onNeedsCompilation) {
+                    status = onNeedsCompilation(record.args, libMap, record.logs);
+
+                    if (!status) {
+                        if (GFX.tempCompiledShaderDirty) {
+                            GFX.tempCompiledShaderDirty = false;
+
+                            program = GFX.tempCompiledShader;
+                            if (!program) {
+                                hasError = true;
+                                errRecord = GFX.errRecord;
+                            } else {
+                                GFX.tempCompiledShader = null;
+                            }
+                        }
+                    } else {
+                        hasError = (status[0] == null);
+                        errRecord = status[1];
+                    }
+                } else {
+                    db.warn("onNeedsCompilation unspecified");
                 }
-                hOuter.style.color = (shaderInfoIsHidden) ? 'gray' : 'white';
-                            
+
+                if (status && !hasError) {
+                    program = status[1];
+
+                    record.logs.clearLogErrors();
+
+                    const oldProgram = record.program;
+                    gl.useProgram(null);
+                    gl.deleteProgram(oldProgram);
+                    gl.useProgram(program);
+
+                    record.program = program;
+                } else if (hasError) {
+                    record.logs.clearLogErrors();
+                    record.logs.logError(errRecord);
+                }
+
+                if (status && !hasError && onAfterCompilation) {
+                    onAfterCompilation(program);
+                } else {
+                    db.warn("onAfterCompilation unspecified");
+                }
             }
-            record.logs.clearLogErrors = clearLogErrors;
+            if (args.doCompilationAfterFirstSetup) {
+                compile(); 
+            }
+
+            return compile;
         }
     }
 
