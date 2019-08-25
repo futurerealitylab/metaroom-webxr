@@ -102,6 +102,9 @@ const MREditor = (function() {
 			fragSrc
 		);
 		GFX.tempCompiledShaderDirty = true;
+
+		console.log(GFX.tempCompiledShader);
+		console.log(GFX.tempCompiledShaderDirty);
 	}
 	_out.createShaderProgramFromStringsAndHandleErrors = createShaderProgramFromStringsAndHandleErrors;
 

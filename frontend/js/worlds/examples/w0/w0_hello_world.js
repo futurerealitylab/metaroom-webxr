@@ -187,5 +187,5 @@ MR.registerWorld((function() {
     }
 
     return main;
-}())
-);
+}()),
+0);

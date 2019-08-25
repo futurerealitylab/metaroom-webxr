@@ -14,8 +14,12 @@ Metaroom.TYPE_TO_NAME = {
 };
 
 Metaroom.prototype = {
-  registerWorld : function(world) {
-    this.worlds.push(world);
+  registerWorld : function(world, idx) {
+    if (idx) {
+      this.worlds[idx] = world;
+    } else {
+      this.worlds.push(world);
+    }
   }
 };
 

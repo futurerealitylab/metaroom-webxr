@@ -48,8 +48,8 @@ const GFX = (function() {
             }
             console.error("Cannot compile " + shaderTypename + " shader:\n\n" + msg);
 
-            const errRecord_ = (errRecord) ? errRecord : _util.errRecord;
-            errRecord_[shaderTypename] = msg;
+            errRecord = (errRecord) ? errRecord : _util.errRecord;
+            errRecord[shaderTypename] = msg;
             return null;
         } else {
             gl.attachShader(program, shader);
@@ -69,6 +69,7 @@ const GFX = (function() {
             const msg = gl.getProgramInfoLog(program);
             console.error("Cannot link program:\n\n" + msg);
 
+            errRecord = (errRecord) ? errRecord : _util.errRecord;
             errRecord.link = msg;
 
             gl.deleteShader(vshader);
@@ -798,7 +799,7 @@ const GFX = (function() {
             errRecord
         );
 
-        return [errRecord, program];
+        return {program : program, errRecord : errRecord}
     }
     _util.onNeedsCompilationDefault;
 
@@ -813,23 +814,19 @@ const GFX = (function() {
             errRecord
         );
 
-        return [errRecord, program];        
+        return {program : program, errRecord : errRecord};        
     }
     _util.onNeedsCompilationNoPreprocessorDefault;
 
-    function registerShaderForLiveEditing(_gl, key, args, callbacks, TEMPMAPSLOT) {
+    function registerShaderForLiveEditing(_gl, key, args, callbacks, options) {
         if (!key) {
             console.error("No shader key specified");
             return;
         }
 
-        if (TEMPMAPSLOT) {
-            libMap = TEMPMAPSLOT;
-        }
-
-
         const onNeedsCompilation = callbacks.onNeedsCompilation || onNeedsCompilationDefault;
         const onAfterCompilation = callbacks.onAfterCompilation;
+        const userData = (options && options.userData) ? options.userData : null;
 
 
         // TODO(KTR): make a div per shader program in addition to the blocks per shader pass
@@ -845,17 +842,6 @@ const GFX = (function() {
             }
         }
 
-        //     // create shader container
-        //     const SHADER_DIV = doc.createElement("div");
-        //     SHADER_DIV.setAttribute("id", key + "-shader lib container");
-        //     textAreas.appendChild(SHADER_DIV);
-
-
-        // function spacer(color, width, height) {
-        //    return '<table bgcolor=' + color +
-        //                 ' width='   + width +
-        //                 ' height='  + height + '><tr><td>&nbsp;</td></tr></table>';
-        // }
 
         const doc = (MR.wrangler.externalWindow) ? MR.wrangler.externalWindow.document : document;
 
@@ -979,8 +965,13 @@ const GFX = (function() {
         }
         record.logs.clearLogErrors = clearLogErrors;
 
-        for (let prop in args) {
+        for (var prop in args) {
+            console.log("ARGS");
+            console.log(args);
             if (Object.prototype.hasOwnProperty.call(args, prop)) {
+
+                console.log("PROP: " + prop);
+                console.log(args);
 
                 let text = '';
                 let code = '';
@@ -996,6 +987,8 @@ const GFX = (function() {
                 }
 
                 propHiddenState.set(key + prop, false);
+
+
 
 
                 let DIV = doc.createElement("div");
@@ -1117,82 +1110,84 @@ const GFX = (function() {
                             }
                         } 
 
+                        console.log("COMPILING PREMATURELY?")
                         compile();
                     }
 
                 });
             }
-
-
-            function compile() {
-                for (let prop in record.args) {
-                    if (Object.prototype.hasOwnProperty.call(record.args, prop)) {
-                        const textE = textAreaElements[prop]; 
-                        if (textE) {
-                            record.args[prop] = textE.value;
-                            if (libMap && prop != 'vertex' && prop != 'fragment') {
-                                libMap.set(prop, textE.value);
-                            }
-                        }
-
-                    }
-                } 
-
-                let hasError  = false;
-                let status    = null;
-                let program   = null;
-                let errRecord = null;
-                if (onNeedsCompilation) {
-                    status = onNeedsCompilation(record.args, libMap, record.logs);
-
-                    if (!status) {
-                        if (GFX.tempCompiledShaderDirty) {
-                            GFX.tempCompiledShaderDirty = false;
-
-                            program = GFX.tempCompiledShader;
-                            if (!program) {
-                                hasError = true;
-                                errRecord = GFX.errRecord;
-                            } else {
-                                GFX.tempCompiledShader = null;
-                            }
-                        }
-                    } else {
-                        hasError = (status[0] == null);
-                        errRecord = status[1];
-                    }
-                } else {
-                    db.warn("onNeedsCompilation unspecified");
-                }
-
-                if (status && !hasError) {
-                    program = status[1];
-
-                    record.logs.clearLogErrors();
-
-                    const oldProgram = record.program;
-                    gl.useProgram(null);
-                    gl.deleteProgram(oldProgram);
-                    gl.useProgram(program);
-
-                    record.program = program;
-                } else if (hasError) {
-                    record.logs.clearLogErrors();
-                    record.logs.logError(errRecord);
-                }
-
-                if (status && !hasError && onAfterCompilation) {
-                    onAfterCompilation(program);
-                } else {
-                    db.warn("onAfterCompilation unspecified");
-                }
-            }
-            if (args.doCompilationAfterFirstSetup) {
-                compile(); 
-            }
-
-            return compile;
         }
+
+        function compile() {
+            for (let prop in record.args) {
+                if (Object.prototype.hasOwnProperty.call(record.args, prop)) {
+                    const textE = textAreaElements[prop]; 
+                    if (textE) {
+                        record.args[prop] = textE.value;
+                        if (libMap && prop != 'vertex' && prop != 'fragment') {
+                            libMap.set(prop, textE.value);
+                        }
+                    }
+
+                }
+            } 
+
+            let hasError  = false;
+            let status    = null;
+            let program   = null;
+            let errRecord = null;
+            if (onNeedsCompilation) {
+                status = onNeedsCompilation(record.args, libMap);
+                console.log("STATUS", status);
+                if (!status) {
+                    console.log("DIRTY: ", GFX.tempCompiledShaderDirty);
+                    if (GFX.tempCompiledShaderDirty) {
+                        GFX.tempCompiledShaderDirty = false;
+
+                        console.log()
+                        program = GFX.tempCompiledShader;
+                        if (!program) {
+                            hasError = true;
+                            errRecord = GFX.errRecord;
+                        } else {
+                            GFX.tempCompiledShader = null;
+                        }
+                    }
+                } else {
+                    hasError = (status.program == null);
+                    errRecord = status.errRecord || GFX.errRecord;
+                }
+            } else {
+                db.warn("onNeedsCompilation unspecified");
+            }
+
+            if (!hasError) {
+                console.log("SETTING PROGRAM", program);
+
+                record.logs.clearLogErrors();
+
+                const oldProgram = record.program;
+                gl.useProgram(program);
+                gl.deleteProgram(oldProgram);
+
+                record.program = program;
+            } else if (hasError) {
+                record.logs.clearLogErrors();
+                record.logs.logError(errRecord);
+            }
+
+            if (!hasError && onAfterCompilation) {
+                onAfterCompilation(program, userData);
+            } else {
+                db.warn("onAfterCompilation unspecified");
+            }
+        }
+
+        if ((options && options.doCompilationAfterFirstSetup) || !options) {
+            compile();             
+        }
+
+        return compile;
     }
 
     _util.registerShaderForLiveEditing = registerShaderForLiveEditing;

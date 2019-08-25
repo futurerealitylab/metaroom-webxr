@@ -268,5 +268,5 @@ MR.registerWorld((function() {
     }
 
     return main;
-}())
+}()), 3
 );

@@ -378,94 +378,104 @@ float turbulence(vec3 P) {
         ]);
 
         // register the shader for display in the editor
-        // returns a callback in case you want to recompile
-        // manually
+        // returns a callback in case you want to recompile at a different time
         let recompileCallback = GFX.registerShaderForLiveEditing(
             // pass your gl context
             gl,
             // shader name
-            "mainShader", {
-            // pass your original vertex and fragment shader sources
-            vertex    : vert, 
-            fragment  : fragWithIncludes,
-            // optional parameter if you want to keep some state info about the shader
-            userData  : mydata 
-        }, {
-            // tries compiling immediately after registering
-            doCompilationAfterFirstSetup : true,
-            // called upon a recompilation event
-            onNeedsCompilation : (args, libMap, logs, userData) => {
-                // get the vertex and source code currently written into the editor
-                const vertex    = args.vertex;
-                const fragment  = args.fragment;
+            "mainShader", 
+            {
+                // pass your original vertex and fragment shader sources
+                vertex    : vert, 
+                fragment  : fragWithIncludes,
+            }, 
+            {
+                // called upon a recompilation event
+                onNeedsCompilation : (args, libMap, userData) => {
+                    // get the vertex and source code currently written into the editor
+                    const vertex    = args.vertex;
+                    const fragment  = args.fragment;
 
-                // choose to use the preprocessor
-                const vertRecord = GFX.preprocessShader(vertex,   libMap);
-                const fragRecord = GFX.preprocessShader(fragment, libMap);
+                    // choose to use the preprocessor
+                    const vertRecord = GFX.preprocessShader(vertex,   libMap);
+                    const fragRecord = GFX.preprocessShader(fragment, libMap);
 
-                // do preprocessor error checking
-                if (!vertRecord.isValid || !fragRecord.isValid) {
-                    return null;
-                }
+                    // do preprocessor error checking
+                    if (!vertRecord.isValid || !fragRecord.isValid) {
+                        return null;
+                    }
+                    
+                    // try to compile the shader program
+                    // use an external object if you want to capture the errors
+                    // for yourself (uncomment lines), otherwise the library
+                    // keeps an internal object for you,
+                    // 
+                    // NOTE: use this if there is some additional
+                    // behavior you'd like to implement based on the error
+                    // e.g. hook-in an external system
+                    // const errRecord = {};
+                    // const program = GFX.createShaderProgramFromStrings(
+                    //     vertRecord.shaderSource, 
+                    //     fragRecord.shaderSource
+                    //     //, errRecord
+                    // );
+
+                    // // return the program and its error record for updating
+                    // // the editor's record of the shader,
+                    // // if there was an error, the editor displays it and does
+                    // // not update the user program state or call onAfterCompilation()
+                    // return {
+                    //     program : program
+                    //     // , errRecord : errRecord
+                    // };
+
+                    // or ... uncomment the return and GFX.createShaderProgramFromStrings() 
+                    // above and you can call a convenience function in the editor
+                    // that looks like the regular compilation function,
+                    // but handles the error checking phase for you.
+                    // this will use the internal error record that you would have provided to the previous
+                    // function
+                    MREditor.createShaderProgramFromStringsAndHandleErrors(
+                        vertRecord.shaderSource,
+                        fragRecord.shaderSource
+                    )
+                },
+                // OR just call a default function:
+                // onNeedsCompilation : GFX.onNeedsCompilationDefault,
                 
-                // try to compile the shader program
-                // use an external object if you want to capture the errors
-                // for yourself (uncomment lines), otherwise the library
-                // keeps an internal object for you,
-                // 
-                // NOTE: use this if there is some additional
-                // behavior you'd like to implement based on the error
-                // e.g. hook-in an external system
-                // const errRecord = {};
-                const program = GFX.createShaderProgramFromStrings(
-                    vertRecord.shaderSource, 
-                    fragRecord.shaderSource
-                    //, errRecord
-                );
 
-                // return the program and its error record for updating
-                // the editor's record of the shader,
-                // if there was an error, the editor displays it and does
-                // not update the user program state or call onAfterCompilation()
-                return [program, errRecord];
+                // Use this callback to set any state that needs
+                // to be set or updated after compiling the shader,
+                // this function is only called upon successfull recompilation
+                onAfterCompilation : (program, userData) => {
+                    // update any global or local references to the shader 
+                    // to point to the newly compiled version
+                    mydata.program = program;
+                    // bind the newly compiled program
+                    gl.useProgram(program);
 
-                // or ... uncomment the return above and you can call a convenience function in the editor
-                // that looks like the regular compilation function,
-                // but handles the error checking phase for you.
-                // this will use the internal error record that you would have provided to the previous
-                // function
-                MREditor.createShaderProgramFromStringsAndHandleErrors(
-                    vertRecord.shaderSource,
-                    fragRecord.shaderSource
-                )
+                    // initialize uniforms
+                    GFX.getAndStoreIndividualUniformLocations(gl, program, state.uniformData);
+
+                    // uncomment the line below to get the maximum number of 
+                    // texture image units available for your GPU hardware
+                    // const maxTextureUnitCount = GL.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
+
+                    // set texture unit 0 at uTex0
+                    gl.uniform1i(state.uniformData.uTex0Loc, 0);
+                    // set texture unit 1 at uTex1
+                    gl.uniform1i(state.uniformData.uTex1Loc, 1); 
+                },
+
             },
-            // OR just call a default function:
-            // onNeedsCompilation : GFX.onNeedsCompilationDefault,
-            
-
-            // Use this callback to set any state that needs
-            // to be set or updated after compiling the shader,
-            // this function is only called upon successfull recompilation
-            onAfterCompilation : (program, userData) => {
-                // update any global or local references to the shader 
-                // to point to the newly compiled version
-                mydata.program = program;
-                // bind the newly compiled program
-                gl.useProgram(program);
-
-                // initialize uniforms
-                GFX.getAndStoreIndividualUniformLocations(gl, state.program, state.uniformData);
-
-                // uncomment the line below to get the maximum number of 
-                // texture image units available for your GPU hardware
-                // const maxTextureUnitCount = GL.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
-
-                // set texture unit 0 at uTex0
-                gl.uniform1i(state.uniformData.uTex0Loc, 0);
-                // set texture unit 1 at uTex1
-                gl.uniform1i(state.uniformData.uTex1Loc, 1); 
+            {
+                // optional parameter if you want to keep some metadata / info about the shader
+                userData  : mydata,
+                // optional parameter if you want to defer compilation until later
+                // (set to false, true by default)
+                doCompilationAfterFirstSetup : true,
             }
-        });
+        );
 
         // save all attribute and uniform locations
 
@@ -702,7 +712,7 @@ float turbulence(vec3 P) {
         gl.enable(gl.CULL_FACE);
             gl.bindVertexArray(state.vao);
 
-            gl.useProgram(state.program);
+            gl.useProgram(mydata.program);
 
             gl.uniform1f(state.uniformData.uTimeLoc, now / 1000.0);
     }

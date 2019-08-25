@@ -138,5 +138,6 @@ MR.registerWorld((function() {
     }
 
     return main;
-}())
+}()),
+2
 );
