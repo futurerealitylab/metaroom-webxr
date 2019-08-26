@@ -1,7 +1,6 @@
 "use strict";
 
 db.initLoggerSystem({
-  redirect : true,
   logger : new db.LoggerDefault()
 });
 
@@ -18,7 +17,9 @@ MR.wrangler.init({
   // main() is the system's entry point
   main : () => {
 
-    MREditor.init();
+    MREditor.init({
+      defaultShaderCompilationFunction : MREditor.onNeedsCompilationDefault
+    });
 
     // call the main function of the selected world
     MR.wrangler.beginSetup(MR.worlds[MR.worldIdx](MR.wrangler));

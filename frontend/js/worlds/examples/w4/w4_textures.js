@@ -1,7 +1,5 @@
 "use strict"
 
-import * as imgutil from '/js/lib/imageutil.js';
-
 MR.registerWorld((function() {
     const vert = `#version 300 es
     precision highp float;
@@ -98,7 +96,7 @@ MR.registerWorld((function() {
         uniformData[name].data = data;
     }
 
-    // cube without element indexing
+    // cube without element indexing, attributes in separate buffers
     const geometryPosData = new Float32Array([
         -1.0, -1.0,  -1.0,
         -1.0,  1.0,  -1.0,
@@ -188,6 +186,7 @@ MR.registerWorld((function() {
     ]);
 
 
+    // data for interleaved attribute cube
     const cubeVertexCount = 24;
     const cubeIndexCount  = 36;
     // front, right, back, left, top, bottom
@@ -243,16 +242,14 @@ MR.registerWorld((function() {
         22, 23, 20
     ]);
 
-
-
-
+    // NOTE! TODO, this may need to be updated if we change the directory structure
     function worldPath() {
         return window.location.href.split('?')[0] + "js/worlds/examples/w4/";
     }
     console.log(worldPath());
 
+    // an object to hold your data
     function UserData() {
-        this.shaderProgram = null;
     }
     const mydata = new UserData();
 
@@ -268,18 +265,12 @@ MR.registerWorld((function() {
         // this line only executes after the images are loaded asynchronously
         // "await" is syntactic sugar that makes the code continue to look linear (avoid messy callbacks or "then" clauses)
 
-        
-        
-        state.attribData  = {};
-        state.uniformData = {};
-        state.textureData = {};
 
-        state.images = images;
-
-
-
-
-    const libMap = new Map();
+        // this is an object I declare globally
+        // in this world to store objects together...
+        // "state" is optional in other words. Here I'm using my own
+        // non-Meta_Room-controlled state. 
+        mydata.images = images;
 
     const pnoiseLibSource = `
 vec3 mod289(vec3 x) { return x - floor(x * (1. / 289.)) * 289.; }
@@ -325,151 +316,131 @@ float turbulence(vec3 P) {
 }
 `;
 
-    libMap.set("pnoise.glsl",
-        pnoiseLibSource
-    );
-
-    const fragWithIncludes = `#version 300 es
-    precision highp float;
-
-    // Passed in from the vertex shader.
-    in vec3 vNor;
-    in vec2 vUV;
-    in vec2 vUV2;
-    in vec3 vPos;
-
-    // The texture(s).
-    uniform sampler2D uTex0;
-    uniform sampler2D uTex1;
-
-    uniform float uTime;
-
-    out vec4 fragColor;
-
-    void main() {
-        vec4 color0 = texture(uTex0, vUV + sin(uTime));
-        vec4 color1 = texture(uTex1, vUV2);
-
-        color1 = mix(color1, vec4(0.0), cos(uTime) * cos(uTime));
-
-        fragColor = mix(color0, color1, sin(uTime));
-    }
-    `
-    // let preprocessedVertRecord = GFX.preprocessShader(vert, libMap);
-    // let preprocessedFragRecord = GFX.preprocessShader(fragWithIncludes, libMap);
-
-    // console.assert(preprocessedVertRecord && preprocessedFragRecord.isValid);
-
-    // state.program = GFX.createShaderProgramFromStrings(preprocessedVertRecord.shaderSource, preprocessedFragRecord.shaderSource);
-    // gl.useProgram(state.program);
-
-
-        libMap.set("wee.glsl",
-            "void do_procedural_graphics(void) { }"
-        );
-
-        // TODO(KTR): implement GFX.registerSharedShaderLibraryMapForLiveEditing(gl, "libraries", libMap);
-        // Need to separate libraries from shaders (or have multiple text boxes for the library be updated)
-        // with the same text at the same time - I think that I prefer the first alternative
-
-        GFX.registerShaderLibrariesForLiveEditing(gl, "libraries", [
-            { name : "wee.glsl",    code : "void do_procedural_graphics(void) { }" },
-            { name : "pnoise.glsl", code : pnoiseLibSource }
+        // register code snippets
+        MREditor.registerShaderLibrariesForLiveEditing(gl, "libs", [
+            { key : "wee.glsl",    code : "void do_procedural_graphics(void) { /* :) */ }" },
+            { key : "pnoise.glsl", code : pnoiseLibSource }
         ]);
+
+        /*
 
         // register the shader for display in the editor
         // returns a callback in case you want to recompile at a different time
-        let recompileCallback = GFX.registerShaderForLiveEditing(
+        // within your program
+        let recompileCallback = MREditor.registerShaderForLiveEditing(
             // pass your gl context
             gl,
             // shader name
-            "mainShader", 
+            "mainShader",
             {
                 // pass your original vertex and fragment shader sources
                 vertex    : vert, 
-                fragment  : fragWithIncludes,
+                fragment  : frag,
             }, 
             {
-                // called upon a recompilation event
-                onNeedsCompilation : (args, libMap, userData) => {
-                    // get the vertex and source code currently written into the editor
-                    const vertex    = args.vertex;
-                    const fragment  = args.fragment;
+                // onNeedsCompilation is completely optional because it has an internal
+                // default -- this callback is meant more for if you want to do something
+                // more advanced and requires some more knowledge about how the editor
+                // works -- i.e. a leaky abstraction
 
-                    // choose to use the preprocessor
-                    const vertRecord = GFX.preprocessShader(vertex,   libMap);
-                    const fragRecord = GFX.preprocessShader(fragment, libMap);
+                // // called upon a recompilation event
+                // onNeedsCompilation : (args, libMap, userData) => {
+                //     // get the vertex and source code currently written into the editor
+                //     const vertex    = args.vertex;
+                //     const fragment  = args.fragment;
 
-                    // do preprocessor error checking
-                    if (!vertRecord.isValid || !fragRecord.isValid) {
-                        return null;
-                    }
+                //     // // choose to use the preprocessor
+                //     const vertRecord = GFX.preprocessShader(vertex,   libMap);
+                //     const fragRecord = GFX.preprocessShader(fragment, libMap);
+
+                //      // you need to do error handling manually and tell the
+                //      // editor what your error was -- this is your chance
+                //      // to do custom error messages if you want
+                //     if (!vertRecord.isValid || !fragRecord.isValid) {
+                //         return {program : null, errRecord : {
+                //             vertex : vertRecord.errRecord, 
+                //             fragment : fragRecord.errRecord
+                //         }};
+                //     }
                     
-                    // try to compile the shader program
-                    // use an external object if you want to capture the errors
-                    // for yourself (uncomment lines), otherwise the library
-                    // keeps an internal object for you,
-                    // 
-                    // NOTE: use this if there is some additional
-                    // behavior you'd like to implement based on the error
-                    // e.g. hook-in an external system
-                    // const errRecord = {};
-                    // const program = GFX.createShaderProgramFromStrings(
-                    //     vertRecord.shaderSource, 
-                    //     fragRecord.shaderSource
-                    //     //, errRecord
-                    // );
+                //     //try to compile the shader program
+                //     //use an external object if you want to capture the errors
+                //     //for yourself (uncomment lines), otherwise the library
+                //     //keeps an internal object for you,
+                    
+                //     //NOTE: use this if there is some additional
+                //     //behavior you'd like to implement based on the error
+                //     //e.g. hook-in an external system
+                //     const errRecord = {};
+                //     const program = GFX.createShaderProgramFromStrings(
+                //         vertRecord.shaderSource, 
+                //         fragRecord.shaderSource
+                //         //, errRecord
+                //     );
 
-                    // // return the program and its error record for updating
-                    // // the editor's record of the shader,
-                    // // if there was an error, the editor displays it and does
-                    // // not update the user program state or call onAfterCompilation()
-                    // return {
-                    //     program : program
-                    //     // , errRecord : errRecord
-                    // };
+                //     // return the program and its error record, also set of includes used
+                //     // for updating
+                //     // the editor's record of the shader,
+                //     // if there was an error, the editor displays it and does
+                //     // not update the user program state or call onAfterCompilation()
+                //     return {
+                //         program : program
+                //         // , errRecord : errRecord
+                //         ,includes : new Set([
+                //             vertRecord.includes, fragRecord.includes
+                //         ])
+                //     };
 
-                    // or ... uncomment the return and GFX.createShaderProgramFromStrings() 
-                    // above and you can call a convenience function in the editor
-                    // that looks like the regular compilation function,
-                    // but handles the error checking phase for you.
-                    // this will use the internal error record that you would have provided to the previous
-                    // function
-                    MREditor.createShaderProgramFromStringsAndHandleErrors(
-                        vertRecord.shaderSource,
-                        fragRecord.shaderSource
-                    )
-                },
-                // OR just call a default function:
-                // onNeedsCompilation : GFX.onNeedsCompilationDefault,
+                //     // This function is recommended if you want to do some
+                //     // string manipulation without having to know the innards of the
+                //     // editor, and if you don't want to use the preprocessor
+                //    
+                //     // MREditor.createShaderProgramFromStringsAndHandleErrors(
+                //     //     vertRecord.shaderSource,
+                //     //     fragRecord.shaderSource,
+                //     // );
+
+                //     // This gives you the preprocessing in addition
+                //     MREditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+                //         vertex,
+                //         fragment,
+                //         libMap
+                //     );
+                // },
+                // // OR just set a default callback:
+                // // onNeedsCompilation : GFX.onNeedsCompilationDefault,
                 
 
-                // Use this callback to set any state that needs
-                // to be set or updated after compiling the shader,
+                // The callback is required, 
+                // use it to set any state that needs
+                // to be updated after compiling the shader,
                 // this function is only called upon successfull recompilation
                 onAfterCompilation : (program, userData) => {
                     // update any global or local references to the shader 
                     // to point to the newly compiled version
+                    // this is a very important step. Otherwise the rest of your
+                    // program may use an outdated or deleted shader
                     mydata.program = program;
                     // bind the newly compiled program
                     gl.useProgram(program);
 
-                    // initialize uniforms
-                    GFX.getAndStoreIndividualUniformLocations(gl, program, state.uniformData);
+                    // initialize uniforms (store them in the object passed-in)
+                    GFX.getAndStoreIndividualUniformLocations(gl, program, mydata);
 
                     // uncomment the line below to get the maximum number of 
                     // texture image units available for your GPU hardware
                     // const maxTextureUnitCount = GL.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
 
                     // set texture unit 0 at uTex0
-                    gl.uniform1i(state.uniformData.uTex0Loc, 0);
+                    gl.uniform1i(mydata.uTex0Loc, 0);
                     // set texture unit 1 at uTex1
-                    gl.uniform1i(state.uniformData.uTex1Loc, 1); 
+                    gl.uniform1i(mydata.uTex1Loc, 1); 
                 },
 
             },
             {
                 // optional parameter if you want to keep some metadata / info about the shader
+                // over the course of compilation and re-compilation
                 userData  : mydata,
                 // optional parameter if you want to defer compilation until later
                 // (set to false, true by default)
@@ -477,35 +448,86 @@ float turbulence(vec3 P) {
             }
         );
 
+        */
+        // // simplified :
+            MREditor.registerShaderForLiveEditing(
+                gl,
+                "mainShader", 
+                {
+                    vertex : vert, 
+                    fragment : frag
+                }, 
+                { 
+                    onAfterCompilation : (program) => {
+                        mydata.program = program;
+
+                        gl.useProgram(program);
+
+                        // initialize uniforms (store them in the object passed-in)
+                        GFX.getAndStoreIndividualUniformLocations(gl, program, mydata);
+
+                        // uncomment the line below to get the maximum number of 
+                        // texture image units available for your GPU hardware
+                        // const maxTextureUnitCount = GL.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
+
+                        // set texture unit 0 at uTex0
+                        gl.uniform1i(mydata.uTex0Loc, 0);
+                        // set texture unit 1 at uTex1
+                        gl.uniform1i(mydata.uTex1Loc, 1); 
+                    } 
+                }
+            );
+
+        // proposed API for setting highlighted sections in the code in sequence,
+        // 
+        // MREditor.createShaderWalkthrough(
+        // {
+        //     key       : "mainShader",
+        //     vertex    : [
+        //         [line numbers indexed by 1],
+        //         [...],
+        //         [...],
+        //         [...],
+        //     ],
+        //     fragment : [
+        //         [line numbers indexed by 1],
+        //         [...],
+        //         [...],
+        //         [...],
+        //     ]
+        // });
+
+
+
         // save all attribute and uniform locations
 
-        state.attribData.aPosLoc = 0;
-        state.attribData.aNorLoc = 1;
-        state.attribData.aUVLoc  = 2;
-        //GFX.getAndStoreAttributeLocations(gl, state.program, state.attribData);
+        mydata.aPosLoc = 0;
+        mydata.aNorLoc = 1;
+        mydata.aUVLoc  = 2;
+        //GFX.getAndStoreAttributeLocations(gl, mydata.program, mydata);
 
         // note: could also use a uniform buffer instead of individual uniforms
         // to share uniforms across shader programs
-        // state.uniformData.uModelLoc = gl.getUniformLocation(state.program, "uModel");
-        // state.uniformData.uViewLoc  = gl.getUniformLocation(state.program, "uView");
-        // state.uniformData.uProjLoc  = gl.getUniformLocation(state.program, "uProj");
-        // state.uniformData.uTimeLoc  = gl.getUniformLocation(state.program, "uTime");
-        // state.uniformData.uTex0Loc  = gl.getUniformLocation(state.program, "uTex0");
-        // state.uniformData.uTex1Loc  = gl.getUniformLocation(state.program, "uTex1");
+        // mydata.uniformData.uModelLoc = gl.getUniformLocation(mydata.program, "uModel");
+        // mydata.uniformData.uViewLoc  = gl.getUniformLocation(mydata.program, "uView");
+        // mydata.uProjLoc  = gl.getUniformLocation(mydata.program, "uProj");
+        // mydata.uTimeLoc  = gl.getUniformLocation(mydata.program, "uTime");
+        // mydata.uTex0Loc  = gl.getUniformLocation(mydata.program, "uTex0");
+        // mydata.uTex1Loc  = gl.getUniformLocation(mydata.program, "uTex1");
 
         // NOTE: individual as opposed to the uniform buffers that may be added in an example later
-        // GFX.getAndStoreIndividualUniformLocations(gl, state.program, state.uniformData);
+        // GFX.getAndStoreIndividualUniformLocations(gl, mydata.program, mydata);
 
         // // commented line would give you the maximum number of 
         // // texture image units availabl on your hardware
         // // const maxTextureUnitCount = GL.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
 
-        // gl.uniform1i(state.uniformData.uTex0Loc, 0); // set texture unit 0 at uTex0
-        // gl.uniform1i(state.uniformData.uTex1Loc, 1); // set texture unit 1 at uTex1
+        // gl.uniform1i(mydata.uTex0Loc, 0); // set texture unit 0 at uTex0
+        // gl.uniform1i(mydata.uTex1Loc, 1); // set texture unit 1 at uTex1
 
         // attribute state
-        state.vao = gl.createVertexArray();
-        gl.bindVertexArray(state.vao);
+        mydata.vao = gl.createVertexArray();
+        gl.bindVertexArray(mydata.vao);
         
         // create buffer for attributes
         // Version 1: (RECOMMENDED)
@@ -513,16 +535,16 @@ float turbulence(vec3 P) {
             // Step 1: create GPU buffers
 
             // create buffer for vertex attribute data
-            state.vertexBuf = gl.createBuffer();
+            mydata.vertexBuf = gl.createBuffer();
             // set this to be the buffer we're currently looking at
-            gl.bindBuffer(gl.ARRAY_BUFFER, state.vertexBuf);
+            gl.bindBuffer(gl.ARRAY_BUFFER, mydata.vertexBuf);
             // upload data to buffer
             gl.bufferData(gl.ARRAY_BUFFER, cubeVertexData, gl.STATIC_DRAW, 0);
 
             // create buffer for indexing into vertex buffer
-            state.elementBuf = gl.createBuffer();
+            mydata.elementBuf = gl.createBuffer();
             // set this to be the buffer we're currently looking at
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, state.elementBuf);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mydata.elementBuf);
             // upload data to buffer
             gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, cubeIndexData, gl.STATIC_DRAW, 0);
 
@@ -533,55 +555,42 @@ float turbulence(vec3 P) {
             
             // position
             {
-                const size = 3;                                    // 3 components per iteration
-                const type = gl.FLOAT;                             // the data is 32-bit floats
-                const normalize = false;                           // don't normalize data
-                const stride = Float32Array.BYTES_PER_ELEMENT * 8; // move forward (size * sizeof(type)) ... using 3 for ps, 3 for normal, 2 for uv (8)
-                const offset = Float32Array.BYTES_PER_ELEMENT * 0;
-                // set how the data is accessed in the buffer
                 gl.vertexAttribPointer( 
-                    state.attribData.aPosLoc, size, type, normalize, stride, offset
+                    mydata.aPosLoc,                     // attributeLocation: the layout location of the attribute
+                    3,                                  // size: 3 components per iteration
+                    gl.FLOAT,                           // type: the data is 32-bit floats
+                    false,                              // normalize: don't normalize data
+                    Float32Array.BYTES_PER_ELEMENT * 8, // stride: move forward (size * sizeof(type)) ... using 3 for ps, 3 for normal, 2 for uv (8)
+                    Float32Array.BYTES_PER_ELEMENT * 0  // offset: set how the data is accessed in the buffer
                 );
-                gl.enableVertexAttribArray(state.attribData.aPosLoc); // enable the attribute
+                gl.enableVertexAttribArray(mydata.aPosLoc); // enable the attribute
             }
             // normals
             {
-                const size = 3;                                    // 3 components per iteration
-                const type = gl.FLOAT;                             // the data is 32-bit floats
-                const normalize = false;                           // don't normalize data
-                const stride = Float32Array.BYTES_PER_ELEMENT * 8; // move forward (size * sizeof(type)) ... using 3 for ps, 3 for normal, 2 for uv (8)
-                const offset = Float32Array.BYTES_PER_ELEMENT * 3;
                 // set how the data is accessed in the buffer
                 gl.vertexAttribPointer( 
-                    state.attribData.aNorLoc, size, type, normalize, stride, offset
+                    mydata.aNorLoc,                     // attributeLocation: the layout location of the attribute
+                    3,                                  // size: 3 components per iteration
+                    gl.FLOAT,                           // type: the data is 32-bit floats
+                    false,                              // normalize: don't normalize data
+                    Float32Array.BYTES_PER_ELEMENT * 8, // stride: move forward (size * sizeof(type)) ... using 3 for ps, 3 for normal, 2 for uv (8)
+                    Float32Array.BYTES_PER_ELEMENT * 3  // offset: set how the data is accessed in the buffer
                 );
-                gl.enableVertexAttribArray(state.attribData.aNorLoc); // enable the attribute
+                gl.enableVertexAttribArray(mydata.aNorLoc); // enable the attribute
             }
             // uv coords
             {
-                const size = 2;                                    // 3 components per iteration
-                const type = gl.FLOAT;                             // the data is 32-bit floats
-                const normalize = false;                           // don't normalize data
-                const stride = Float32Array.BYTES_PER_ELEMENT * 8; // move forward (size * sizeof(type)) ... using 3 for ps, 3 for normal, 2 for uv (8)
-                const offset = Float32Array.BYTES_PER_ELEMENT * 6;
                 // set how the data is accessed in the buffer
                 gl.vertexAttribPointer( 
-                    state.attribData.aUVLoc, size, type, normalize, stride, offset
+                    mydata.aUVLoc,                      // attributeLocation: the layout location of the attribute
+                    2,                                  // size: 3 components per iteration
+                    gl.FLOAT,                           // type: the data is 32-bit floats
+                    false,                              // normalize: don't normalize data
+                    Float32Array.BYTES_PER_ELEMENT * 8, // stride: move forward (size * sizeof(type)) ... using 3 for ps, 3 for normal, 2 for uv (8)
+                    Float32Array.BYTES_PER_ELEMENT * 6  // offset: set how the data is accessed in the buffer
                 );
-                gl.enableVertexAttribArray(state.attribData.aUVLoc); // enable the attribute
+                gl.enableVertexAttribArray(mydata.aUVLoc); // enable the attribute
             }
-
-            // TODO(KTR): Helper function?
-            // function setAndEnableVertexAttribute(attribLoc, size, type, normalize, stride, offset) {
-            //     // set how the data is accessed in the buffer
-            //     gl.vertexAttribPointer( 
-            //         attribLoc, size, type, normalize, stride, offset
-            //     );
-            //     gl.enableVertexAttribArray(attribLoc); // enable the attribute
-            // }
-            //
-            //  setAndEnableVertexAttribute(state.attribData.aUVLoc, size, type, normalize, stride, offset);
-
         }
         // Version 2: (Separate Buffers Per Attribute)
         // This version uses 2 buffers to store position and UV/texture coord
@@ -590,9 +599,9 @@ float turbulence(vec3 P) {
         // {
         //     {   
         //         // position buffer
-        //         state.posBuffer = gl.createBuffer();
+        //         mydata.posBuffer = gl.createBuffer();
         //         // set this to be the buffer we're currently looking at
-        //         gl.bindBuffer(gl.ARRAY_BUFFER, state.posBuffer);
+        //         gl.bindBuffer(gl.ARRAY_BUFFER, mydatae.posBuffer);
         //         // upload data to buffer
         //         gl.bufferData(gl.ARRAY_BUFFER, geometryPosData, gl.STATIC_DRAW);
 
@@ -603,16 +612,16 @@ float turbulence(vec3 P) {
         //         const offset = 0;        // start at beginning of the buffer
         //         // set how the data is accessed in the buffer
         //         gl.vertexAttribPointer( 
-        //             state.attribData.aPosLoc, size, type, normalize, stride, offset
+        //             mydata.aPosLoc, size, type, normalize, stride, offset
         //         );
-        //         gl.enableVertexAttribArray(state.attribData.aPosLoc); // enable the attribute
+        //         gl.enableVertexAttribArray(mydata.aPosLoc); // enable the attribute
         //     }
 
         //     {
         //         // uv buffer
-        //         state.uvBuffer = gl.createBuffer();
+        //         mydata.uvBuffer = gl.createBuffer();
         //         // set this to be the buffer we're currently looking at
-        //         gl.bindBuffer(gl.ARRAY_BUFFER, state.uvBuffer);
+        //         gl.bindBuffer(gl.ARRAY_BUFFER, mydata.uvBuffer);
         //         // upload data to buffer
         //         gl.bufferData(gl.ARRAY_BUFFER, geometryUVData, gl.STATIC_DRAW); 
 
@@ -622,19 +631,19 @@ float turbulence(vec3 P) {
         //         const stride = 0;
         //         const offset = 0;
         //         gl.vertexAttribPointer(
-        //             state.attribData.aUVLoc, size, type, normalize, stride, offset
+        //             mydata.aUVLoc, size, type, normalize, stride, offset
         //         );
-        //         gl.enableVertexAttribArray(state.attribData.aUVLoc); // enable the attribute
+        //         gl.enableVertexAttribArray(mydata.aUVLoc); // enable the attribute
         //     }
         // }
 
         // Step 3: load textures if you have any,
         // alternatively could combine the images into one and use an atlas
         {
-            state.textureData.textures = [];
+            mydata.textures = [];
 
-            const texArr = state.textureData.textures;
-            for (let i = 0; i < state.images.length; i += 1) {
+            const texArr = mydata.textures;
+            for (let i = 0; i < mydata.images.length; i += 1) {
                 const tex = gl.createTexture();
                 texArr.push(tex);
 
@@ -668,7 +677,7 @@ float turbulence(vec3 P) {
                     internalFormat,
                     srcFormat,
                     srcType,
-                    state.images[i]
+                    mydata.images[i]
                 );
                 // generate mipmaps for the texture 
                 // (note: mipmapping is not required for all
@@ -676,7 +685,7 @@ float turbulence(vec3 P) {
                 gl.generateMipmap(gl.TEXTURE_2D);
             }
             // discard images unless we actually need them later (in this example, we don't)
-            state.images = undefined;
+            mydata.images = undefined;
         }
 
         gl.enable(gl.BLEND);
@@ -710,11 +719,11 @@ float turbulence(vec3 P) {
 
         gl.enable(gl.DEPTH_TEST);
         gl.enable(gl.CULL_FACE);
-            gl.bindVertexArray(state.vao);
+            gl.bindVertexArray(mydata.vao);
 
             gl.useProgram(mydata.program);
 
-            gl.uniform1f(state.uniformData.uTimeLoc, now / 1000.0);
+            gl.uniform1f(mydata.uTimeLoc, now / 1000.0);
     }
 
     function onEndFrame(t, state) {
@@ -727,11 +736,11 @@ float turbulence(vec3 P) {
 
         // (KTR): or just use MR.time for seconds, MR.timeMS for milliseconds
 
-        gl.uniformMatrix4fv(state.uniformData.uModelLoc, false, 
+        gl.uniformMatrix4fv(mydata.uModelLoc, false, 
             new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0, -1.0,1])
         );           
-        gl.uniformMatrix4fv(state.uniformData.uViewLoc, false, new Float32Array(viewMat));
-        gl.uniformMatrix4fv(state.uniformData.uProjLoc, false, new Float32Array(projMat));
+        gl.uniformMatrix4fv(mydata.uViewLoc, false, new Float32Array(viewMat));
+        gl.uniformMatrix4fv(mydata.uProjLoc, false, new Float32Array(projMat));
 
         const primitive = gl.TRIANGLES;
         const offset    = 0;
@@ -761,7 +770,6 @@ float turbulence(vec3 P) {
             },
         };
 
-        //myWorld.beginSetup(def);
         return def;
     }
 

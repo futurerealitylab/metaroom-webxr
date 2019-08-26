@@ -80,7 +80,7 @@ window.VRCanvasWrangler = (function() {
                 min-height: 0%;
                 /* min-width: 100%; */
                 /* max-height: 50vh; */
-                resize: vertical;
+                /* resize: vertical; */
               }
 
 
@@ -104,9 +104,12 @@ window.VRCanvasWrangler = (function() {
           `
 
           this.externalWindow.document.body.innerHTML = `
-          <body style="background-color: black; color: white; text-emphasis-color: white;">
-            <div style="float: left;" class="text_area_block" id=text-areas></div>
-          </body>`
+          <div style="float: left;" class="text_area_block" id="text-areas">
+            <div style="float: left;" class="text_area_block" id="shader-programs-container"></div>
+            <br>
+            <br>
+            <div style="float: left;" class="text_area_block" id="shader-libs-container"></div>
+          </div>`;
 
 
 

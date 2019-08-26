@@ -151,7 +151,7 @@ const GFX = (function() {
     _util.getAndStoreIndividualUniformLocations = getAndStoreIndividualUniformLocations;
 
 
-    const pr      = console.log;
+    const pr      = function() {}; //console.log;
     const passert = console.assert;
     const pwarn   = console.warn;
     const perr    = console.error;
@@ -233,7 +233,7 @@ const GFX = (function() {
           output.isValid = true;
           output.shaderSource = shaderSections.join('');
 
-          console.log(output.shaderSource);
+          pr(output.shaderSource);
 
       }
 
@@ -255,7 +255,7 @@ const GFX = (function() {
 
        const pstate = new ShaderLibIncluderState(string);
 
-       const output = {isValid : false, shaderSource : null};
+       const output = {isValid : false, shaderSource : null, includedLibs : alreadyIncludedSet};
 
        function seek(pstate, symbol) {
           return pstate.stream.indexOf(symbol, pstate.i);
@@ -274,7 +274,10 @@ const GFX = (function() {
        }
 
        function skipWhitespace(pstate) {
-          console.assert(pstate.i < pstate.len);
+          passert(pstate.i < pstate.len);
+          if (pstate.i >= pstate.len) {
+            return;
+          }
           let whiteChar = pstate.stream.charAt(pstate.i);
           while (whiteChar === ' ' || 
                   whiteChar === '\t' || 
@@ -282,7 +285,10 @@ const GFX = (function() {
                   whiteChar === '\r') {
             pstate.i += 1;
             
-            console.assert(pstate.i < pstate.len);
+            passert(pstate.i < pstate.len);
+            if (pstate.i >= pstate.len) {
+                return;
+            }
 
             whiteChar = pstate.stream.charAt(pstate.i);
           } 
@@ -306,8 +312,10 @@ const GFX = (function() {
                 do {
                   pstate.i += 1;
                   
-                  console.assert(pstate.i < pstate.len);
-
+                  if (pstate.i >= pstate.len) {
+                    return output;
+                  }
+                  pr(pstate.i, pstate.len);
                   whiteChar = pstate.stream.charAt(pstate.i);
                 } while (whiteChar === ' ' || 
                         whiteChar === '\t');
@@ -331,6 +339,11 @@ const GFX = (function() {
                        charAt !== '{') {
                     cursor += 1;
                     charAt = pstateCharAt(pstate, cursor);
+
+                    if (cursor >= pstate.len) {
+                        perr("NO DIRECTIVE");
+                        return output;
+                    }
                 }
                 const directiveToken = pstate.stream.substring(pstate.i , cursor);
                 pr("directive found: " + directiveToken);
@@ -339,7 +352,7 @@ const GFX = (function() {
                 default: { // unhandled pre-processor directive found
                   const newlinePos = seek(pstate, '\n');
                   if (newlinePos == -1) {
-                    console.warn("WARNING: No newline at assumed EOF");
+                    pwarn("WARNING: No newline at assumed EOF");
                     assembleShader(pstate, out);
                     return out;
                   } else {
@@ -356,7 +369,10 @@ const GFX = (function() {
 
                   skipWhitespace(pstate);
 
-                  console.assert(pstateChar(pstate) === '<');
+                  passert(pstateChar(pstate) === '<');
+                  if (pstateChar(pstate) !== '<') {
+                    return output;
+                  }
 
 
                   // extract the library name
@@ -365,7 +381,10 @@ const GFX = (function() {
                   const includeEndPos = seek(pstate, '>');
                   const newlineEndPosSyntaxTest = seek(pstate, '\n');
 
-                  if (includeEndPos == -1 || newlineEndPosSyntaxTest < includeEndPos) {
+                  if (includeEndPos == -1 
+                  || 
+                  (newlineEndPosSyntaxTest > -1 && (newlineEndPosSyntaxTest < includeEndPos))
+                  ) {
                     pr("ERROR: include syntax");
                     return output;
                   }
@@ -390,7 +409,8 @@ const GFX = (function() {
                     }
 
                   } else {
-                    console.error("ERROR: [Metaroom Shader Preprocessor] cannot find lib=<" + libName + ">");
+                    perr("ERROR: [Metaroom Shader Preprocessor] cannot find lib=<" + libName + ">");
+                    output.errRecord = "ERROR: 0:/: '#include<" + libName + ">' : [Metaroom Shader Preprocessor] cannot find library to include"
                     return output;
                   }
 
@@ -398,7 +418,7 @@ const GFX = (function() {
                   // seek to newline or EOF
                   const endPos = seek(pstate, '\n');
                   if (endPos == -1) {
-                    console.warn("WARNING: No newline at assumed EOF");
+                    pwarn("WARNING: No newline at assumed EOF");
 
                     assembleShader(pstate, output);
                     return output;
@@ -430,9 +450,12 @@ const GFX = (function() {
 
                     directiveState.openingBracketIdx = pstate.i; 
 
-                    console.log(pstate.stream.substring(directivePos, pstate.i));
+                    pr(pstate.stream.substring(directivePos, pstate.i));
 
                     passert(directiveState.braceCount === 0);
+                    if (directiveState.braceCount !== 0) {
+                        return output;
+                    }
                     directiveState.braceCount = 1;
 
                     break;
@@ -459,6 +482,9 @@ const GFX = (function() {
                     directiveState.openingBracketIdx = pstate.i; 
 
                     passert(directiveState.braceCount === 0);
+                    if (directiveState.braceCount !== 0) {
+                        return output;
+                    }
                     directiveState.braceCount = 1;
 
                     break;
@@ -488,7 +514,7 @@ const GFX = (function() {
                       continue;
                     } else {
                       // assumed end of file
-                      console.warn("WARNING: No newline at assumed EOF");
+                      pwarn("WARNING: No newline at assumed EOF");
 
                       assembleShader(pstate, output);
                       return output;
@@ -515,7 +541,7 @@ const GFX = (function() {
                       continue;
                     }
                     else {
-                      console.error("ERROR block comment doesn't end");
+                      perr("ERROR block comment doesn't end");
                       return output;
                     }
 
@@ -743,454 +769,6 @@ const GFX = (function() {
          _util.clearErrRecord = callbackClear || function() { GFX.errRecord = {}; };
     }
     setErrRecordGetSetClear();
-
-    function registerShaderLibrariesForLiveEditing(_gl, keys, libMap) {
-        if (!keys) {
-            console.error("No library keys specified");
-            return;
-        }
-        if (!libMap) {
-            console.warn("No library map specified. Libraries section will be empty.");
-        }
-
-
-        db.warn("REGISTER SHADER LIBRARIES TODO");
-        return;
-
-        libMap = libMap || new Map();
-        let record = libMap.get(key);
-        if (!record) {
-            record = {args : args, originals : {}, textAreas : {}, errorMessageNodes : {}};
-            MR.shaderMap.set(key, record);
-            for (var prop in args) {
-                if (Object.prototype.hasOwnProperty.call(args, prop)) {
-                    record.originals[prop] = args[prop];
-                }
-            }
-        }
-
-        const doc = (MR.wrangler.externalWindow) ? MR.wrangler.externalWindow.document : document;
-        const textAreas = doc.getElementById("text-areas");
-
-        const textAreaElements = record.textAreas;
-    }
-    _util.registerShaderLibrariesForLiveEditing = registerShaderLibrariesForLiveEditing;
-
-
-    let libMap;
-
-    let tempCompiledShader = null;
-
-    function onNeedsCompilationDefault(args, libMap, logs, userData) {
-        const vertex    = args.vertex;
-        const fragment  = args.fragment;
-
-        const vertRecord = GFX.preprocessShader(vertex,   libMap);
-        const fragRecord = GFX.preprocessShader(fragment, libMap);
-
-        if (!vertRecord.isValid || !fragRecord.isValid) {
-            return false;
-        }
-        
-        const errRecord = {};
-        const program = GFX.createShaderProgramFromStrings(
-            vertRecord.shaderSource, 
-            fragRecord.shaderSource, 
-            errRecord
-        );
-
-        return {program : program, errRecord : errRecord}
-    }
-    _util.onNeedsCompilationDefault;
-
-    function onNeedsCompilationNoPreprocessorDefault(args, libMap, logs, userData) {
-        const vertex    = args.vertex;
-        const fragment  = args.fragment;
-        
-        const errRecord = {};
-        const program = GFX.createShaderProgramFromStrings(
-            vertRecord.shaderSource, 
-            fragRecord.shaderSource, 
-            errRecord
-        );
-
-        return {program : program, errRecord : errRecord};        
-    }
-    _util.onNeedsCompilationNoPreprocessorDefault;
-
-    function registerShaderForLiveEditing(_gl, key, args, callbacks, options) {
-        if (!key) {
-            console.error("No shader key specified");
-            return;
-        }
-
-        const onNeedsCompilation = callbacks.onNeedsCompilation || onNeedsCompilationDefault;
-        const onAfterCompilation = callbacks.onAfterCompilation;
-        const userData = (options && options.userData) ? options.userData : null;
-
-
-        // TODO(KTR): make a div per shader program in addition to the blocks per shader pass
-
-        let record = MREditor.shaderMap.get(key);
-        if (!record) {
-            record = {args : args, originals : {}, textAreas : {}, logs: {}, errorMessageNodes : {}, program : null};
-            MREditor.shaderMap.set(key, record);
-            for (let prop in args) {
-                if (Object.prototype.hasOwnProperty.call(args, prop)) {
-                    record.originals[prop] = args[prop];
-                }
-            }
-        }
-
-
-        const doc = (MR.wrangler.externalWindow) ? MR.wrangler.externalWindow.document : document;
-
-
-        const textAreas = doc.getElementById("shader-programs-container");
-
-        //textAreas.innerHTML = '';
-
-        const textAreaElements = record.textAreas;
-
-            // create shader container
-            const SHADER_DIV = doc.createElement("div");
-            SHADER_DIV.setAttribute("id", key + "-shader-container");
-            textAreas.appendChild(SHADER_DIV);
-
-                // create header
-                const HEADER_DIV = doc.createElement("div");
-                HEADER_DIV.setAttribute("id", key + "header");
-                SHADER_DIV.appendChild(HEADER_DIV); 
-                const hOuter = doc.createElement("H1");
-                const tOuter = doc.createTextNode(key + '\n');
-                hOuter.appendChild(tOuter);
-                HEADER_DIV.appendChild(hOuter);
-
-            SHADER_DIV.appendChild(HEADER_DIV);
-
-                // create hideable container
-                const SHADER_STAGE_DIV = doc.createElement("div");
-                SHADER_STAGE_DIV.setAttribute("id", key + "hideable container");
-
-            SHADER_DIV.appendChild(SHADER_STAGE_DIV);
-
-                let shaderInfoIsHidden = false;
-                hOuter.style.color = 'white';
-                HEADER_DIV.style.cursor = 'pointer';
-                HEADER_DIV.onclick = () => {
-                    const isHidden = !propHiddenState.get('main');
-                    propHiddenState.set('main', isHidden);
-                    switch (isHidden) {
-                    case true: {
-                        HTMLUtil.hideElement(SHADER_STAGE_DIV);
-                        if (errorState) {
-                            return;
-                        }
-                        hOuter.style.color = 'gray';
-
-                        return;
-                    }
-                    case false: {
-                        HTMLUtil.showElement(SHADER_STAGE_DIV);
-                        if (errorState) {
-                            return;
-                        }
-                        hOuter.style.color = 'white';
-
-                        return;
-                    }
-                    default: {
-                        return;
-                    }
-                    }
-                }
-
-                let errorState = false;
-                HEADER_DIV.onmouseover = (event) => {
-                    const isHidden = propHiddenState.get('main');
-
-                    if (hOuter.style.color !== 'red') {
-                        hOuter.style.color = (isHidden) ? 'white' : 'gray';
-                    } else {
-                        hOuter.style.color = 'gray'
-                    }
-                };
-                HEADER_DIV.onmouseleave = (event) => {
-                    if (hOuter.style.color !== 'red') {
-                        hOuter.style.color = (propHiddenState.get('main') === true) ? 'gray' :
-                                                       'white';
-                    }
-                }
-
-        
-        const propHiddenState = new Map();
-        propHiddenState.set("main", false);
-
-        const logError = function(args) {
-            const errorMessageNodes = record.errorMessageNodes;
-            let hasError = false;
-            for (let prop in args) {
-                if (Object.prototype.hasOwnProperty.call(args, prop)) {
-                    const errMsgNode = errorMessageNodes[prop]
-
-                    if (errMsgNode) {
-                        errMsgNode.nodeValue = args[prop];
-                        textAreaElements[prop].parentElement.style.color = 'red';
-                        hasError = true;
-                    }
-                }
-            }
-            if (hasError) {
-                hOuter.style.color = 'red';
-                errorState = true;
-            }
-        }
-        record.logs.logError = logError;
-
-        function clearLogErrors() {
-            const errorMessageNodes = record.errorMessageNodes;
-            let hasError = false;
-            for (let prop in errorMessageNodes) {
-                if (Object.prototype.hasOwnProperty.call(errorMessageNodes, prop)) {
-                    const errMsgNode = errorMessageNodes[prop]
-                    if (errMsgNode) {
-                        errMsgNode.nodeValue = '';
-                        textAreaElements[prop].parentElement.style.color = 
-                        (propHiddenState.get(key + prop)) ? 'gray' : 'white';
-                    }
-                }
-            }
-            hOuter.style.color = (shaderInfoIsHidden) ? 'gray' : 'white';
-            GFX.clearErrRecord();
-        }
-        record.logs.clearLogErrors = clearLogErrors;
-
-        for (var prop in args) {
-            console.log("ARGS");
-            console.log(args);
-            if (Object.prototype.hasOwnProperty.call(args, prop)) {
-
-                console.log("PROP: " + prop);
-                console.log(args);
-
-                let text = '';
-                let code = '';
-                if (prop === 'vertex' || prop === 'fragment') {
-                    code = args[prop];
-                    text = code.split('\n');
-                } else {
-                    code = (libMap) ? (libMap.get(prop) || '') : '';
-                    text = code.split('\n');
-                }
-                if (text === '') {
-                    continue;
-                }
-
-                propHiddenState.set(key + prop, false);
-
-
-
-
-                let DIV = doc.createElement("div");
-                DIV.setAttribute("id", key + " : " + prop + "_div");
-
-                let h = doc.createElement("H1");                // Create a <h1> element
-                let t = doc.createTextNode(key + " : " + prop + '\n');
-                h.appendChild(t);
-
-                let hErr = doc.createElement('H1');
-                hErr.style.color = 'red';
-                let tErr = doc.createTextNode('');
-                hErr.appendChild(tErr);
-
-                record.errorMessageNodes[prop] = tErr;
-
-                DIV.appendChild(h);
-                DIV.appendChild(hErr);
-
-                SHADER_STAGE_DIV.appendChild(DIV);
-
-                const thisTextArea = doc.createElement("textarea");
-                thisTextArea.spellcheck = false;
-                textAreaElements[prop] = thisTextArea;
-                DIV.appendChild(thisTextArea);
-                thisTextArea.setAttribute("id", key + "_" + prop + "_textArea");
-                thisTextArea.setAttribute("class", "tabSupport");
-
-                let parentElement = thisTextArea.parentElement;
-
-
-
-                h.style.cursor = 'pointer';
-                h.onmouseover = (event) => {
-                    const isHidden = propHiddenState.get(key + prop);
-
-                    if (parentElement.style.color !== 'red') {
-                        parentElement.style.color = (isHidden) ? 'white' : 'gray';
-                    }
-                };
-                h.onmouseleave = (event) => {
-                    if (parentElement.style.color !== 'red') {
-                        parentElement.style.color = (propHiddenState.get(key + prop) === true) ? 'gray' :
-                                                       'white';
-                    }
-                };
-
-                h.onclick = () => {
-                    const isHidden = !propHiddenState.get(key + prop);
-                    propHiddenState.set(key + prop, isHidden);
-
-                    switch (isHidden) {
-                    case true: {
-                        HTMLUtil.hideElement(thisTextArea);
-                        HTMLUtil.hideElement(hErr);
-                        if (textAreaElements[prop].parentElement.style.color == 'red') {
-                            return;
-                        }
-                        parentElement.style.color = 'gray';
-
-                        return;
-                    }
-                    case false: {
-                        HTMLUtil.showElement(thisTextArea);
-                        HTMLUtil.showElement(hErr);
-                        if (textAreaElements[prop].parentElement.style.color == 'red') {
-                            return;
-                        }
-                        parentElement.style.color = 'white';
-                        return;
-                    }
-                    default: {
-                        return;
-                    }
-                    }
-                };
-                
-
-
-                 
-                let cols = 0;
-                for (let i = 0; i < text.length; i += 1) {
-                    cols = Math.max(cols, text[i].length);
-                }
-
-                thisTextArea.rows = text.length + 1;
-                thisTextArea.cols = cols;
-                thisTextArea.value = code;
-                thisTextArea.style.backgroundColor = '#808080';
-
-                const textarea = thisTextArea;
-
-                textarea.style.display = "block";
-
-
-                thisTextArea.addEventListener('keydown', (event) => {
-                    const cursor = textarea.selectionStart;
-                    if(event.key == "Tab") {
-                        event.preventDefault();
-                        doc.execCommand("insertText", false, '\t');//appends a tab and makes the browser's default undo/redo aware and automatically moves cursor
-                    } else if (event.key == "Enter") {
-                        event.preventDefault();
-                        doc.execCommand("insertText", false, '\n');
-                    } else if (event.key == '`') {
-                        event.preventDefault();
-                        //record.args[prop] = thisTextArea.value;
-
-
-                        for (let prop in record.args) {
-                            if (Object.prototype.hasOwnProperty.call(record.args, prop)) {
-                                const textE = textAreaElements[prop]; 
-                                if (textE) {
-                                    record.args[prop] = textE.value;
-                                    if (libMap && prop != 'vertex' && prop != 'fragment') {
-                                        libMap.set(prop, textE.value);
-                                    }
-                                }
-
-                            }
-                        } 
-
-                        console.log("COMPILING PREMATURELY?")
-                        compile();
-                    }
-
-                });
-            }
-        }
-
-        function compile() {
-            for (let prop in record.args) {
-                if (Object.prototype.hasOwnProperty.call(record.args, prop)) {
-                    const textE = textAreaElements[prop]; 
-                    if (textE) {
-                        record.args[prop] = textE.value;
-                        if (libMap && prop != 'vertex' && prop != 'fragment') {
-                            libMap.set(prop, textE.value);
-                        }
-                    }
-
-                }
-            } 
-
-            let hasError  = false;
-            let status    = null;
-            let program   = null;
-            let errRecord = null;
-            if (onNeedsCompilation) {
-                status = onNeedsCompilation(record.args, libMap);
-                console.log("STATUS", status);
-                if (!status) {
-                    console.log("DIRTY: ", GFX.tempCompiledShaderDirty);
-                    if (GFX.tempCompiledShaderDirty) {
-                        GFX.tempCompiledShaderDirty = false;
-
-                        console.log()
-                        program = GFX.tempCompiledShader;
-                        if (!program) {
-                            hasError = true;
-                            errRecord = GFX.errRecord;
-                        } else {
-                            GFX.tempCompiledShader = null;
-                        }
-                    }
-                } else {
-                    hasError = (status.program == null);
-                    errRecord = status.errRecord || GFX.errRecord;
-                }
-            } else {
-                db.warn("onNeedsCompilation unspecified");
-            }
-
-            if (!hasError) {
-                console.log("SETTING PROGRAM", program);
-
-                record.logs.clearLogErrors();
-
-                const oldProgram = record.program;
-                gl.useProgram(program);
-                gl.deleteProgram(oldProgram);
-
-                record.program = program;
-            } else if (hasError) {
-                record.logs.clearLogErrors();
-                record.logs.logError(errRecord);
-            }
-
-            if (!hasError && onAfterCompilation) {
-                onAfterCompilation(program, userData);
-            } else {
-                db.warn("onAfterCompilation unspecified");
-            }
-        }
-
-        if ((options && options.doCompilationAfterFirstSetup) || !options) {
-            compile();             
-        }
-
-        return compile;
-    }
-
-    _util.registerShaderForLiveEditing = registerShaderForLiveEditing;
 
     return _util;
 

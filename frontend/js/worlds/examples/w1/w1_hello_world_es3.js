@@ -1,5 +1,5 @@
 "use strict"
-import * as imgutil from '/js/lib/imageutil.js';
+
 MR.registerWorld((function() {
     const vertModern = `#version 300 es
     in vec3 aPos; // attributes replaced with "in"
