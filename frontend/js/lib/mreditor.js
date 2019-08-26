@@ -58,7 +58,7 @@ const MREditor = (function() {
 	      cols = Math.max(cols, text[i].length);
 	  }
 
-	  field.rows = text.length + 1;
+	  field.rows = text.length;
 	  field.cols = cols;
 	}
  
@@ -108,7 +108,11 @@ const MREditor = (function() {
 		this.defaultShaderCompilationFunction = 
 		args.defaultShaderCompilationFunction || this.onNeedsCompilationDefault;
 
-		document.addEventListener('input', function (event) {
+		this.getExternalWindow = args.externalWindowGetter;
+
+		const doc = (this.getExternalWindow) ? this.getExternalWindow().document : document;
+
+		doc.addEventListener('input', function (event) {
 	  		if (event.target.tagName.toLowerCase() !== 'textarea') return;
 	  		autoExpand(event.target);
 		}, false);
@@ -571,14 +575,14 @@ const MREditor = (function() {
 	                    	);
 
 	                    	if (colNumber > 0) {
-		                        errMsgNode.nodeValue = "ERROR : L-" + lineNumber + ",C-" + colNumber + " : " +
+		                        errMsgNode.nodeValue = "ERROR : Line-" + lineNumber + ",Column-" + colNumber + " : " +
 		                        	token + " : " + errSections[4];
 	                        } else {
-		                        errMsgNode.nodeValue = "ERROR : L-" + lineNumber + " : " +
+		                        errMsgNode.nodeValue = "ERROR : Line-" + lineNumber + " : " +
 		                        	token + " : " + errSections[4];                        	
 	                        }
                     	} else {
-	                        errMsgNode.nodeValue = "ERROR : L-/: " +
+	                        errMsgNode.nodeValue = "ERROR : Line-unavailable: " +
 	                        	token + " : " + errSections[4];                      		
                     	}
 

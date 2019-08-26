@@ -47,10 +47,33 @@ MR.registerWorld((function() {
     }`;
 
     function setup(state, wrangler, session) {
-        // Create shader program
-        const program = GFX.createShaderProgramFromStrings(vertModern, fragModern);
-        state.program = program;
-        gl.useProgram(program);
+
+            MREditor.registerShaderForLiveEditing(
+                gl,
+                "mainShader", 
+                {
+                    vertex : vertModern, 
+                    fragment : fragModern
+                }, 
+                { 
+                    onAfterCompilation : (program) => {
+                        state.program = program;
+
+                        gl.useProgram(program);
+
+                        // Assign MVP matrices
+                        state.uModelLoc        = gl.getUniformLocation(program, 'uModel');
+                        state.uViewLoc         = gl.getUniformLocation(program, 'uView');
+                        state.uProjLoc         = gl.getUniformLocation(program, 'uProj');
+                        state.uTimeLoc         = gl.getUniformLocation(program, 'uTime');
+                        state.uCompileCountLoc = gl.getUniformLocation(program, 'uCompileCount');
+
+                        //const localCompileCount = state.persistent.localCompileCount || 1;
+                        //gl.uniform1i(state.uCompileCountLoc, localCompileCount);
+                        //state.persistent.localCompileCount = (localCompileCount + 1) % 14;
+                    } 
+                }
+            );
 
         // Create a square as a triangle strip consisting of two triangles
         state.buffer = gl.createBuffer();
@@ -58,21 +81,9 @@ MR.registerWorld((function() {
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0, 1,1,0, -1,-1,0, 1,-1,0]), gl.STATIC_DRAW);
 
         // Assign aPos attribute to each vertex
-        let aPos = gl.getAttribLocation(program, 'aPos');
+        let aPos = gl.getAttribLocation(state.program, 'aPos');
         gl.enableVertexAttribArray(aPos);
         gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
-
-        // Assign MVP matrices
-        state.uModelLoc        = gl.getUniformLocation(program, 'uModel');
-        state.uViewLoc         = gl.getUniformLocation(program, 'uView');
-        state.uProjLoc         = gl.getUniformLocation(program, 'uProj');
-        state.uTimeLoc         = gl.getUniformLocation(program, 'uTime');
-        state.uCompileCountLoc = gl.getUniformLocation(program, 'uCompileCount');
-
-        const localCompileCount = state.persistent.localCompileCount || 1;
-        gl.uniform1i(state.uCompileCountLoc, localCompileCount);
-        state.program = program;
-        state.persistent.localCompileCount = (localCompileCount + 1) % 14;
     }
 
     // NOTE(KTR): t is the elapsed time since system start in ms, but

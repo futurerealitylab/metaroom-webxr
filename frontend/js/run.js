@@ -4,7 +4,6 @@ db.initLoggerSystem({
   logger : new db.LoggerDefault()
 });
 
-MREditor.enable();
 
 MR.wrangler.init({
   outputSurfaceName : 'output-element',
@@ -17,8 +16,11 @@ MR.wrangler.init({
   // main() is the system's entry point
   main : () => {
 
+    MREditor.enable();
+
     MREditor.init({
-      defaultShaderCompilationFunction : MREditor.onNeedsCompilationDefault
+      defaultShaderCompilationFunction : MREditor.onNeedsCompilationDefault,
+      externalWindowGetter : function() { return MR.wrangler.externalWindow; }
     });
 
     // call the main function of the selected world
