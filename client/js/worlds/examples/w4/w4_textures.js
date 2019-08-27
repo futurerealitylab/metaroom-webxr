@@ -1,6 +1,18 @@
 "use strict"
 
 MR.registerWorld((function() {
+    const MY_ROOT_PATH = "/js/worlds/examples/w4/";
+    function getPath(path) {
+      if (!path || path.length < 1) {
+        return;
+      }
+      if (path.charAt(0) !== '/') {
+        path = '/' + path;
+      }
+
+      return MY_ROOT_PATH + path;
+    }
+
     const vert = `#version 300 es
     precision highp float;
     layout (location = 0) in vec3 aPos;
@@ -242,12 +254,6 @@ MR.registerWorld((function() {
         22, 23, 20
     ]);
 
-    // NOTE! TODO, this may need to be updated if we change the directory structure
-    function worldPath() {
-        return window.location.href.split('?')[0] + "js/worlds/examples/w4/";
-    }
-    console.log(worldPath());
-
     // an object to hold your data
     function UserData() {
     }
@@ -258,8 +264,8 @@ MR.registerWorld((function() {
     async function setup(state, myWorld, session) {
         // load initial images, then continue setup after waiting is done
         const images = await imgutil.loadImagesPromise([
-            worldPath() + "/resources/textures/brick.png",
-            worldPath() + "/resources/textures/polkadots_transparent.png",    
+            getPath("/resources/textures/brick.png"),
+            getPath("/resources/textures/polkadots_transparent.png"),   
         ]);
 
         // this line only executes after the images are loaded asynchronously

@@ -1,5 +1,22 @@
 "use strict";
 
+function treq(data) {
+  fetch("/world_transition", {
+      method: "POST",
+      body: JSON.stringify(data),         
+      headers: {
+        'Content-Type': 'application/json',
+        // 'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      mode: 'cors'
+  }).then(res => res.json()).then(parsed => {
+      console.log(parsed);
+  }).error(err => {
+      console.error(err);
+  });
+}
+window.treq = treq;
+
 db.initLoggerSystem({
   logger : new db.LoggerDefault()
 });
@@ -20,7 +37,7 @@ MR.wrangler.init({
 
     MREditor.init({
       defaultShaderCompilationFunction : MREditor.onNeedsCompilationDefault,
-      externalWindowGetter : function() { return MR.wrangler.externalWindow; }
+      //externalWindowGetter : function() { return MR.wrangler.externalWindow; }
     });
 
     // call the main function of the selected world

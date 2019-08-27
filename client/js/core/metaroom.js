@@ -100,5 +100,32 @@ if (urlParams.has('mrBackend')) {
 
 const MR = Metaroom.create(type);
 
+try {
+  console.log(
+    "wss://127.0.0.1:3001"
+  );
+  MR.sock = new WebSocket(  
+    "wss://127.0.0.1:3001"
+  );
+
+  MR.sock.addEventListener('open', () => {
+    console.log("websocket connected");
+    MR.sock.send(JSON.stringify({
+      "message_type": "client_connect",
+      "data": {
+        "username": "synchronizer"
+      }
+    }));
+  })
+
+  MR.sock.addEventListener('message', (ev) => {
+    console.log(JSON.parse(ev.data));
+  });
+
+} catch (err) {
+  console.error("cannot connect to socket", err);
+}
+
+
 // Register MR.worlds (in final, probably enough to register the first world before init time and defer the rest until load) 
 // TEMP hard-coded
