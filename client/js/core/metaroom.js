@@ -101,11 +101,12 @@ if (urlParams.has('mrBackend')) {
 const MR = Metaroom.create(type);
 
 try {
+
   console.log(
     "wss://127.0.0.1:3001"
   );
   MR.sock = new WebSocket(  
-    "wss://127.0.0.1:3001"
+    "ws://127.0.0.1:3001"
   );
 
   MR.sock.addEventListener('open', () => {

@@ -13,7 +13,158 @@ const fs        = require('fs');
 const express   = require('express');
 const WebSocket = require('ws');
 const argparse  = require('argparse');
+const path = require('path');
 
+function walk(dir) {
+  return new Promise((resolve, reject) => {
+    fs.readdir(dir, (error, files) => {
+      if (error) {
+        return reject(error);
+      }
+      Promise.all(files.map((file) => {
+        return new Promise((resolve, reject) => {
+          const filepath = path.join(dir, file);
+          fs.stat(filepath, (error, stats) => {
+            if (error) {
+              return reject(error);
+            }
+            if (stats.isDirectory()) {
+              walk(filepath).then(resolve);
+            } else if (stats.isFile()) {
+              resolve(filepath);
+            }
+          });
+        });
+      }))
+      .then((foldersContents) => {
+        resolve(foldersContents.reduce((all, folderContents) => all.concat(folderContents), []));
+      });
+    });
+  });
+}
+
+let allWorlds = '';
+const WORLD_HEADER = `"use strict";
+MR.registerWorld((function() {
+`;
+
+function generatePathInfo(rootPath) {
+	return `
+    const MY_ROOT_PATH = \"` + rootPath + `\";
+    function getPath(path) {
+      if (!path || path.length < 1) {
+        return;
+      }
+      if (path.charAt(0) !== '/') {
+        path = '/' + path;
+      }
+
+      return MY_ROOT_PATH + path;
+    }
+    `;
+}
+
+const WORLD_FOOTER = `return main; }());`;
+const worldsSources = [];
+
+async function preprocess(prefix, dir) {
+  return new Promise((resolve, reject) => {
+
+    fs.readdir(path.join(prefix, dir), async (error, files) => {
+      if (error) {
+        return reject(error);
+      }
+
+      let confpath = null;
+      let confpathshortname = null;
+      let dirs = [];
+      for (let i = 0; i < files.length; i += 1) {
+      	const filepath = path.join(prefix, dir, files[i]);
+      	const filepathsansprefix = path.join(dir, files[i]);
+      	const stats = fs.statSync(filepath);
+      	if (stats.isDirectory()) {
+      		dirs.push(filepathsansprefix);
+      	} else if (stats.isFile()) {
+      		if (filepath.endsWith('.mr.json')) {
+      			confpath = filepath;
+      			confpathshortname = filepathsansprefix;
+      		}
+      	}
+      }
+
+      if (confpath) {
+      	console.log("config file found at: " + confpathshortname, confpath, dir);
+
+      	const confFile = JSON.parse(fs.readFileSync(confpath, 'utf8'));
+      	console.log(confFile);
+
+      	const shaders = confFile.shaders;
+      	const files = confFile.fileorder;
+
+      	const fileSources = {rootPath : dir, array : []};
+		Promise.all(files.map(async (file, idx) => {
+		    return new Promise((resolve, reject) => {
+		    	fs.readFile(path.join(prefix, dir, file), 'utf8', (err, data) => {
+		    		if (err) {
+		    			console.error(err);
+		    			reject();
+		    		} else {
+		    			fileSources.array[idx] = {
+		    				src : data, 
+		    				relPath : path.join(dir, file), 
+		    				absPath : path.join(prefix, dir, file),
+		    				rootPath : dir, 
+		    				name : path.join(file),
+		    				config : confFile
+		    			};
+		    			resolve();
+		    		}
+		    	});
+		    }).catch((err) => { console.error(err); });
+		}))
+		.then(() => {
+
+			let world = WORLD_HEADER + generatePathInfo(fileSources.rootPath);
+
+			const arr = fileSources.array;
+			for (let i = 0; i < arr.length; i += 1) {
+				world += arr[i].src;
+			}
+
+			world += WORLD_FOOTER;
+
+			worldsSources.push(world);
+
+			resolve();
+
+		}).catch((err) => { console.error(err); });
+
+	  } else {
+      	for (let i = 0; i < dirs.length; i += 1) {
+      		console.log(prefix, dirs[i]);
+      		await preprocess(prefix, dirs[i]);
+      	}
+      	resolve();
+      }
+    });
+  })
+}
+
+
+// collect files
+preprocess(
+	path.join('./', '..', 'client'),
+	path.join('js', 'worlds')
+).then((err, data) => {
+	fs.writeFile(
+		path.join('./', '..', 'client', 'js', 'worlds', 'worlds.js'), 
+		worldsSources.join('\n\n'), 
+		(err) => {
+
+		if (err) {
+			console.error(err);
+			return;
+		}
 
 
 const parser = new argparse.ArgumentParser({
@@ -51,7 +202,7 @@ let   interval = args.interval;
 
 const options = {
   key: fs.readFileSync('./server.key'),
-  cert: fs.readFileSync('./server.cert'),
+  cert: fs.readFileSync('./server.crt'),
   requestCert: false,
   rejectUnauthorized: false
 };
@@ -62,7 +213,6 @@ let frontend = express.static('../client');
 app.use(frontend);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 
 
 let server = https.createServer(options, app);
@@ -166,6 +316,9 @@ try {
 } catch (err) {
 	console.error("couldn't load websocket", err);
 }
+
+});
+});
 
 
 // app.post('/world_transition', (req, res) => {

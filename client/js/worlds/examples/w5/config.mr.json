@@ -1,6 +1,7 @@
 {
 	"fileorder" : [
-		"main.js",
+		"mylib/mylib.js",
+		"myhw.js"
 	],
 	"shaders" : {
 		"vert" : "shaders/main.vert.glsl",

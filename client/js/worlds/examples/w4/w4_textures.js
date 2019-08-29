@@ -1,7 +1,7 @@
 "use strict"
 
 MR.registerWorld((function() {
-    const MY_ROOT_PATH = "/js/worlds/examples/w4/";
+    const MY_ROOT_PATH = "/js/worlds/examples/w4";
     function getPath(path) {
       if (!path || path.length < 1) {
         return;
@@ -12,6 +12,8 @@ MR.registerWorld((function() {
 
       return MY_ROOT_PATH + path;
     }
+
+
 
     const vert = `#version 300 es
     precision highp float;
@@ -267,6 +269,8 @@ MR.registerWorld((function() {
             getPath("/resources/textures/brick.png"),
             getPath("/resources/textures/polkadots_transparent.png"),   
         ]);
+
+            console.log(getPath('/resources'));
 
         // this line only executes after the images are loaded asynchronously
         // "await" is syntactic sugar that makes the code continue to look linear (avoid messy callbacks or "then" clauses)
