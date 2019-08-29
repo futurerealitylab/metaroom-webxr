@@ -12,7 +12,7 @@ MR.registerWorld((function() {
 
       return MY_ROOT_PATH + path;
     }
-        const vertex = `#version 300 es
+        const vertModern = `#version 300 es
     in vec3 aPos; // attributes replaced with "in"
     out   vec3 vPos; // varying output replaced with "out"
     uniform   mat4 uModel;
@@ -28,8 +28,8 @@ MR.registerWorld((function() {
       vPos = aPos;
     }`;
 
-
-    const fragment = `\#version 300 es
+ddd
+    const fragModern = `\#version 300 es
     precision highp float;
     uniform float uTime;   // TIME, IN SECONDS
     // varying input replaced with "in"  
@@ -150,4 +150,4 @@ function main(myWorld) {
     // myWorld.beginSetup(def);
     return def;
 }
-return main; }());
+return main; }()));

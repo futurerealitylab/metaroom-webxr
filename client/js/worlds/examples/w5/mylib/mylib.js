@@ -1,4 +1,4 @@
-    const vertex = `#version 300 es
+    const vertModern = `#version 300 es
     in vec3 aPos; // attributes replaced with "in"
     out   vec3 vPos; // varying output replaced with "out"
     uniform   mat4 uModel;
@@ -15,7 +15,7 @@
     }`;
 
 
-    const fragment = `\#version 300 es
+    const fragModern = `\#version 300 es
     precision highp float;
     uniform float uTime;   // TIME, IN SECONDS
     // varying input replaced with "in"  

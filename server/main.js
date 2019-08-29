@@ -64,8 +64,8 @@ function generatePathInfo(rootPath) {
     `;
 }
 
-const WORLD_FOOTER = `return main; }());`;
-const worldsSources = [];
+const WORLD_FOOTER = `return main; }()));`;
+let worldsSources = [];
 
 async function preprocess(prefix, dir) {
   return new Promise((resolve, reject) => {
@@ -149,7 +149,6 @@ async function preprocess(prefix, dir) {
     });
   })
 }
-
 
 // collect files
 preprocess(
@@ -286,10 +285,36 @@ try {
 
 		console.log("connection: ", ws.index);
 
+		worldsSources = [];
+
+		preprocess(
+			path.join('./', '..', 'client'),
+			path.join('js', 'worlds')
+		).then((err, data) => {
+
+			console.log("RE-WRITING");
+			fs.writeFile(
+				path.join('./', '..', 'client', 'js', 'worlds', 'worlds.js'), 
+				worldsSources.join('\n\n'), 
+				(err) => {
+
+					if (err) {
+						console.error(err);
+					}
+					
+					for (let [key, value] of websocketMap) {
+						ws.send(JSON.stringify({load : true}));
+					}
+				}
+			);
+		});
+
 		ws.on('message', (data) => {
 			console.log('message received', ws.index, data);
 
 			userMap[ws.index] = "hooray";//data;
+
+
 		});
 
 		ws.on('close', () => {
