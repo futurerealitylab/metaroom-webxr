@@ -28,7 +28,7 @@ MR.registerWorld((function() {
       vPos = aPos;
     }`;
 
-ddd
+
     const fragModern = `\#version 300 es
     precision highp float;
     uniform float uTime;   // TIME, IN SECONDS

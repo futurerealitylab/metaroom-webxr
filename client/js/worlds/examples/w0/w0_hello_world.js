@@ -1,7 +1,6 @@
 "use strict"
 
-// TODO(KTR): Need to assign user IDs and communicate with the server/relay
-MR.registerWorld((function() {
+// MR.registerWorld((function() {
     const vert = `
     precision highp float;
     attribute vec3 aPos;
@@ -42,7 +41,7 @@ MR.registerWorld((function() {
         gl_FragColor = vec4(sqrt(color), 1.0);
     }`;
 
-    function setup(state, wrangler, session) {
+    function setup(state) {
         // Create shader program
         const program = GFX.createShaderProgramFromStrings(vert, frag);
         state.program = program;
@@ -163,29 +162,20 @@ MR.registerWorld((function() {
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     };
 
-    // TODO(KTR) Might not pass the wrangler like this
-    function main(myWorld) {
+
+    function main() {
         const def = {
             name         : 'hello world',
             setup        : setup,
             onStartFrame : onStartFrame,
             onEndFrame   : onEndFrame,
             onDraw       : onDraw,
-
-            // TEMP use these handlers for simulating world transitions
-            onSelectStart : function(t, state) {
-                myWorld.simulateWorldTransition();
-            },
-            onSelect : function(t, state) {
-            },
-            onSelectEnd : function(t, state) {
-            },
         };
 
         // myWorld.beginSetup(def);
         return def;
     }
 
-    return main;
-}()),
-0);
+//     return main;
+// }()),
+// 0);

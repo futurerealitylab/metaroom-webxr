@@ -1,5 +1,5 @@
 "use strict"
-MR.registerWorld((function() {
+// MR.registerWorld((function() {
     const vertConnor = `
     precision highp float;
     attribute vec3 aPos;
@@ -49,7 +49,7 @@ MR.registerWorld((function() {
         gl_FragColor = vec4(color, 1.0);
     }`;
 
-    function setup(state, wrangler, session) {
+    function setup(state) {
         // Create shader program
         const program = GFX.createShaderProgramFromStrings(vertConnor, fragConnor);
         state.program = program;
@@ -115,29 +115,20 @@ MR.registerWorld((function() {
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
 
-    function main(myWorld) {
+    function main() {
         const def = {
             name         : 'connor_example',
             setup        : setup,
             onStartFrame : onStartFrame,
             onEndFrame   : onEndFrame,
             onDraw       : onDraw,
-
-            // TEMP use these handlers for simulating world transitions
-            onSelectStart : function(t, state) {
-                myWorld.simulateWorldTransition();
-            },
-            onSelect : function(t, state) {
-            },
-            onSelectEnd : function(t, state) {;
-            },
         };
 
         // myWorld.beginSetup(def);
         return def;
     }
 
-    return main;
-}()),
-2
-);
+//     return main;
+// }()),
+// 2
+// );

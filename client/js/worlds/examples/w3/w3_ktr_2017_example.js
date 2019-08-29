@@ -1,5 +1,5 @@
 "use strict"
-MR.registerWorld((function() {
+// MR.registerWorld((function() {
     const vert = `
     precision highp float;
     attribute vec3 aPos;
@@ -130,7 +130,7 @@ MR.registerWorld((function() {
         uniformData[name].data = data;
     }
 
-    function setup(state, wrangler, session) {
+    function setup(state) {
         const uniformData = {};
         state.uniformData = uniformData;
 
@@ -199,8 +199,6 @@ MR.registerWorld((function() {
         gl.enable(gl.DEPTH_TEST);
     }
 
-    function onEndFrame(t, state) {
-    }
 
     function onDraw(t, projMat, viewMat, state, eyeIdx) {
         const sec = state.time / 1000;
@@ -245,6 +243,9 @@ MR.registerWorld((function() {
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
 
+    function onEndFrame(t, state) {
+    }
+
     function main(myWorld) {
         const def = {
             name         : 'ktr_2017_example',
@@ -252,21 +253,12 @@ MR.registerWorld((function() {
             onStartFrame : onStartFrame,
             onEndFrame   : onEndFrame,
             onDraw       : onDraw,
-
-            // TEMP use these handlers for simulating world transitions
-            onSelectStart : function(t, state) {
-                myWorld.simulateWorldTransition();
-            },
-            onSelect : function(t, state) {
-            },
-            onSelectEnd : function(t, state) {
-            },
         };
 
         //myWorld.beginSetup(def);
         return def;
     }
 
-    return main;
-}()), 3
-);
+//     return main;
+// }()), 3
+// );

@@ -120,7 +120,7 @@ try {
   })
 
   MR.sock.addEventListener('message', (ev) => {
-    console.log(JSON.parse(ev.data));
+    //console.log(JSON.parse(ev.data));
   });
 
 } catch (err) {

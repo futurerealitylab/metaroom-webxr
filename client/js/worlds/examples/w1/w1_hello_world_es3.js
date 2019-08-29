@@ -1,6 +1,6 @@
 "use strict"
 
-MR.registerWorld((function() {
+// MR.registerWorld((function() {
     const vertModern = `#version 300 es
     in vec3 aPos; // attributes replaced with "in"
     out   vec3 vPos; // varying output replaced with "out"
@@ -46,7 +46,7 @@ MR.registerWorld((function() {
       fragColor = vec4(sqrt(color), 1.0);
     }`;
 
-    function setup(state, wrangler, session) {
+    function setup(state) {
 
             MREditor.registerShaderForLiveEditing(
                 gl,
@@ -124,28 +124,19 @@ MR.registerWorld((function() {
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
 
-    function main(myWorld) {
+    function main() {
         const def = {
             name         : 'hello world modern es3',
             setup        : setup,
             onStartFrame : onStartFrame,
             onEndFrame   : onEndFrame,
             onDraw       : onDraw,
-
-            // TEMP use these handlers for simulating world transitions
-            onSelectStart : function(t, state) {
-                myWorld.simulateWorldTransition();
-            },
-            onSelect : function(t, state) {
-            },
-            onSelectEnd : function(t, state) {
-            },
         };
 
         // myWorld.beginSetup(def);
         return def;
     }
 
-    return main;
-}()),
-1);
+//     return main;
+// }()),
+// 1);

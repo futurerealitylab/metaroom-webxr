@@ -310,9 +310,9 @@ try {
 		});
 
 		ws.on('message', (data) => {
-			console.log('message received', ws.index, data);
+			//console.log('message received', ws.index, data);
 
-			userMap[ws.index] = "hooray";//data;
+			//userMap[ws.index] = "hooray";//data;
 
 
 		});
@@ -324,12 +324,12 @@ try {
 		});
 
 		setInterval(() => {
-			console.log("tick:", ws.index, (Date.now() - timeStart) / 1000.0);
-			for (let [key, value] of websocketMap) {
+			//console.log("tick:", ws.index, (Date.now() - timeStart) / 1000.0);
+			//for (let [key, value] of websocketMap) {
 				//if (key != ws.index) { // TODO re-enable check later since I'm testing whether messages are received
-					value.send(JSON.stringify(userMap));
+					//value.send(JSON.stringify(userMap));
 				//}
-			}
+			//}
 		}, interval)
 
 	});

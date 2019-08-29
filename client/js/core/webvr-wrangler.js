@@ -134,7 +134,9 @@ window.VRCanvasWrangler = (function() {
       options.outputWidth = options.outputWidth || 1280;
       options.outputHeight = options.outputHeight || 720;
       options.useCustomState = options.useCustomState || true;
-
+      options.enableEntryByButton    = (options.enableEntryByButton !== undefined)    ? options.enableEntryByButton    : true;
+      options.enableMultipleWorlds   = (options.enableMultipleWorlds !== undefined)   ? options.enableMultipleWorlds   : true;
+      options.enableBellsAndWhistles = (options.enableBellsAndWhistles !== undefined) ? options.enableBellsAndWhistles : true;
       // Member variables.
       this.options = options;
       this.main = options.main;
@@ -172,7 +174,7 @@ window.VRCanvasWrangler = (function() {
 
     start() {
         let target = null;
-        if (this._vrDisplay) {
+        if (this._vrDisplay && this.options.enableBellsAndWhistles) {
             this._vrDisplay.cancelAnimationFrame(this._animationHandle);
             this._animationHandle = this._vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
         } else {
@@ -197,7 +199,15 @@ window.VRCanvasWrangler = (function() {
       options.onDraw = options.onDraw || (function(t, p, v, state, eyeIdx) {}); // projMat, viewMat
       options.onAnimationFrame = options.onAnimationFrame || this._onAnimationFrame.bind(this);
 
-      options.onSelectStart = options.onSelectStart || (function(t, state) {});
+      if (this.enableMultipleWorlds) {
+        options.onSelectStart = options.onSelectStart || (function(t, state) { 
+          MR.wrangler.simulateWorldTransition();
+        });
+      } else {
+        options.onSelectStart = options.onSelectStart || function(t, state) {
+        };        
+      }
+
       options.onSelect = options.onSelect || (function(t, state) {});
       options.onSelectEnd = options.selectEnd || (function(t, state) {});
 
@@ -247,10 +257,15 @@ window.VRCanvasWrangler = (function() {
 
       this.timeStart = 0;
 
-      const status = await this._initWebVR();
-      if (!status) {
-        console.log('Initializing PC browser mode ...');
-        this._initFallback();
+      if (this.options.enableBellsAndWhistles) {
+        const status = await this._initWebVR();
+        if (!status) {
+          console.log('Initializing PC browser mode ...');
+          this._initFallback();
+        }
+      } else {
+          console.log('Initializing PC browser mode ...');
+          this._initFallback();        
       }
 
       // After initialization, begin main program
@@ -264,11 +279,13 @@ window.VRCanvasWrangler = (function() {
     }
 
     _initButton() {
-      this._button = new XRDeviceButton({
-        onRequestSession: this._onVRRequestPresent.bind(this),
-        onEndSession: this._onVRExitPresent.bind(this)
-      });
-      document.querySelector('body').prepend(this._button.domElement);
+      if (this.options.enableBellsAndWhistles && this.options.enableEntryByButton) {
+        this._button = new XRDeviceButton({
+          onRequestSession: this._onVRRequestPresent.bind(this),
+          onEndSession: this._onVRExitPresent.bind(this)
+        });
+        document.querySelector('body').prepend(this._button.domElement);
+      }
     }
 
     _initCanvasOnParentElement(parent = 'active') {

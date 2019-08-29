@@ -1,6 +1,6 @@
 "use strict"
 
-MR.registerWorld((function() {
+// MR.registerWorld((function() {
     const MY_ROOT_PATH = "/js/worlds/examples/w4";
     function getPath(path) {
       if (!path || path.length < 1) {
@@ -263,7 +263,7 @@ MR.registerWorld((function() {
 
     // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
     // (return JavaScript "Promises" like in loadImages())
-    async function setup(state, myWorld, session) {
+    async function setup(state) {
         // load initial images, then continue setup after waiting is done
         const images = await imgutil.loadImagesPromise([
             getPath("/resources/textures/brick.png"),
@@ -762,27 +762,18 @@ float turbulence(vec3 P) {
     }
 
 
-    function main(myWorld) {
+    function main() {
         const def = {
             name         : 'texture_example_1',
             setup        : setup,
             onStartFrame : onStartFrame,
             onEndFrame   : onEndFrame,
             onDraw       : onDraw,
-
-            // TEMP use these handlers for simulating world transitions
-            onSelectStart : function(t, state) {
-                myWorld.simulateWorldTransition();
-            },
-            onSelect : function(t, state) {
-            },
-            onSelectEnd : function(t, state) {
-            },
         };
 
         return def;
     }
 
-    return main;
-}())
-);
+//     return main;
+// }())
+// );
