@@ -45,7 +45,7 @@ function walk(dir) {
 
 let allWorlds = '';
 const WORLD_HEADER = `"use strict";
-MR.registerWorld((function() {
+//MR.registerWorld((function() {
 `;
 
 function generatePathInfo(rootPath) {
@@ -64,7 +64,7 @@ function generatePathInfo(rootPath) {
     `;
 }
 
-const WORLD_FOOTER = `return main; }()));`;
+const WORLD_FOOTER = 'export default main;';//`return main; }()));`;
 let worldsSources = [];
 
 async function preprocess(prefix, dir) {
@@ -344,25 +344,4 @@ try {
 
 });
 });
-
-
-// app.post('/world_transition', (req, res) => {
-
-// 	console.log("world transition");
-// 	res.set('Content-Type', 'application/json');
-// 	//res.set('Content-Type', 'text/plain');
-// 	res.send({wee:"WEE"});
-// });
-
-// fetch("/world_transition", {
-//     method: "POST",
-//     body: JSON.stringify(data)
-// }).then(res => res.json()).then(parsed => {
-//     console.log(parsed);
-// });
-
-// try {
-// 	console.log('ws://' + args.host + )
-// }
-
 
