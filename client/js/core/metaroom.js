@@ -100,6 +100,21 @@ if (urlParams.has('mrBackend')) {
 
 const MR = Metaroom.create(type);
 
+let MY_ROOT_PATH = "";
+function getPath(path) {
+  if (!path || path.length < 1) {
+    return;
+  }
+  if (path.charAt(0) !== '/') {
+    path = '/' + path;
+  }
+
+  return MY_ROOT_PATH + path;
+}
+function setPath(path) {
+  MY_ROOT_PATH = path;
+}
+
 try {
 
   console.log(

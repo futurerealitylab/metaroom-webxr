@@ -199,13 +199,12 @@ window.VRCanvasWrangler = (function() {
       options.onDraw = options.onDraw || (function(t, p, v, state, eyeIdx) {}); // projMat, viewMat
       options.onAnimationFrame = options.onAnimationFrame || this._onAnimationFrame.bind(this);
 
-      if (this.enableMultipleWorlds) {
+      if (this.options.enableMultipleWorlds) {
         options.onSelectStart = options.onSelectStart || (function(t, state) { 
           MR.wrangler.simulateWorldTransition();
         });
       } else {
-        options.onSelectStart = options.onSelectStart || function(t, state) {
-        };        
+        options.onSelectStart = options.onSelectStart || function(t, state) {};        
       }
 
       options.onSelect = options.onSelect || (function(t, state) {});

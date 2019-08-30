@@ -23,21 +23,23 @@ db.initLoggerSystem({
 
 const VERSION = document.getElementById("version").getAttribute("value");
 switch (VERSION) {
+case 1: {
+}
 default: {
   console.log("running version:", VERSION);
   MR.wrangler.init({
-    outputSurfaceName : 'output-element',
-    outputWidth : 1280,
-    outputHeight : 720,
-    glUseGlobalContext : true,
+    outputSurfaceName      : 'output-element',
+    outputWidth            : 1280,
+    outputHeight           : 720,
+    glUseGlobalContext     : true,
     // frees gl resources upon world switch
-    glDoResourceTracking : true,
-    glEnableEditorHook : true,
-    enableMultipleWorlds : false,
-    enableEntryByButton : false,
+    glDoResourceTracking   : true,
+    glEnableEditorHook     : true,
+    enableMultipleWorlds   : true,
+    enableEntryByButton    : true,
     enableBellsAndWhistles : false,
     // main() is the system's entry point
-    main : () => {
+    main : async () => {
 
       MREditor.enable();
 
@@ -46,21 +48,58 @@ default: {
         //externalWindowGetter : function() { return MR.wrangler.externalWindow; }
       });
 
-      // call the main function of the selected world
-      if (MR.wrangler.enableMultipleWorlds) {
-          const configCallback = MR.worlds[MR.worldIdx];
+      let sourceFiles = document.getElementsByClassName("worlds");
 
-          MR.wrangler.beginSetup(configCallback());
-      } else {
-        try {
-          const configCallback = main;
-          if (!configCallback) {
-            return;
+      function getLocalPath(path) {
+          let slashIdx = path.lastIndexOf('/');
+          if (slashIdx === -1) {
+              slashIdx = path.lastIndexOf('\\');
           }
 
-          MR.wrangler.beginSetup(configCallback());
+          return path.substring(0, slashIdx);
+      }
+      
+      // call the main function of the selected world
+      if (MR.wrangler.options.enableMultipleWorlds) {
+
+        try {
+
+          let worldIt = sourceFiles[0].firstElementChild;
+
+          while (worldIt !== null) {
+            const src = worldIt.src;
+
+            // TODO consider using explicit Promises
+            const world     = await import(src);
+            const localPath = getLocalPath(src)
+
+            MR.worlds.push({world : world, localPath : localPath});
+
+            worldIt = worldIt.nextElementSibling;
+          }
+
+          const worldInfo = MR.worlds[MR.worldIdx];
+          setPath(worldInfo.localPath);
+
+          MR.wrangler.beginSetup(worldInfo.world.default());
+
+          console.log(MR.worlds);
+
         } catch (err) {
-          console.error("ERROR: main function not defined!", err);
+          console.error(err);
+        }
+
+      } else {
+        try {
+          
+          const src  = sourceFiles[0].firstElementChild.src;
+          setPath(getLocalPath(src));
+
+          const world = await import(src);
+          MR.wrangler.beginSetup(world.default());
+
+        } catch (err) {
+          console.error(err);
         }
       }
 
@@ -87,7 +126,10 @@ default: {
 
             let hadError = false;
 
-            MR.wrangler.beginSetup(MR.worlds[MR.worldIdx](MR.wrangler)).catch((e) => {
+            const worldInfo = MR.worlds[MR.worldIdx];
+            setPath(worldInfo.localPath);
+
+            MR.wrangler.beginSetup(worldInfo.world.default()).catch((e) => {
                 console.error(e);
                 wrangler.simulateWorldTransition();
             });
@@ -96,10 +138,6 @@ default: {
 
           } catch (e) {
             console.error(e);
-
-            if (typeof MR.worlds[MR.worldIdx] !== "function") {
-              console.error("must return a main initialization function");
-            }
 
 
             setTimeout(function(){ 

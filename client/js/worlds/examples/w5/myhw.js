@@ -34,7 +34,7 @@ function setup(state, wrangler, session) {
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
 }
 
-// NOTE(KTR): t is the elapsed time since system start in ms, but
+// NOTE: t is the elapsed time since system start in ms, but
 // each world could have different rules about time elapsed and whether the time
 // is reset after returning to the world
 function onStartFrame(t, state) {
@@ -58,9 +58,6 @@ function onStartFrame(t, state) {
     gl.enable(gl.DEPTH_TEST);
 }
 
-function onEndFrame(t, state) {
-}
-
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
     const sec = state.time / 1000;
 
@@ -72,24 +69,17 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
-function main(myWorld) {
+function onEndFrame(t, state) {
+}
+
+function main() {
     const def = {
         name         : 'hello world modern es3',
         setup        : setup,
         onStartFrame : onStartFrame,
         onEndFrame   : onEndFrame,
         onDraw       : onDraw,
-
-        // TEMP use these handlers for simulating world transitions
-        onSelectStart : function(t, state) {
-            myWorld.simulateWorldTransition();
-        },
-        onSelect : function(t, state) {
-        },
-        onSelectEnd : function(t, state) {
-        },
     };
 
-    // myWorld.beginSetup(def);
     return def;
 }
