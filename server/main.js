@@ -1,5 +1,5 @@
 // file: main.js
-// author: Nicholas G Vitovitch <ngv220@nyu.edu>
+// authors: Nicholas G Vitovitch <ngv220@nyu.edu>, Karl Toby Rosenberg <ktr254@nyu.edu>
 //
 // A minimal static webpage demonstrating a shared VR environment
 // using WebXR.
@@ -13,7 +13,7 @@ const fs        = require('fs');
 const express   = require('express');
 const WebSocket = require('ws');
 const argparse  = require('argparse');
-const path = require('path');
+const path      = require('path');
 
 function walk(dir) {
   return new Promise((resolve, reject) => {
@@ -64,7 +64,7 @@ function generatePathInfo(rootPath) {
     `;
 }
 
-const WORLD_FOOTER = 'export default main;';//`return main; }()));`;
+const WORLD_FOOTER = 'export default main;\n';//`return main; }()));`;
 let worldsSources = [];
 
 async function preprocess(prefix, dir) {
