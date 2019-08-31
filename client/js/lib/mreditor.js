@@ -294,6 +294,7 @@ const MREditor = (function() {
             DIV.appendChild(thisTextArea);
             thisTextArea.setAttribute("id", key + "_" + prop + "_textArea");
             thisTextArea.setAttribute("class", "tabSupport");
+            thisTextArea.style.wrap = "off";
 
             let parentElement = thisTextArea.parentElement;
 
@@ -340,6 +341,7 @@ const MREditor = (function() {
             thisTextArea.value = code;
             thisTextArea.style.backgroundColor = BG_COLOR_NO_ERROR;
             thisTextArea.style.color = TEXT_COLOR_NO_ERROR;
+            console.log(thisTextArea.style);
 
             const textarea = thisTextArea;
 
@@ -372,6 +374,8 @@ const MREditor = (function() {
                     doc.execCommand("insertText", false, '\n');
                 } else if (event.key == '`') {
                     event.preventDefault();
+
+                    return;
 
                     for (let i = 0; i < record.args.length; i += 1) {
                         const textE = textAreaElements[prop]; 
@@ -655,8 +659,11 @@ const MREditor = (function() {
                 DIV.appendChild(thisTextArea);
                 thisTextArea.setAttribute("id", key + "_" + prop + "_textArea");
                 thisTextArea.setAttribute("class", "tabSupport");
+                thisTextArea.style.wrap = "off";
 
                 let parentElement = thisTextArea.parentElement;
+
+                window.TEST = thisTextArea;
 
 
 
@@ -760,10 +767,10 @@ const MREditor = (function() {
                     } else if (event.key == "Enter") {
                         event.preventDefault();
                         doc.execCommand("insertText", false, '\n');
-                    } else if (event.key == '`') {
+                    } else if (vent.key == '`') {
                         event.preventDefault();
                         //record.args[prop] = thisTextArea.value;
-
+                        return;
 
                         for (let prop in record.args) {
                             if (Object.prototype.hasOwnProperty.call(record.args, prop)) {
@@ -893,3 +900,5 @@ const MREditor = (function() {
 
 	return _out;
 }());
+
+export {MREditor};

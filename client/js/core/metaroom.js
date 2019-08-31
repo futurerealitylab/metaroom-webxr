@@ -98,7 +98,7 @@ if (urlParams.has('mrBackend')) {
   type = parseInt(urlParams.get('mrBackend'))
 }
 
-const MR = Metaroom.create(type);
+window.MR = Metaroom.create(type);
 
 let MY_ROOT_PATH = "";
 function getPath(path) {
