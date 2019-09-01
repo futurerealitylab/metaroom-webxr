@@ -7,6 +7,8 @@ const GFX = (function() {
 
     _util.errRecord = {};
 
+    _util.viewportXOffset = 0;
+
     class GLContextResult {
         constructor(isValid, _gl, _version) {
             this.isValid = isValid;

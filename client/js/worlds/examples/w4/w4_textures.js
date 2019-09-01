@@ -311,8 +311,8 @@ return f;
 
     // register code snippets
     MREditor.registerShaderLibrariesForLiveEditing(gl, "libs", [
-        { key : "wee.glsl",    code : "void do_procedural_graphics(void) { /* :) */ }" },
-        { key : "pnoise.glsl", code : pnoiseLibSource }
+        { key : "wee.glsl",    code : "void do_procedural_graphics(void) { /* :) */ }", saveTo : "shaders/wee.glsl"},
+        { key : "pnoise.glsl", code : pnoiseLibSource, saveTo : "shaders/pnoise.glsl" },
     ]);
 
     /*

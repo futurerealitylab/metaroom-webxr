@@ -200,8 +200,8 @@ window.VRCanvasWrangler = (function() {
       options.onAnimationFrame = options.onAnimationFrame || this._onAnimationFrame.bind(this);
 
       if (this.options.enableMultipleWorlds) {
-        options.onSelectStart = options.onSelectStart || (function(t, state) { 
-          MR.wrangler.simulateWorldTransition();
+        options.onSelectStart = options.onSelectStart || (function(t, state) {
+          MR.wrangler.doWorldTransition();
         });
       } else {
         options.onSelectStart = options.onSelectStart || function(t, state) {};        
@@ -272,7 +272,7 @@ window.VRCanvasWrangler = (function() {
         if (ev.button === 2) { 
           return; 
         } 
-        this.config.onSelectStart() 
+        this.config.onSelectStart();
       });
       this.main();
     }
@@ -361,6 +361,97 @@ window.VRCanvasWrangler = (function() {
     }
 
     _initFallback() {
+      
+      class Menu {
+        constructor() {
+          this.menuItems = [];
+          this.div = document.createElement("div");
+          this.div.setAttribute("id", "menu");
+          document.body.prepend(this.div);
+        }
+
+        addMenuItem(name, callback) {
+          
+        }
+      }
+      const initMenu = () => {
+        this.menu = new Menu();
+      }
+      initMenu();
+
+      const modalCanvasInit = () => {
+          const bodyWidth = document.body.getBoundingClientRect().width;
+          const parent = document.getElementById('output-container');
+          parent.float = 'right';
+          let P = parent;
+          P.style.left = (((P.style.left) + bodyWidth - this._canvas.clientWidth)) + "px";
+
+          const out = document.getElementById('output-element');
+          out.style.position = 'relative';
+          out.style.float = 'right';
+
+          let shiftX = parseInt(P.style.left);
+          let shiftY = 0;
+
+          window.addEventListener('scroll', function ( event ) {
+            let curr = parseInt(P.style.top);
+
+            P.style.top = "" + (window.scrollY + shiftY) + "px";
+            P.style.left = "" + (window.scrollX + shiftX) + "px";
+
+          });
+
+          let shiftDown__ = false;
+          let clientX = 0;
+          let clientY = 0;
+
+          const mouseMoveHandler__ = function(event) {
+            const doc = document;
+            const body = document.body;
+            
+            let pageX = event.clientX +
+              (doc && doc.scrollLeft || body && body.scrollLeft || 0) -
+              (doc && doc.clientLeft || body && body.clientLeft || 0);
+            let pageY = event.clientY +
+              (doc && doc.scrollTop  || body && body.scrollTop  || 0) -
+              (doc && doc.clientTop  || body && body.clientTop  || 0 );
+
+            const w = MR.wrangler._canvas.clientWidth;
+            const h = MR.wrangler._canvas.clientHeight;
+
+            let prevLeft = parseInt(P.style.left);
+            let prevTop = parseInt(P.style.top);
+
+            let nextLeft = (pageX - (w / 2.0));
+            let nextTop = (pageY - (h / 2.0));
+
+            P.style.left = "" + (window.scrollX + nextLeft) + "px";
+            P.style.top   = "" + (window.scrollY + nextTop) + "px";
+
+            shiftX = nextLeft;
+            shiftY = nextTop;
+          };
+
+          window.addEventListener('mousemove', function(event) {
+            clientX = event.clientX;
+            clientY = event.clientY;
+          });
+          window.addEventListener('keydown', function (event) {
+            if (event.key == "`") {
+              window.addEventListener('mousemove', mouseMoveHandler__);
+              shiftDown__ = true;
+              mouseMoveHandler__({clientX : clientX, clientY : clientY});
+            }
+          });
+          window.addEventListener('keyup', function (event) {
+            if (event.key == "`") {
+              window.removeEventListener('mousemove', mouseMoveHandler__);
+              shiftDown__ = false;
+            }
+          });
+        }
+        modalCanvasInit();
+
       this.keyboardEventCallback = (ev) => {
 
         if (ev.key === 'Control') {
@@ -442,6 +533,8 @@ window.VRCanvasWrangler = (function() {
           0.01, 1024);
 
         this.config.onStartFrame(t, this.customState);
+
+        GFX.viewportXOffset = 0;
         this.config.onDraw(t, this._projectionMatrix, this._viewMatrix, this.customState);
         this.config.onEndFrame(t);
     }
@@ -470,9 +563,14 @@ window.VRCanvasWrangler = (function() {
         {
             // left eye
             gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
+
+            GFX.viewportXOffset = 0;
             this.config.onDraw(t, frame.leftProjectionMatrix, frame.leftViewMatrix, this.customState);
             // right eye
             gl.viewport(gl.canvas.width * 0.5, 0, gl.canvas.width * 0.5, gl.canvas.height);
+            
+
+            GFX.viewportXOffset = gl.canvas.width * 0.5;
             this.config.onDraw(t, frame.rightProjectionMatrix, frame.rightViewMatrix, this.customState);
         }
         this.config.onEndFrame(t);
@@ -502,7 +600,7 @@ window.VRCanvasWrangler = (function() {
           }
         }
         if (doTransition) {
-          this.simulateWorldTransition();
+          this.doWorldTransition();
         }
     }
 

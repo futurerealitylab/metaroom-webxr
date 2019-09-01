@@ -159,7 +159,7 @@ const MREditor = (function() {
 	const BG_COLOR_NO_ERROR   = 'black';
 	const BG_COLOR_ERROR      = 'black';
 
-    function registerShaderLibrariesForLiveEditing(_gl, key, args) {
+    function registerShaderLibrariesForLiveEditing(_gl, key, args, options) {
         if (!args) {
             console.warn("No libraries object specified. Libraries section will be empty.");
             return;
@@ -442,6 +442,76 @@ const MREditor = (function() {
     }
     _out.onNeedsCompilationNoPreprocessorDefault = onNeedsCompilationNoPreprocessorDefault;
 
+    function saveLibsToFile(key) {
+        if (!key) {
+            console.error("No shader key specified");
+            return;
+        }        
+    }
+
+    _out.defaultShaderOutputPath = "saved_editor_shaders";
+
+    function saveShaderToFile(key) {
+        if (!key) {
+            console.error("No shader key specified");
+            return;
+        }
+
+        const record = MREditor.shaderMap.get(key);
+        if (!record) {
+            console.error("shader not on record");
+            return;
+        }
+
+        if (record.hasError) {
+            console.warn("Writing canceled, shader has error");
+            return;
+        }
+
+
+        const options = record.options;
+        if (!options) {
+            console.error("no save directories specified");
+            return;
+        }
+
+        let writeQueue = [];
+        function enqueueWrite(q, text, path, opts) {
+            //console.log("writing", text, "to", getPath(relativePath));
+
+            q.push({path : path, text : text, opts : opts});
+        }
+        function submitWrite(q) {
+            MR.sock.send(JSON.stringify({"MR_Command" : "Write_Files", "files" : q}));
+        }
+
+        for (let prop in record.args) {
+            if (Object.prototype.hasOwnProperty.call(record.args, prop)) {
+                const textE = record.textAreas[prop];
+                if (textE) {
+                    let saveTo = _out.defaultShaderOutputPath;
+                    let guardAgainstOverwrite = true;
+                    if (options.saveTo && options.saveTo[prop]) {
+                        guardAgainstOverwrite = false;
+                        saveTo = getPath(options.saveTo[prop]);
+                        const origin = window.location.origin;
+                        const originIdx = saveTo.indexOf(origin);
+                        saveTo = saveTo.substring(originIdx + origin.length + 1);
+                    } else {
+                        saveTo += "/" + prop + ".glsl";
+                    }
+
+                    enqueueWrite(writeQueue, textE.value, saveTo, {guardAgainstOverwrite : guardAgainstOverwrite});
+                }
+
+            }
+        }
+        if (writeQueue.length > 0) {
+            submitWrite(writeQueue);
+        }
+    }
+    _out.saveShaderToFile = saveShaderToFile;
+
     function registerShaderForLiveEditing(_gl, key, args, callbacks, options) {
         if (!key) {
             console.error("No shader key specified");
@@ -460,7 +530,7 @@ const MREditor = (function() {
 
         let record = MREditor.shaderMap.get(key);
         if (!record) {
-            record = {args : args, originals : {}, textAreas : {}, logs: {}, errorMessageNodes : {}, program : null, compile : null};
+            record = {args : args, originals : {}, textAreas : {}, logs: {}, errorMessageNodes : {}, program : null, compile : null, options : options, hasError : false};
             MREditor.shaderMap.set(key, record);
             for (let prop in args) {
                 if (Object.prototype.hasOwnProperty.call(args, prop)) {
@@ -598,6 +668,7 @@ const MREditor = (function() {
             if (hasError) {
                 hOuter.style.color = 'red';
                 errorState = true;
+                record.hasError = true;
             }
         }
         record.logs.logError = logError;
@@ -662,10 +733,6 @@ const MREditor = (function() {
                 thisTextArea.style.wrap = "off";
 
                 let parentElement = thisTextArea.parentElement;
-
-                window.TEST = thisTextArea;
-
-
 
                 h.style.cursor = 'pointer';
                 h.onmouseover = (event) => {
@@ -767,7 +834,7 @@ const MREditor = (function() {
                     } else if (event.key == "Enter") {
                         event.preventDefault();
                         doc.execCommand("insertText", false, '\n');
-                    } else if (vent.key == '`') {
+                    } else if (event.key == '`') {
                         event.preventDefault();
                         //record.args[prop] = thisTextArea.value;
                         return;
@@ -861,6 +928,7 @@ const MREditor = (function() {
                 record.program = program;
 
                 errorState = false;
+                record.hasError = false;
 
                 textAreaElements.vertex.style.color = TEXT_COLOR_NO_ERROR;
                 textAreaElements.fragment.style.color = TEXT_COLOR_NO_ERROR;
@@ -870,7 +938,7 @@ const MREditor = (function() {
                 record.logs.clearLogErrors();
                 record.logs.logError(errRecord);
 
-                errorState = true;
+                record.hasError = true;
 
                 textAreaElements.vertex.style.color = TEXT_COLOR_ERROR;
                 textAreaElements.fragment.style.color = TEXT_COLOR_ERROR;
@@ -889,7 +957,7 @@ const MREditor = (function() {
         }
         record.compile = compile;
 
-        if ((options && options.doCompilationAfterFirstSetup) || !options) {
+        if ((options && (options.doCompilationAfterFirstSetup !== false)) || !options) {
             compile();             
         }
 

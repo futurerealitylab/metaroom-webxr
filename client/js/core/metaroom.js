@@ -134,6 +134,10 @@ try {
     }));
   })
 
+  // MR.sock.send(JSON.stringify({
+  //   "files" : [{"path", "val"}, {"path", "val"}]
+  // }));
+
   MR.sock.addEventListener('message', (ev) => {
     //console.log(JSON.parse(ev.data));
   });

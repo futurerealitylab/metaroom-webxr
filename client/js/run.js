@@ -4,98 +4,32 @@ import {MREditor} from "./lib/mreditor.js";
 
 window.MREditor = MREditor;
 
-  // const editorDiv = document.createElement('div');
-  // editorDiv.setAttribute('class', 'ge_editor');
+const codemirror = true;
+if (codemirror) {
+  const editorDiv = document.createElement('div');
+  editorDiv.setAttribute('class', 'ge_editor');
 
-  // document.body.appendChild(editorDiv);
+  document.body.prepend(editorDiv);
 
-  // const editor = CodeMirror(editorDiv, {
-  //   lineNumbers: true,
-  //   keyMap: 'sublime',
-  //   theme:  "monokai",
-  //   mode:   'x-shader/x-fragment',
-  //   showCursorWhenSelecting: true,
-  //   lineWrapping: true,
-  //   autofocus: false
-  // });
-
-  // editor.setOption("extraKeys", {
-  //   Tab: function(cm){cm.replaceSelection("    ");},
-  //   Enter: function(cm){cm.replaceSelection("\n");}
-  // });
-
-
-  const parent = document.getElementById('output-container');
-  parent.float = 'right';
-  window.P = parent;
-  const out = document.getElementById('output-element');
-  out.style.position = 'relative';
-  out.style.float = 'right';
-
-  window.CN = out;
-
-  window.offsetX = 0;
-  window.offsetY = 0;
-  let shiftX = 0;
-  let shiftY = 0;
-
-  window.addEventListener('scroll', function ( event ) {
-    let curr = parseInt(P.style.top);
-
-    P.style.top = "" + (window.scrollY + shiftY) + "px";
-    P.style.left = "" + (window.scrollX + shiftX) + "px";
-
+  window.editor = CodeMirror(editorDiv, {
+    lineNumbers: true,
+    keyMap: 'sublime',
+    theme:  "monokai",
+    mode:   'x-shader/x-fragment',
+    showCursorWhenSelecting: true,
+    lineWrapping: true,
+    autofocus: false
   });
 
-  let shiftDown__ = false;
-  let clientX = 0;
-  let clientY = 0;
 
-
-  const mouseMoveHandler__ = function(event) {
-    const doc = document;
-    const body = document.body;
-    
-    let pageX = event.clientX +
-      (doc && doc.scrollLeft || body && body.scrollLeft || 0) -
-      (doc && doc.clientLeft || body && body.clientLeft || 0);
-    let pageY = event.clientY +
-      (doc && doc.scrollTop  || body && body.scrollTop  || 0) -
-      (doc && doc.clientTop  || body && body.clientTop  || 0 );
-
-    const w = MR.wrangler._canvas.clientWidth;
-    const h = MR.wrangler._canvas.clientHeight;
-
-    let prevLeft = parseInt(P.style.left);
-    let prevTop = parseInt(P.style.top);
-
-    let nextLeft = (pageX - (w / 2.0));
-    let nextTop = (pageY - (h / 2.0));
-
-    P.style.left = "" + (window.scrollX + nextLeft) + "px";
-    P.style.top   = "" + (window.scrollY + nextTop) + "px";
-
-    shiftX = nextLeft;
-    shiftY = nextTop;
-  };
-
-  window.addEventListener('mousemove', function(event) {
-    clientX = event.clientX;
-    clientY = event.clientY;
+  window.editor.setOption("extraKeys", {
+    Tab: function(cm){cm.replaceSelection("    ");},
+    Enter: function(cm){cm.replaceSelection("\n");},
+    '`': function(cm) {},
   });
-  window.addEventListener('keydown', function (event) {
-    if (event.key == "`") {
-      window.addEventListener('mousemove', mouseMoveHandler__);
-      shiftDown__ = true;
-      mouseMoveHandler__({clientX : clientX, clientY : clientY});
-    }
-  });
-  window.addEventListener('keyup', function (event) {
-    if (event.key == "`") {
-      window.removeEventListener('mousemove', mouseMoveHandler__);
-      shiftDown__ = false;
-    }
-  });
+
+
+}
 
 
 
@@ -126,6 +60,7 @@ db.initLoggerSystem({
 const VERSION = document.getElementById("version").getAttribute("value");
 switch (VERSION) {
 case 1: {
+  MREditor.VERSION = VERSION;
 }
 default: {
   console.log("running version:", VERSION);
@@ -207,7 +142,8 @@ default: {
       }
 
       // this is just a temporary function
-      wrangler.simulateWorldTransition = function() {
+      wrangler.doWorldTransition = function() {
+        console.trace();
         let ok = false;
 
         // try to transition to the next world
@@ -234,7 +170,7 @@ default: {
 
             MR.wrangler.beginSetup(worldInfo.world.default()).catch((e) => {
                 console.error(e);
-                wrangler.simulateWorldTransition();
+                wrangler.doWorldTransition();
             });
 
             ok = true;

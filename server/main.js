@@ -310,7 +310,32 @@ try {
 		});
 
 		ws.on('message', (data) => {
-			//console.log('message received', ws.index, data);
+			console.log('message received', ws.index);
+
+			const msg = JSON.parse(data);
+			const cmd = msg.MR_Command;
+			if (cmd) {
+				switch (cmd) {
+				case "Write_Files": {
+					const files = msg.files;
+					const fcount = files.length;
+					for (let i = 0; i < fcount; i += 1) {
+						let fPath = path.join('./', '..', 'client', files[i].path);
+						if (files[i].opts.guardAgainstOverwrite && fs.existsSync(fPath)) {
+							console.log("file with same path found, modifying name");
+							fPath += Date.now();
+						}
+
+						fs.writeFile(
+							fPath,
+							files[i].text,
+							(err) => { if (err) { console.error(err); } }
+						);
+					}
+					break;
+				}
+				}
+			}
 
 			//userMap[ws.index] = "hooray";//data;
 

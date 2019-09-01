@@ -19,7 +19,6 @@
     border: 1px solid #eee;
     height: auto;
     font:20px courier;
-    z-index: -1000;
   }
 
   .resizeable {
@@ -43,6 +42,8 @@
   <script src="js/lib/debugutil.js"></script>
   <script src="js/lib/htmlutil.js"></script>
   <script src="js/third-party/gl-matrix-min.js"></script>
+  <script src="js/third-party/FileSaver.min.js"></script>
+  <script src="js/lib/assetutil.js"></script>
   <script src="js/lib/gfxutil.js"></script>
   <script src="js/lib/imageutil.js"></script>
   <!-- WebXR Button implements a button to toggle in and out of VR. -->
@@ -85,7 +86,7 @@
 
 </head>
 <body style="background-color: black; color: white; text-emphasis-color: white;">
-<div id=output-container style="border: 1px solid #FFF5; position: absolute; text-align: center vertical-align: text-top">
+<div id=output-container style="border: 1px solid #FFF5; position: absolute; text-align: center vertical-align: text-top; z-index: 10">
   <div id=output-element></div>
 </div>
   <!-- Shader Editor Areas -->
