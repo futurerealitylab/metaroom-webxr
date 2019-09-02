@@ -198,14 +198,7 @@ window.VRCanvasWrangler = (function() {
       options.onEndFrame = options.onEndFrame || (function(t) {});
       options.onDraw = options.onDraw || (function(t, p, v, state, eyeIdx) {}); // projMat, viewMat
       options.onAnimationFrame = options.onAnimationFrame || this._onAnimationFrame.bind(this);
-
-      if (this.options.enableMultipleWorlds) {
-        options.onSelectStart = options.onSelectStart || (function(t, state) {
-          MR.wrangler.doWorldTransition();
-        });
-      } else {
-        options.onSelectStart = options.onSelectStart || function(t, state) {};        
-      }
+      options.onSelectStart = options.onSelectStart || function(t, state) {};
 
       options.onSelect = options.onSelect || (function(t, state) {});
       options.onSelectEnd = options.selectEnd || (function(t, state) {});
@@ -266,14 +259,6 @@ window.VRCanvasWrangler = (function() {
           console.log('Initializing PC browser mode ...');
           this._initFallback();        
       }
-
-      // After initialization, begin main program
-      this._canvas.addEventListener('mousedown', (ev) => { 
-        if (ev.button === 2) { 
-          return; 
-        } 
-        this.config.onSelectStart();
-      });
       this.main();
     }
 
@@ -360,22 +345,24 @@ window.VRCanvasWrangler = (function() {
       }
     }
 
-    _initFallback() {
-      
-      class Menu {
-        constructor() {
-          this.menuItems = [];
-          this.div = document.createElement("div");
-          this.div.setAttribute("id", "menu");
-          document.body.prepend(this.div);
-        }
+    defineWorldTransitionProcedure(fn) {
+      this.doWorldTransition = fn.bind(this);
+    }
 
-        addMenuItem(name, callback) {
-          
-        }
-      }
+    _initFallback() {
+
       const initMenu = () => {
         this.menu = new Menu();
+        if (this.options.enableMultipleWorlds) {
+          console.log("WEE");
+          console.log(MR.wrangler.doWorldTransition);
+          this.menu.menus.transition = new MenuItem(
+            this.menu.el, 
+            'ge_menu', 
+            'transition',
+            function() { return MR.wrangler.doWorldTransition(); }
+          );
+        }
       }
       initMenu();
 
@@ -432,9 +419,14 @@ window.VRCanvasWrangler = (function() {
             shiftY = nextTop;
           };
 
-          window.addEventListener('mousemove', function(event) {
+          window.addEventListener('mousemove', (event) => {
             clientX = event.clientX;
             clientY = event.clientY;
+            // if (clientY <= this.menu.height) {
+            //   this.menu.el.style.display = "block";
+            // } else {
+            //   this.menu.el.style.display = "none";
+            // }
           });
           window.addEventListener('keydown', function (event) {
             if (event.key == "`") {
@@ -599,7 +591,7 @@ window.VRCanvasWrangler = (function() {
             }
           }
         }
-        if (doTransition) {
+        if (this.options.enableMultipleWorlds && doTransition) {
           this.doWorldTransition();
         }
     }

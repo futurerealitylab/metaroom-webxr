@@ -4,7 +4,7 @@ import {MREditor} from "./lib/mreditor.js";
 
 window.MREditor = MREditor;
 
-const codemirror = true;
+const codemirror = false;
 if (codemirror) {
   const editorDiv = document.createElement('div');
   editorDiv.setAttribute('class', 'ge_editor');
@@ -30,6 +30,8 @@ if (codemirror) {
 
 
 }
+
+
 
 
 
@@ -141,8 +143,7 @@ default: {
         }
       }
 
-      // this is just a temporary function
-      wrangler.doWorldTransition = function() {
+      wrangler.defineWorldTransitionProcedure(function() {
         console.trace();
         let ok = false;
 
@@ -186,7 +187,7 @@ default: {
             // TODO(KTR) some sort of shader animation to indicate error?
           }
         }
-      }
+      });
     },
     useExternalWindow : (new URLSearchParams(window.location.search)).has('externWin')
   });

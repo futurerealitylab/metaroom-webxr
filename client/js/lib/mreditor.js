@@ -118,6 +118,15 @@ const MREditor = (function() {
 		}, false);
 
 		resetState();
+
+        MR.wrangler.menu.save = new MenuItem(MR.wrangler.menu.el, 'ge_menu', 'Save', (event) => {
+            let ok = true;
+            for (const k of MREditor.shaderMap.keys()) {
+                ok = ok && saveShaderToFile(k);
+            }
+            console.log(ok);
+            MR.wrangler.menu.save.el.style.color = (ok) ? "green" : "red";
+        });
 	}
 	_out.init = init;
 
@@ -454,25 +463,25 @@ const MREditor = (function() {
     function saveShaderToFile(key) {
         if (!key) {
             console.error("No shader key specified");
-            return;
+            return false;
         }
 
         const record = MREditor.shaderMap.get(key);
         if (!record) {
             console.error("shader not on record");
-            return;
+            return false;
         }
 
         if (record.hasError) {
             console.warn("Writing canceled, shader has error");
-            return;
+            return false;
         }
 
 
         const options = record.options;
         if (!options) {
             console.error("no save directories specified");
-            return;
+            return false;
         }
 
         let writeQueue = [];
@@ -509,6 +518,8 @@ const MREditor = (function() {
         if (writeQueue.length > 0) {
             submitWrite(writeQueue);
         }
+
+        return true;
     }
     _out.saveShaderToFile = saveShaderToFile;
 
