@@ -38,9 +38,45 @@
       font-weight:    bold;
   }
 
+  :root {
+    --color-section-success:          white;
+    --color-section-error:            red;
+    --color-section-success-inactive: gray;
+    --color-section-error-inactive:   pink;
+  }
+
+  .shader_section_success {
+    color: var(--color-section-success);
+  }
+  .shader_section_success:hover {
+    color: var(--color-section-success-inactive);
+  }
+  .shader_section_success_inactive {
+    color: var(--color-section-success-inactive);
+  }
+  .shader_section_success_inactive:hover {
+    color: var(--color-section-success);
+  }
+
+  .shader_section_error {
+    color: var(--color-section-error);
+  }
+  .shader_section_error:hover {
+    color: var(--color-section-error-inactive);
+  }
+  .shader_section_error_inactive {
+    color: var(--color-section-error-inactive);
+  }
+  .shader_section_error:hover {
+    color: var(--color-section-error);
+  }
+
+
   </style>
+
   <link   rel="stylesheet" href="css/glslEditor/glslEditor.css">
   <link   rel="stylesheet" href="css/glslEditor/_menu.css">
+  <script src="js/lib/ui.js"></script>
   <script src="js/lib/debugutil.js"></script>
   <script src="js/lib/htmlutil.js"></script>
   <script src="js/third-party/gl-matrix-min.js"></script>
@@ -90,6 +126,20 @@
 <div id=output-container style="border: 1px solid #FFF5; position: absolute; text-align: center vertical-align: text-top; z-index: 10">
   <div id=output-element></div>
 </div>
+
+
+<!--   <script>
+  window.div = document.createElement("div");
+  window.tsuccess = document.createElement("H1");
+  window.tsuccess.setAttribute('class', 'shader_section_success');
+  window.tsuccess.appendChild(document.createTextNode("test"));
+
+  window.div.appendChild(window.tsuccess);
+  document.body.appendChild(window.div);
+
+
+  </script> -->
+
   <!-- Shader Editor Areas -->
   <div style="float: left;" class="text_area_block" id="text-areas">
     <div style="float: left;" class="text_area_block" id="shader-programs-container"></div>
@@ -111,6 +161,8 @@
   <script type="module" src=js/worlds/worlds.js></script>
   </div>
 
-  <!-- Program Entrypoint -->
+  <!-- Program Entry-point -->
   <script type="module" src="js/run.js"></script>
+
+
 </body>

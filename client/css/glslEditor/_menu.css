@@ -70,9 +70,9 @@
   color: #777777;
 }
 
-.ge_menu_button:hover {
+/*.ge_menu_button:hover {
     color: var(--ui-highlight-color);
-}
+}*/
 
 .ge_sub_menu .ge_menu_button {
     width: 100%;
