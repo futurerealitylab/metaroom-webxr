@@ -121,11 +121,52 @@ const MREditor = (function() {
 
         MR.wrangler.menu.save = new MenuItem(MR.wrangler.menu.el, 'ge_menu', 'Save', (event) => {
             let ok = true;
+            let i = 0;
+            let msgs = [];
+            const keys = MREditor.shaderMap.keys();
+            let kcount = 0;
             for (const k of MREditor.shaderMap.keys()) {
                 ok = ok && saveShaderToFile(k);
+                msgs.push(k);
+                kcount += 1;
             }
-            console.log(ok);
-            MR.wrangler.menu.save.el.style.color = (ok) ? "green" : "red";
+
+            if (ok && kcount > 0) {
+
+                const oldStyle = window.getComputedStyle(MR.wrangler.menu.save.el);
+
+                //MR.wrangler.menu.save.button.innerHTML = msg;
+                MR.wrangler.menu.save.el.style.color = "#66ff00";
+                MR.wrangler.menu.save.name = "saved " + msgs[i];
+                const intervalID = setInterval(() => {;
+                    MR.wrangler.menu.save.el.style = oldStyle;
+
+                    i += 1;
+
+                    if (i === msgs.length) {
+                        MR.wrangler.menu.save.name = MR.wrangler.menu.save.nameInit;
+                        clearInterval(intervalID);
+                    } else {
+                        MR.wrangler.menu.save.name = "saved " + msgs[i];
+                    }
+
+                }, 500);
+            } else {
+                if (kcount == 0) {
+                    msgs = ["nothing to save"];
+                } else {
+                    msgs = ["save failed, fix errors first"];
+                }
+                MR.wrangler.menu.save.name = msgs[0];
+                const oldStyle = window.getComputedStyle(MR.wrangler.menu.save.el);
+
+                MR.wrangler.menu.save.el.style.color = "red";
+
+                setTimeout(() => {
+                    MR.wrangler.menu.save.name = MR.wrangler.menu.save.nameInit;
+                    MR.wrangler.menu.save.el.style = oldStyle;
+                }, 1000);
+            }
         });
 	}
 	_out.init = init;
@@ -461,6 +502,7 @@ const MREditor = (function() {
     _out.defaultShaderOutputPath = "saved_editor_shaders";
 
     function saveShaderToFile(key) {
+        console.log(key);
         if (!key) {
             console.error("No shader key specified");
             return false;
@@ -477,12 +519,7 @@ const MREditor = (function() {
             return false;
         }
 
-
         const options = record.options;
-        if (!options) {
-            console.error("no save directories specified");
-            return false;
-        }
 
         let writeQueue = [];
         function enqueueWrite(q, text, path, opts) {
@@ -500,9 +537,10 @@ const MREditor = (function() {
                 if (textE) {
                     let saveTo = _out.defaultShaderOutputPath;
                     let guardAgainstOverwrite = true;
-                    if (options.saveTo && options.saveTo[prop]) {
+                    if (options && options.saveTo && options.saveTo[prop]) {
                         guardAgainstOverwrite = false;
                         saveTo = getPath(options.saveTo[prop]);
+                        console.log(saveTo);
                         const origin = window.location.origin;
                         const originIdx = saveTo.indexOf(origin);
                         saveTo = saveTo.substring(originIdx + origin.length + 1);
@@ -650,26 +688,30 @@ const MREditor = (function() {
                     	}
                     	const errSections = errText.split(':');
 
-                    	const lineNumber = parseInt(errSections[2].trim());
+                        if (errSections.length < 3) {
+                            errMsgNode.nodeValue = "ERROR : " + errSections[1];
+                        } else {
+                        	const lineNumber = parseInt(errSections[2].trim());
 
-	                    const token = errSections[3].trim();
+    	                    const token = errSections[3].trim();
 
-                    	if (lineNumber) {
-	                    	const colNumber = 1 + splitTextArea[lineNumber - 1].indexOf(
-	                    		token.substring(1, token.length - 1)
-	                    	);
+                        	if (lineNumber) {
+    	                    	const colNumber = 1 + splitTextArea[lineNumber - 1].indexOf(
+    	                    		token.substring(1, token.length - 1)
+    	                    	);
 
-	                    	if (colNumber > 0) {
-		                        errMsgNode.nodeValue = "ERROR : Line-" + lineNumber + ",Column-" + colNumber + " : " +
-		                        	token + " : " + errSections[4];
-	                        } else {
-		                        errMsgNode.nodeValue = "ERROR : Line-" + lineNumber + " : " +
-		                        	token + " : " + errSections[4];                        	
-	                        }
-                    	} else {
-	                        errMsgNode.nodeValue = "ERROR : Line-unavailable: " +
-	                        	token + " : " + errSections[4];                      		
-                    	}
+    	                    	if (colNumber > 0) {
+    		                        errMsgNode.nodeValue = "ERROR : Line-" + lineNumber + ",Column-" + colNumber + " : " +
+    		                        	token + " : " + errSections[4];
+    	                        } else {
+    		                        errMsgNode.nodeValue = "ERROR : Line-" + lineNumber + " : " +
+    		                        	token + " : " + errSections[4];                        	
+    	                        }
+                        	} else {
+    	                        errMsgNode.nodeValue = "ERROR : Line-unavailable: " +
+    	                        	token + " : " + errSections[4];                      		
+                        	}
+                        }
 
                         textAreaElements[prop].parentElement.style.color = 'red';
                         hasError = true;

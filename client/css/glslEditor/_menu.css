@@ -22,6 +22,7 @@
     font-family: courier, sans-serif;
     font-weight: 400;
     font-size: 10;
+    left: 0px;
 
 }
 
@@ -29,7 +30,7 @@
 
 .ge_menu {
     display: inline-block;
-    margin: 16px 32px 16px 16px;
+    margin: 10px 32px 10px 16px;
     letter-spacing: 0.2em;
     font-size: 14px;
 }

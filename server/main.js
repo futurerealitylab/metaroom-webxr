@@ -317,13 +317,29 @@ try {
 			if (cmd) {
 				switch (cmd) {
 				case "Write_Files": {
+					const date = new Date();
+					const dateString = "_y_" + date.getFullYear() + 
+										 "_m_" + (date.getMonth() + 1) + 
+										 "_d_" + (date.getDay() + 1) +
+										 "_h_" + date.getHours() +
+										 "_s_" + date.getSeconds() +
+										 "_stamp_" + Date.now();
+
 					const files = msg.files;
 					const fcount = files.length;
 					for (let i = 0; i < fcount; i += 1) {
 						let fPath = path.join('./', '..', 'client', files[i].path);
 						if (files[i].opts.guardAgainstOverwrite && fs.existsSync(fPath)) {
 							console.log("file with same path found, modifying name");
-							fPath += Date.now();
+							extDotIdx = fPath.lastIndexOf('.');
+							
+							if (extDotIdx == -1) {
+								fPath += dateString;
+							} else {
+								fPath = fPath.substring(0, extDotIdx) + 
+										dateString +
+										fPath.substring(extDotIdx);
+							}
 						}
 
 						fs.writeFile(

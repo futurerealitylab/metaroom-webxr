@@ -153,9 +153,11 @@ try {
             this.button.className = className + '_button';
             this.el.appendChild(this.button);
             this.el.setAttribute('class', className);
+            this.nameInit = name;
             this.button.innerHTML = name;
             this.className = className;
             this.hiddenClass = className + '--hidden';
+            this.el.backgroundColor = "green";
 
             // Attach listeners, including those for tooltip behavior
             this.button.addEventListener('click', onClick, true);

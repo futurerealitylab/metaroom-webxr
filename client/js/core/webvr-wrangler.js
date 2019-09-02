@@ -354,12 +354,10 @@ window.VRCanvasWrangler = (function() {
       const initMenu = () => {
         this.menu = new Menu();
         if (this.options.enableMultipleWorlds) {
-          console.log("WEE");
-          console.log(MR.wrangler.doWorldTransition);
           this.menu.menus.transition = new MenuItem(
             this.menu.el, 
             'ge_menu', 
-            'transition',
+            'Transition',
             function() { return MR.wrangler.doWorldTransition(); }
           );
         }
@@ -389,6 +387,7 @@ window.VRCanvasWrangler = (function() {
           });
 
           let shiftDown__ = false;
+          let mouseDown__ = false;
           let clientX = 0;
           let clientY = 0;
 
@@ -422,11 +421,14 @@ window.VRCanvasWrangler = (function() {
           window.addEventListener('mousemove', (event) => {
             clientX = event.clientX;
             clientY = event.clientY;
-            // if (clientY <= this.menu.height) {
-            //   this.menu.el.style.display = "block";
-            // } else {
-            //   this.menu.el.style.display = "none";
-            // }
+          });
+          window.addEventListener('mousedown', (event) => {
+            clientX = event.clientX;
+            clientY = event.clientY;
+          });
+          window.addEventListener('mouseup', (event) => {
+            clientX = event.clientX;
+            clientY = event.clientY;
           });
           window.addEventListener('keydown', function (event) {
             if (event.key == "`") {
