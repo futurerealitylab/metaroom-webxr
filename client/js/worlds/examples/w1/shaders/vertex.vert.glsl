@@ -9,7 +9,7 @@ uniform   int uCompileCount;
 uniform   float uTime;
 
 void main() {
-  float translation = float(uCompileCount) * uTime + (10.0 * float(uCompileCount));
+  float translation = /*float(uCompileCount) * */ 1.0 * uTime + (10.0 * float(uCompileCount));
   gl_Position = uProj * uView * uModel * vec4(vec3(0.25 * (aPos.x + sin(translation)), 0.25 * (aPos.y - sin(translation)), aPos.z), 1.);
   vPos = aPos;
 }

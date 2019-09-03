@@ -420,14 +420,30 @@ const MREditor = (function() {
             thisTextArea.value = code;
             thisTextArea.style.backgroundColor = BG_COLOR_NO_ERROR;
             thisTextArea.style.color = TEXT_COLOR_NO_ERROR;
-            console.log(thisTextArea.style);
 
             const textarea = thisTextArea;
 
             textarea.style.display = "block";
 
             thisTextArea.addEventListener('keyup', (event) => {
+
             	event.preventDefault();
+
+                switch (event.key) {
+                case "ArrowUp": {
+                }
+                case "ArrowDown": {
+                }
+                case "ArrowLeft": {
+                }
+                case "ArrowRight": {
+                    return;
+                }
+                default: {
+                    break;
+                }
+                }
+
                 for (let i = 0; i < record.args.length; i += 1) {
                     const textE = textAreaElements[prop]; 
                     if (textE) {
@@ -437,6 +453,8 @@ const MREditor = (function() {
                 } 
 
                 console.warn("TODO: Only re-compile dependent shaders");
+
+ 
 
 
                 for (const v of this.shaderMap.values()) {
@@ -569,10 +587,14 @@ const MREditor = (function() {
                     if (options && options.saveTo && options.saveTo[prop]) {
                         guardAgainstOverwrite = false;
                         saveTo = getPath(options.saveTo[prop]);
-                        console.log(saveTo);
+                        console.log("relative path:", saveTo)
                         const origin = window.location.origin;
+                        console.log("location:");
+                        console.log(window.location);
+                        console.log("origin:", window.location.origin);
                         const originIdx = saveTo.indexOf(origin);
                         saveTo = saveTo.substring(originIdx + origin.length + 1);
+                        console.log("final:", saveTo);
                     } else {
                         saveTo += "/" + prop + ".glsl";
                     }
@@ -864,7 +886,24 @@ const MREditor = (function() {
                 textarea.style.display = "block";
 
                 thisTextArea.addEventListener('keyup', (event) => {
+
                 	event.preventDefault();
+
+                    switch (event.key) {
+                    case "ArrowUp": {
+                    }
+                    case "ArrowDown": {
+                    }
+                    case "ArrowLeft": {
+                    }
+                    case "ArrowRight": {
+                        return;
+                    }
+                    default: {
+                        break;
+                    }
+                    }
+
                     for (let prop in record.args) {
                         if (Object.prototype.hasOwnProperty.call(record.args, prop)) {
                             const textE = textAreaElements[prop]; 

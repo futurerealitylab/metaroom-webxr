@@ -31,13 +31,6 @@ if (codemirror) {
 
 }
 
-
-
-
-
-
-
-
 function treq(data) {
   fetch("/world_transition", {
       method: "POST",
@@ -80,7 +73,6 @@ default: {
     // main() is the system's entry point
     main : async () => {
 
-      console.log(MREditor);
       MREditor.enable();
 
       MREditor.init({
@@ -90,7 +82,7 @@ default: {
 
       let sourceFiles = document.getElementsByClassName("worlds");
 
-      function getLocalPath(path) {
+      function getCurrentPath(path) {
           let slashIdx = path.lastIndexOf('/');
           if (slashIdx === -1) {
               slashIdx = path.lastIndexOf('\\');
@@ -111,7 +103,7 @@ default: {
 
             // TODO consider using explicit Promises
             const world     = await import(src);
-            const localPath = getLocalPath(src)
+            const localPath = getCurrentPath(src)
 
             MR.worlds.push({world : world, localPath : localPath});
 
@@ -133,7 +125,7 @@ default: {
         try {
           
           const src  = sourceFiles[0].firstElementChild.src;
-          setPath(getLocalPath(src));
+          setPath(getCurrentPath(src));
 
           const world = await import(src);
           MR.wrangler.beginSetup(world.default());
@@ -144,7 +136,6 @@ default: {
       }
 
       wrangler.defineWorldTransitionProcedure(function() {
-        console.trace();
         let ok = false;
 
         // try to transition to the next world

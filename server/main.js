@@ -15,6 +15,50 @@ const WebSocket = require('ws');
 const argparse  = require('argparse');
 const path      = require('path');
 
+const parser = new argparse.ArgumentParser({
+  version : '0.0.1',
+  addHelp : true,
+  description: 'metaroom server'
+});
+
+parser.addArgument(
+	['--host' ],
+	{
+		help: 'hostname',
+		defaultValue: '127.0.0.1'
+	}
+);
+parser.addArgument(
+	[ '-p', '--port' ],
+	{
+	help: 'port to listen on',
+	defaultValue: 3000
+	}
+);
+parser.addArgument(
+  [ '-i', '--interval' ],
+  {
+    help: 'interval to broadcast to clients',
+    defaultValue: 2000
+  }
+);
+parser.addArgument(
+	['-d', '--debug'],
+	{
+		help: 'enable additional status print-outs',
+		defaultValue: true
+	}
+);
+
+const args     = parser.parseArgs();
+const host     = args.host;
+const port     = parseInt(args.port);
+let   interval = args.interval;
+
+if (parser.version) {
+	console.log("Version:", 1.0);
+}
+
 function walk(dir) {
   return new Promise((resolve, reject) => {
     fs.readdir(dir, (error, files) => {
@@ -66,6 +110,13 @@ function generatePathInfo(rootPath) {
 
 const WORLD_FOOTER = 'export default main;\n';//`return main; }()));`;
 let worldsSources = [];
+console.log(args);
+const dblog = (args.debug) ? console.log   : () => {};
+const dberr = (args.debug) ? console.error : () => {};
+
+const testingNonRoot = false;
+const rootDir = path.join('..', 'client');
+const parseRootDir = (testingNonRoot) ? path.join('..') : path.join('..', 'client');
 
 async function preprocess(prefix, dir) {
   return new Promise((resolve, reject) => {
@@ -96,7 +147,7 @@ async function preprocess(prefix, dir) {
       	console.log("config file found at: " + confpathshortname, confpath, dir);
 
       	const confFile = JSON.parse(fs.readFileSync(confpath, 'utf8'));
-      	console.log(confFile);
+      	dblog(confFile);
 
       	const shaders = confFile.shaders;
       	const files = confFile.fileorder;
@@ -106,7 +157,7 @@ async function preprocess(prefix, dir) {
 		    return new Promise((resolve, reject) => {
 		    	fs.readFile(path.join(prefix, dir, file), 'utf8', (err, data) => {
 		    		if (err) {
-		    			console.error(err);
+		    			dberr(err);
 		    			reject();
 		    		} else {
 		    			fileSources.array[idx] = {
@@ -120,7 +171,7 @@ async function preprocess(prefix, dir) {
 		    			resolve();
 		    		}
 		    	});
-		    }).catch((err) => { console.error(err); });
+		    }).catch((err) => { dberr(err); });
 		}))
 		.then(() => {
 
@@ -137,11 +188,11 @@ async function preprocess(prefix, dir) {
 
 			resolve();
 
-		}).catch((err) => { console.error(err); });
+		}).catch((err) => { dberr(err); });
 
 	  } else {
       	for (let i = 0; i < dirs.length; i += 1) {
-      		console.log(prefix, dirs[i]);
+      		dblog(prefix, dirs[i]);
       		await preprocess(prefix, dirs[i]);
       	}
       	resolve();
@@ -152,52 +203,22 @@ async function preprocess(prefix, dir) {
 
 // collect files
 preprocess(
-	path.join('./', '..', 'client'),
+	rootDir,
 	path.join('js', 'worlds')
 ).then((err, data) => {
 	fs.writeFile(
-		path.join('./', '..', 'client', 'js', 'worlds', 'worlds.js'), 
+		path.join(rootDir, 'js', 'worlds', 'worlds.js'), 
 		worldsSources.join('\n\n'), 
 		(err) => {
 
 		if (err) {
-			console.error(err);
+			dberr(err);
 			return;
 		}
 
 
-const parser = new argparse.ArgumentParser({
-  version : '0.0.1',
-  addHelp : true,
-  description: 'metaroom server'
-});
 
-parser.addArgument(
-	['--host' ],
-	{
-		help: 'hostname',
-		defaultValue: '127.0.0.1'
-	}
-);
-parser.addArgument(
-	[ '-p', '--port' ],
-	{
-	help: 'port to listen on',
-	defaultValue: 3000
-	}
-);
-parser.addArgument(
-  [ '-i', '--interval' ],
-  {
-    help: 'interval to broadcast to clients',
-    defaultValue: 2000
-  }
-);
 
-const args     = parser.parseArgs();
-const host     = args.host;
-const port     = parseInt(args.port);
-let   interval = args.interval;
 
 const options = {
   key: fs.readFileSync('./server.key'),
@@ -207,7 +228,8 @@ const options = {
 };
 
 let app = express();
-let frontend = express.static('../client');
+
+let frontend = express.static(parseRootDir);
 
 app.use(frontend);
 app.use(express.json());
@@ -235,26 +257,26 @@ try {
 
 	function exitHandler(options, exitCode) {
 	    if (options.cleanup) {
-	    	console.log('clean');
+	    	dblog('clean');
 	    	try {
 	    		wss.close();
 	    	} catch (err) {
-	    		console.error(err);
+	    		dberr(err);
 	    	}
 	    }
 	    if (exitCode || exitCode === 0) {
 	    	try {
 	    		wss.close();
 	    	} catch (err) {
-	    		console.error(err);
+	    		dberr(err);
 	    	}
-	    	console.log(exitCode);
+	    	dblog(exitCode);
 	    }
 	    if (options.exit) {
 	    	try {
 	    		wss.close();
 	    	} catch (err) {
-	    		console.error(err);
+	    		dberr(err);
 	    	}
 	    	process.exit();
 	    }
@@ -288,18 +310,17 @@ try {
 		worldsSources = [];
 
 		preprocess(
-			path.join('./', '..', 'client'),
+			rootDir,
 			path.join('js', 'worlds')
 		).then((err, data) => {
 
-			console.log("RE-WRITING");
 			fs.writeFile(
-				path.join('./', '..', 'client', 'js', 'worlds', 'worlds.js'), 
+				path.join(rootDir, 'js', 'worlds', 'worlds.js'), 
 				worldsSources.join('\n\n'), 
 				(err) => {
 
 					if (err) {
-						console.error(err);
+						dberr(err);
 					}
 					
 					for (let [key, value] of websocketMap) {
@@ -310,15 +331,14 @@ try {
 		});
 
 		ws.on('message', (data) => {
-			console.log('message received', ws.index);
-
 			const msg = JSON.parse(data);
 			const cmd = msg.MR_Command;
+
 			if (cmd) {
 				switch (cmd) {
 				case "Write_Files": {
 					const date = new Date();
-					const dateString = "_y_" + date.getFullYear() + 
+					const dateString = 	"_y_" + date.getFullYear() + 
 										 "_m_" + (date.getMonth() + 1) + 
 										 "_d_" + (date.getDay() + 1) +
 										 "_h_" + date.getHours() +
@@ -328,7 +348,9 @@ try {
 					const files = msg.files;
 					const fcount = files.length;
 					for (let i = 0; i < fcount; i += 1) {
-						let fPath = path.join('./', '..', 'client', files[i].path);
+						let fPath = path.join(parseRootDir, files[i].path);
+
+						console.log("saving at path:", fPath);
 						if (files[i].opts.guardAgainstOverwrite && fs.existsSync(fPath)) {
 							console.log("file with same path found, modifying name");
 							extDotIdx = fPath.lastIndexOf('.');
@@ -345,7 +367,7 @@ try {
 						fs.writeFile(
 							fPath,
 							files[i].text,
-							(err) => { if (err) { console.error(err); } }
+							(err) => { if (err) { dberr(err); } }
 						);
 					}
 					break;
