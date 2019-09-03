@@ -8,6 +8,7 @@
         this.el.appendChild(this.button);
         this.el.setAttribute('class', className);
         this.nameInit = name;
+        this.currName = name;
         this.button.innerHTML = name;
         this.className = className;
         this.hiddenClass = className + '--hidden';
@@ -20,9 +21,13 @@
             container.appendChild(this.el);
         }
     }
-
+	
+	get name () {
+		return this.currName;
+	}
     set name (name) {
         this.button.innerHTML = name;
+        this.currName = name;
     }
 
     hide () {

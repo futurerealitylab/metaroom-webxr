@@ -168,6 +168,27 @@ const MREditor = (function() {
                 }, 1000);
             }
         });
+
+        const showHideState = {
+            idx : 0,
+            text : ["Show", "Hide"],
+            style : ["none", "block"]
+        };
+        MR.wrangler.menu.hide = new MenuItem(
+            MR.wrangler.menu.el, 'ge_menu', 'Hide', 
+            (event) => {
+
+                MR.wrangler.menu.hide.name = 
+                    showHideState.text[showHideState.idx];
+                document.getElementById('text-areas').style.display = 
+                    showHideState.style[showHideState.idx];
+
+                showHideState.idx ^= 1;
+            }
+        );
+
+        document.getElementById("text-areas").style.paddingBottom = 
+            (MR.wrangler.menu.el.getBoundingClientRect().height * 1.5) + "px";
 	}
 	_out.init = init;
 
@@ -579,7 +600,20 @@ const MREditor = (function() {
 
         let record = MREditor.shaderMap.get(key);
         if (!record) {
-            record = {args : args, originals : {}, textAreas : {}, logs: {}, errorMessageNodes : {}, program : null, compile : null, options : options, hasError : false};
+            record = {
+                args : args, 
+                originals : {}, 
+                textAreas : {}, 
+                logs: {}, 
+                errorMessageNodes : {}, 
+                program : null, 
+                compile : null, 
+                options : options, 
+                hasError : false,
+                errorStates : {},
+                headers : {}
+            };
+
             MREditor.shaderMap.set(key, record);
             for (let prop in args) {
                 if (Object.prototype.hasOwnProperty.call(args, prop)) {
@@ -604,6 +638,7 @@ const MREditor = (function() {
                 SHADER_DIV.appendChild(HEADER_DIV); 
                 const hOuter = doc.createElement("H1");
                 const tOuter = doc.createTextNode(key + '\n');
+                hOuter.classList = "shader_section_success";
                 hOuter.appendChild(tOuter);
                 HEADER_DIV.appendChild(hOuter);
 
@@ -615,28 +650,24 @@ const MREditor = (function() {
 
             SHADER_DIV.appendChild(SHADER_STAGE_DIV);
 
-                let shaderInfoIsHidden = false;
-                hOuter.style.color = 'white';
-                HEADER_DIV.style.cursor = 'pointer';
+
                 HEADER_DIV.onclick = () => {
                     const isHidden = !propHiddenState.get('main');
                     propHiddenState.set('main', isHidden);
                     switch (isHidden) {
                     case true: {
                         HTMLUtil.hideElement(SHADER_STAGE_DIV);
-                        if (errorState) {
-                            return;
-                        }
-                        hOuter.style.color = 'gray';
+                        hOuter.classList = (propErrorState.get("main")) ? 
+                                            "shader_section_error_inactive" :
+                                            "shader_section_success_inactive"
 
                         return;
                     }
                     case false: {
                         HTMLUtil.showElement(SHADER_STAGE_DIV);
-                        if (errorState) {
-                            return;
-                        }
-                        hOuter.style.color = 'white';
+                        hOuter.classList = (propErrorState.get("main")) ? 
+                                            "shader_section_error" :
+                                            "shader_section_success"
 
                         return;
                     }
@@ -646,30 +677,11 @@ const MREditor = (function() {
                     }
                 }
 
-                let errorState = false;
-                HEADER_DIV.onmouseover = (event) => {
-                    const isHidden = propHiddenState.get('main');
-
-                    if (hOuter.style.color !== 'red') {
-                        hOuter.style.color = (isHidden) ? 'white' : 'gray';
-                    } else {
-                        hOuter.style.color = 'gray'
-                    }
-                };
-                HEADER_DIV.onmouseleave = (event) => {
-                	if (errorState) {
-                		hOuter.style.color = 'red';
-                		return;
-                	}
-                    if (hOuter.style.color !== 'red') {
-                        hOuter.style.color = (propHiddenState.get('main') === true) ? 'gray' :
-                                                       'white';
-                    }
-                }
-
         
         const propHiddenState = new Map();
+        const propErrorState = new Map();
         propHiddenState.set("main", false);
+        propErrorState.set("main", false);
 
         const logError = function(args) {
             const errorMessageNodes = record.errorMessageNodes;
@@ -684,7 +696,6 @@ const MREditor = (function() {
                     	const errText = args[prop];
                     	if (!errText) {
                     		continue;
-
                     	}
                     	const errSections = errText.split(':');
 
@@ -719,9 +730,16 @@ const MREditor = (function() {
                 }
             }
             if (hasError) {
-                hOuter.style.color = 'red';
-                errorState = true;
+                hOuter.classList = propHiddenState.get("main") ? 
+                                    "shader_section_error_inactive" :
+                                    "shader_section_error";
                 record.hasError = true;
+            } else {
+                hOuter.classList = propHiddenState.get("main") ? 
+                                    "shader_section_success_inactive" :
+                                    "shader_section_success";
+
+                record.hasError = false;
             }
         }
         record.logs.logError = logError;
@@ -734,17 +752,14 @@ const MREditor = (function() {
                     const errMsgNode = errorMessageNodes[prop]
                     if (errMsgNode) {
                         errMsgNode.nodeValue = '';
-                        textAreaElements[prop].parentElement.style.color = 
-                        (propHiddenState.get(key + prop)) ? 'gray' : 'white';
                     }
                 }
             }
-            hOuter.style.color = (shaderInfoIsHidden) ? 'gray' : 'white';
             GFX.clearErrRecord();
         }
         record.logs.clearLogErrors = clearLogErrors;
 
-        for (var prop in args) {
+        for (let prop in args) {
             if (Object.prototype.hasOwnProperty.call(args, prop)) {
                 let text = '';
                 let code = '';
@@ -756,7 +771,7 @@ const MREditor = (function() {
                 }
 
                 propHiddenState.set(key + prop, false);
-
+                propErrorState.set(key + prop, false);
 
                 let DIV = doc.createElement("div");
                 DIV.setAttribute("id", key + " : " + prop + "_div");
@@ -786,21 +801,11 @@ const MREditor = (function() {
                 thisTextArea.style.wrap = "off";
 
                 let parentElement = thisTextArea.parentElement;
+                h.classList = "shader_section_success";
 
-                h.style.cursor = 'pointer';
-                h.onmouseover = (event) => {
-                    const isHidden = propHiddenState.get(key + prop);
+                console.log("setting header for", prop);
+                record.headers[prop] = h;
 
-                    if (parentElement.style.color !== 'red') {
-                        parentElement.style.color = (isHidden) ? 'white' : 'gray';
-                    }
-                };
-                h.onmouseleave = (event) => {
-                    if (parentElement.style.color !== 'red') {
-                        parentElement.style.color = (propHiddenState.get(key + prop) === true) ? 'gray' :
-                                                       'white';
-                    }
-                };
 
                 h.onclick = () => {
                     const isHidden = !propHiddenState.get(key + prop);
@@ -810,20 +815,20 @@ const MREditor = (function() {
                     case true: {
                         HTMLUtil.hideElement(thisTextArea);
                         HTMLUtil.hideElement(hErr);
-                        if (textAreaElements[prop].parentElement.style.color == 'red') {
-                            return;
-                        }
-                        parentElement.style.color = 'gray';
+
+                        h.classList = (propErrorState.get(key + prop)) ? 
+                                            "shader_section_error_inactive" :
+                                            "shader_section_success_inactive"
 
                         return;
                     }
                     case false: {
                         HTMLUtil.showElement(thisTextArea);
                         HTMLUtil.showElement(hErr);
-                        if (textAreaElements[prop].parentElement.style.color == 'red') {
-                            return;
-                        }
-                        parentElement.style.color = 'white';
+
+                        h.classList = (propErrorState.get(key + prop)) ? 
+                                            "shader_section_error" :
+                                            "shader_section_success"
                         return;
                     }
                     default: {
@@ -857,9 +862,6 @@ const MREditor = (function() {
                             const textE = textAreaElements[prop]; 
                             if (textE) {
                                 record.args[prop] = textE.value;
-                                // if (libMap && prop != 'vertex' && prop != 'fragment') {
-                                //     libMap.set(prop, textE.value);
-                                // }
                             }
 
                         }
@@ -889,35 +891,7 @@ const MREditor = (function() {
                         doc.execCommand("insertText", false, '\n');
                     } else if (event.key == '`') {
                         event.preventDefault();
-                        //record.args[prop] = thisTextArea.value;
                         return;
-
-                        for (let prop in record.args) {
-                            if (Object.prototype.hasOwnProperty.call(record.args, prop)) {
-                                const textE = textAreaElements[prop]; 
-                                if (textE) {
-                                    record.args[prop] = textE.value;
-                                    // if (libMap && prop != 'vertex' && prop != 'fragment') {
-                                    //     libMap.set(prop, textE.value);
-                                    // }
-                                }
-
-                            }
-                        } 
-
-				        if (this.libGroupMap) {
-				        	for (const record of this.libGroupMap.values()) {
-						        for (let i = 0; i < record.args.length; i += 1) {
-						            const textE = record.textAreas[record.args[i].key]; 
-						            if (textE) {
-						                record.args[i][record.args[i].key] = textE.value;
-						                libMap.set(record.args[i].key, textE.value);
-						            }
-						        }
-					    	}
-				    	}
-
-                        compile();
                     }
 
                 });
@@ -930,9 +904,6 @@ const MREditor = (function() {
                     const textE = textAreaElements[prop]; 
                     if (textE) {
                         record.args[prop] = textE.value;
-                        //if (libMap && prop != 'vertex' && prop != 'fragment') {
-                        //    libMap.set(prop, textE.value);
-                        //}
                     }
 
                 }
@@ -980,32 +951,70 @@ const MREditor = (function() {
 
                 record.program = program;
 
-                errorState = false;
                 record.hasError = false;
 
-                textAreaElements.vertex.style.color = TEXT_COLOR_NO_ERROR;
-                textAreaElements.fragment.style.color = TEXT_COLOR_NO_ERROR;
-                textAreaElements.vertex.style.backgroundColor = BG_COLOR_NO_ERROR;
+                textAreaElements.vertex.style.color             = TEXT_COLOR_NO_ERROR;
+                textAreaElements.fragment.style.color           = TEXT_COLOR_NO_ERROR;
+                textAreaElements.vertex.style.backgroundColor   = BG_COLOR_NO_ERROR;
                 textAreaElements.fragment.style.backgroundColor = BG_COLOR_NO_ERROR;
+
+                if (!onAfterCompilation) {
+                    console.warn("onAfterCompilation unspecified");
+                } else {
+                    onAfterCompilation(program, userData);
+                }
+
+                hOuter.classList = propHiddenState.get("main") ? 
+                                    "shader_section_success_inactive" :
+                                    "shader_section_success";
+
+                if (propErrorState.get("main") === true) {
+                    propErrorState.set("main", false);
+
+                    for (let prop in record.args) {
+                        if (Object.prototype.hasOwnProperty.call(record.args, prop)) {
+                            propErrorState.set(key + prop, false);
+                            record.headers[prop].classList = propHiddenState.get(key + prop) ? 
+                                                "shader_section_success_inactive" :
+                                                "shader_section_success";
+                        }
+                    }
+                }
+
             } else if (hasError) {
                 record.logs.clearLogErrors();
                 record.logs.logError(errRecord);
 
                 record.hasError = true;
 
-                textAreaElements.vertex.style.color = TEXT_COLOR_ERROR;
-                textAreaElements.fragment.style.color = TEXT_COLOR_ERROR;
-                textAreaElements.vertex.style.backgroundColor = BG_COLOR_ERROR;
+                textAreaElements.vertex.style.color             = TEXT_COLOR_ERROR;
+                textAreaElements.fragment.style.color           = TEXT_COLOR_ERROR;
+                textAreaElements.vertex.style.backgroundColor   = BG_COLOR_ERROR;
                 textAreaElements.fragment.style.backgroundColor = BG_COLOR_ERROR;
-            }
+
+                hOuter.classList = propHiddenState.get("main") ? 
+                                    "shader_section_error_inactive" :
+                                    "shader_section_error";
+
+                propErrorState.set("main", true);
 
 
-            if (!hasError) {
-            	if (!onAfterCompilation) {
-            		console.warn("onAfterCompilation unspecified");
-            	} else {
-            		onAfterCompilation(program, userData);
-            	}
+                for (let prop in record.args) {
+                    if (!Object.prototype.hasOwnProperty.call(record.args, prop)) {
+                        continue;
+                    }
+                    if (Object.prototype.hasOwnProperty.call(errRecord, prop)) {
+                        propErrorState.set(key + prop, true);
+                        record.headers[prop].classList = propHiddenState.get(key + prop) ? 
+                                    "shader_section_error_inactive" :
+                                    "shader_section_error";
+                    } else {
+                        propErrorState.set(key + prop, false);
+                        record.headers[prop].classList = propHiddenState.get(key + prop) ? 
+                                    "shader_section_success_inactive" :
+                                    "shader_section_success";
+                    }
+                }
             }
         }
         record.compile = compile;
