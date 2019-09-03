@@ -119,7 +119,7 @@ const MREditor = (function() {
 
 		resetState();
 
-        MR.wrangler.menu.save = new MenuItem(MR.wrangler.menu.el, 'ge_menu', 'Save', (event) => {
+        const saveCallback = (event) => {
             let ok = true;
             let i = 0;
             let msgs = [];
@@ -167,11 +167,19 @@ const MREditor = (function() {
                     MR.wrangler.menu.save.el.style = oldStyle;
                 }, 1000);
             }
-        });
+        };
+        MR.wrangler.menu.save = new MenuItem(MR.wrangler.menu.el, 'ge_menu', 'Save', saveCallback);
+
+        document.addEventListener("keydown", function(e) {
+          if ((window.navigator.platform.match("Mac") ? e.metaKey : e.ctrlKey)  && e.keyCode == 83) {
+            e.preventDefault();
+            saveCallback(e);
+          }
+        }, false);
 
         const showHideState = {
-            idx : 0,
-            text : ["Show", "Hide"],
+            idx   : 0,
+            text  : ["Show", "Hide"],
             style : ["none", "block"]
         };
         MR.wrangler.menu.hide = new MenuItem(
