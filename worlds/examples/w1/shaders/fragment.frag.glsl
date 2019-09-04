@@ -19,9 +19,9 @@ void main() {    // YOU MUST DEFINE main()
   
   // R,G,B EACH RANGE FROM 0.0 TO 1.0
     
-  vec3 color = vec3(red, green, blue);
+  vec3 color = vec3(0.1, blue, blue);
     
   // THIS LINE OUTPUTS THE FRAGMENT COLOR
     
-  fragColor = vec4(sqrt(0.1 * color), 1.0);
+  fragColor = vec4(sqrt(color), 1.0);
 }

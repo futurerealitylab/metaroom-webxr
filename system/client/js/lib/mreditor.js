@@ -172,41 +172,41 @@ const MREditor = (function() {
 
 
         // TODO
-        MR.wrangler.menu.reset = new MenuItem(
-            MR.wrangler.menu.el, 'ge_menu', 'Reset Shaders',
-            (event) => {
-                const shaderIt = MREditor.shaderMap.entries();
-                for (let shader of shaderIt) {
-                    const shaderRecord = shader[1];
-                    const originals = shaderRecord.originals;
-                    const headers =  shaderRecord.headers;
-                    const textAreas = shaderRecord.textAreas;
+        // MR.wrangler.menu.reset = new MenuItem(
+        //     MR.wrangler.menu.el, 'ge_menu', 'Reset Shaders',
+        //     (event) => {
+        //         const shaderIt = MREditor.shaderMap.entries();
+        //         for (let shader of shaderIt) {
+        //             const shaderRecord = shader[1];
+        //             const originals = shaderRecord.originals;
+        //             const headers =  shaderRecord.headers;
+        //             const textAreas = shaderRecord.textAreas;
 
-                    shaderRecord.logs.clearLogErrors();
-                    shaderRecord.hasError = false;
+        //             shaderRecord.logs.clearLogErrors();
+        //             shaderRecord.hasError = false;
 
-                    {
-                        const errorStates = shaderRecord.errorStates;
-                        for (let entry of errorStates) {
-                            entry[1] = false;
-                        }
-                    }
+        //             {
+        //                 const errorStates = shaderRecord.errorStates;
+        //                 for (let entry of errorStates) {
+        //                     entry[1] = false;
+        //                 }
+        //             }
 
-                    for (let prop in originals) {
-                        if (Object.prototype.hasOwnProperty.call(originals, prop)) {
-                            const tArea = textAreas[prop];
-                            if (tArea) {
-                                tArea.value = originals[prop];
-                                tArea.style.backgroundColor = BG_COLOR_NO_ERROR;
-                                tArea.style.color = TEXT_COLOR_NO_ERROR
-                            }
-                        }
-                    }
+        //             for (let prop in originals) {
+        //                 if (Object.prototype.hasOwnProperty.call(originals, prop)) {
+        //                     const tArea = textAreas[prop];
+        //                     if (tArea) {
+        //                         tArea.value = originals[prop];
+        //                         tArea.style.backgroundColor = BG_COLOR_NO_ERROR;
+        //                         tArea.style.color = TEXT_COLOR_NO_ERROR
+        //                     }
+        //                 }
+        //             }
 
-                    shaderRecord.compile();
-                }
-            }
-        );
+        //             shaderRecord.compile();
+        //         }
+        //     }
+        // );
 
         document.addEventListener("keydown", function(e) {
           if ((window.navigator.platform.match("Mac") ? e.metaKey : e.ctrlKey)  && e.keyCode == 83) {

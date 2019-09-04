@@ -4,15 +4,15 @@ const assetutil = (function() {
 	
 	const _out = {};
 
-	async function loadTextRelativePath(relativePath) {
-		return await fetch(getPath(relativePath)).
+	async function loadTextRelativePath(relativePath, opts) {
+		return await fetch(getPath(relativePath), (opts || {cache: "no-store"})).
     		then(response => response.text()).catch(err => { console.error(err); });
 	};
 	_out.loadText = loadTextRelativePath;
 	_out.loadTextRelativePath = loadTextRelativePath;
 
-	async function loadTextAbsolutePath(absolutePath) {
-		return await fetch(absolutePath).
+	async function loadTextAbsolutePath(absolutePath, opts) {
+		return await fetch(absolutePath, (opts || {cache: "no-store"})).
     		then(response => response.text()).catch(err => { console.error(err); });
 	};
 	_out.loadTextAbsolutePath = loadTextAbsolutePath;
