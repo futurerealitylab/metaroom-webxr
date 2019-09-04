@@ -23,5 +23,5 @@ void main() {    // YOU MUST DEFINE main()
     
   // THIS LINE OUTPUTS THE FRAGMENT COLOR
     
-  fragColor = vec4(sqrt(color), 1.0);
+  fragColor = vec4(sqrt(0.1 * color), 1.0);
 }

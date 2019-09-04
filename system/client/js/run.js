@@ -82,14 +82,8 @@ default: {
 
       let sourceFiles = document.getElementsByClassName("worlds");
 
-      function getCurrentPath(path) {
-          let slashIdx = path.lastIndexOf('/');
-          if (slashIdx === -1) {
-              slashIdx = path.lastIndexOf('\\');
-          }
-
-          return path.substring(0, slashIdx);
-      }
+      const parentDir = getCurrentPath(window.location.pathname);
+      console.log("PARENT DIR", parentDir);
       
       // call the main function of the selected world
       if (MR.wrangler.options.enableMultipleWorlds) {
@@ -104,6 +98,10 @@ default: {
             // TODO consider using explicit Promises
             const world     = await import(src);
             const localPath = getCurrentPath(src)
+
+            console.log("source:", src);
+
+            console.log(window.location);
 
             MR.worlds.push({world : world, localPath : localPath});
 

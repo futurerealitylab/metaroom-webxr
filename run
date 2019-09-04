@@ -1,4 +1,1 @@
-pushd server
-node main.js
-popd server
-
+node system/server/main.js

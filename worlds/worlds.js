@@ -1,7 +1,7 @@
 "use strict";
 //MR.registerWorld((function() {
 
-    const MY_ROOT_PATH = "js/worlds/examples/w5";
+    const MY_ROOT_PATH = "worlds/examples/w5";
     function getPath(path) {
       if (!path || path.length < 1) {
         return;

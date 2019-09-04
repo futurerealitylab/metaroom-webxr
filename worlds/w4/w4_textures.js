@@ -251,8 +251,8 @@ const mydata = new UserData();
 async function setup(state) {
     // load initial images, then continue setup after waiting is done
     const images = await imgutil.loadImagesPromise([
-        getPath("/resources/textures/brick.png"),
-        getPath("/resources/textures/polkadots_transparent.png"),   
+        getPath("resources/textures/brick.png"),
+        getPath("resources/textures/polkadots_transparent.png"),   
     ]);
 
     // this line only executes after the images are loaded asynchronously

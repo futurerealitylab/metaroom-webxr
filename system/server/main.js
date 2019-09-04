@@ -58,6 +58,7 @@ let   interval = args.interval;
 if (parser.version) {
 	console.log("Version:", 1.0);
 }
+console.log(process.cwd(), __dirname);
 
 function walk(dir) {
   return new Promise((resolve, reject) => {
@@ -115,8 +116,9 @@ const dblog = (args.debug) ? console.log   : () => {};
 const dberr = (args.debug) ? console.error : () => {};
 
 const testingNonRoot = false;
-const rootDir = path.join('..', 'client');
-const parseRootDir = (testingNonRoot) ? path.join('..') : path.join('..', 'client');
+
+const systemRoot = './';
+const clientDir = 'worlds';
 
 async function preprocess(prefix, dir) {
   return new Promise((resolve, reject) => {
@@ -203,11 +205,11 @@ async function preprocess(prefix, dir) {
 
 // collect files
 preprocess(
-	rootDir,
-	path.join('js', 'worlds')
+	systemRoot,
+	clientDir
 ).then((err, data) => {
 	fs.writeFile(
-		path.join(rootDir, 'js', 'worlds', 'worlds.js'), 
+		path.join(systemRoot, clientDir, 'worlds.js'), 
 		worldsSources.join('\n\n'), 
 		(err) => {
 
@@ -216,20 +218,16 @@ preprocess(
 			return;
 		}
 
-
-
-
-
 const options = {
-  key: fs.readFileSync('./server.key'),
-  cert: fs.readFileSync('./server.crt'),
+  key: fs.readFileSync(path.join(__dirname, 'server.key')),
+  cert: fs.readFileSync(path.join(__dirname, 'server.crt')),
   requestCert: false,
   rejectUnauthorized: false
 };
 
 let app = express();
 
-let frontend = express.static(parseRootDir);
+let frontend = express.static(systemRoot);
 
 app.use(frontend);
 app.use(express.json());
@@ -310,12 +308,12 @@ try {
 		worldsSources = [];
 
 		preprocess(
-			rootDir,
-			path.join('js', 'worlds')
+			systemRoot,
+			clientDir
 		).then((err, data) => {
 
 			fs.writeFile(
-				path.join(rootDir, 'js', 'worlds', 'worlds.js'), 
+				path.join(systemRoot, clientDir, 'worlds.js'),
 				worldsSources.join('\n\n'), 
 				(err) => {
 
@@ -348,7 +346,7 @@ try {
 					const files = msg.files;
 					const fcount = files.length;
 					for (let i = 0; i < fcount; i += 1) {
-						let fPath = path.join(parseRootDir, files[i].path);
+						let fPath = path.join(systemRoot, files[i].path);
 
 						console.log("saving at path:", fPath);
 						if (files[i].opts.guardAgainstOverwrite && fs.existsSync(fPath)) {

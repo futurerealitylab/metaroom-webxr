@@ -1,4 +1,1 @@
-pushd
-node main.js
-popd
-
+node system\server\main.js

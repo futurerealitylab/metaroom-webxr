@@ -448,7 +448,7 @@ window.VRCanvasWrangler = (function() {
 
       this.keyboardEventCallback = (ev) => {
 
-        if (ev.key === 'Control') {
+        if (ev.key === 'Alt') {
           if (this._canvas.width !== this.options.outputWidth) {
             this._canvas.width = this.options.outputWidth;
             this._canvas.height = this.options.outputHeight;

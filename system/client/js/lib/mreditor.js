@@ -170,6 +170,44 @@ const MREditor = (function() {
         };
         MR.wrangler.menu.save = new MenuItem(MR.wrangler.menu.el, 'ge_menu', 'Save', saveCallback);
 
+
+        // TODO
+        MR.wrangler.menu.reset = new MenuItem(
+            MR.wrangler.menu.el, 'ge_menu', 'Reset Shaders',
+            (event) => {
+                const shaderIt = MREditor.shaderMap.entries();
+                for (let shader of shaderIt) {
+                    const shaderRecord = shader[1];
+                    const originals = shaderRecord.originals;
+                    const headers =  shaderRecord.headers;
+                    const textAreas = shaderRecord.textAreas;
+
+                    shaderRecord.logs.clearLogErrors();
+                    shaderRecord.hasError = false;
+
+                    {
+                        const errorStates = shaderRecord.errorStates;
+                        for (let entry of errorStates) {
+                            entry[1] = false;
+                        }
+                    }
+
+                    for (let prop in originals) {
+                        if (Object.prototype.hasOwnProperty.call(originals, prop)) {
+                            const tArea = textAreas[prop];
+                            if (tArea) {
+                                tArea.value = originals[prop];
+                                tArea.style.backgroundColor = BG_COLOR_NO_ERROR;
+                                tArea.style.color = TEXT_COLOR_NO_ERROR
+                            }
+                        }
+                    }
+
+                    shaderRecord.compile();
+                }
+            }
+        );
+
         document.addEventListener("keydown", function(e) {
           if ((window.navigator.platform.match("Mac") ? e.metaKey : e.ctrlKey)  && e.keyCode == 83) {
             e.preventDefault();
@@ -430,6 +468,8 @@ const MREditor = (function() {
             	event.preventDefault();
 
                 switch (event.key) {
+                case "`": {
+                }
                 case "ArrowUp": {
                 }
                 case "ArrowDown": {
@@ -546,7 +586,7 @@ const MREditor = (function() {
         }        
     }
 
-    _out.defaultShaderOutputPath = "saved_editor_shaders";
+    _out.defaultShaderOutputPath = "worlds/saved_editor_shaders";
 
     function saveShaderToFile(key) {
         console.log(key);
@@ -586,17 +626,28 @@ const MREditor = (function() {
                     let guardAgainstOverwrite = true;
                     if (options && options.saveTo && options.saveTo[prop]) {
                         guardAgainstOverwrite = false;
-                        saveTo = getPath(options.saveTo[prop]);
-                        console.log("relative path:", saveTo)
-                        const origin = window.location.origin;
-                        console.log("location:");
-                        console.log(window.location);
+
+                        const parentPath = getCurrentPath(window.location.pathname);
+                        const localPath = options.saveTo[prop];
+                        console.log("parentPath:", parentPath);
+                        console.log("local file to save:", options.saveTo[prop]);
                         console.log("origin:", window.location.origin);
+                        
+                        saveTo = getPath(options.saveTo[prop]);
+
+                        const origin = window.location.origin;
                         const originIdx = saveTo.indexOf(origin);
                         saveTo = saveTo.substring(originIdx + origin.length + 1);
+                        console.log("remove origin:", saveTo);
+
+                        if (parentPath !== '/' && parentPath !== '\\') {
+                            const parentIdx = saveTo.indexOf(parentPath);
+                            saveTo = saveTo.substring(parentIdx + parentPath.length);
+                        }
                         console.log("final:", saveTo);
                     } else {
                         saveTo += "/" + prop + ".glsl";
+                        console.log(saveTo);
                     }
 
                     enqueueWrite(writeQueue, textE.value, saveTo, {guardAgainstOverwrite : guardAgainstOverwrite});
@@ -710,6 +761,7 @@ const MREditor = (function() {
         
         const propHiddenState = new Map();
         const propErrorState = new Map();
+        record.errorStates = propErrorState;
         propHiddenState.set("main", false);
         propErrorState.set("main", false);
 
@@ -890,6 +942,8 @@ const MREditor = (function() {
                 	event.preventDefault();
 
                     switch (event.key) {
+                    case "`": {
+                    }
                     case "ArrowUp": {
                     }
                     case "ArrowDown": {

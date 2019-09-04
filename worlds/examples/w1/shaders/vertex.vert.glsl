@@ -1,6 +1,6 @@
 #version 300 es
 in vec3 aPos; // attributes replaced with "in"
-out   vec3 vPos; // varying output replaced with "out"
+out       vec3 vPos; // varying output replaced with "out"
 uniform   mat4 uModel;
 uniform   mat4 uView;
 uniform   mat4 uProj;
