@@ -330,10 +330,14 @@ try {
 
 		ws.on('message', (data) => {
 			const msg = JSON.parse(data);
-			const cmd = msg.MR_Command;
+			const cmd = msg.MR_Message;
 
 			if (cmd) {
 				switch (cmd) {
+				case "Echo": {
+					ws.send(data);		
+					break; 
+				}
 				case "Write_Files": {
 					const date = new Date();
 					const dateString = 	"_y_" + date.getFullYear() + 

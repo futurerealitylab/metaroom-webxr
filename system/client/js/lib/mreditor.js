@@ -103,30 +103,36 @@ const MREditor = (function() {
 	}
 	_out.resetState = resetState;
 
-	function init(args) {
-
-		this.defaultShaderCompilationFunction = 
-		args.defaultShaderCompilationFunction || this.onNeedsCompilationDefault;
-
-		this.getExternalWindow = args.externalWindowGetter;
-
-		const doc = (this.getExternalWindow) ? this.getExternalWindow().document : document;
-
-		doc.addEventListener('input', function (event) {
-	  		if (event.target.tagName.toLowerCase() !== 'textarea') return;
-	  		autoExpand(event.target);
-		}, false);
-
-		resetState();
-
         const saveCallback = (event) => {
             let ok = true;
             let i = 0;
             let msgs = [];
             const keys = MREditor.shaderMap.keys();
             let kcount = 0;
+            const status = {};
             for (const k of MREditor.shaderMap.keys()) {
-                ok = ok && saveShaderToFile(k);
+                ok = ok && saveShaderToFile(k, status);
+                
+                if (status.message === "ERR_SERVER_UNAVAILABLE") {
+                    MR.wrangler.menu.save.name = "save failed, server unavailable";
+                    const oldStyle = window.getComputedStyle(MR.wrangler.menu.save.el);
+
+                    MR.wrangler.menu.save.el.style.color = "red";
+
+                    setTimeout(() => {
+                        MR.wrangler.menu.save.name = MR.wrangler.menu.save.nameInit;
+                        MR.wrangler.menu.save.el.style = oldStyle;
+                    }, 1000);
+
+                    MR.server.subs.subscribeOneShot('open', saveCallback);
+                    // attempt to re-connect
+                    MR.initServer();
+
+
+
+                    return;
+                }
+
                 msgs.push(k);
                 kcount += 1;
             }
@@ -168,7 +174,46 @@ const MREditor = (function() {
                 }, 1000);
             }
         };
-        MR.wrangler.menu.save = new MenuItem(MR.wrangler.menu.el, 'ge_menu', 'Save', saveCallback);
+
+	function init(args) {
+
+		this.defaultShaderCompilationFunction = 
+		args.defaultShaderCompilationFunction || this.onNeedsCompilationDefault;
+
+		this.getExternalWindow = args.externalWindowGetter;
+
+		const doc = (this.getExternalWindow) ? this.getExternalWindow().document : document;
+
+		doc.addEventListener('input', function (event) {
+	  		if (event.target.tagName.toLowerCase() !== 'textarea') return;
+	  		autoExpand(event.target);
+		}, false);
+
+		resetState();
+
+
+
+        const showHideState = {
+            idx   : 0,
+            text  : ["Show", "Hide"],
+            style : ["none", "block"]
+        };
+        MR.wrangler.menu.hide = new MenuItem(
+            MR.wrangler.menu.el, 'ge_menu', 'Hide', 
+            (event) => {
+
+                MR.wrangler.menu.hide.name = 
+                    showHideState.text[showHideState.idx];
+                document.getElementById('text-areas').style.display = 
+                    showHideState.style[showHideState.idx];
+
+                showHideState.idx ^= 1;
+            }
+        );
+
+        document.getElementById("text-areas").style.paddingBottom = 
+            (MR.wrangler.menu.el.getBoundingClientRect().height * 1.5) + "px";
+
 
 
         // TODO
@@ -208,6 +253,18 @@ const MREditor = (function() {
         //     }
         // );
 
+        // TODO(KTR): don't show the button when the server is unavailable
+        // MR.wrangler.menu.instaniateServerDependentMenuArray = [];
+        // MR.wrangler.menu.instaniateServerDependentMenuArray.push(() => {
+        //     MR.wrangler.menu.save = new MenuItem(MR.wrangler.menu.el, 'ge_menu', 'Save', saveCallback);
+        //     document.addEventListener("keydown", function(e) {
+        //       if ((window.navigator.platform.match("Mac") ? e.metaKey : e.ctrlKey)  && e.keyCode == 83) {
+        //         e.preventDefault();
+        //         saveCallback(e);
+        //       }
+        //     }, false);
+        // });
+        MR.wrangler.menu.save = new MenuItem(MR.wrangler.menu.el, 'ge_menu', 'Save', saveCallback);
         document.addEventListener("keydown", function(e) {
           if ((window.navigator.platform.match("Mac") ? e.metaKey : e.ctrlKey)  && e.keyCode == 83) {
             e.preventDefault();
@@ -215,26 +272,6 @@ const MREditor = (function() {
           }
         }, false);
 
-        const showHideState = {
-            idx   : 0,
-            text  : ["Show", "Hide"],
-            style : ["none", "block"]
-        };
-        MR.wrangler.menu.hide = new MenuItem(
-            MR.wrangler.menu.el, 'ge_menu', 'Hide', 
-            (event) => {
-
-                MR.wrangler.menu.hide.name = 
-                    showHideState.text[showHideState.idx];
-                document.getElementById('text-areas').style.display = 
-                    showHideState.style[showHideState.idx];
-
-                showHideState.idx ^= 1;
-            }
-        );
-
-        document.getElementById("text-areas").style.paddingBottom = 
-            (MR.wrangler.menu.el.getBoundingClientRect().height * 1.5) + "px";
 	}
 	_out.init = init;
 
@@ -588,21 +625,31 @@ const MREditor = (function() {
 
     _out.defaultShaderOutputPath = "worlds/saved_editor_shaders";
 
-    function saveShaderToFile(key) {
-        console.log(key);
+    function saveShaderToFile(key, status = {}) {
+        console.log("Saving:", key);
         if (!key) {
+            status.message = "ERR_NO_KEY_SPECIFIED";
             console.error("No shader key specified");
             return false;
         }
 
         const record = MREditor.shaderMap.get(key);
         if (!record) {
-            console.error("shader not on record");
+            status.message = "ERR_NO_SHADER_RECORD";
+            console.error("Shader not on record");
             return false;
         }
 
         if (record.hasError) {
+            status.message = "ERR_SHADER_HAS_ERROR";
             console.warn("Writing canceled, shader has error");
+            return false;
+        }
+
+        if (MR.server.sock.readyState !== WebSocket.OPEN) {
+            status.message = "ERR_SERVER_UNAVAILABLE";
+            console.error("Server is unavailable");
+
             return false;
         }
 
@@ -615,7 +662,7 @@ const MREditor = (function() {
             q.push({path : path, text : text, opts : opts});
         }
         function submitWrite(q) {
-            MR.sock.send(JSON.stringify({"MR_Command" : "Write_Files", "files" : q}));
+            MR.server.sock.send(JSON.stringify({"MR_Message" : "Write_Files", "files" : q}));
         }
 
         for (let prop in record.args) {
@@ -628,27 +675,27 @@ const MREditor = (function() {
                         guardAgainstOverwrite = false;
 
                         const parentPath = getCurrentPath(window.location.pathname);
-                        const localPath = options.saveTo[prop];
-                        console.log("parentPath:", parentPath);
-                        console.log("local file to save:", options.saveTo[prop]);
-                        console.log("origin:", window.location.origin);
+                        // const localPath = options.saveTo[prop];
+                        // console.log("parentPath:", parentPath);
+                        // console.log("local file to save:", options.saveTo[prop]);
+                        // console.log("origin:", window.location.origin);
                         
                         saveTo = getPath(options.saveTo[prop]);
 
                         const origin = window.location.origin;
                         const originIdx = saveTo.indexOf(origin);
                         saveTo = saveTo.substring(originIdx + origin.length + 1);
-                        console.log("remove origin:", saveTo);
+                        // console.log("remove origin:", saveTo);
 
                         if (parentPath !== '/' && parentPath !== '\\') {
                             const parentIdx = saveTo.indexOf(parentPath);
                             saveTo = saveTo.substring(parentIdx + parentPath.length);
                         }
-                        console.log("final:", saveTo);
                     } else {
                         saveTo += "/" + prop + ".glsl";
-                        console.log(saveTo);
                     }
+
+                    console.log("Destination:", saveTo);
 
                     enqueueWrite(writeQueue, textE.value, saveTo, {guardAgainstOverwrite : guardAgainstOverwrite});
                 }

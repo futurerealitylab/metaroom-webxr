@@ -1,108 +1,12 @@
 <!DOCTYPE html>
 <head>
-  <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <style type="text/css" media="screen">
-    textarea {
-      margin: 0;
-      border-radius: 0;
-      font:20px courier;
-      min-height: 0%;
-      outline-width:0
-      
-      /* min-width: 100%; 
-      /* max-height: 50vh; */
-       resize: vertical; 
-
-       border-right: none;
-       border-left: 1px solid #FFF5;
-       border-top: none;
-       border-bottom: 1px solid #FFF5;
-
-       white-space: nowrap;  overflow: auto;
-    }
-
-  .CodeMirror {
-    border: 1px solid #eee;
-    height: auto;
-    font:20px courier;
-  }
-
-  .resizeable {
-    resize: both;
-  }
-
-
-  .textAreaColumn div span {
-    display:block;
-    font:20px courier;
-    color: red;
-  }
-
-  .text_area_block {
-      font-family:    courier;
-      font-size:      10px;
-      font-weight:    bold;
-  }
-
-  :root {
-    --color-section-success:          white;
-    --color-section-error:            red;
-    --color-section-success-inactive: gray;
-    --color-section-error-inactive:   pink;
-    --color-section-transition-speed: 0.1s;
-  }
-
-  ::-moz-selection { background: green; }
-  ::selection { background: green; }
-
-  h1 {
-    user-select: none;
-  }
-
-  .shader_section_success {
-    transition: color var(--color-section-transition-speed) linear;
-    color: var(--color-section-success);
-  }
-  .shader_section_success:hover {
-    transition: color var(--color-section-transition-speed) linear;
-    color: var(--color-section-success-inactive);
-    cursor: pointer;
-  }
-  .shader_section_success_inactive {
-    transition: color var(--color-section-transition-speed) linear;
-    color: var(--color-section-success-inactive);
-  }
-  .shader_section_success_inactive:hover {
-    transition: color var(--color-section-transition-speed) linear;
-    color: var(--color-section-success);
-    cursor: pointer;
-  }
-
-  .shader_section_error {
-    transition: color var(--color-section-transition-speed) linear;
-    color: var(--color-section-error);
-  }
-  .shader_section_error:hover {
-    transition: color var(--color-section-transition-speed) linear;
-    color: var(--color-section-error-inactive);
-    cursor: pointer;
-  }
-  .shader_section_error_inactive {
-    transition: color var(--color-section-transition-speed) linear;
-    color: var(--color-section-error-inactive);
-  }
-  .shader_section_error_inactive:hover {
-    transition: color var(--color-section-transition-speed) linear;
-    color: var(--color-section-error);
-    cursor: pointer;
-  }
-
-  </style>
-
+  <link   rel="icon" href="favicon.ico" type="image/x-icon">
+  <link   rel="stylesheet" href="system/client/css/main.css">
   <link   rel="stylesheet" href="system/client/css/glslEditor/glslEditor.css">
   <link   rel="stylesheet" href="system/client/css/glslEditor/_menu.css">
-<!--   <script src="js/third-party/bootstrap/js/bootstrap.min.js"></script>
- -->
+
+  <script src="system/client/js/lib/pathutil.js"></script>
+  <script src="system/client/js/lib/canvasutil.js"></script>
   <script src="system/client/js/lib/ui.js"></script>
   <script src="system/client/js/lib/debugutil.js"></script>
   <script src="system/client/js/lib/htmlutil.js"></script>
@@ -120,7 +24,7 @@
   <script src="system/client/js/core/metaroom.js"></script>
 
   <!-- CodeMirror -->
-  <link   rel="stylesheet" href="system/client/js/third-party/codemirror/lib/codemirror.css">
+<!--   <link   rel="stylesheet" href="system/client/js/third-party/codemirror/lib/codemirror.css">
   <link   rel="stylesheet" href="system/client/js/third-party/codemirror/theme/monokai.css">
   <link   rel="stylesheet" href="system/client/js/third-party/codemirror/theme/darcula.css">
   <script src='system/client/js/third-party/codemirror/lib/codemirror.js'></script>
@@ -143,7 +47,7 @@
   <script src='system/client/js/third-party/codemirror/addon/display/panel.js'></script>
 
   <script src='system/client/js/third-party/codemirror/keymap/sublime.js'></script>
-  <script src='system/client/js/third-party/codemirror/keymap/vim.js'></script>
+  <script src='system/client/js/third-party/codemirror/keymap/vim.js'></script> -->
   <!-- Shader Editor -->
   <script type="module" src="system/client/js/lib/mreditor.js"></script>
 

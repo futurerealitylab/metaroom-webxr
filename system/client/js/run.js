@@ -4,32 +4,30 @@ import {MREditor} from "./lib/mreditor.js";
 
 window.MREditor = MREditor;
 
-const codemirror = false;
-if (codemirror) {
-  const editorDiv = document.createElement('div');
-  editorDiv.setAttribute('class', 'ge_editor');
+// const codemirror = false;
+// if (codemirror) {
+//   const editorDiv = document.createElement('div');
+//   editorDiv.setAttribute('class', 'ge_editor');
 
-  document.body.prepend(editorDiv);
+//   document.body.prepend(editorDiv);
 
-  window.editor = CodeMirror(editorDiv, {
-    lineNumbers: true,
-    keyMap: 'sublime',
-    theme:  "monokai",
-    mode:   'x-shader/x-fragment',
-    showCursorWhenSelecting: true,
-    lineWrapping: true,
-    autofocus: false
-  });
-
-
-  window.editor.setOption("extraKeys", {
-    Tab: function(cm){cm.replaceSelection("    ");},
-    Enter: function(cm){cm.replaceSelection("\n");},
-    '`': function(cm) {},
-  });
+//   window.editor = CodeMirror(editorDiv, {
+//     lineNumbers: true,
+//     keyMap: 'sublime',
+//     theme:  "monokai",
+//     mode:   'x-shader/x-fragment',
+//     showCursorWhenSelecting: true,
+//     lineWrapping: true,
+//     autofocus: false
+//   });
 
 
-}
+//   window.editor.setOption("extraKeys", {
+//     Tab: function(cm){cm.replaceSelection("    ");},
+//     Enter: function(cm){cm.replaceSelection("\n");},
+//     '`': function(cm) {},
+//   });
+// }
 
 function treq(data) {
   fetch("/world_transition", {
@@ -80,10 +78,20 @@ default: {
         //externalWindowGetter : function() { return MR.wrangler.externalWindow; }
       });
 
-      let sourceFiles = document.getElementsByClassName("worlds");
+      // MR.server.subs.subscribeOneShot("Echo", () => {
+      //   let callbacks = MR.wrangler.menu.instaniateServerDependentMenuArray;
+      //   let callbackCount = callbacks.length;
+      //   for (let i = 0; i < callbackCount; i += 1) {
+      //     callbacks[i]();
+      //   }
+      // });
+      // try {
+      //   MR.server.echo("Server is active");
+      // } catch (err) {
+      //   console.error(err);
+      // }
 
-      const parentDir = getCurrentPath(window.location.pathname);
-      console.log("PARENT DIR", parentDir);
+      let sourceFiles = document.getElementsByClassName("worlds");
       
       // call the main function of the selected world
       if (MR.wrangler.options.enableMultipleWorlds) {
@@ -95,13 +103,9 @@ default: {
           while (worldIt !== null) {
             const src = worldIt.src;
 
-            // TODO consider using explicit Promises
             const world     = await import(src);
             const localPath = getCurrentPath(src)
 
-            console.log("source:", src);
-
-            console.log(window.location);
 
             MR.worlds.push({world : world, localPath : localPath});
 
@@ -112,8 +116,6 @@ default: {
           setPath(worldInfo.localPath);
 
           MR.wrangler.beginSetup(worldInfo.world.default());
-
-          console.log(MR.worlds);
 
         } catch (err) {
           console.error(err);
@@ -142,7 +144,7 @@ default: {
 
           console.log("transitioning to world: [" + MR.worldIdx + "]");
 
-          // TODO(KTR): TEMP, the wrangler will handle these lines
+          // TODO(KTR): TEMP, the wrangler could handle these lines
           gl.useProgram(null);
           MR.wrangler._reset();
           MR.wrangler._glFreeResources();
@@ -172,8 +174,6 @@ default: {
             setTimeout(function(){ 
               console.log("Trying another world");
             }, 2000);
-
-            // TODO(KTR) some sort of shader animation to indicate error?
           }
         }
       });
