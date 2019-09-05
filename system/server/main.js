@@ -14,6 +14,7 @@ const express   = require('express');
 const WebSocket = require('ws');
 const argparse  = require('argparse');
 const path      = require('path');
+const chokidar  = require('chokidar');
 
 const parser = new argparse.ArgumentParser({
   version : '0.0.1',
@@ -254,6 +255,7 @@ try {
 	const wss = new WebSocket.Server({ port: (port + 1)});
 
 	function exitHandler(options, exitCode) {
+		watcher.close();
 	    if (options.cleanup) {
 	    	dblog('clean');
 	    	try {
@@ -295,6 +297,34 @@ try {
 	let websocketMap = new Map();
 	let userMap      = new Map();
 	let wsIndex      = 0;
+
+	const watcher = chokidar.watch('file', {
+	  ignored: /(^|[\/\\])\../,
+	  persistent: true
+	});
+
+	const log = console.log.bind(console);
+
+	watcher
+	  .on('add', path => log(`File ${path} has been added`))
+	  .on('change', path => {
+	  	log(`File ${path} has been changed`);
+
+	  	fs.readFile(path, 'utf8', (err, data) => {
+	  		if (err) {
+	  			console.error(err);
+	  			return;
+	  		}
+
+	  		for (let sock__ of websocketMap.values()) {
+  				sock__.send(JSON.stringify({
+  					"MR_Message" : "Update_File", "file" : path, "content" : data
+  				}));
+			}
+	  	});
+	  })
+	  .on('unlink', path => log(`File ${path} has been removed`))
+	  .on('unwatch', path => log(`File ${path} has been removed`));
 
 	wss.on('connection', function(ws) {
 
@@ -372,6 +402,18 @@ try {
 							(err) => { if (err) { dberr(err); } }
 						);
 					}
+					break;
+				}
+				case "Watch_Files": {
+					console.log("Watch_Files command received");
+					watcher.add(msg.files);
+
+					break;
+				}
+				case "Unwatch_Files": {
+					console.log("Unwatch_Files command received");
+					watcher.unwatch(msg.files);
+
 					break;
 				}
 				}

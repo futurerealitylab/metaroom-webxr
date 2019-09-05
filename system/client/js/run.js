@@ -135,12 +135,15 @@ default: {
         }
       }
 
-      wrangler.defineWorldTransitionProcedure(function() {
+      wrangler.defineWorldTransitionProcedure(function(direction=+1) {
         let ok = false;
 
         // try to transition to the next world
         while (!ok) {
-          MR.worldIdx = (MR.worldIdx + 1) % MR.worlds.length;
+          MR.worldIdx = (MR.worldIdx + direction) % MR.worlds.length;
+          if (MR.worldIdx < 0) {
+            MR.worldIdx = MR.worlds.length - 1;
+          }
 
           console.log("transitioning to world: [" + MR.worldIdx + "]");
 
@@ -152,8 +155,9 @@ default: {
 
           try {
             // call the main function of the selected world
-
+            MR.server.subsLocal = new ServerPublishSubscribe();
             MREditor.resetState();
+            
 
             let hadError = false;
 

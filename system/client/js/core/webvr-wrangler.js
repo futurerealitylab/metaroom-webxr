@@ -302,19 +302,21 @@ window.VRCanvasWrangler = (function() {
     }
 
     _initFallback() {
-
-      const initMenu = () => {
         this.menu = new Menu();
         if (this.options.enableMultipleWorlds) {
           this.menu.menus.transition = new MenuItem(
             this.menu.el, 
             'ge_menu', 
-            'Transition',
-            function() { return MR.wrangler.doWorldTransition(); }
+            'Prev',
+            () => { MR.wrangler.doWorldTransition(-1); }
+          );
+          this.menu.menus.transition = new MenuItem(
+            this.menu.el, 
+            'ge_menu', 
+            'Next',
+            () => { return MR.wrangler.doWorldTransition(+1); }
           );
         }
-      }
-      initMenu();
 
       const modalCanvasInit = () => {
           const bodyWidth = document.body.getBoundingClientRect().width;
@@ -330,44 +332,50 @@ window.VRCanvasWrangler = (function() {
           let shiftX = parseInt(P.style.left);
           let shiftY = 0;
 
-          window.addEventListener('scroll', function ( event ) {
-            let curr = parseInt(P.style.top);
-
-            P.style.top = "" + (window.scrollY + shiftY) + "px";
-            P.style.left = "" + (window.scrollX + shiftX) + "px";
-
-          });
-
           let shiftDown__ = false;
           let mouseDown__ = false;
           let clientX = 0;
           let clientY = 0;
 
-          const mouseMoveHandler__ = function(event) {
-            const doc = document;
-            const body = document.body;
-            
-            let pageX = event.clientX +
-              (doc && doc.scrollLeft || body && body.scrollLeft || 0) -
-              (doc && doc.clientLeft || body && body.clientLeft || 0);
-            let pageY = event.clientY +
-              (doc && doc.scrollTop  || body && body.scrollTop  || 0) -
-              (doc && doc.clientTop  || body && body.clientTop  || 0 );
+          // window.addEventListener('scroll', function ( event ) {
+          //   return;
+          //   let curr = parseInt(P.style.top);
 
+          //   P.style.top = "" + (window.scrollY + shiftY) + "px";
+          //   P.style.left = "" + (window.scrollX + shiftX) + "px";
+
+          // });
+
+
+
+          const mouseMoveHandler__ = function(event) {
             const w = MR.wrangler._canvas.clientWidth;
             const h = MR.wrangler._canvas.clientHeight;
+            P.style.left = (clientX - (w / 2.0)) + "px";
+            P.style.top = (clientY - (h / 2.0)) + "px";
+            // const doc = document;
+            // const body = document.body;
+            
+            // let pageX = event.clientX +
+            //   (doc && doc.scrollLeft || body && body.scrollLeft || 0) -
+            //   (doc && doc.clientLeft || body && body.clientLeft || 0);
+            // let pageY = event.clientY +
+            //   (doc && doc.scrollTop  || body && body.scrollTop  || 0) -
+            //   (doc && doc.clientTop  || body && body.clientTop  || 0 );
 
-            let prevLeft = parseInt(P.style.left);
-            let prevTop = parseInt(P.style.top);
 
-            let nextLeft = (pageX - (w / 2.0));
-            let nextTop = (pageY - (h / 2.0));
 
-            P.style.left = "" + (window.scrollX + nextLeft) + "px";
-            P.style.top   = "" + (window.scrollY + nextTop) + "px";
+            // let prevLeft = parseInt(P.style.left);
+            // let prevTop = parseInt(P.style.top);
 
-            shiftX = nextLeft;
-            shiftY = nextTop;
+            // let nextLeft = (pageX - (w / 2.0));
+            // let nextTop = (pageY - (h / 2.0));
+
+            // P.style.left = "" + (window.scrollX + nextLeft) + "px";
+            // P.style.top   = "" + (window.scrollY + nextTop) + "px";
+
+            // shiftX = nextLeft;
+            // shiftY = nextTop;
           };
 
           window.addEventListener('mousemove', (event) => {

@@ -33,10 +33,6 @@ const MREditor = (function() {
 
 	_out.shaderMap = null;
 
-	function resetState() {
-
-	}
-	_out.resetState = resetState;
 
 	function autoExpand(field) {
 	  // field.style.height = "inherit";
@@ -63,7 +59,52 @@ const MREditor = (function() {
 	}
  
 
+    function watchFiles(arr, status = {}) {
+        if (!arr) {
+            status.message = "ERR_NO_FILES_SPECIFIED";
+            console.error("No files specified");
+            return false;
+        }
+        if (MR.server.sock.readyState !== WebSocket.OPEN) {
+            status.message = "ERR_SERVER_UNAVAILABLE";
+            console.error("Server is unavailable");
+
+            return false;
+        }
+
+        MR.server.sock.send(JSON.stringify({"MR_Message" : "Watch_Files", "files" : arr}));
+    }
+
+    function unwatchFiles(arr, status = {}) {
+        if (!arr) {
+            status.message = "ERR_NO_FILES_SPECIFIED";
+            console.error("No files specified");
+            return false;
+        }
+        if (MR.server.sock.readyState !== WebSocket.OPEN) {
+            status.message = "ERR_SERVER_UNAVAILABLE";
+            console.error("Server is unavailable");
+
+            return false;
+        }        
+
+        MR.server.sock.send(JSON.stringify({"MR_Message" : "Unwatch_Files", "files" : arr}));
+    }
+
 	function resetState() {
+        if (MREditor.shaderMap) {   
+            let toUnwatch = [];
+            for (let record of MREditor.shaderMap.values()) {
+                for (let prop in record.paths) {
+                    if (Object.prototype.hasOwnProperty.call(record.paths, prop)) {
+                        toUnwatch.push(record.paths[prop]);
+                    }
+                }
+            }
+            if (toUnwatch.length > 0) {
+                unwatchFiles(toUnwatch);
+            }
+        }
 		{
 		  _out.shaderMap = new Map();
 		  const _tareas = document.getElementById("text-areas");
@@ -625,6 +666,8 @@ const MREditor = (function() {
 
     _out.defaultShaderOutputPath = "worlds/saved_editor_shaders";
 
+
+
     function saveShaderToFile(key, status = {}) {
         console.log("Saving:", key);
         if (!key) {
@@ -710,6 +753,8 @@ const MREditor = (function() {
     }
     _out.saveShaderToFile = saveShaderToFile;
 
+
+
     function registerShaderForLiveEditing(_gl, key, args, callbacks, options) {
         if (!key) {
             console.error("No shader key specified");
@@ -739,7 +784,8 @@ const MREditor = (function() {
                 options : options, 
                 hasError : false,
                 errorStates : {},
-                headers : {}
+                headers : {},
+                paths : {}
             };
 
             MREditor.shaderMap.set(key, record);
@@ -1045,6 +1091,52 @@ const MREditor = (function() {
                 });
             }
         }
+
+
+
+        { //// watch files
+            const toWatch = [];
+            for (let prop in args) {
+                let saveTo = _out.defaultShaderOutputPath;
+                if (options && options.saveTo && options.saveTo[prop]) {
+                    const parentPath = getCurrentPath(window.location.pathname);
+                    
+                    saveTo = getPath(options.saveTo[prop]);
+
+                    const origin = window.location.origin;
+                    const originIdx = saveTo.indexOf(origin);
+                    saveTo = saveTo.substring(originIdx + origin.length + 1);
+
+                    if (parentPath !== '/' && parentPath !== '\\') {
+                        const parentIdx = saveTo.indexOf(parentPath);
+                        saveTo = saveTo.substring(parentIdx + parentPath.length);
+                    }
+
+                    record.paths[prop] = saveTo;
+
+
+                    toWatch.push(saveTo);
+                    MR.server.subsLocal.subscribe("Update_File", (filename, args) => {
+                        if (args.file !== filename) {
+                            console.log("file does not match");
+                            return;
+                        }
+                        console.log("updating file");
+
+                        const textE = textAreaElements[prop]; 
+                        if (textE) {
+                            record.args[prop] = args.content;
+                            textE.value = args.content;
+                            record.compile();
+                        }
+                    }, saveTo);
+                }
+            }
+            console.log(record.paths);
+            if (toWatch.length > 0) {
+                watchFiles(toWatch);
+            }
+        } ////
 
         function compile() {
             for (let prop in record.args) {

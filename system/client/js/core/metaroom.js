@@ -136,6 +136,7 @@ MR.initServer = () => {
       const data = JSON.parse(ev.data);
       if (data.MR_Message) {
         MR.server.subs.publish(data.MR_Message, data);
+        MR.server.subsLocal.publish(data.MR_Message, data);
       }
     });
 
@@ -146,13 +147,21 @@ MR.initServer = () => {
 MR.initServer();
 
 class ServerPublishSubscribe {
-    constructor () {
+    constructor() {
         this.subscribers = {};
         this.subscribersOneShot = {};
     }
-    subscribe (channel, subscriber, data) {
+    subscribe(channel, subscriber, data) {
         this.subscribers[channel] = this.subscribers[channel] || new Map();
         this.subscribers[channel].set(subscriber, {sub: subscriber, data: data});
+    }
+    unsubscribeAll(subscriber) {
+        for (let prop in this.subscribers) {
+            if (Object.prototype.hasOwnProperty.call(this.subscribers, prop)) {
+                const setObj = this.subscribers[prop].delete(subscriber);
+            }
+        }
+        
     }
     subscribeOneShot(channel, subscriber, data) {
         this.subscribersOneShot[channel] = this.subscribersOneShot[channel] || new Map();
@@ -165,6 +174,7 @@ class ServerPublishSubscribe {
     }
 }
 MR.server.subs = new ServerPublishSubscribe();
+MR.server.subsLocal = new ServerPublishSubscribe();
 MR.server.echo = (message) => {   
   MR.server.sock.send(JSON.stringify({
     "MR_Message" : "Echo",
