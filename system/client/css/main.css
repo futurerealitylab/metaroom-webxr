@@ -35,10 +35,29 @@ textarea {
 }
 
 .text_area_block {
-      font-family:    courier;
-      font-size:      10px;
-      font-weight:    bold;
+    font-family:    courier;
+    font-size:      10px;
+    font-weight:    bold;
 }
+
+.status_info {
+    font-family: courier;
+    font-size:   20px;
+    font-weight: bold;
+    float: left;
+}
+
+.hidden {
+    display: none;
+}
+.shown {
+    display: block;
+    white-space: pre;
+}
+.fixed {
+    position: fixed;
+}
+
 
 :root {
     --color-section-success:          white;

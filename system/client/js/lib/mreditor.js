@@ -5,6 +5,16 @@ const MREditor = (function() {
 	const _outEnabled = {};
 	const _outDisabled = {};
 
+    const TEXT_COLOR_NO_ERROR = "#d3b58d"; //'#BFBFBF';
+    const TEXT_COLOR_ERROR    = '#dddda0';
+    const ERR_COLOR_MESSAGE   = 'red';
+    const BG_COLOR_NO_ERROR   = 'black';
+    const BG_COLOR_ERROR      = 'black';
+
+    let globalErrorMsgNode;
+    let globalErrorMsgNodeText;
+    let globalErrorMsgState = {vertex : "", fragment : ""};
+
 	class Editor {
 		constructor() {
 			this.libMap = null;
@@ -104,6 +114,11 @@ const MREditor = (function() {
             if (toUnwatch.length > 0) {
                 unwatchFiles(toUnwatch);
             }
+
+            for (let prop in globalErrorMsgState) {
+                globalErrorMsgState[prop] = "";
+            }
+            globalErrorMsgNodeText.nodeValue = "";
         }
 		{
 		  _out.shaderMap = new Map();
@@ -216,6 +231,7 @@ const MREditor = (function() {
             }
         };
 
+
 	function init(args) {
 
 		this.defaultShaderCompilationFunction = 
@@ -237,7 +253,8 @@ const MREditor = (function() {
         const showHideState = {
             idx   : 0,
             text  : ["Show", "Hide"],
-            style : ["none", "block"]
+            style : ["none", "block"],
+            classes : ["hidden", "shown"]
         };
         MR.wrangler.menu.hide = new MenuItem(
             MR.wrangler.menu.el, 'ge_menu', 'Hide', 
@@ -249,8 +266,15 @@ const MREditor = (function() {
                     showHideState.style[showHideState.idx];
 
                 showHideState.idx ^= 1;
+
+                const classes = showHideState.classes;
+                globalErrorMsgNode.classList.remove(classes[1 - showHideState.idx]);
+                globalErrorMsgNode.classList.add(classes[showHideState.idx]);
+
+                MR.wrangler.codeIsHidden = (showHideState.idx === 1);
             }
         );
+        MR.wrangler.codeIsHidden = false;
 
         document.getElementById("text-areas").style.paddingBottom = 
             (MR.wrangler.menu.el.getBoundingClientRect().height * 1.5) + "px";
@@ -313,6 +337,19 @@ const MREditor = (function() {
           }
         }, false);
 
+        const header = doc.createElement("H1");
+        header.classList.add("status_info");
+        header.classList.add("hidden");
+        header.classList.add("fixed");
+        header.style.color = ERR_COLOR_MESSAGE;
+        const text   = doc.createTextNode('');
+        header.appendChild(text);
+        const textAreas = document.getElementById('text-areas');
+
+        textAreas.parentNode.insertBefore(header, textAreas);
+
+        globalErrorMsgNode = header;
+        globalErrorMsgNodeText = text;
 	}
 	_out.init = init;
 
@@ -349,10 +386,11 @@ const MREditor = (function() {
 	}
 	_out.preprocessAndCreateShaderProgramFromStringsAndHandleErrors = preprocessAndCreateShaderProgramFromStringsAndHandleErrors;
 
-	const TEXT_COLOR_NO_ERROR = "#d3b58d"; //'#BFBFBF';
-	const TEXT_COLOR_ERROR    = '#dddda0';
-	const BG_COLOR_NO_ERROR   = 'black';
-	const BG_COLOR_ERROR      = 'black';
+
+    function loadAndRegisterShaderLibrariesForLiveEditing(_gl, key, args, options) {
+        return _out.registerShaderLibrariesForLiveEditing(_gl, key, args, options);
+    }
+    _out.loadAndRegisterShaderLibrariesForLiveEditing = loadAndRegisterShaderLibrariesForLiveEditing;
 
     function registerShaderLibrariesForLiveEditing(_gl, key, args, options) {
         if (!args) {
@@ -714,7 +752,7 @@ const MREditor = (function() {
                 if (textE) {
                     let saveTo = _out.defaultShaderOutputPath;
                     let guardAgainstOverwrite = true;
-                    if (options && options.saveTo && options.saveTo[prop]) {
+                    if (options && options.paths && options.paths[prop]) {
                         guardAgainstOverwrite = false;
 
                         const parentPath = getCurrentPath(window.location.pathname);
@@ -723,7 +761,7 @@ const MREditor = (function() {
                         // console.log("local file to save:", options.saveTo[prop]);
                         // console.log("origin:", window.location.origin);
                         
-                        saveTo = getPath(options.saveTo[prop]);
+                        saveTo = getPath(options.paths[prop]);
 
                         const origin = window.location.origin;
                         const originIdx = saveTo.indexOf(origin);
@@ -754,6 +792,29 @@ const MREditor = (function() {
     _out.saveShaderToFile = saveShaderToFile;
 
 
+    async function loadAndRegisterShaderForLiveEditing(_gl, key, callbacks, options) {
+        if (!options || !options.paths || !options.paths.vertex || !options.paths.fragment) {
+            return Promise.reject("No paths provided");
+        }
+        return new Promise(async (resolve, reject) => {
+            try {
+                const vsrc = await assetutil.loadText(options.paths.vertex);
+                const fsrc = await assetutil.loadText(options.paths.fragment);
+                console.log(vsrc, fsrc);
+                resolve(_out.registerShaderForLiveEditing(
+                    _gl, key, 
+                    {vertex : vsrc, fragment : fsrc}, 
+                    callbacks, 
+                    options
+                ));
+            } catch (err) {
+                reject(err);
+            }
+            
+
+        });
+    }
+    _out.loadAndRegisterShaderForLiveEditing = loadAndRegisterShaderForLiveEditing;
 
     function registerShaderForLiveEditing(_gl, key, args, callbacks, options) {
         if (!key) {
@@ -899,6 +960,10 @@ const MREditor = (function() {
                         	}
                         }
 
+                        globalErrorMsgState[prop] = errMsgNode.nodeValue + 
+                            "\t in FILE : " + 
+                            ((record.paths[prop]) ? record.paths[prop]: '') + '\n';
+
                         textAreaElements[prop].parentElement.style.color = 'red';
                         hasError = true;
                     }
@@ -909,12 +974,19 @@ const MREditor = (function() {
                                     "shader_section_error_inactive" :
                                     "shader_section_error";
                 record.hasError = true;
+
+                let errMsg = '';
+                for (let msgProp in globalErrorMsgState) {
+                    errMsg += globalErrorMsgState[msgProp];
+                }
+                globalErrorMsgNodeText.nodeValue = errMsg;
             } else {
                 hOuter.classList = propHiddenState.get("main") ? 
                                     "shader_section_success_inactive" :
                                     "shader_section_success";
 
                 record.hasError = false;
+                globalErrorMsgNodeText.nodeValue = '';
             }
         }
         record.logs.logError = logError;
@@ -931,6 +1003,9 @@ const MREditor = (function() {
                 }
             }
             GFX.clearErrRecord();
+            for (let prop in globalErrorMsgState) {
+                globalErrorMsgState[prop] = "";
+            }
         }
         record.logs.clearLogErrors = clearLogErrors;
 
@@ -1098,10 +1173,10 @@ const MREditor = (function() {
             const toWatch = [];
             for (let prop in args) {
                 let saveTo = _out.defaultShaderOutputPath;
-                if (options && options.saveTo && options.saveTo[prop]) {
+                if (options && options.paths && options.paths[prop]) {
                     const parentPath = getCurrentPath(window.location.pathname);
                     
-                    saveTo = getPath(options.saveTo[prop]);
+                    saveTo = getPath(options.paths[prop]);
 
                     const origin = window.location.origin;
                     const originIdx = saveTo.indexOf(origin);
@@ -1221,7 +1296,12 @@ const MREditor = (function() {
                     }
                 }
 
+                globalErrorMsgNodeText.nodeValue = '';
+
             } else if (hasError) {
+
+                globalErrorMsgNodeText.nodeValue = '';
+
                 record.logs.clearLogErrors();
                 record.logs.logError(errRecord);
 
