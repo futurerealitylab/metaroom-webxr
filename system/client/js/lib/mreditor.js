@@ -43,6 +43,19 @@ const MREditor = (function() {
 
 	_out.shaderMap = null;
 
+    function detectFeatures() {
+        const textArea = document.createElement("textarea");
+        document.body.appendChild(textArea);
+        textArea.focus();
+
+        MREditor.insertTextSupported = document.queryCommandEnabled("insertText");
+        console.log("insertTextSupport:", MREditor.insertTextSupported);
+        textArea.blur();
+
+        document.body.removeChild(textArea);
+    }
+    _out.detectFeatures = detectFeatures;
+
 
 	function autoExpand(field) {
 	  // field.style.height = "inherit";
@@ -669,36 +682,39 @@ const MREditor = (function() {
 			 		v.compile();
 				}
             });
-            thisTextArea.addEventListener('keydown', (event) => {
-                const cursor = textarea.selectionStart;
-                if(event.key == "Tab") {
-                    event.preventDefault();
-                    doc.execCommand("insertText", false, '    ');//appends a tab and makes the browser's default undo/redo aware and automatically moves cursor
-                } else if (event.key == "Enter") {
-                    event.preventDefault();
-                    doc.execCommand("insertText", false, '\n');
-                } else if (event.key == '`') {
-                    event.preventDefault();
 
-                    return;
-
-                    for (let i = 0; i < record.args.length; i += 1) {
-                        const textE = textAreaElements[prop]; 
-                        if (textE) {
-                            record.args[i][prop] = textE.value;
-                            libMap.set(prop, textE.value);
-                        }
-                    } 
-
-                    console.warn("TODO: Only re-compile dependent shaders");
-
-
-	                for (const v of this.shaderMap.values()) {
-				 		v.compile();
-					}
-                }
-
-            });
+            if (MREditor.insertTextSupported) {
+                thisTextArea.addEventListener('keydown', (event) => {
+                    const cursor = textarea.selectionStart;
+                    if(event.key == "Tab") {
+                        event.preventDefault();
+                        doc.execCommand("insertText", false, '    ');
+                    } else if (event.key == "Enter") {
+                        event.preventDefault();
+                        doc.execCommand("insertText", false, '\n');
+                    } else if (event.key == '`') {
+                        event.preventDefault();
+                        return;
+                    }
+                });
+            } else {
+                thisTextArea.addEventListener('keydown', (event) => {
+                    if (event.key == "Tab") {
+                        // event.preventDefault()
+                        // const cursor = textarea.selectionStart
+                        // textarea.value = textarea.value.slice(0, cursor) + '    ' + textarea.value.slice(textarea.selectionEnd)
+                        // textarea.selectionStart = textarea.selectionEnd = cursor + 4
+                    } else if (event.key == "Enter") {
+                        // event.preventDefault()
+                        // const cursor = textarea.selectionStart
+                        // textarea.value = textarea.value.slice(0, cursor) + '\n' + textarea.value.slice(textarea.selectionEnd)
+                        // textarea.selectionStart = textarea.selectionEnd = cursor + 1
+                    } else if (event.key == '`') {
+                        event.preventDefault();
+                        return;
+                    }
+                });
+            }
         }
 
         { //// watch files
@@ -988,6 +1004,8 @@ const MREditor = (function() {
     }
     _out.loadAndRegisterShaderForLiveEditing = loadAndRegisterShaderForLiveEditing;
 
+    _out.insertTextSupported = true;
+
     function registerShaderForLiveEditing(_gl, key, args, callbacks, options) {
         if (!key) {
             console.error("No shader key specified");
@@ -1226,7 +1244,7 @@ const MREditor = (function() {
 
                 let parentElement = thisTextArea.parentElement;
 
-                if (options.foldDefault && options.foldDefault[prop]) {
+                if (options && options.foldDefault && options.foldDefault[prop]) {
                     propHiddenState.set(key + prop, true);
                     h.classList = "shader_section_success_inactive";
                     HTMLUtil.hideElement(thisTextArea);
@@ -1330,20 +1348,39 @@ const MREditor = (function() {
 
                     compile();
                 })
-                thisTextArea.addEventListener('keydown', (event) => {
-                    const cursor = textarea.selectionStart;
-                    if(event.key == "Tab") {
-                        event.preventDefault();
-                        doc.execCommand("insertText", false, '    ');//appends a tab and makes the browser's default undo/redo aware and automatically moves cursor
-                    } else if (event.key == "Enter") {
-                        event.preventDefault();
-                        doc.execCommand("insertText", false, '\n');
-                    } else if (event.key == '`') {
-                        event.preventDefault();
-                        return;
-                    }
 
-                });
+                if (MREditor.insertTextSupported) {
+                    thisTextArea.addEventListener('keydown', (event) => {
+                        const cursor = textarea.selectionStart;
+                        if(event.key == "Tab") {
+                            event.preventDefault();
+                            doc.execCommand("insertText", false, '    ');
+                        } else if (event.key == "Enter") {
+                            event.preventDefault();
+                            doc.execCommand("insertText", false, '\n');
+                        } else if (event.key == '`') {
+                            event.preventDefault();
+                            return;
+                        }
+                    });
+                } else {
+                    thisTextArea.addEventListener('keydown', (event) => {
+                        if (event.key == "Tab") {
+                            // event.preventDefault()
+                            // const cursor = thisTextArea.selectionStart
+                            // thisTextArea.value = thisTextArea.value.slice(0, cursor) + '    ' + thisTextArea.value.slice(thisTextArea.selectionEnd);
+                            // thisTextArea.selectionStart = thisTextArea.selectionEnd = cursor + 4;
+                        } else if (event.key == "Enter") {
+                            // event.preventDefault()
+                            // const cursor = textarea.selectionStart
+                            // textarea.value = textarea.value.slice(0, cursor) + '\n' + textarea.value.slice(textarea.selectionEnd)
+                            // textarea.selectionStart = textarea.selectionEnd = cursor + 1
+                        } else if (event.key == '`') {
+                            event.preventDefault();
+                            return;
+                        }
+                    });
+                }
             }
         }
 

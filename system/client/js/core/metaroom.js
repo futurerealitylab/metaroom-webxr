@@ -116,9 +116,20 @@ const SOCKET_STATE_MAP = {
 MR.server = {};
 MR.initServer = () => {
     console.log("initializing server");
-    MR.server.sock = new WebSocket(  
-      "ws://127.0.0.1:3001"
-    );
+
+
+    MR.server.sock = {
+        addEventListener : () => {},
+        send : () => {},
+        readyState : WebSocket.CLOSED
+    };
+    try {
+        MR.server.sock = new WebSocket(  
+          "ws://127.0.0.1:3001"
+        );
+    } catch (err) {
+        console.log(err);
+    }
 
     MR.server.sock.onerror = () => {
       console.log("Socket state:", SOCKET_STATE_MAP[MR.server.sock.readyState]);

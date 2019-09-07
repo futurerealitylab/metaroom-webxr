@@ -1,1 +1,1 @@
-node system/server/main.js
+node system/server/main.js "$@"

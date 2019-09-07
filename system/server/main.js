@@ -7,8 +7,6 @@
 // NOTE: WebXR !!!REQUIRES!!! a secure context in order to run (i.e. URL must
 // begin with https:// or localhost), otherwise `navigator.xr` is undefined!
 
-
-const https     = require('https');
 const fs        = require('fs');
 const express   = require('express');
 const WebSocket = require('ws');
@@ -50,8 +48,18 @@ parser.addArgument(
 		defaultValue: true
 	}
 );
+parser.addArgument(
+    ['-ssl', '--enablessl'],
+    {
+        help: 'enable SSL for use with HTTPS/certificates',
+        defaultValue: false
+    }
+);
 
 const args     = parser.parseArgs();
+
+const https = require('https');
+const http  = require('http');
 const host     = args.host;
 const port     = parseInt(args.port);
 let   interval = args.interval;
@@ -235,7 +243,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 
-let server = https.createServer(options, app);
+const server = (args.enablessl) ? https.createServer(options, app) : http.createServer({}, app);
 
 // temp
 app.all('/', function(req, res, next) {
@@ -244,14 +252,19 @@ app.all('/', function(req, res, next) {
   next();
 });
 
-server.listen(port, () => {
-  console.log('MetaRoom server listening on port ' + server.address().port);
-});
+if (!args.enablessl) {
+    app.listen(port, () => {
+      console.log('MetaRoom server listening on port ' + port);
+    });
+} else {
+    server.listen(port, () => {
+      console.log('MetaRoom server listening on port ' + server.address().port);
+    });
+}
 
 const timeStart = Date.now();
 
 try {
-	console.log('wss://' + args.host + ':' + (port + 1));
 	const wss = new WebSocket.Server({ port: (port + 1)});
 
 	function exitHandler(options, exitCode) {
