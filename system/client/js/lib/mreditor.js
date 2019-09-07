@@ -1226,7 +1226,7 @@ const MREditor = (function() {
 
                 let parentElement = thisTextArea.parentElement;
 
-                if (options.foldDefault && options.foldDefault[prop]) {
+                if (options && options.foldDefault && options.foldDefault[prop]) {
                     propHiddenState.set(key + prop, true);
                     h.classList = "shader_section_success_inactive";
                     HTMLUtil.hideElement(thisTextArea);
