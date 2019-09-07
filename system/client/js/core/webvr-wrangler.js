@@ -150,6 +150,7 @@ window.VRCanvasWrangler = (function() {
       options.onEndFrame = options.onEndFrame || (function(t) {});
       options.onDraw = options.onDraw || (function(t, p, v, state, eyeIdx) {}); // projMat, viewMat
       options.onAnimationFrame = options.onAnimationFrame || this._onAnimationFrame.bind(this);
+      options.onAnimationFrameWindow = options.onAnimationFrameWindow || this._onAnimationFrameWindow.bind(this);
       options.onSelectStart = options.onSelectStart || function(t, state) {};
 
       options.onSelect = options.onSelect || (function(t, state) {});
@@ -433,6 +434,7 @@ window.VRCanvasWrangler = (function() {
       options.onEndFrame = (function(t, state) {});
       options.onDraw = (function(t, p, v, state, eyeIdx) {});
       options.onAnimationFrame = this._onAnimationFrame.bind(this);
+      options.onAnimationFrameWindow = this._onAnimationFrameWindow.bind(this);
       //options.onWindowFrame = this._onWindowFrame.bind(this);
 
       // selection
@@ -497,53 +499,22 @@ window.VRCanvasWrangler = (function() {
         this.time = t / 1000.0;
         this.timeMS = t;
 
-        // revert to windowed rendering if there is no VR display
-        // or if the VR display is not presenting
-        const vrDisplay = this._vrDisplay;
-        if (!vrDisplay) {
-            this._onAnimationFrameWindow(t);
-            return;
-        }
-        const gl = this._gl;
-        const frame = this._frameData;
-        vrDisplay.getFrameData(frame);
-        if (!vrDisplay.isPresenting) {
-            this._onAnimationFrameWindow(t);
-            return;
-        }
+        // For now, all VR gamepad button presses trigger a world transition.
 
-        this._animationHandle = vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
-        this.config.onStartFrame(t, this.customState);
-        {
-            // left eye
-            gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
-
-            GFX.viewportXOffset = 0;
-            this.config.onDraw(t, frame.leftProjectionMatrix, frame.leftViewMatrix, this.customState);
-            // right eye
-            gl.viewport(gl.canvas.width * 0.5, 0, gl.canvas.width * 0.5, gl.canvas.height);
-            
-
-            GFX.viewportXOffset = gl.canvas.width * 0.5;
-            this.config.onDraw(t, frame.rightProjectionMatrix, frame.rightViewMatrix, this.customState);
-        }
-        this.config.onEndFrame(t);
-
-        vrDisplay.submitFrame();
-
-        // For now, all VR gamepad button presses trigger a world
-        // transition.
-        var gamepads = navigator.getGamepads();
-        var vrGamepadCount = 0;
-        var doTransition = false;
+        let gamepads = navigator.getGamepads();
+        let vrGamepadCount = 0;
+        let doTransition = false;
         for (var i = 0; i < gamepads.length; ++i) {
           var gamepad = gamepads[i];
-          if (gamepad) { /* `gamepads` may contain null-valued entries (eek!) */
-            if (gamepad.pose || gamepad.displayId ) { /* VR gamepads will have one or both of these properties. */
+          if (gamepad) { // gamepads may contain null-valued entries (eek!)
+            if (gamepad.pose || gamepad.displayId ) { // VR gamepads will have one or both of these properties.
               var cache = this.buttonsCache[vrGamepadCount] || [];
               for (var j = 0; j < gamepad.buttons.length; j++) {
+
                 // Check for any buttons that are pressed and previously were not.
+
                 if (cache[j] != null && !cache[j] && gamepad.buttons[j].pressed) {
+                  console.log('pressed gamepad', i, 'button', j);
                   doTransition = true;
                 }
                 cache[j] = gamepad.buttons[j].pressed;
@@ -553,9 +524,48 @@ window.VRCanvasWrangler = (function() {
             }
           }
         }
-        if (this.options.enableMultipleWorlds && doTransition) {
-          this.doWorldTransition();
+
+        // revert to windowed rendering if there is no VR display
+        // or if the VR display is not presenting
+        const vrDisplay = this._vrDisplay;
+        if (!vrDisplay) {
+            this.config.onAnimationFrameWindow(t);
+            if (this.options.enableMultipleWorlds && doTransition) {
+               this.doWorldTransition();
+            }
+            return;
         }
+
+        const gl = this._gl;
+        const frame = this._frameData;
+        if (!vrDisplay.isPresenting) {
+            this.config.onAnimationFrameWindow(t);
+            if (this.options.enableMultipleWorlds && doTransition) {
+               this.doWorldTransition();
+            }
+            return;
+        }
+        vrDisplay.getFrameData(frame);
+
+        this._animationHandle = vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
+        this.config.onStartFrame(t, this.customState);
+        {
+            // left eye
+            gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
+            GFX.viewportXOffset = 0;
+            this.config.onDraw(t, frame.leftProjectionMatrix, frame.leftViewMatrix, this.customState);
+            
+            // right eye
+            gl.viewport(gl.canvas.width * 0.5, 0, gl.canvas.width * 0.5, gl.canvas.height);
+            GFX.viewportXOffset = gl.canvas.width * 0.5;
+            this.config.onDraw(t, frame.rightProjectionMatrix, frame.rightViewMatrix, this.customState);
+        }
+        this.config.onEndFrame(t);
+        if (this.options.enableMultipleWorlds && doTransition) {
+           this.doWorldTransition();
+        }
+
+        vrDisplay.submitFrame();
     }
 
     _glAttachResourceTracking() {

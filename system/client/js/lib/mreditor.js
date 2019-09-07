@@ -111,6 +111,18 @@ const MREditor = (function() {
                     }
                 }
             }
+
+            if (MREditor.libGroupMap) {
+                for (let record of MREditor.libGroupMap.values()) {
+                    if (record.paths) {
+                        for (let prop in record.paths) {
+                            if (Object.prototype.hasOwnProperty.call(record.paths, prop)) {
+                                toUnwatch.push(record.paths[prop]);
+                            }                        
+                        }
+                    }
+                }
+            }
             if (toUnwatch.length > 0) {
                 unwatchFiles(toUnwatch);
             }
@@ -160,17 +172,73 @@ const MREditor = (function() {
 	_out.resetState = resetState;
 
         const saveCallback = (event) => {
-            let ok = true;
-            let i = 0;
             let msgs = [];
-            const keys = MREditor.shaderMap.keys();
-            let kcount = 0;
-            const status = {};
-            for (const k of MREditor.shaderMap.keys()) {
-                ok = ok && saveShaderToFile(k, status);
-                
-                if (status.message === "ERR_SERVER_UNAVAILABLE") {
-                    MR.wrangler.menu.save.name = "save failed, server unavailable";
+            let ok = true;
+            { // save shaders
+                const keys = MREditor.shaderMap.keys();
+                let kcount = 0;
+                const status = {};
+
+                for (const k of keys) {
+                    ok = ok && saveShaderToFile(k, status);
+                    
+                    if (status.message === "ERR_SERVER_UNAVAILABLE") {
+                        MR.wrangler.menu.save.name = "save failed, server unavailable";
+                        const oldStyle = window.getComputedStyle(MR.wrangler.menu.save.el);
+
+                        MR.wrangler.menu.save.el.style.color = "red";
+
+                        setTimeout(() => {
+                            MR.wrangler.menu.save.name = MR.wrangler.menu.save.nameInit;
+                            MR.wrangler.menu.save.el.style = oldStyle;
+                        }, 1000);
+
+                        MR.server.subs.subscribeOneShot('open', saveCallback);
+                        // attempt to re-connect
+                        MR.initServer();
+
+
+
+                        return;
+                    }
+
+                    msgs.push(k);
+                    kcount += 1;
+                }
+
+                if (!ok) {
+                    if (kcount != 0) {
+                        msgs = ["save failed, fix errors first"];
+                        MR.wrangler.menu.save.name = msgs[0];
+                        const oldStyle = window.getComputedStyle(MR.wrangler.menu.save.el);
+
+                        MR.wrangler.menu.save.el.style.color = "red";
+
+                        setTimeout(() => {
+                            MR.wrangler.menu.save.name = MR.wrangler.menu.save.nameInit;
+                            MR.wrangler.menu.save.el.style = oldStyle;
+                        }, 1000);
+
+                        return;
+                    }
+                }
+            }
+
+            { // save shader libraries
+                const keys = MREditor.libGroupMap.keys();
+                let kcount = 0;
+                const status = {};
+
+                for (const k of keys) {
+                    ok = ok && saveShaderLibsToFile(k, status);
+
+                    msgs.push(k);
+                    kcount += 1;
+                }
+
+                if (!ok) {
+                    msgs = ["save failed"];
+                    MR.wrangler.menu.save.name = msgs[0] + " " + status.message;
                     const oldStyle = window.getComputedStyle(MR.wrangler.menu.save.el);
 
                     MR.wrangler.menu.save.el.style.color = "red";
@@ -179,56 +247,38 @@ const MREditor = (function() {
                         MR.wrangler.menu.save.name = MR.wrangler.menu.save.nameInit;
                         MR.wrangler.menu.save.el.style = oldStyle;
                     }, 1000);
-
-                    MR.server.subs.subscribeOneShot('open', saveCallback);
-                    // attempt to re-connect
-                    MR.initServer();
-
-
-
                     return;
                 }
-
-                msgs.push(k);
-                kcount += 1;
             }
 
-            if (ok && kcount > 0) {
+            const oldStyle = window.getComputedStyle(MR.wrangler.menu.save.el);
+            MR.wrangler.menu.save.el.style.color = "#66ff00";
+            MR.wrangler.menu.save.name = "saved";
+            const intervalID = setInterval(() => {
+                MR.wrangler.menu.save.name = MR.wrangler.menu.save.nameInit;
+                MR.wrangler.menu.save.el.style = oldStyle;
+                clearInterval(intervalID);
+            }, 350);
 
-                const oldStyle = window.getComputedStyle(MR.wrangler.menu.save.el);
+            // if (msgs.length > 0) {
+            //     const oldStyle = window.getComputedStyle(MR.wrangler.menu.save.el);
+            //     MR.wrangler.menu.save.el.style.color = "#66ff00";
+            //     MR.wrangler.menu.save.name = "saved " + msgs[0];
 
-                //MR.wrangler.menu.save.button.innerHTML = msg;
-                MR.wrangler.menu.save.el.style.color = "#66ff00";
-                MR.wrangler.menu.save.name = "saved " + msgs[i];
-                const intervalID = setInterval(() => {;
-                    MR.wrangler.menu.save.el.style = oldStyle;
+            //     let i = 1;
+            //     const intervalID = setInterval(() => {
+            //         if (i === msgs.length) {
+            //             MR.wrangler.menu.save.name = MR.wrangler.menu.save.nameInit;
+            //             MR.wrangler.menu.save.el.style = oldStyle;
+            //             clearInterval(intervalID);
+            //         } else {
+            //             MR.wrangler.menu.save.name = "saved " + msgs[i];
+            //         }
 
-                    i += 1;
+            //         i += 1;
 
-                    if (i === msgs.length) {
-                        MR.wrangler.menu.save.name = MR.wrangler.menu.save.nameInit;
-                        clearInterval(intervalID);
-                    } else {
-                        MR.wrangler.menu.save.name = "saved " + msgs[i];
-                    }
-
-                }, 500);
-            } else {
-                if (kcount == 0) {
-                    msgs = ["nothing to save"];
-                } else {
-                    msgs = ["save failed, fix errors first"];
-                }
-                MR.wrangler.menu.save.name = msgs[0];
-                const oldStyle = window.getComputedStyle(MR.wrangler.menu.save.el);
-
-                MR.wrangler.menu.save.el.style.color = "red";
-
-                setTimeout(() => {
-                    MR.wrangler.menu.save.name = MR.wrangler.menu.save.nameInit;
-                    MR.wrangler.menu.save.el.style = oldStyle;
-                }, 1000);
-            }
+            //     }, 350);
+            // }
         };
 
 
@@ -387,8 +437,36 @@ const MREditor = (function() {
 	_out.preprocessAndCreateShaderProgramFromStringsAndHandleErrors = preprocessAndCreateShaderProgramFromStringsAndHandleErrors;
 
 
-    function loadAndRegisterShaderLibrariesForLiveEditing(_gl, key, args, options) {
-        return _out.registerShaderLibrariesForLiveEditing(_gl, key, args, options);
+    async function loadAndRegisterShaderLibrariesForLiveEditing(_gl, key, args, options) {
+        return new Promise(async (resolve, reject) => {
+            const libArgs = [];
+            try {
+                let err = false;
+                Promise.all(args.map(async lib => {
+                    if (!lib.path) {
+                        return;
+                    }
+
+                    const libSrc = await assetutil.loadText(lib.path);
+                    if (!libSrc) {
+                        err = true;
+                        reject(null);
+                    }
+
+                    libArgs.push({key : lib.key, code : libSrc, path : lib.path, foldDefault : lib.foldDefault});
+
+                })).then(result => {
+                    if (err) {
+                        reject(null);
+                    } else {
+                        _out.registerShaderLibrariesForLiveEditing(_gl, key, libArgs, options);
+                        resolve(libArgs);
+                    }
+                });
+            } catch (err) {
+                reject(null);
+            }
+        }).catch((err) => { return null; });
     }
     _out.loadAndRegisterShaderLibrariesForLiveEditing = loadAndRegisterShaderLibrariesForLiveEditing;
 
@@ -403,14 +481,6 @@ const MREditor = (function() {
         }
         const libMap = this.libMap;
 
-
-
-        // let record = libMap.get(key);
-        // if (!record) {
-        // 	record = {args : args, originals : [], textAreas : [], assocShaders : new Map()};
-        // 	libMap.set(key, record);
-        // }
-
         if (!this.libGroupMap) {
         	this.libGroupMap = new Map();
         }
@@ -419,7 +489,9 @@ const MREditor = (function() {
         if (!record) {
         	record = {
         		args : args, originals : {}, textAreas : {}, 
-        		assocShaderCompileCallbacks : new Map()
+        		assocShaderCompileCallbacks : new Map(),
+                options : options,
+                paths : {},
         	};
         	libGroupMap.set(key, record);
         }
@@ -450,6 +522,7 @@ const MREditor = (function() {
                 SHADER_DIV.appendChild(HEADER_DIV); 
                 const hOuter = doc.createElement("H1");
                 const tOuter = doc.createTextNode(key + '\n');
+                hOuter.classList = "shader_section_success";
                 hOuter.appendChild(tOuter);
                 HEADER_DIV.appendChild(hOuter);
 
@@ -461,22 +534,19 @@ const MREditor = (function() {
 
           	SHADER_DIV.appendChild(SHADER_LIB_GROUP_DIV);
 
-          		let shaderInfoIsHidden = false;
-          		hOuter.style.color = 'white';
-                HEADER_DIV.style.cursor = 'pointer';
                 HEADER_DIV.onclick = () => {
                     const isHidden = !propHiddenState.get('main');
                     propHiddenState.set('main', isHidden);
                     switch (isHidden) {
                     case true: {
                         HTMLUtil.hideElement(SHADER_LIB_GROUP_DIV);
-                        hOuter.style.color = 'gray';
+                        hOuter.classList = "shader_section_success_inactive";
 
                         return;
                     }
                     case false: {
                         HTMLUtil.showElement(SHADER_LIB_GROUP_DIV);
-                        hOuter.style.color = 'white';
+                        hOuter.classList = "shader_section_success";
 
                         return;
                     }
@@ -484,16 +554,6 @@ const MREditor = (function() {
                         return;
                     }
                     }
-                }
-
-                HEADER_DIV.onmouseover = (event) => {
-                	const isHidden = propHiddenState.get("main");
-                    hOuter.style.color = (isHidden) ? 'white' : 'gray';
-                };
-                HEADER_DIV.onmouseleave = (event) => {
-
-                    hOuter.style.color = (propHiddenState.get('main') === true) ? 'gray' :
-                                                       'white';
                 }
 
         const propHiddenState = new Map();
@@ -507,8 +567,6 @@ const MREditor = (function() {
         	code = arg.code;
         	text = code.split('\n');
         	const prop = arg.key;
-
-        	propHiddenState.set(key + prop, false);
 
         	let DIV = doc.createElement("div");
         	DIV.setAttribute("id", key + " : " + prop + "_div");
@@ -531,16 +589,14 @@ const MREditor = (function() {
 
             let parentElement = thisTextArea.parentElement;
 
-            h.style.cursor = 'pointer';
-            h.onmouseover = (event) => {
-                const isHidden = propHiddenState.get(key + prop);
-
-                parentElement.style.color = (isHidden) ? 'white' : 'gray';
-            };
-            h.onmouseleave = (event) => {
-                parentElement.style.color = (propHiddenState.get(key + prop) === true) ? 'gray' :
-                                                   'white';
-            };
+            if (arg.foldDefault) {
+                propHiddenState.set(key + prop, true);
+                h.classList = "shader_section_success_inactive";
+                HTMLUtil.hideElement(thisTextArea);
+            } else {
+                propHiddenState.set(key + prop, false);
+                h.classList = "shader_section_success";
+            }
 
             h.onclick = () => {
                 const isHidden = !propHiddenState.get(key + prop);
@@ -549,13 +605,13 @@ const MREditor = (function() {
                 switch (isHidden) {
                 case true: {
                     HTMLUtil.hideElement(thisTextArea);
-                    parentElement.style.color = 'gray';
+                    h.classList = "shader_section_success_inactive";
 
                     return;
                 }
                 case false: {
                     HTMLUtil.showElement(thisTextArea);
-                    parentElement.style.color = 'white';
+                    h.classList = "shader_section_success";
                     return;
                 }
                 default: {
@@ -576,8 +632,6 @@ const MREditor = (function() {
             thisTextArea.style.color = TEXT_COLOR_NO_ERROR;
 
             const textarea = thisTextArea;
-
-            textarea.style.display = "block";
 
             thisTextArea.addEventListener('keyup', (event) => {
 
@@ -611,8 +665,6 @@ const MREditor = (function() {
                 console.warn("TODO: Only re-compile dependent shaders");
 
  
-
-
                 for (const v of this.shaderMap.values()) {
 			 		v.compile();
 				}
@@ -648,6 +700,55 @@ const MREditor = (function() {
 
             });
         }
+
+        { //// watch files
+            const toWatch = []
+            for (let i = 0; i < args.length; i += 1) {
+                const arg = args[i];
+                let saveTo = _out.defaultShaderOutputPath;
+
+                if (arg.path) {
+                    const argPath = arg.path;
+                    const parentPath = getCurrentPath(window.location.pathname);
+                    saveTo = getPath(arg.path);
+
+                    const origin = window.location.origin;
+                    const originIdx = saveTo.indexOf(origin);
+                    saveTo = saveTo.substring(originIdx + origin.length + 1);
+
+                    if (parentPath !== '/' && parentPath !== '\\') {
+                        const parentIdx = saveTo.indexOf(parentPath);
+                        saveTo = saveTo.substring(parentIdx + parentPath.length);
+                    }
+                    const prop = arg.key;
+                    record.paths[prop] = saveTo;
+
+                    toWatch.push(saveTo);
+                    MR.server.subsLocal.subscribe("Update_File", (filename, args) => {
+                        if (args.file !== filename) {
+                            console.log("file does not match");
+                            return;
+                        }
+                        console.log("updating file");
+
+                        const textE = textAreaElements[prop]
+                        if (textE) {
+                            record.args[prop] = args.content;
+                            textE.value = args.content;
+                            for (const v of this.shaderMap.values()) {
+                                v.compile();
+                            }
+                        }
+                    }, saveTo);
+                }
+
+            }
+       
+            console.log(record.paths);
+            if (toWatch.length > 0) {
+                watchFiles(toWatch);
+            }
+        } ////
 
 
     }
@@ -791,6 +892,76 @@ const MREditor = (function() {
     }
     _out.saveShaderToFile = saveShaderToFile;
 
+    function saveShaderLibsToFile(key, status = {}) {
+        console.log("Saving:", key);
+        if (!key) {
+            status.message = "ERR_NO_KEY_SPECIFIED";
+            console.error("No shader lib key specified");
+            return false;
+        }
+
+        const record = MREditor.libGroupMap.get(key);
+        if (!record) {
+            status.message = "ERR_NO_SHADER_RECORD";
+            console.error("Shader lib not on record");
+            return false;
+        }
+
+        if (MR.server.sock.readyState !== WebSocket.OPEN) {
+            status.message = "ERR_SERVER_UNAVAILABLE";
+            console.error("Server is unavailable");
+
+            return false;
+        }
+
+        let writeQueue = [];
+        function enqueueWrite(q, text, path, opts) {
+            q.push({path : path, text : text, opts : opts});
+        }
+        function submitWrite(q) {
+            MR.server.sock.send(JSON.stringify({"MR_Message" : "Write_Files", "files" : q}));
+        }
+
+        for (let i = 0; i < record.args.length; i += 1) {
+            let arg  = record.args[i];
+            let prop = arg.key;
+
+            const textE = record.textAreas[prop];
+            if (textE) {
+                let saveTo = _out.defaultShaderOutputPath;
+                let guardAgainstOverwrite = true;
+
+                if (arg.path) {
+                    guardAgainstOverwrite = false;
+
+                    const parentPath = getCurrentPath(window.location.pathname);
+                    
+                    saveTo = getPath(arg.path);
+
+                    const origin = window.location.origin;
+                    const originIdx = saveTo.indexOf(origin);
+                    saveTo = saveTo.substring(originIdx + origin.length + 1);
+
+                    if (parentPath !== '/' && parentPath !== '\\') {
+                        const parentIdx = saveTo.indexOf(parentPath);
+                        saveTo = saveTo.substring(parentIdx + parentPath.length);
+                    }
+                } else {
+                    saveTo += "/" + prop + ".glsl";
+                }
+
+                console.log("Destination:", saveTo);
+
+                enqueueWrite(writeQueue, textE.value, saveTo, {guardAgainstOverwrite : guardAgainstOverwrite});
+            }
+        }
+        if (writeQueue.length > 0) {
+            submitWrite(writeQueue);
+        }
+
+        return true;
+    }
+    _out.saveShaderLibsToFile = saveShaderLibsToFile;
 
     async function loadAndRegisterShaderForLiveEditing(_gl, key, callbacks, options) {
         if (!options || !options.paths || !options.paths.vertex || !options.paths.fragment) {
@@ -800,15 +971,16 @@ const MREditor = (function() {
             try {
                 const vsrc = await assetutil.loadText(options.paths.vertex);
                 const fsrc = await assetutil.loadText(options.paths.fragment);
-                console.log(vsrc, fsrc);
-                resolve(_out.registerShaderForLiveEditing(
+                
+                _out.registerShaderForLiveEditing(
                     _gl, key, 
                     {vertex : vsrc, fragment : fsrc}, 
                     callbacks, 
                     options
-                ));
+                );
+                resolve([vsrc, fsrc]);
             } catch (err) {
-                reject(err);
+                reject(null);
             }
             
 
@@ -942,7 +1114,10 @@ const MREditor = (function() {
 
     	                    const token = errSections[3].trim();
 
-                        	if (lineNumber) {
+                        	if (lineNumber > 0 && 
+                                splitTextArea.length >= lineNumber && 
+                                splitTextArea[lineNumber - 1]) {
+
     	                    	const colNumber = 1 + splitTextArea[lineNumber - 1].indexOf(
     	                    		token.substring(1, token.length - 1)
     	                    	);
@@ -1020,7 +1195,6 @@ const MREditor = (function() {
                     continue;
                 }
 
-                propHiddenState.set(key + prop, false);
                 propErrorState.set(key + prop, false);
 
                 let DIV = doc.createElement("div");
@@ -1051,9 +1225,17 @@ const MREditor = (function() {
                 thisTextArea.style.wrap = "off";
 
                 let parentElement = thisTextArea.parentElement;
-                h.classList = "shader_section_success";
 
-                console.log("setting header for", prop);
+                if (options.foldDefault && options.foldDefault[prop]) {
+                    propHiddenState.set(key + prop, true);
+                    h.classList = "shader_section_success_inactive";
+                    HTMLUtil.hideElement(thisTextArea);
+                    HTMLUtil.hideElement(hErr);
+                } else {
+                    propHiddenState.set(key + prop, false);
+                    h.classList = "shader_section_success";
+                }
+
                 record.headers[prop] = h;
 
 
@@ -1102,8 +1284,6 @@ const MREditor = (function() {
                 thisTextArea.style.color = TEXT_COLOR_NO_ERROR
 
                 const textarea = thisTextArea;
-
-                textarea.style.display = "block";
 
                 thisTextArea.addEventListener('keyup', (event) => {
 

@@ -1,14 +1,12 @@
-#version 300 es
-precision highp float;
 uniform float uTime;   // TIME, IN SECONDS
-// varying input replaced with "in"  
+
 in vec3 vPos;     // -1 < vPos.x < +1
 // -1 < vPos.y < +1
 //      vPos.z == 0
 
-out vec4 fragColor; // gl_FragColor replaced with an explicit "out" vec4 that you set in the shader
-//dwd
-void main() {    // YOU MUST DEFINE main()
+out vec4 fragColor; 
+
+void main() {
     
   // HERE YOU CAN WRITE ANY CODE TO
   // DEFINE A COLOR FOR THIS FRAGMENT

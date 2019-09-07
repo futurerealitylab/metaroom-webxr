@@ -27,7 +27,7 @@ const CanvasUtil = (function() {
 	  canvas.width = width;
 	  canvas.height = height;
 
-
+	  // TODO: figure out proper display size
 	  //resizeToDisplaySize(canvas);
 
 	  return {

@@ -57,10 +57,12 @@ case 1: {
 }
 default: {
   console.log("running version:", VERSION);
+
+  const RESOLUTION = document.getElementById("resolution").getAttribute("value").split(',');
   MR.wrangler.init({
     outputSurfaceName      : 'output-element',
-    outputWidth            : 1280,
-    outputHeight           : 720,
+    outputWidth            : parseInt(RESOLUTION[0]),
+    outputHeight           : parseInt(RESOLUTION[1]),
     glUseGlobalContext     : true,
     // frees gl resources upon world switch
     glDoResourceTracking   : true,
@@ -115,7 +117,10 @@ default: {
           const worldInfo = MR.worlds[MR.worldIdx];
           setPath(worldInfo.localPath);
 
-          MR.wrangler.beginSetup(worldInfo.world.default());
+          MR.wrangler.beginSetup(worldInfo.world.default()).catch(err => {
+              console.error(err.message);
+              MR.wrangler.doWorldTransition();
+          });
 
         } catch (err) {
           console.error(err);
@@ -128,8 +133,9 @@ default: {
           setPath(getCurrentPath(src));
 
           const world = await import(src);
-          MR.wrangler.beginSetup(world.default());
-
+          MR.wrangler.beginSetup(world.default()).catch(err => {
+              console.error(err.message);
+          });
         } catch (err) {
           console.error(err);
         }
@@ -166,7 +172,10 @@ default: {
 
             MR.wrangler.beginSetup(worldInfo.world.default()).catch((e) => {
                 console.error(e);
-                wrangler.doWorldTransition();
+                setTimeout(function(){ 
+                    console.log("Trying another world");
+                    wrangler.doWorldTransition();
+                }, 500);  
             });
 
             ok = true;
@@ -177,7 +186,7 @@ default: {
 
             setTimeout(function(){ 
               console.log("Trying another world");
-            }, 2000);
+            }, 500);
           }
         }
       });

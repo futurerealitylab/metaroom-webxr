@@ -1,43 +1,92 @@
 "use strict"
 
 async function setup(state) {
-    // load vertex and fragment shader sources
-    const vsrc = await assetutil.loadText("shaders/vertex.vert.glsl");
-    const fsrc = await assetutil.loadText("shaders/fragment.frag.glsl");
-    // load fragment source
+    const loadAndRegisterAtOnce = true;
 
-    MREditor.registerShaderForLiveEditing(
-        gl,
-        "mainShader", 
-        {
-            vertex   : vsrc,
-            fragment : fsrc
-        }, 
-        { 
-            onAfterCompilation : (program) => {
-                state.program = program;
+    if (loadAndRegisterAtOnce) {
 
-                gl.useProgram(program);
+        await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+            { 
+              key : "pnoise", path : "shaders/libs/pnoise.glsl"
+            },            
+        ]);
 
-                // Assign MVP matrices
-                state.uModelLoc        = gl.getUniformLocation(program, 'uModel');
-                state.uViewLoc         = gl.getUniformLocation(program, 'uView');
-                state.uProjLoc         = gl.getUniformLocation(program, 'uProj');
-                state.uTimeLoc         = gl.getUniformLocation(program, 'uTime');
-                state.uCompileCountLoc = gl.getUniformLocation(program, 'uCompileCount');
+        // load vertex and fragment shaders from the server, register with the editor
+        await MREditor.loadAndRegisterShaderForLiveEditing(
+            gl,
+            "mainShader",
+            { 
+                onAfterCompilation : (program) => {
+                    state.program = program;
 
-                const localCompileCount = state.persistent.localCompileCount || 1;
-                gl.uniform1i(state.uCompileCountLoc, localCompileCount);
-                state.persistent.localCompileCount = (localCompileCount + 1) % 14;
-            } 
-        },
-        {
-            saveTo : {
-                vertex   : "shaders/vertex.vert.glsl",
-                fragment : "shaders/fragment.frag.glsl"
+                    gl.useProgram(program);
+
+                    // Assign MVP matrices
+                    state.uModelLoc        = gl.getUniformLocation(program, 'uModel');
+                    state.uViewLoc         = gl.getUniformLocation(program, 'uView');
+                    state.uProjLoc         = gl.getUniformLocation(program, 'uProj');
+                    state.uTimeLoc         = gl.getUniformLocation(program, 'uTime');
+                    state.uCompileCountLoc = gl.getUniformLocation(program, 'uCompileCount');
+
+                    const localCompileCount = state.persistent.localCompileCount || 1;
+                    gl.uniform1i(state.uCompileCountLoc, localCompileCount);
+                    state.persistent.localCompileCount = (localCompileCount + 1) % 14;
+                } 
+            },
+            {
+                paths : {
+                    vertex   : "shaders/vertex.vert.glsl",
+                    fragment : "shaders/fragment.frag.glsl"
+                }
             }
-        }
-    );
+        );
+
+    } else {  
+
+        const pnoiseLib = await assetutil.loadText("shaders/libs/pnoise.glsl");
+        MREditor.registerShaderLibrariesForLiveEditing(gl, "libs", [
+            { 
+              key : "pnoise", code : pnoiseLib, 
+                path : "shaders/libs/pnoise.glsl"
+            },
+        ]);
+
+        //load vertex and fragment shader sources
+        const vsrc = await assetutil.loadText("shaders/vertex.vert.glsl");
+        const fsrc = await assetutil.loadText("shaders/fragment.frag.glsl");
+        MREditor.registerShaderForLiveEditing(
+            gl,
+            "mainShader", 
+            {
+                vertex   : vsrc,
+                fragment : fsrc
+            }, 
+            { 
+                onAfterCompilation : (program) => {
+                    state.program = program;
+
+                    gl.useProgram(program);
+
+                    // Assign MVP matrices
+                    state.uModelLoc        = gl.getUniformLocation(program, 'uModel');
+                    state.uViewLoc         = gl.getUniformLocation(program, 'uView');
+                    state.uProjLoc         = gl.getUniformLocation(program, 'uProj');
+                    state.uTimeLoc         = gl.getUniformLocation(program, 'uTime');
+                    state.uCompileCountLoc = gl.getUniformLocation(program, 'uCompileCount');
+
+                    const localCompileCount = state.persistent.localCompileCount || 1;
+                    gl.uniform1i(state.uCompileCountLoc, localCompileCount);
+                    state.persistent.localCompileCount = (localCompileCount + 1) % 14;
+                } 
+            },
+            {
+                paths : {
+                    vertex   : "shaders/vertex.vert.glsl",
+                    fragment : "shaders/fragment.frag.glsl"
+                }
+            }
+        );
+    }
 
     // Create a square as a triangle strip consisting of two triangles
     state.buffer = gl.createBuffer();

@@ -184,6 +184,8 @@ MR.server.echo = (message) => {
   }));
 };
 
+MR.getCanvas = () => MR.wrangler._canvas;
+
 
 // Register MR.worlds (in final, probably enough to register the first world before init time and defer the rest until load) 
 // TEMP hard-coded

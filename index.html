@@ -17,8 +17,7 @@
   <script src="system/client/js/lib/imageutil.js"></script>
   <!-- WebXR Button implements a button to toggle in and out of VR. -->
   <script src="system/client/js/lib/webxr-button.js"></script>
-  <!-- WebXR Canvas Wrangler simplifies WebXR setup. -->
-  <script src="system/client/js/core/webxr-wrangler.js"></script>
+  <!-- WebXR Canvas Wrangler back-end. -->
   <script src="system/client/js/core/webvr-wrangler.js"></script>
   <!--   System Initialization -->
   <script src="system/client/js/core/metaroom.js"></script>
@@ -68,15 +67,18 @@
 
   <!-- System Version Number -->
   <div id='version' value='1'></div>
-
+  <div id='resolution' value='720,720'></div>
   <!-- World Code Area -->
   <div class='worlds'>
-  <script type="module" src=worlds/examples/w0/w0_hello_world.js></script>
-  <script type="module" src=worlds/examples/w1/w1_hello_world_es3.js></script>
-  <script type="module" src=worlds/examples/w2/w2_connor_example.js></script>
+    
+    <script type="module" src=worlds/week1/week1.js></script>
+
+<!--   <script type="module" src=worlds/examples/w0/w0_hello_world.js></script> -->
+  <!-- <script type="module" src=worlds/examples/w1/w1_hello_world_es3.js></script> -->
+  <!-- <script type="module" src=worlds/examples/w2/w2_connor_example.js></script>
   <script type="module" src=worlds/examples/w3/w3_ktr_2017_example.js></script>
   <script type="module" src=worlds/w4/w4_textures.js></script>
-  <script type="module" src=worlds/worlds.js></script>
+  <script type="module" src=worlds/worlds.js></script> -->
   </div>
 
   <!-- Program Entry-point -->
