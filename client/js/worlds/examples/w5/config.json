@@ -1,9 +1,0 @@
-{
-	"fileorder" : [
-		"main.js",
-	],
-	"shaders" : {
-		"vert" : "shaders/main.vert.glsl",
-		"frag" : "shaders/main.frag.glsl"
-	}
-}
