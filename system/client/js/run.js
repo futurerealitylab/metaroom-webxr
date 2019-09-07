@@ -80,6 +80,8 @@ default: {
         //externalWindowGetter : function() { return MR.wrangler.externalWindow; }
       });
 
+      MREditor.detectFeatures();
+
       // MR.server.subs.subscribeOneShot("Echo", () => {
       //   let callbacks = MR.wrangler.menu.instaniateServerDependentMenuArray;
       //   let callbackCount = callbacks.length;
