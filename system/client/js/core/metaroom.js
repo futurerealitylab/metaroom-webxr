@@ -42,13 +42,13 @@ function Metaroom_WebXR() {
     window.wrangler = this.wrangler;
     window.MR = this;
 }
-Metaroom_WebXR.prototype = Object.create(
-    Metaroom.prototype,
-    {
-        type : {value : Metaroom.BACKEND_TYPE.WEBXR},
-        wrangler : {value : new XRCanvasWrangler()},
-    }
-);
+// Metaroom_WebXR.prototype = Object.create(
+//     Metaroom.prototype,
+//     {
+//         type : {value : Metaroom.BACKEND_TYPE.WEBXR},
+//         wrangler : {value : new XRCanvasWrangler()},
+//     }
+// );
 
 // Metaroom impl using WebVR backend.  See `js/webxr-wrangler.js` for
 // details. 
@@ -69,7 +69,8 @@ Metaroom.create = function(type = Metaroom.BACKEND_TYPE.WEBXR) {
     this.type = type;
     switch (type) {
     case Metaroom.BACKEND_TYPE.WEBXR: {
-        return new Metaroom_WebXR();
+        // return new Metaroom_WebXR();
+        console.error("WebXR not yet implemented");
         break;
     } case Metaroom.BACKEND_TYPE.WEBVR: {
         return new Metaroom_WebVR();
@@ -89,9 +90,9 @@ var urlParams = new URLSearchParams(window.location.search);
 
 // (1) useShim - when present and set to '1', applies the WebXR version
 //     shim.  This will become unnecessary once the WebXR becomes stable. 
-if (urlParams.has('useShim') && urlParams.get('useShim') == '1') {
-    const shim = new WebXRVersionShim();
-}
+// if (urlParams.has('useShim') && urlParams.get('useShim') == '1') {
+//     const shim = new WebXRVersionShim();
+// }
 // (2) mrBackend - specify the Metaroom backend type.  Valid options are
 //     '0' for WebXR and '1' for WebVR (default).
 if (urlParams.has('mrBackend')) {
