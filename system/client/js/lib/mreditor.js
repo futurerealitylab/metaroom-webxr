@@ -1036,7 +1036,8 @@ const MREditor = (function() {
                 hasError : false,
                 errorStates : {},
                 headers : {},
-                paths : {}
+                paths : {},
+                lineAdjustments : {},
             };
 
             MREditor.shaderMap.set(key, record);
@@ -1557,7 +1558,31 @@ const MREditor = (function() {
         record.compile = compile;
 
         if ((options && (options.doCompilationAfterFirstSetup !== false)) || !options) {
-            compile();             
+            compile();
+            if (record.hasError) {
+                console.warn("First-time compilation failed, using default error condition shader");
+                const defaultErrVertex = `#version 300 es
+                precision highp float;
+
+                void main() {
+                  // Multiply the position by the matrix.
+                  gl_Position = vec4(vec3(0.0), 1.0);
+                }
+                `;
+
+                const defaultErrorFragment = `#version 300 es
+                precision highp float;
+
+                out vec4 fragColor;
+
+                void main() {
+                    fragColor = vec4(1.0, 0.0, 0.0, 0.0);
+                }
+                `;
+
+                const shaderRecord = GFX.createShaderProgramFromStrings(defaultErrorVertex, defaultErrorFragment);
+                onAfterCompilation(shaderRecord.program, userData);
+            }
         }
 
         return compile;

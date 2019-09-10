@@ -13,20 +13,27 @@ async function setup(state) {
         throw new Error("Could not load shader library");
     }
 
-
     // load vertex and fragment shaders from the server, register with the editor
     let shaderSource = await MREditor.loadAndRegisterShaderForLiveEditing(
         gl,
         "mainShader",
         { 
-            // onNeedsCompilation : (args, libMap, userData) => {
-            //     MREditor.createShaderProgramFromStringsAndHandleErrors(
-            //         "#version 300 es\nprecision highp float;\n" + 
-            //             libSources[0].code + args.vertex,
-            //         "#version 300 es\nprecision highp float;\n" + 
-            //             libSources[0].code + args.fragment,
-            //     );
-            // },
+            onNeedsCompilation : (args, libMap, userData) => {
+                const vertHdrEndIdx = args.vertex.indexOf(';');
+                const fragHdrEndIdx = args.fragment.indexOf(';');
+
+                const vertHdr = args.vertex.substring(0, vertHdrEndIdx + 1);
+                const fragHdr = args.fragment.substring(0, fragHdrEndIdx + 1);
+
+
+                const vertFinal = vertHdr + '\n' + libSources[0].code + '\n' + args.vertex.substring(vertHdrEndIdx + 1);
+                const fragFinal = fragHdr + '\n' + libSources[0].code + '\n' + args.fragment.substring(fragHdrEndIdx + 1);
+
+                MREditor.createShaderProgramFromStringsAndHandleErrors(
+                    vertFinal,
+                    fragFinal
+                );
+            },
             onAfterCompilation : (program) => {
                 state.program = program;
 

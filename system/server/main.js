@@ -213,6 +213,8 @@ async function preprocess(prefix, dir) {
 }
 
 // collect files
+
+/*
 preprocess(
 	systemRoot,
 	clientDir
@@ -225,7 +227,7 @@ preprocess(
 		if (err) {
 			dberr(err);
 			return;
-		}
+		} */
 
 const options = {
   key: fs.readFileSync(path.join(__dirname, 'server.key')),
@@ -462,6 +464,8 @@ try {
 	console.error("couldn't load websocket", err);
 }
 
+/*
 });
 });
+*/
 
