@@ -1,5 +1,7 @@
-uniform float uTime;   // TIME, IN SECONDS
+#version 300 es
+precision highp float;
 
+uniform float uTime;   // TIME, IN SECONDS
 in vec3 vPos;     // -1 < vPos.x < +1
 // -1 < vPos.y < +1
 //      vPos.z == 0

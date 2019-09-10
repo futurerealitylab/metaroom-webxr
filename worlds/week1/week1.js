@@ -19,14 +19,14 @@ async function setup(state) {
         gl,
         "mainShader",
         { 
-            onNeedsCompilation : (args, libMap, userData) => {
-                MREditor.createShaderProgramFromStringsAndHandleErrors(
-                    "#version 300 es\nprecision highp float;\n" + 
-                        libSources[0].code + args.vertex,
-                    "#version 300 es\nprecision highp float;\n" + 
-                        libSources[0].code + args.fragment,
-                );
-            },
+            // onNeedsCompilation : (args, libMap, userData) => {
+            //     MREditor.createShaderProgramFromStringsAndHandleErrors(
+            //         "#version 300 es\nprecision highp float;\n" + 
+            //             libSources[0].code + args.vertex,
+            //         "#version 300 es\nprecision highp float;\n" + 
+            //             libSources[0].code + args.fragment,
+            //     );
+            // },
             onAfterCompilation : (program) => {
                 state.program = program;
 
