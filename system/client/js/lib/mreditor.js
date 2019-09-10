@@ -1137,10 +1137,10 @@ const MREditor = (function() {
                             }
     	                    const token = errSections[3].trim();
 
-                            console.log(splitTextArea);
-                            console.log(lineNumber - 1 - pnoiseLineCount);
-                            console.log("err number", lineNumber);
-                            console.log(splitTextArea[lineNumber - 1 - pnoiseLineCount]);
+                            // console.log(splitTextArea);
+                            // console.log(lineNumber - 1 - pnoiseLineCount);
+                            // console.log("err number", lineNumber);
+                            // console.log(splitTextArea[lineNumber - 1 - pnoiseLineCount]);
                         	if (lineNumber > 0 && 
                                 splitTextArea.length + pnoiseLineCount >= lineNumber && 
                                 splitTextArea[lineNumber - 1 - pnoiseLineCount]) {

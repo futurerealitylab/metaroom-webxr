@@ -32,10 +32,6 @@ async function setup(state) {
                 const vertFinal = vertHdr + libSources[0].code + args.vertex.substring(vertHdrEndIdx + 1);
                 const fragFinal = fragHdr + libSources[0].code + args.fragment.substring(fragHdrEndIdx + 1);
 
-                console.log(vertFinal);
-                console.log("WEE");
-                console.log(fragFinal);
-
                 MREditor.createShaderProgramFromStringsAndHandleErrors(
                     vertFinal,
                     fragFinal

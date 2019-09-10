@@ -352,26 +352,26 @@ try {
 
 		worldsSources = [];
 
-		preprocess(
-			systemRoot,
-			clientDir
-		).then((err, data) => {
+		// preprocess(
+		// 	systemRoot,
+		// 	clientDir
+		// ).then((err, data) => {
 
-			fs.writeFile(
-				path.join(systemRoot, clientDir, 'worlds.js'),
-				worldsSources.join('\n\n'), 
-				(err) => {
+		// 	fs.writeFile(
+		// 		path.join(systemRoot, clientDir, 'worlds.js'),
+		// 		worldsSources.join('\n\n'), 
+		// 		(err) => {
 
-					if (err) {
-						dberr(err);
-					}
+		// 			if (err) {
+		// 				dberr(err);
+		// 			}
 					
-					for (let [key, value] of websocketMap) {
-						ws.send(JSON.stringify({load : true}));
-					}
-				}
-			);
-		});
+		// 			for (let [key, value] of websocketMap) {
+		// 				ws.send(JSON.stringify({load : true}));
+		// 			}
+		// 		}
+		// 	);
+		// });
 
 		ws.on('message', (data) => {
 			const msg = JSON.parse(data);
