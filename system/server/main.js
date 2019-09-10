@@ -120,7 +120,7 @@ function generatePathInfo(rootPath) {
 
 const WORLD_FOOTER = 'export default main;\n';//`return main; }()));`;
 let worldsSources = [];
-console.log(args);
+
 const dblog = (args.debug) ? console.log   : () => {};
 const dberr = (args.debug) ? console.error : () => {};
 
