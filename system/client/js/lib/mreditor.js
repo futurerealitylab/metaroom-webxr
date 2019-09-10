@@ -1129,17 +1129,27 @@ const MREditor = (function() {
                         if (errSections.length < 3) {
                             errMsgNode.nodeValue = "ERROR : " + errSections[1];
                         } else {
-                        	const lineNumber = parseInt(errSections[2].trim());
+                        	let lineNumber = parseInt(errSections[2].trim());
 
+                            const pnoiseLineCount = 42;
+                            function calcLineNumber(num) {
+                                return 2 + num - 1 - 42;
+                            }
     	                    const token = errSections[3].trim();
 
+                            console.log(splitTextArea);
+                            console.log(lineNumber - 1 - pnoiseLineCount);
+                            console.log("err number", lineNumber);
+                            console.log(splitTextArea[lineNumber - 1 - pnoiseLineCount]);
                         	if (lineNumber > 0 && 
-                                splitTextArea.length >= lineNumber && 
-                                splitTextArea[lineNumber - 1]) {
+                                splitTextArea.length + pnoiseLineCount >= lineNumber && 
+                                splitTextArea[lineNumber - 1 - pnoiseLineCount]) {
 
-    	                    	const colNumber = 1 + splitTextArea[lineNumber - 1].indexOf(
+    	                    	const colNumber = /*1 + splitTextArea[lineNumber - 1].indexOf(
     	                    		token.substring(1, token.length - 1)
-    	                    	);
+    	                    	);*/ -1;
+
+                                lineNumber = calcLineNumber(lineNumber); // TEMP hard-coded
 
     	                    	if (colNumber > 0) {
     		                        errMsgNode.nodeValue = "ERROR : Line-" + lineNumber + ",Column-" + colNumber + " : " +

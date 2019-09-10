@@ -19,15 +19,22 @@ async function setup(state) {
         "mainShader",
         { 
             onNeedsCompilation : (args, libMap, userData) => {
-                const vertHdrEndIdx = args.vertex.indexOf(';');
-                const fragHdrEndIdx = args.fragment.indexOf(';');
+                let vertHdrEndIdx = args.vertex.indexOf(';');
+                let fragHdrEndIdx = args.fragment.indexOf(';');
+
+                vertHdrEndIdx = args.vertex.indexOf('\n', vertHdrEndIdx);
+                fragHdrEndIdx = args.fragment.indexOf('\n', fragHdrEndIdx);
 
                 const vertHdr = args.vertex.substring(0, vertHdrEndIdx + 1);
                 const fragHdr = args.fragment.substring(0, fragHdrEndIdx + 1);
 
 
-                const vertFinal = vertHdr + '\n' + libSources[0].code + '\n' + args.vertex.substring(vertHdrEndIdx + 1);
-                const fragFinal = fragHdr + '\n' + libSources[0].code + '\n' + args.fragment.substring(fragHdrEndIdx + 1);
+                const vertFinal = vertHdr + libSources[0].code + args.vertex.substring(vertHdrEndIdx + 1);
+                const fragFinal = fragHdr + libSources[0].code + args.fragment.substring(fragHdrEndIdx + 1);
+
+                console.log(vertFinal);
+                console.log("WEE");
+                console.log(fragFinal);
 
                 MREditor.createShaderProgramFromStringsAndHandleErrors(
                     vertFinal,
