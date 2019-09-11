@@ -115,6 +115,7 @@ const MREditor = (function() {
     }
 
 	function resetState() {
+        MREditor.nextLibID = 1;
         if (MREditor.shaderMap) {   
             let toUnwatch = [];
             for (let record of MREditor.shaderMap.values()) {
@@ -483,6 +484,8 @@ const MREditor = (function() {
     }
     _out.loadAndRegisterShaderLibrariesForLiveEditing = loadAndRegisterShaderLibrariesForLiveEditing;
 
+    _out.recompileDelayDefault = 300;
+
     function registerShaderLibrariesForLiveEditing(_gl, key, args, options) {
         if (!args) {
             console.warn("No libraries object specified. Libraries section will be empty.");
@@ -496,6 +499,7 @@ const MREditor = (function() {
 
         if (!this.libGroupMap) {
         	this.libGroupMap = new Map();
+            this.nextLibID = 1;
         }
         const libGroupMap = this.libGroupMap;
         let record = libGroupMap.get(key);
@@ -646,6 +650,9 @@ const MREditor = (function() {
 
             const textarea = thisTextArea;
 
+
+
+
             thisTextArea.addEventListener('keyup', (event) => {
 
             	event.preventDefault();
@@ -667,20 +674,26 @@ const MREditor = (function() {
                 }
                 }
 
-                for (let i = 0; i < record.args.length; i += 1) {
-                    const textE = textAreaElements[prop]; 
-                    if (textE) {
-                        record.args[i][prop] = textE.value;
-                        libMap.set(prop, textE.value);
-                    }
-                } 
+                if (record["timeout" + prop]) {
+                    clearTimeout(record["timeout" + prop]);
+                }
+                record["timeout" + prop] = setTimeout(() => {
+                    for (let i = 0; i < record.args.length; i += 1) {
+                        const textE = textAreaElements[prop]; 
+                        if (textE) {
+                            record.args[i][prop] = textE.value;
+                            libMap.set(prop, textE.value);
+                        }
+                    } 
 
-                console.warn("TODO: Only re-compile dependent shaders");
+                    console.warn("TODO: Only re-compile dependent shaders");
 
- 
-                for (const v of this.shaderMap.values()) {
-			 		v.compile();
-				}
+     
+                    for (const v of this.shaderMap.values()) {
+    			 		v.compile();
+    				}
+
+                }, MREditor.recompileDelayDefault);
             });
 
             if (MREditor.insertTextSupported) {
@@ -1124,45 +1137,8 @@ const MREditor = (function() {
                     	if (!errText) {
                     		continue;
                     	}
-                    	const errSections = errText.split(':');
 
-                        if (errSections.length < 3) {
-                            errMsgNode.nodeValue = "ERROR : " + errSections[1];
-                        } else {
-                        	let lineNumber = parseInt(errSections[2].trim());
-
-                            const pnoiseLineCount = 42;
-                            function calcLineNumber(num) {
-                                return 2 + num - 1 - 42;
-                            }
-    	                    const token = errSections[3].trim();
-
-                            // console.log(splitTextArea);
-                            // console.log(lineNumber - 1 - pnoiseLineCount);
-                            // console.log("err number", lineNumber);
-                            // console.log(splitTextArea[lineNumber - 1 - pnoiseLineCount]);
-                        	if (lineNumber > 0 && 
-                                splitTextArea.length + pnoiseLineCount >= lineNumber && 
-                                splitTextArea[lineNumber - 1 - pnoiseLineCount]) {
-
-    	                    	const colNumber = /*1 + splitTextArea[lineNumber - 1].indexOf(
-    	                    		token.substring(1, token.length - 1)
-    	                    	);*/ -1;
-
-                                lineNumber = calcLineNumber(lineNumber); // TEMP hard-coded
-
-    	                    	if (colNumber > 0) {
-    		                        errMsgNode.nodeValue = "ERROR : Line-" + lineNumber + ",Column-" + colNumber + " : " +
-    		                        	token + " : " + errSections[4];
-    	                        } else {
-    		                        errMsgNode.nodeValue = "ERROR : Line-" + lineNumber + " : " +
-    		                        	token + " : " + errSections[4];                        	
-    	                        }
-                        	} else {
-    	                        errMsgNode.nodeValue = "ERROR : Line-unavailable: " +
-    	                        	token + " : " + errSections[4];                      		
-                        	}
-                        }
+                        errMsgNode.nodeValue = errText;
 
                         globalErrorMsgState[prop] = errMsgNode.nodeValue + 
                             "\t in FILE : " + 
@@ -1335,29 +1311,34 @@ const MREditor = (function() {
                     }
                     }
 
-                    for (let prop in record.args) {
-                        if (Object.prototype.hasOwnProperty.call(record.args, prop)) {
-                            const textE = textAreaElements[prop]; 
-                            if (textE) {
-                                record.args[prop] = textE.value;
+                    if (record["timeout" + prop]) {
+                        clearTimeout(record["timeout" + prop]);
+                    }
+                    record["timeout" + prop] = setTimeout(() => {
+                        for (let prop in record.args) {
+                            if (Object.prototype.hasOwnProperty.call(record.args, prop)) {
+                                const textE = textAreaElements[prop]; 
+                                if (textE) {
+                                    record.args[prop] = textE.value;
+                                }
+
                             }
+                        } 
 
-                        }
-                    } 
+    			        if (this.libGroupMap) {
+    			        	for (const record of this.libGroupMap.values()) {
+    					        for (let i = 0; i < record.args.length; i += 1) {
+    					            const textE = record.textAreas[record.args[i].key]; 
+    					            if (textE) {
+    					                record.args[i][record.args[i].key] = textE.value;
+    					                libMap.set(record.args[i].key, textE.value);
+    					            }
+    					        }
+    				    	}
+    			    	}
 
-			        if (this.libGroupMap) {
-			        	for (const record of this.libGroupMap.values()) {
-					        for (let i = 0; i < record.args.length; i += 1) {
-					            const textE = record.textAreas[record.args[i].key]; 
-					            if (textE) {
-					                record.args[i][record.args[i].key] = textE.value;
-					                libMap.set(record.args[i].key, textE.value);
-					            }
-					        }
-				    	}
-			    	}
-
-                    compile();
+                        compile();
+                    }, record.hasError ? 100 :  MREditor.recompileDelayDefault);
                 })
 
                 if (MREditor.insertTextSupported) {
@@ -1457,7 +1438,13 @@ const MREditor = (function() {
             let program   = null;
             let errRecord = null;
             if (onNeedsCompilation) {
-                status = onNeedsCompilation(record.args, libMap);
+                try {
+                    status = onNeedsCompilation(record.args, libMap);
+                } catch (err) {
+                    console.error(err);
+                    return;
+                }
+
                 if (!status) {
                     if (GFX.tempCompiledShaderDirty) {
                         GFX.tempCompiledShaderDirty = false;
@@ -1504,7 +1491,12 @@ const MREditor = (function() {
                 if (!onAfterCompilation) {
                     console.warn("onAfterCompilation unspecified");
                 } else {
-                    onAfterCompilation(program, userData);
+                    try {
+                        onAfterCompilation(program, userData);
+                    } catch (err) {
+                        console.error(err);
+                        return;
+                    }
                 }
 
                 hOuter.classList = propHiddenState.get("main") ? 

@@ -1,8 +1,6 @@
 "use strict"
 
 async function setup(state) {
-
-
     let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
         { 
           key : "pnoise", path : "shaders/noise.glsl", foldDefault : true
@@ -13,29 +11,39 @@ async function setup(state) {
         throw new Error("Could not load shader library");
     }
 
+    function concatShaderCode(a, b, bidx, bline = 1) {
+        return a + '\n' + '#line ' + bline + ' ' + bidx + '\n' + b + '\n';
+    }
+
+
     // load vertex and fragment shaders from the server, register with the editor
     let shaderSource = await MREditor.loadAndRegisterShaderForLiveEditing(
         gl,
         "mainShader",
         { 
             onNeedsCompilation : (args, libMap, userData) => {
-                let vertHdrEndIdx = args.vertex.indexOf(';');
-                let fragHdrEndIdx = args.fragment.indexOf(';');
+                const stages = [args.vertex, args.fragment];
+                const output = [null, null];
 
-                vertHdrEndIdx = args.vertex.indexOf('\n', vertHdrEndIdx);
-                fragHdrEndIdx = args.fragment.indexOf('\n', fragHdrEndIdx);
+                let libCode = MREditor.libMap.get("pnoise");
 
-                const vertHdr = args.vertex.substring(0, vertHdrEndIdx + 1);
-                const fragHdr = args.fragment.substring(0, fragHdrEndIdx + 1);
-
-
-                const vertFinal = vertHdr + libSources[0].code + args.vertex.substring(vertHdrEndIdx + 1);
-                const fragFinal = fragHdr + libSources[0].code + args.fragment.substring(fragHdrEndIdx + 1);
+                for (let i = 0; i < 2; i += 1) {
+                    const stageCode = stages[i];
+                    const hdrEndIdx = stageCode.indexOf(';');
+                    
+                    const hdr = stageCode.substring(0, hdrEndIdx + 1);
+                    output[i] = concatShaderCode(hdr, libCode, 1);
+                    output[i] = concatShaderCode(output[i], stageCode.substring(hdrEndIdx + 1), 0, hdr.split('\n').length);
+                }
 
                 MREditor.createShaderProgramFromStringsAndHandleErrors(
-                    vertFinal,
-                    fragFinal
+                    output[0],
+                    output[1]
                 );
+                // MREditor.createShaderProgramFromStringsAndHandleErrors(
+                //     output[0],
+                //     output[1]
+                // );
             },
             onAfterCompilation : (program) => {
                 state.program = program;

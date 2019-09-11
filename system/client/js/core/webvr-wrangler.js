@@ -140,10 +140,6 @@ window.VRCanvasWrangler = (function() {
         }
     }
 
-    beginSetup(options) {
-      return this.configure(options);
-    }
-
     async configure(options) {
 
       this._clearConfig();
