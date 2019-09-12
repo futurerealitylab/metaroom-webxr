@@ -4,7 +4,7 @@ async function setup(state) {
     let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
         { 
           key : "pnoise", path : "shaders/noise.glsl", foldDefault : true
-        },            
+        },          
     ]);
 
     if (!libSources) {
