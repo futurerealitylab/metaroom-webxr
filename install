@@ -1,5 +1,0 @@
-#!/bin/bash
-
-cd system/server
-npm install
-cd ../..

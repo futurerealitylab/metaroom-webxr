@@ -164,9 +164,11 @@ const GFX = (function() {
     const DIRECTIVE_SHARED   = 'shared';
     const DIRECTIVE_SHADER_STAGES = [DIRECTIVE_VERTEX, DIRECTIVE_FRAGMENT];
 
-    function ShaderLibIncludeRecord(idxBegin, idxEndExclusive, libRecord) {
+    function ShaderLibIncludeRecord(idxBegin, idxEndExclusive, libSource, libName, libRecord) {
       this.idxBegin        = idxBegin;
       this.idxEndExclusive = idxEndExclusive;
+      this.libSource       = libSource;
+      this.libName         = libName;
       this.libRecord       = libRecord;
     }
     function ShaderLibIncluderState(stream) {
@@ -225,7 +227,10 @@ const GFX = (function() {
             const include = includes[i];
 
             shaderSections.push(shaderBase.substring(shaderBaseCursor, include.idxBegin));
-            shaderSections.push(include.libRecord);
+            shaderSections.push("\n#line 1 0\n");
+            shaderSections.push(include.libSource);
+            const line = shaderBase.substring(0, include.idxBegin).split('\n').length;
+            shaderSections.push("\n#line " + line + " 0\n");
             shaderBaseCursor = include.idxEndExclusive;
           }
           if (shaderBaseCursor < shaderBase.length) {
@@ -396,7 +401,7 @@ const GFX = (function() {
                   const libRecord = libMap.get(libName);
                   if (libRecord) {
                     if (alreadyIncludedSet.has(libName)) {
-                        pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, ''));
+                        pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, '', null, null));
                     } else {
                         pr("including lib=<" + libName + ">");
                         
@@ -407,7 +412,7 @@ const GFX = (function() {
                             return output;
                         }
 
-                        pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, subInclude.shaderSource))
+                        pstate.includes.push(new ShaderLibIncludeRecord(directivePos, includeEndPos + 1, subInclude.shaderSource, libName, libRecord))
                     }
 
                   } else {

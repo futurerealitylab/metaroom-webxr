@@ -23,27 +23,28 @@ async function setup(state) {
         { 
             onNeedsCompilation : (args, libMap, userData) => {
                 const stages = [args.vertex, args.fragment];
-                const output = [null, null];
+                const output = [args.vertex, args.fragment];
 
-                let libCode = MREditor.libMap.get("pnoise");
+                // let libCode = MREditor.libMap.get("pnoise");
 
-                for (let i = 0; i < 2; i += 1) {
-                    const stageCode = stages[i];
-                    const hdrEndIdx = stageCode.indexOf(';');
+                // for (let i = 0; i < 2; i += 1) {
+                //     const stageCode = stages[i];
+                //     const hdrEndIdx = stageCode.indexOf(';');
                     
-                    const hdr = stageCode.substring(0, hdrEndIdx + 1);
-                    output[i] = concatShaderCode(hdr, libCode, 1);
-                    output[i] = concatShaderCode(
-                        output[i], 
-                        stageCode.substring(hdrEndIdx + 1), 
-                        0, 
-                        hdr.split('\n').length
-                    );
-                }
+                //     const hdr = stageCode.substring(0, hdrEndIdx + 1);
+                //     output[i] = concatShaderCode(hdr, libCode, 1);
+                //     output[i] = concatShaderCode(
+                //         output[i], 
+                //         stageCode.substring(hdrEndIdx + 1), 
+                //         0, 
+                //         hdr.split('\n').length
+                //     );
+                // }
 
-                MREditor.createShaderProgramFromStringsAndHandleErrors(
+                MREditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
                     output[0],
-                    output[1]
+                    output[1],
+                    libMap
                 );
             },
             onAfterCompilation : (program) => {

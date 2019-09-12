@@ -443,8 +443,8 @@ const MREditor = (function() {
         }
 
 		GFX.tempCompiledShader = GFX.createShaderProgramFromStrings(
-			vertex,
-			fragment
+			vertRecord.shaderSource,
+			fragRecord.shaderSource
 		);
 		GFX.tempCompiledShaderDirty = true;
 	}
