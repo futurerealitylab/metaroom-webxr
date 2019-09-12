@@ -33,17 +33,18 @@ async function setup(state) {
                     
                     const hdr = stageCode.substring(0, hdrEndIdx + 1);
                     output[i] = concatShaderCode(hdr, libCode, 1);
-                    output[i] = concatShaderCode(output[i], stageCode.substring(hdrEndIdx + 1), 0, hdr.split('\n').length);
+                    output[i] = concatShaderCode(
+                        output[i], 
+                        stageCode.substring(hdrEndIdx + 1), 
+                        0, 
+                        hdr.split('\n').length
+                    );
                 }
 
                 MREditor.createShaderProgramFromStringsAndHandleErrors(
                     output[0],
                     output[1]
                 );
-                // MREditor.createShaderProgramFromStringsAndHandleErrors(
-                //     output[0],
-                //     output[1]
-                // );
             },
             onAfterCompilation : (program) => {
                 state.program = program;
@@ -85,7 +86,7 @@ async function setup(state) {
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
 }
 
-// NOTE(KTR): t is the elapsed time since system start in ms, but
+// NOTE: t is the elapsed time since system start in ms, but
 // each world could have different rules about time elapsed and whether the time
 // is reset after returning to the world
 function onStartFrame(t, state) {

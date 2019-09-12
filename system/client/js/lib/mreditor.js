@@ -484,7 +484,7 @@ const MREditor = (function() {
     }
     _out.loadAndRegisterShaderLibrariesForLiveEditing = loadAndRegisterShaderLibrariesForLiveEditing;
 
-    _out.recompileDelayDefault = 300;
+    _out.recompileDelayDefault = 50;
 
     function registerShaderLibrariesForLiveEditing(_gl, key, args, options) {
         if (!args) {

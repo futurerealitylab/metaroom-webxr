@@ -1,5 +1,17 @@
 @charset 'utf-8';
 
+/* Elements */
+@import 'menu.css';
+/*@import 'panel.css';
+@import 'editor.css';
+@import 'shader.css';
+
+@import 'pickers.css';
+@import 'modals.css';
+@import 'errors.css';
+@import 'debugger.css';*/
+@import 'icons.css';
+
 /* VARIABLES */
 
 :root {
@@ -28,13 +40,13 @@
 }
 
 /* Native Codemirror */
-@import 'codemirror/lib/codemirror.css';
+/*@import 'codemirror/lib/codemirror.css';
 @import 'codemirror/addon/dialog/dialog.css';
 @import 'codemirror/addon/fold/foldgutter.css';
-@import 'codemirror/addon/hint/show-hint.css';
+@import 'codemirror/addon/hint/show-hint.css';*/
 
 /* Themes */
-@import 'codemirror/theme/ambiance.css';
+/*@import 'codemirror/theme/ambiance.css';
 @import 'codemirror/theme/base16-dark.css';
 @import 'codemirror/theme/base16-light.css';
 @import 'codemirror/theme/dracula.css';
@@ -55,16 +67,4 @@
 @import 'codemirror/theme/tomorrow-night-bright.css';
 @import 'codemirror/theme/tomorrow-night-eighties.css';
 @import 'codemirror/theme/ttcn.css';
-@import 'codemirror/theme/yeti.css';
-
-/* Elements */
-@import '_menu';
-@import '_panel';
-@import '_editor';
-@import '_shader';
-
-@import '_pickers';
-@import '_modals';
-@import '_errors';
-@import '_debugger';
-@import '_icons';
+@import 'codemirror/theme/yeti.css';*/

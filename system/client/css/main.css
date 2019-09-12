@@ -3,11 +3,10 @@ textarea {
   border-radius: 0;
   font:20px courier;
   min-height: 0%;
-  outline-width:0
+  outline-width:0;
   
    /* min-width: 100%; 
    /* max-height: 50vh; */
-   resize: vertical; 
 
    border-right: none;
    border-left: 1px solid #FFF5;

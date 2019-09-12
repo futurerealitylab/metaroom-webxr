@@ -46,9 +46,9 @@ function treq(data) {
 }
 window.treq = treq;
 
-db.initLoggerSystem({
-  logger : new db.LoggerDefault()
-});
+// db.initLoggerSystem({
+//   logger : new db.LoggerDefault()
+// });
 
 const VERSION = document.getElementById("version").getAttribute("value");
 switch (VERSION) {
