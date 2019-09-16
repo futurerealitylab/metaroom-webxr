@@ -426,7 +426,7 @@ const MREditor = (function() {
 	}
 	_out.createShaderProgramFromStringsAndHandleErrors = createShaderProgramFromStringsAndHandleErrors;
 
-	function preprocessAndCreateShaderProgramFromStringsAndHandleErrors(vertex, fragment, libMap) {
+	function preprocessAndCreateShaderProgramFromStringsAndHandleErrors(vertex, fragment, libMap, autoIncludes) {
 		
         const vertRecord = GFX.preprocessShader(vertex,   libMap);
         const fragRecord = GFX.preprocessShader(fragment, libMap);
@@ -462,7 +462,7 @@ const MREditor = (function() {
                     }
 
                     const libSrc = await assetutil.loadText(lib.path);
-                    if (!libSrc) {
+                    if (libSrc === null) {
                         err = true;
                         reject(null);
                     }
@@ -657,6 +657,10 @@ const MREditor = (function() {
 
             	event.preventDefault();
 
+                if (record["timeout" + prop]) {
+                    clearTimeout(record["timeout" + prop]);
+                }
+
                 switch (event.key) {
                 case "`": {
                 }
@@ -672,10 +676,6 @@ const MREditor = (function() {
                 default: {
                     break;
                 }
-                }
-
-                if (record["timeout" + prop]) {
-                    clearTimeout(record["timeout" + prop]);
                 }
                 record["timeout" + prop] = setTimeout(() => {
                     for (let i = 0; i < record.args.length; i += 1) {
@@ -1294,6 +1294,10 @@ const MREditor = (function() {
 
                 	event.preventDefault();
 
+                    if (record["timeout" + prop]) {
+                        clearTimeout(record["timeout" + prop]);
+                    }
+
                     switch (event.key) {
                     case "`": {
                     }
@@ -1311,9 +1315,6 @@ const MREditor = (function() {
                     }
                     }
 
-                    if (record["timeout" + prop]) {
-                        clearTimeout(record["timeout" + prop]);
-                    }
                     record["timeout" + prop] = setTimeout(() => {
                         for (let prop in record.args) {
                             if (Object.prototype.hasOwnProperty.call(record.args, prop)) {

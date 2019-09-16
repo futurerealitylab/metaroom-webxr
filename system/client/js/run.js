@@ -120,7 +120,7 @@ default: {
           setPath(worldInfo.localPath);
 
           MR.wrangler.beginSetup(worldInfo.world.default()).catch(err => {
-              console.error(err.message);
+              console.error(err);
               MR.wrangler.doWorldTransition();
           });
 
