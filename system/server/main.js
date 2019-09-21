@@ -120,7 +120,7 @@ function generatePathInfo(rootPath) {
 
 const WORLD_FOOTER = 'export default main;\n';//`return main; }()));`;
 let worldsSources = [];
-console.log(args);
+
 const dblog = (args.debug) ? console.log   : () => {};
 const dberr = (args.debug) ? console.error : () => {};
 
@@ -213,6 +213,8 @@ async function preprocess(prefix, dir) {
 }
 
 // collect files
+
+/*
 preprocess(
 	systemRoot,
 	clientDir
@@ -225,7 +227,7 @@ preprocess(
 		if (err) {
 			dberr(err);
 			return;
-		}
+		} */
 
 const options = {
   key: fs.readFileSync(path.join(__dirname, 'server.key')),
@@ -350,26 +352,26 @@ try {
 
 		worldsSources = [];
 
-		preprocess(
-			systemRoot,
-			clientDir
-		).then((err, data) => {
+		// preprocess(
+		// 	systemRoot,
+		// 	clientDir
+		// ).then((err, data) => {
 
-			fs.writeFile(
-				path.join(systemRoot, clientDir, 'worlds.js'),
-				worldsSources.join('\n\n'), 
-				(err) => {
+		// 	fs.writeFile(
+		// 		path.join(systemRoot, clientDir, 'worlds.js'),
+		// 		worldsSources.join('\n\n'), 
+		// 		(err) => {
 
-					if (err) {
-						dberr(err);
-					}
+		// 			if (err) {
+		// 				dberr(err);
+		// 			}
 					
-					for (let [key, value] of websocketMap) {
-						ws.send(JSON.stringify({load : true}));
-					}
-				}
-			);
-		});
+		// 			for (let [key, value] of websocketMap) {
+		// 				ws.send(JSON.stringify({load : true}));
+		// 			}
+		// 		}
+		// 	);
+		// });
 
 		ws.on('message', (data) => {
 			const msg = JSON.parse(data);
@@ -462,6 +464,8 @@ try {
 	console.error("couldn't load websocket", err);
 }
 
+/*
 });
 });
+*/
 

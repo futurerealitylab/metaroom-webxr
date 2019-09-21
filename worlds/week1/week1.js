@@ -1,16 +1,18 @@
 "use strict"
 
 async function setup(state) {
-
-
     let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
         { 
           key : "pnoise", path : "shaders/noise.glsl", foldDefault : true
-        },            
+        },          
     ]);
 
     if (!libSources) {
         throw new Error("Could not load shader library");
+    }
+
+    function concatShaderCode(a, b, bidx, bline = 1) {
+        return a + '\n' + '#line ' + bline + ' ' + bidx + '\n' + b + '\n';
     }
 
 
@@ -20,11 +22,29 @@ async function setup(state) {
         "mainShader",
         { 
             onNeedsCompilation : (args, libMap, userData) => {
-                MREditor.createShaderProgramFromStringsAndHandleErrors(
-                    "#version 300 es\nprecision highp float;\n" + 
-                        libSources[0].code + args.vertex,
-                    "#version 300 es\nprecision highp float;\n" + 
-                        libSources[0].code + args.fragment,
+                const stages = [args.vertex, args.fragment];
+                const output = [args.vertex, args.fragment];
+
+                // let libCode = MREditor.libMap.get("pnoise");
+
+                // for (let i = 0; i < 2; i += 1) {
+                //     const stageCode = stages[i];
+                //     const hdrEndIdx = stageCode.indexOf(';');
+                    
+                //     const hdr = stageCode.substring(0, hdrEndIdx + 1);
+                //     output[i] = concatShaderCode(hdr, libCode, 1);
+                //     output[i] = concatShaderCode(
+                //         output[i], 
+                //         stageCode.substring(hdrEndIdx + 1), 
+                //         0, 
+                //         hdr.split('\n').length
+                //     );
+                // }
+
+                MREditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+                    output[0],
+                    output[1],
+                    libMap
                 );
             },
             onAfterCompilation : (program) => {
@@ -67,7 +87,7 @@ async function setup(state) {
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
 }
 
-// NOTE(KTR): t is the elapsed time since system start in ms, but
+// NOTE: t is the elapsed time since system start in ms, but
 // each world could have different rules about time elapsed and whether the time
 // is reset after returning to the world
 function onStartFrame(t, state) {

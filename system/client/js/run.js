@@ -46,9 +46,9 @@ function treq(data) {
 }
 window.treq = treq;
 
-db.initLoggerSystem({
-  logger : new db.LoggerDefault()
-});
+// db.initLoggerSystem({
+//   logger : new db.LoggerDefault()
+// });
 
 const VERSION = document.getElementById("version").getAttribute("value");
 switch (VERSION) {
@@ -67,7 +67,7 @@ default: {
     // frees gl resources upon world switch
     glDoResourceTracking   : true,
     glEnableEditorHook     : true,
-    enableMultipleWorlds   : true,
+    enableMultipleWorlds   : false,
     enableEntryByButton    : true,
     enableBellsAndWhistles : false,
     // main() is the system's entry point
@@ -120,7 +120,7 @@ default: {
           setPath(worldInfo.localPath);
 
           MR.wrangler.beginSetup(worldInfo.world.default()).catch(err => {
-              console.error(err.message);
+              console.error(err);
               MR.wrangler.doWorldTransition();
           });
 
@@ -135,7 +135,7 @@ default: {
           setPath(getCurrentPath(src));
 
           const world = await import(src);
-          MR.wrangler.beginSetup(world.default()).catch(err => {
+          MR.wrangler.configure(world.default()).catch(err => {
               console.error(err.message);
           });
         } catch (err) {

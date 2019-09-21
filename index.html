@@ -3,7 +3,6 @@
   <link   rel="icon" href="favicon.ico" type="image/x-icon">
   <link   rel="stylesheet" href="system/client/css/main.css">
   <link   rel="stylesheet" href="system/client/css/glslEditor/glslEditor.css">
-  <link   rel="stylesheet" href="system/client/css/glslEditor/_menu.css">
 
   <script src="system/client/js/lib/pathutil.js"></script>
   <script src="system/client/js/lib/canvasutil.js"></script>
@@ -53,7 +52,7 @@
 
 </head>
 <body style="background-color: black; color: white; text-emphasis-color: white;">
-<div id=output-container style="border: 1px solid #FFF5; position: fixed; text-align: center vertical-align: text-top; z-index: 10">
+<div id=output-container style="border: none solid #FFF5; position: fixed; text-align: center vertical-align: text-top; z-index: 10">
   <div id=output-element></div>
 </div>
 
@@ -67,11 +66,12 @@
 
   <!-- System Version Number -->
   <div id='version' value='1'></div>
-  <div id='resolution' value='720,720'></div>
+  <div id='resolution' value='640,640'></div>
   <!-- World Code Area -->
   <div class='worlds'>
     
-    <script type="module" src=worlds/week1/week1.js></script>
+    <!-- <script type="module" src=worlds/week1/week1.js></script> -->
+    <script type="module" src=worlds/week2/week2.js></script>
 
 <!--   <script type="module" src=worlds/examples/w0/w0_hello_world.js></script> -->
   <!-- <script type="module" src=worlds/examples/w1/w1_hello_world_es3.js></script> -->
