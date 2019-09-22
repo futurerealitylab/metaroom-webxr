@@ -1,15 +1,27 @@
 #version 300 es
 precision highp float;
 
-in        vec3 aPos;
-out       vec3 vPos;
-//uniform   mat4 uModel;
-//uniform   mat4 uView;
-//uniform   mat4 uProj;
+in      vec3 aPos;
+out     vec3 vPos;
 
-uniform   float uTime;
+// matrices
+uniform mat4 uModel;
+uniform mat4 uView;
+uniform mat4 uProj;
+
+// window resolution
+uniform vec2 uResolution;
+
+// cursor
+uniform vec3 uCursor;
+uniform vec3 uCursorInterp;
+uniform vec3 uCursorDir;
+
+// time in seconds
+uniform float uTime;
+
 
 void main() {
-    gl_Position = /*uProj * uView * uModel * */ vec4(aPos * 1.0, 1.);
+    gl_Position = /*uProj * uView * uModel * */ vec4(aPos, 1.0);
     vPos = aPos;
 }

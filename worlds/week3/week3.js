@@ -18,6 +18,8 @@ let timePrevMS  =  0;
 let timeDelta   =  0;
 let timeDeltaMS =  0;
 
+let cursorState = null;
+
 // attribute locations
 let aPosLoc;
 // uniform locations
@@ -29,6 +31,14 @@ let uProjLoc;
 let uTimeLoc;
 // cursor
 let uCursorLoc;
+// cursor clipspace
+let uCursorInterpLoc;
+// cursor direction
+let uCursorDirLoc;
+// cursor velocity
+let uCursorVelLoc;
+// resolution
+let uResolutionLoc;
 
 // shader program 
 // (only one for now, but you can switch between many
@@ -424,7 +434,16 @@ async function setup(state) {
                 uViewLoc         = gl.getUniformLocation(program, 'uView');
                 uProjLoc         = gl.getUniformLocation(program, 'uProj');
                 uTimeLoc         = gl.getUniformLocation(program, 'uTime');
+                
                 uCursorLoc       = gl.getUniformLocation(program, 'uCursor');
+                uCursorInterpLoc = gl.getUniformLocation(program, 'uCursorInterp');
+                uCursorDirLoc    = gl.getUniformLocation(program, 'uCursorDir');
+                uCursorVelLoc    = gl.getUniformLocation(program, 'uCursorVel');
+
+                uResolutionLoc   = gl.getUniformLocation(program, 'uResolution');
+
+                const cvs = MR.getCanvas();
+                gl.uniform2fv(uResolutionLoc, new Float32Array([cvs.clientWidth, cvs.clientHeight]));
 
                 // reupload the static model matrix
                 gl.uniformMatrix4fv(
@@ -466,6 +485,93 @@ async function setup(state) {
             initTriangleStrip();
         }
     }
+
+    // set mouse handler
+    {
+        const buf = new Float32Array([0, 0, 0]);
+        cursorState = ScreenCursor.trackCursor(MR.getCanvas(), {
+            up   : (cursorInfo) => {
+                const pos = cursorInfo.position();
+
+                gl.uniform3fv(uCursorLoc, pos);
+                const cvs = MR.getCanvas();
+                const w = cvs.clientWidth;
+                const h = cvs.clientHeight;
+
+                // clip space
+                // clip space
+                pos[0] = (2.0 * (pos[0] / w)) - 1.0;
+                pos[1] = -1.0 * ((2.0 * (pos[1] / h)) - 1.0);
+
+                gl.uniform3fv(uCursorInterpLoc, pos);
+
+                gl.uniform3fv(uCursorDirLoc, cursorState.direction());
+
+                const velocity = cursorInfo.toClipPosition(cursorInfo.positionChange(), w, h);
+                velocity[0] *= timeDelta;
+                velocity[1] *= timeDelta;
+                velocity[2] *= timeDelta;
+
+                gl.uniform3fv(uCursorVelLoc, velocity);
+            },
+            down : (cursorInfo) => { 
+                const pos = cursorInfo.position();
+
+                gl.uniform3fv(uCursorLoc, pos);
+                const cvs = MR.getCanvas();
+                const w = cvs.clientWidth;
+                const h = cvs.clientHeight;
+
+                // clip space
+                pos[0] = (2.0 * (pos[0] / w)) - 1.0;
+                pos[1] = -1.0 * ((2.0 * (pos[1] / h)) - 1.0);
+
+                gl.uniform3fv(uCursorInterpLoc, pos);
+
+                gl.uniform3fv(uCursorDirLoc, cursorState.direction());
+
+                const velocity = cursorInfo.toClipPosition(cursorInfo.positionChange(), w, h);
+                velocity[0] *= timeDelta;
+                velocity[1] *= timeDelta;
+                velocity[2] *= timeDelta;
+
+                gl.uniform3fv(uCursorVelLoc, velocity);
+            },
+            move : (cursorInfo) => {
+                const pos = cursorInfo.position();
+
+                gl.uniform3fv(uCursorLoc, pos);
+                const cvs = MR.getCanvas();
+                const w = cvs.clientWidth;
+                const h = cvs.clientHeight;
+
+                // clip space
+                pos[0] = (2.0 * (pos[0] / w)) - 1.0;
+                pos[1] = -1.0 * ((2.0 * (pos[1] / h)) - 1.0);
+
+                gl.uniform3fv(uCursorInterpLoc, pos);
+
+                gl.uniform3fv(uCursorDirLoc, cursorState.direction());
+                
+
+                const velocity = cursorInfo.toClipPosition(cursorInfo.positionChange(), w, h);
+                velocity[0] *= timeDelta;
+                velocity[1] *= timeDelta;
+                velocity[2] *= timeDelta;
+
+                gl.uniform3fv(uCursorVelLoc, velocity);
+
+
+            },
+        });
+
+        // make the mouse cursor invisible while on the canvas
+        cursorState.hide();
+    }
+
+    CanvasUtil.setOnResizeEventHandler((cvs, w, h) => {
+        gl.uniform2fv(uResolutionLoc, new Float32Array([w, h]));
+    });
 }
 
 

@@ -136,7 +136,7 @@ default: {
 
           const world = await import(src);
           MR.wrangler.configure(world.default()).catch(err => {
-              console.error(err.message);
+              console.error(err);
           });
         } catch (err) {
           console.error(err);
@@ -155,10 +155,10 @@ default: {
 
           console.log("transitioning to world: [" + MR.worldIdx + "]");
 
-          // TODO(KTR): TEMP, the wrangler could handle these lines
           gl.useProgram(null);
           MR.wrangler._reset();
           MR.wrangler._glFreeResources();
+          ScreenCursor.clearTargetEvents();
           //
 
           try {
