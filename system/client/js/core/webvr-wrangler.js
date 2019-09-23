@@ -206,6 +206,7 @@ window.VRCanvasWrangler = (function() {
       }
 
       this.timeStart = 0;
+      window.timeStart = this.timeStart;
 
       if (this.options.enableBellsAndWhistles) {
         const status = await this._initWebVR();
@@ -418,8 +419,10 @@ window.VRCanvasWrangler = (function() {
           if (this._canvas.width !== this.options.outputWidth) {
             this._canvas.width = this.options.outputWidth;
             this._canvas.height = this.options.outputHeight;
+            CanvasUtil.handleResizeEvent(this._canvas, this._canvas.clientWidth, this._canvas.clientHeight);
           } else {
             CanvasUtil.resizeToDisplaySize(this._canvas, 0.22);
+            CanvasUtil.handleResizeEvent(this._canvas);
           }          
         }
       }

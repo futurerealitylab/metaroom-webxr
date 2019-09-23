@@ -1,6 +1,6 @@
 "use strict";
 
-const GFX = (function() {
+window.GFX = (function() {
     const _util = {};
 
     // shader and GL utilities

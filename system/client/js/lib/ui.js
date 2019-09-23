@@ -1,5 +1,7 @@
 "use strict";
 
+// based on GLSLEditor classes
+
   class MenuItem {
     constructor (container, className, name, onClick) {
         this.el = document.createElement('li');
@@ -97,3 +99,6 @@
 
     }
   }
+
+  window.Menu = Menu;
+  window.MenuItem = MenuItem;

@@ -1,7 +1,7 @@
 
 "use strict";
 
-const imgutil = (function() {
+window.imgutil = (function() {
 
     const _out = {};
 

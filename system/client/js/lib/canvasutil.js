@@ -1,6 +1,9 @@
 "use strict";
 
 const CanvasUtil = (function() {
+
+	let _onResizeEventHandler;
+	
 	function resizeToDisplaySize(canvas, scale = 1) {
 	  const realToCSSPixels = window.devicePixelRatio;
 
@@ -36,11 +39,22 @@ const CanvasUtil = (function() {
 	  };
 	}
 
+	function setOnResizeEventHandler(handler) {
+		_onResizeEventHandler = handler;
+	}
+
+	function handleResizeEvent(target, width, height) {
+		_onResizeEventHandler(target, width, height);
+	}
+
 	const _out = {
 	  resizeToDisplaySize : resizeToDisplaySize,
-	  createCanvasOnElement : createCanvasOnElement
+	  createCanvasOnElement : createCanvasOnElement,
+	  setOnResizeEventHandler : setOnResizeEventHandler,
+	  handleResizeEvent : handleResizeEvent
 	};
 
 	return _out;
 
 }());
+window.CanvasUtil = CanvasUtil;

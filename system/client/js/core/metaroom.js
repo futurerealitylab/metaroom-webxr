@@ -197,6 +197,8 @@ MR.server.echo = (message) => {
 };
 
 MR.getCanvas = () => MR.wrangler._canvas;
+MR.time = () => MR.wrangler.time;
+MR.timeMS = () => MR.wrangler.timeMS;
 
 
 // Register MR.worlds (in final, probably enough to register the first world before init time and defer the rest until load) 
