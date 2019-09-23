@@ -113,6 +113,13 @@ const SOCKET_STATE_MAP = {
   [WebSocket.OPEN]       : "OPEN",
 };
 
+{
+    const IP_ELEMENT   = document.getElementById("server-ip");
+    window.IP          = (IP_ELEMENT && IP_ELEMENT.getAttribute("value")) || "localhost";
+    const PORT_ELEMENT = document.getElementById("server-comm-port");
+    window.PORT        = (PORT_ELEMENT && PORT_ELEMENT.getAttribute("value")) || "3001";
+}
+
 MR.server = {};
 MR.initServer = () => {
     console.log("initializing server");
@@ -125,7 +132,7 @@ MR.initServer = () => {
     };
     try {
         MR.server.sock = new WebSocket(  
-          "ws://127.0.0.1:3001"
+          "ws://" + window.IP + ":" + window.PORT
         );
     } catch (err) {
         console.log(err);
