@@ -1,6 +1,6 @@
 "use strict";
 
-let MY_ROOT_PATH = "";
+window.MY_ROOT_PATH = "";
 function getPath(path) {
   	if (!path || path.length < 1) {
     	return;
@@ -20,3 +20,9 @@ function getCurrentPath(path) {
 
     return path.substring(0, slashIdx + 1);
 }
+
+window.getPath = getPath;
+window.setPath = setPath;
+window.getCurrentPath = getCurrentPath;
+
+

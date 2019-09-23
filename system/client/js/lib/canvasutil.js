@@ -57,3 +57,4 @@ const CanvasUtil = (function() {
 	return _out;
 
 }());
+window.CanvasUtil = CanvasUtil;

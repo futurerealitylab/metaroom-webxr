@@ -1,6 +1,6 @@
 "use strict";
 
-const db = (function() {
+window.db = (function() {
 	const _out = {};
 
 	let textNode;

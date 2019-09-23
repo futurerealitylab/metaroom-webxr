@@ -14,7 +14,7 @@ uniform vec2 uResolution;
 
 // cursor
 uniform vec3 uCursor;
-uniform vec3 uCursorInterp;
+uniform vec3 uCursorClipspace;
 uniform vec3 uCursorDir;
 
 // time in seconds

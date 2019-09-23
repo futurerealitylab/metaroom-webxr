@@ -32,7 +32,7 @@ let uTimeLoc;
 // cursor
 let uCursorLoc;
 // cursor clipspace
-let uCursorInterpLoc;
+let uCursorClipspaceLoc;
 // cursor direction
 let uCursorDirLoc;
 // cursor velocity
@@ -436,7 +436,7 @@ async function setup(state) {
                 uTimeLoc         = gl.getUniformLocation(program, 'uTime');
                 
                 uCursorLoc       = gl.getUniformLocation(program, 'uCursor');
-                uCursorInterpLoc = gl.getUniformLocation(program, 'uCursorInterp');
+                uCursorClipspaceLoc = gl.getUniformLocation(program, 'uCursorClipspace');
                 uCursorDirLoc    = gl.getUniformLocation(program, 'uCursorDir');
                 uCursorVelLoc    = gl.getUniformLocation(program, 'uCursorVel');
 
@@ -503,7 +503,7 @@ async function setup(state) {
                 pos[0] = (2.0 * (pos[0] / w)) - 1.0;
                 pos[1] = -1.0 * ((2.0 * (pos[1] / h)) - 1.0);
 
-                gl.uniform3fv(uCursorInterpLoc, pos);
+                gl.uniform3fv(uCursorClipspaceLoc, pos);
 
                 gl.uniform3fv(uCursorDirLoc, cursorState.direction());
 
@@ -526,7 +526,7 @@ async function setup(state) {
                 pos[0] = (2.0 * (pos[0] / w)) - 1.0;
                 pos[1] = -1.0 * ((2.0 * (pos[1] / h)) - 1.0);
 
-                gl.uniform3fv(uCursorInterpLoc, pos);
+                gl.uniform3fv(uCursorClipspaceLoc, pos);
 
                 gl.uniform3fv(uCursorDirLoc, cursorState.direction());
 
@@ -549,7 +549,7 @@ async function setup(state) {
                 pos[0] = (2.0 * (pos[0] / w)) - 1.0;
                 pos[1] = -1.0 * ((2.0 * (pos[1] / h)) - 1.0);
 
-                gl.uniform3fv(uCursorInterpLoc, pos);
+                gl.uniform3fv(uCursorClipspaceLoc, pos);
 
                 gl.uniform3fv(uCursorDirLoc, cursorState.direction());
                 

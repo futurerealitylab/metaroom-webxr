@@ -1,7 +1,7 @@
 "use strict";
 
 
-const HTMLUtil = (function() {
+window.HTMLUtil = (function() {
     const _util = {};
 
     function showElement(element) {

@@ -22,3 +22,4 @@ const assetutil = (function() {
 	return _out;
 
 }());
+window.assetutil = assetutil;

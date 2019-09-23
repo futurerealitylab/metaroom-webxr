@@ -106,13 +106,13 @@ window.ScreenCursor = (function() {
             positionChange : () => {
                 tempBuf[0] = cursor[0] - prevCursor[0];
                 tempBuf[1] = cursor[1] - prevCursor[1];
-                tempBuf[2] = cursor[2] - prevCursor[2];    
+                tempBuf[2] = 0.0;    
 
                 return tempBuf;
             },
-            direction : () => {
-                tempBuf[0] = 0.1 * prevDir[0] + cursor[0] - prevCursor[0];
-                tempBuf[1] = 0.1 * prevDir[1] + cursor[1] - prevCursor[1];
+            direction : (tolerance = 0.1) => {
+                tempBuf[0] = tolerance * prevDir[0] + cursor[0] - prevCursor[0];
+                tempBuf[1] = tolerance * prevDir[1] + cursor[1] - prevCursor[1];
                 tempBuf[2] = 0.0;
 
                 // normalize
