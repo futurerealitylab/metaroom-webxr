@@ -67,29 +67,21 @@ window.ScreenCursor = (function() {
     function trackCursor(target, callbacks) {
         // internal object that stores the x, y, and z values for the cursor
         const cursor = new Float32Array([
-            0,
-            0,
-            0 
+            0.0,
+            0.0,
+            0.0 
         ]);
 
         const prevCursor = new Float32Array([
-            0,
-            0,
-            0
-        ]);
-
-        const tempBuf = new Float32Array([
-            0,
-            0,
-            0
+            0.0,
+            0.0,
+            0.0
         ]);
 
         // save the callbacks individually
-        const downCallback = callbacks.down;
-        const moveCallback = callbacks.move;
-        const upCallback   = callbacks.up;
-
-        let prevDir = [0.0, 0.0, 0.0];
+        const downCallback = (callbacks) ? callbacks.down : null;
+        const moveCallback = (callbacks) ? callbacks.move : null;
+        const upCallback   = (callbacks) ? callbacks.up   : null;
 
         const info = {
             position : () => {
@@ -97,41 +89,6 @@ window.ScreenCursor = (function() {
             },
             prevPosition : () => {
                 return prevCursor;
-            },
-            toClipPosition : (pos, w, h) => {
-                tempBuf[0] = (2.0 * (pos[0] / w)) - 1.0;
-                tempBuf[1] = -1.0 * ((2.0 * (pos[1] / h)) - 1.0);
-                return tempBuf;
-            },
-            positionChange : () => {
-                tempBuf[0] = cursor[0] - prevCursor[0];
-                tempBuf[1] = cursor[1] - prevCursor[1];
-                tempBuf[2] = 0.0;    
-
-                return tempBuf;
-            },
-            direction : (tolerance = 0.1) => {
-                tempBuf[0] = tolerance * prevDir[0] + cursor[0] - prevCursor[0];
-                tempBuf[1] = tolerance * prevDir[1] + cursor[1] - prevCursor[1];
-                tempBuf[2] = 0.0;
-
-                // normalize
-                const x = tempBuf[0];
-                const y = tempBuf[1];
-                const z = tempBuf[2];
-                let len = x*x + y*y + z*z;
-                if (len > 0) {
-                    len = 1 / Math.sqrt(len);
-                }
-                tempBuf[0] = x * len;
-                tempBuf[1] = y * len;
-                tempBuf[2] = z * len;
-
-                prevDir[0] = tempBuf[0];
-                prevDir[1] = tempBuf[1];
-                prevDir[2] = tempBuf[2];
-
-                return tempBuf;
             },
             hide : () => {
                 if (target.style) {
@@ -143,6 +100,18 @@ window.ScreenCursor = (function() {
                     return target.style.cursor = "";
                 }
             },
+            x : () => { 
+                return cursor[0]; 
+            },
+            y : () => {
+                return cursor[1];
+            },
+            z : () => {
+                return cursor[2];
+            },
+            down : downCallback,
+            move : moveCallback,
+            up   : upCallback,
         };
 
         // sets cursor coordinates offset from the top-left of the program bounding rectangle
@@ -151,8 +120,8 @@ window.ScreenCursor = (function() {
 
             prevCursor[0] = cursor[0];
             prevCursor[1] = cursor[1];
-            cursor[0] = (x - r.left) | 0;
-            cursor[1] = (y - r.top) | 0;
+            cursor[0] = (1 + x - r.left) || 0;
+            cursor[1] = (1 + y - r.top)  || 0;
 
             if (z !== undefined) {
                 cursor[2] = z;
@@ -170,7 +139,7 @@ window.ScreenCursor = (function() {
             this.set(e.clientX, e.clientY, 1);
 
             if (downCallback != null) {
-               downCallback(info);
+               info.down(info);
             }
         };
 
@@ -180,7 +149,7 @@ window.ScreenCursor = (function() {
             // set cursor state using the given cursor event "e"
             this.set(e.clientX, e.clientY);
             if (moveCallback != null) {
-               moveCallback(info);
+               info.move(info);
            }
         };
 
@@ -195,7 +164,7 @@ window.ScreenCursor = (function() {
             this.set(e.clientX, e.clientY, 0);
 
             if (upCallback != null) {
-               upCallback(info);
+               info.up(info);
             }
         };
     	
