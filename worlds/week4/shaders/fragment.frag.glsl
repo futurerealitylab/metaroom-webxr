@@ -24,5 +24,7 @@ void main(void) {
     // step(edge, x), if x is < edge, returns 0.0, 1.0 otherwise
     float withinEdge = 1.0 - step(radius * radius, dot(diff, diff));
 
-    fragColor = vec4((1.0 - withinEdge) * vec3(0.25, 0.25, 1.0) + (withinEdge) * vPos, 1.0);
+    // mixes between the two colors depending on the third argument
+    vec3 bgOrCircle = mix(vec3(0.25, 0.25, 1.0), vPos, withinEdge);
+    fragColor = vec4(bgOrCircle, 1.0);
 }
