@@ -1,9 +1,9 @@
 "use strict";
 
 const MREditor = (function() {
-	
-	const _outEnabled = {};
-	const _outDisabled = {};
+    
+    const _outEnabled = {};
+    const _outDisabled = {};
 
     const TEXT_COLOR_NO_ERROR = "#d3b58d"; //'#BFBFBF';
     const TEXT_COLOR_ERROR    = '#dddda0';
@@ -13,35 +13,35 @@ const MREditor = (function() {
 
     let globalErrorMsgNode;
     let globalErrorMsgNodeText;
-    let globalErrorMsgState = {vertex : "", fragment : ""};
+    let globalErrorMsgState = {vertex : "", fragment : "", link : ""};
 
-	class Editor {
-		constructor() {
-			this.libMap = null;
-			this.tempCompiledShader = null;
-			this.libToShaderMap = new Map();
-		}
-	}
-	const _out = new Editor();
-	MR.editor = _out;
+    class Editor {
+        constructor() {
+            this.libMap = null;
+            this.tempCompiledShader = null;
+            this.libToShaderMap = new Map();
+        }
+    }
+    const _out = new Editor();
+    MR.editor = _out;
 
-	function hookIntoGFXLib(gfxLib__) {
+    function hookIntoGFXLib(gfxLib__) {
 
-	}
-	_out.hookIntoGFXLib = hookIntoGFXLib;
+    }
+    _out.hookIntoGFXLib = hookIntoGFXLib;
 
 
-	function disable() {
+    function disable() {
 
-	}
-	_out.disable = disable;
+    }
+    _out.disable = disable;
 
-	function enable() {
+    function enable() {
 
-	}
-	_out.enable = enable;
+    }
+    _out.enable = enable;
 
-	_out.shaderMap = null;
+    _out.shaderMap = null;
 
     function detectFeatures() {
         const textArea = document.createElement("textarea");
@@ -57,29 +57,29 @@ const MREditor = (function() {
     _out.detectFeatures = detectFeatures;
 
 
-	function autoExpand(field) {
-	  // field.style.height = "inherit";
+    function autoExpand(field) {
+      // field.style.height = "inherit";
 
-	  // var computed = window.getComputedStyle(field);
+      // var computed = window.getComputedStyle(field);
 
-	  // var height = parseInt(computed.getPropertyValue('border-top-width'), 10) +
-	  //              parseInt(computed.getPropertyValue('padding-top'), 10) +
-	  //              field.scrollHeight +
-	  //              parseInt(computed.getPropertyValue('padding-bottom'), 10) +
-	  //              parseInt(computed.getPropertyValue('border-bottom-width'), 10);
+      // var height = parseInt(computed.getPropertyValue('border-top-width'), 10) +
+      //              parseInt(computed.getPropertyValue('padding-top'), 10) +
+      //              field.scrollHeight +
+      //              parseInt(computed.getPropertyValue('padding-bottom'), 10) +
+      //              parseInt(computed.getPropertyValue('border-bottom-width'), 10);
 
 
-	  // field.style.height = height + 'px';
+      // field.style.height = height + 'px';
 
-	  let text = field.value.split('\n');
-	  let cols = 0;
-	  for (let i = 0; i < text.length; i += 1) {
-	      cols = Math.max(cols, text[i].length);
-	  }
+      let text = field.value.split('\n');
+      let cols = 0;
+      for (let i = 0; i < text.length; i += 1) {
+          cols = Math.max(cols, text[i].length);
+      }
 
-	  field.rows = text.length;
-	  field.cols = cols;
-	}
+      field.rows = text.length;
+      field.cols = cols;
+    }
  
 
     function watchFiles(arr, status = {}) {
@@ -114,7 +114,7 @@ const MREditor = (function() {
         MR.server.sock.send(JSON.stringify({"MR_Message" : "Unwatch_Files", "files" : arr}));
     }
 
-	function resetState() {
+    function resetState() {
         MREditor.nextLibID = 1;
         if (MREditor.shaderMap) {   
             let toUnwatch = [];
@@ -146,44 +146,44 @@ const MREditor = (function() {
             }
             globalErrorMsgNodeText.nodeValue = "";
         }
-		{
-		  _out.shaderMap = new Map();
-		  const _tareas = document.getElementById("text-areas");
-		  if (!_tareas) {
-		    return;
-		  }
-		  const _children = _tareas.children;
-		  for (let i = 0; i < _children.length; i += 1) {
-		    let _subtareas = _children[i];
-		    while (_subtareas && _subtareas.firstChild) {
-		        _subtareas.removeChild(_subtareas.firstChild);
-		    }
-		  }
-		}
-		{
-		  if (wrangler.externalWindow) {
-		    const _tareas = wrangler.externalWindow.document.getElementById("text-areas");
-		    if (!_tareas) {
-		      return;
-		    }
-		    const _children = _tareas.children;
-		    for (let i = 0; i < _children.length; i += 1) {
-		      let _subtareas = _children[i];
-		      while (_subtareas && _subtareas.firstChild) {
-		          _subtareas.removeChild(_subtareas.firstChild);
-		      }
-		    }
-		  }
-		}
+        {
+          _out.shaderMap = new Map();
+          const _tareas = document.getElementById("text-areas");
+          if (!_tareas) {
+            return;
+          }
+          const _children = _tareas.children;
+          for (let i = 0; i < _children.length; i += 1) {
+            let _subtareas = _children[i];
+            while (_subtareas && _subtareas.firstChild) {
+                _subtareas.removeChild(_subtareas.firstChild);
+            }
+          }
+        }
+        {
+          if (wrangler.externalWindow) {
+            const _tareas = wrangler.externalWindow.document.getElementById("text-areas");
+            if (!_tareas) {
+              return;
+            }
+            const _children = _tareas.children;
+            for (let i = 0; i < _children.length; i += 1) {
+              let _subtareas = _children[i];
+              while (_subtareas && _subtareas.firstChild) {
+                  _subtareas.removeChild(_subtareas.firstChild);
+              }
+            }
+          }
+        }
 
-		_out.libMap = null;
-		_out.libGroupMap = null;
+        _out.libMap = null;
+        _out.libGroupMap = null;
 
-		GFX.tempCompiledShaderDirty = false;
-		GFX.tempPreprocessorErrRecord = null;
-		GFX.tempCompiledShader = null;
-	}
-	_out.resetState = resetState;
+        GFX.tempCompiledShaderDirty = false;
+        GFX.tempPreprocessorErrRecord = null;
+        GFX.tempCompiledShader = null;
+    }
+    _out.resetState = resetState;
 
         const saveCallback = (event) => {
             let msgs = [];
@@ -296,21 +296,21 @@ const MREditor = (function() {
         };
 
 
-	function init(args) {
+    function init(args) {
 
-		this.defaultShaderCompilationFunction = 
-		args.defaultShaderCompilationFunction || this.onNeedsCompilationDefault;
+        this.defaultShaderCompilationFunction = 
+        args.defaultShaderCompilationFunction || this.onNeedsCompilationDefault;
 
-		this.getExternalWindow = args.externalWindowGetter;
+        this.getExternalWindow = args.externalWindowGetter;
 
-		const doc = (this.getExternalWindow) ? this.getExternalWindow().document : document;
+        const doc = (this.getExternalWindow) ? this.getExternalWindow().document : document;
 
-		doc.addEventListener('input', function (event) {
-	  		if (event.target.tagName.toLowerCase() !== 'textarea') return;
-	  		autoExpand(event.target);
-		}, false);
+        doc.addEventListener('input', function (event) {
+            if (event.target.tagName.toLowerCase() !== 'textarea') return;
+            autoExpand(event.target);
+        }, false);
 
-		resetState();
+        resetState();
 
 
 
@@ -414,26 +414,26 @@ const MREditor = (function() {
 
         globalErrorMsgNode = header;
         globalErrorMsgNodeText = text;
-	}
-	_out.init = init;
+    }
+    _out.init = init;
 
-	function createShaderProgramFromStringsAndHandleErrors(vertex, fragment) {
-		GFX.tempCompiledShader = GFX.createShaderProgramFromStrings(
-			vertex,
-			fragment
-		);
-		GFX.tempCompiledShaderDirty = true;
-	}
-	_out.createShaderProgramFromStringsAndHandleErrors = createShaderProgramFromStringsAndHandleErrors;
+    function createShaderProgramFromStringsAndHandleErrors(vertex, fragment) {
+        GFX.tempCompiledShader = GFX.createShaderProgramFromStrings(
+            vertex,
+            fragment
+        );
+        GFX.tempCompiledShaderDirty = true;
+    }
+    _out.createShaderProgramFromStringsAndHandleErrors = createShaderProgramFromStringsAndHandleErrors;
 
-	function preprocessAndCreateShaderProgramFromStringsAndHandleErrors(vertex, fragment, libMap, autoIncludes) {
-		
+    function preprocessAndCreateShaderProgramFromStringsAndHandleErrors(vertex, fragment, libMap, autoIncludes) {
+        
         const vertRecord = GFX.preprocessShader(vertex,   libMap);
         const fragRecord = GFX.preprocessShader(fragment, libMap);
 
         if (!vertRecord.isValid || !fragRecord.isValid) {
-        	GFX.tempErrorDirty = true;
-        	GFX.tempPreprocessorErrRecord = {program : null, errRecord : {
+            GFX.tempErrorDirty = true;
+            GFX.tempPreprocessorErrRecord = {program : null, errRecord : {
                 vertex : vertRecord.errRecord, 
                 fragment : fragRecord.errRecord
             }};
@@ -442,13 +442,13 @@ const MREditor = (function() {
             return;
         }
 
-		GFX.tempCompiledShader = GFX.createShaderProgramFromStrings(
-			vertRecord.shaderSource,
-			fragRecord.shaderSource
-		);
-		GFX.tempCompiledShaderDirty = true;
-	}
-	_out.preprocessAndCreateShaderProgramFromStringsAndHandleErrors = preprocessAndCreateShaderProgramFromStringsAndHandleErrors;
+        GFX.tempCompiledShader = GFX.createShaderProgramFromStrings(
+            vertRecord.shaderSource,
+            fragRecord.shaderSource
+        );
+        GFX.tempCompiledShaderDirty = true;
+    }
+    _out.preprocessAndCreateShaderProgramFromStringsAndHandleErrors = preprocessAndCreateShaderProgramFromStringsAndHandleErrors;
 
 
     async function loadAndRegisterShaderLibrariesForLiveEditing(_gl, key, args, options) {
@@ -493,33 +493,33 @@ const MREditor = (function() {
         }
 
         if (!this.libMap) {
-        	this.libMap = new Map();
+            this.libMap = new Map();
         }
         const libMap = this.libMap;
 
         if (!this.libGroupMap) {
-        	this.libGroupMap = new Map();
+            this.libGroupMap = new Map();
             this.nextLibID = 1;
         }
         const libGroupMap = this.libGroupMap;
         let record = libGroupMap.get(key);
         if (!record) {
-        	record = {
-        		args : args, originals : {}, textAreas : {}, 
-        		assocShaderCompileCallbacks : new Map(),
+            record = {
+                args : args, originals : {}, textAreas : {}, 
+                assocShaderCompileCallbacks : new Map(),
                 options : options,
                 paths : {},
-        	};
-        	libGroupMap.set(key, record);
+            };
+            libGroupMap.set(key, record);
         }
        
         for (let i = 0; i < args.length; i += 1) {
-        	const codeKey = args[i].key;
-        	const codeTxt = args[i].code;
+            const codeKey = args[i].key;
+            const codeTxt = args[i].code;
 
-        	record.originals[codeKey] = codeTxt;
+            record.originals[codeKey] = codeTxt;
 
-        	libMap.set(codeKey, codeTxt);
+            libMap.set(codeKey, codeTxt);
         }
 
         const doc = (MR.wrangler.externalWindow) ? MR.wrangler.externalWindow.document : document;
@@ -528,7 +528,7 @@ const MREditor = (function() {
 
         const textAreaElements = record.textAreas;
 
-        	// create shader lib container
+            // create shader lib container
             const SHADER_DIV = doc.createElement("div");
             SHADER_DIV.setAttribute("id", key + "-shader-lib-container");
             textAreas.appendChild(SHADER_DIV);
@@ -549,7 +549,7 @@ const MREditor = (function() {
                 const SHADER_LIB_GROUP_DIV = doc.createElement("div");
                 SHADER_LIB_GROUP_DIV.setAttribute("id", key + "hideable container lib");
 
-          	SHADER_DIV.appendChild(SHADER_LIB_GROUP_DIV);
+            SHADER_DIV.appendChild(SHADER_LIB_GROUP_DIV);
 
                 HEADER_DIV.onclick = () => {
                     const isHidden = !propHiddenState.get('main');
@@ -577,16 +577,16 @@ const MREditor = (function() {
         propHiddenState.set("main", false);
 
         for (let i = 0; i < args.length; i += 1) {
-        	const arg = args[i];
-        	let text = '';
-        	let code = '';
+            const arg = args[i];
+            let text = '';
+            let code = '';
 
-        	code = arg.code;
-        	text = code.split('\n');
-        	const prop = arg.key;
+            code = arg.code;
+            text = code.split('\n');
+            const prop = arg.key;
 
-        	let DIV = doc.createElement("div");
-        	DIV.setAttribute("id", key + " : " + prop + "_div");
+            let DIV = doc.createElement("div");
+            DIV.setAttribute("id", key + " : " + prop + "_div");
 
             let h = doc.createElement("H1");                // Create a <h1> element
             let t = doc.createTextNode(key + " : " + prop + '\n');
@@ -655,7 +655,7 @@ const MREditor = (function() {
 
             thisTextArea.addEventListener('keyup', (event) => {
 
-            	event.preventDefault();
+                event.preventDefault();
 
                 if (record["timeout" + prop]) {
                     clearTimeout(record["timeout" + prop]);
@@ -690,8 +690,8 @@ const MREditor = (function() {
 
      
                     for (const v of this.shaderMap.values()) {
-    			 		v.compile();
-    				}
+                        v.compile();
+                    }
 
                 }, MREditor.recompileDelayDefault);
             });
@@ -1124,6 +1124,7 @@ const MREditor = (function() {
         propErrorState.set("main", false);
 
         const logError = function(args) {
+
             const errorMessageNodes = record.errorMessageNodes;
             let hasError = false;
             for (let prop in args) {
@@ -1131,12 +1132,12 @@ const MREditor = (function() {
                     const errMsgNode = errorMessageNodes[prop]
 
                     if (errMsgNode) {
-                    	const textArea = record.textAreas[prop];
-                    	const splitTextArea = textArea.value.split('\n');
-                    	const errText = args[prop];
-                    	if (!errText) {
-                    		continue;
-                    	}
+                        const textArea = record.textAreas[prop];
+                        const splitTextArea = textArea.value.split('\n');
+                        const errText = args[prop];
+                        if (!errText) {
+                            continue;
+                        }
 
                         errMsgNode.nodeValue = errText;
 
@@ -1149,6 +1150,9 @@ const MREditor = (function() {
                     }
                 }
             }
+            if (args.link != '') {
+                hasError = true;
+            }
             if (hasError) {
                 hOuter.classList = propHiddenState.get("main") ? 
                                     "shader_section_error_inactive" :
@@ -1158,6 +1162,9 @@ const MREditor = (function() {
                 let errMsg = '';
                 for (let msgProp in globalErrorMsgState) {
                     errMsg += globalErrorMsgState[msgProp];
+                }
+                if (args.link) {
+                    errMsg += args.link;
                 }
                 globalErrorMsgNodeText.nodeValue = errMsg;
             } else {
@@ -1292,7 +1299,7 @@ const MREditor = (function() {
 
                 thisTextArea.addEventListener('keyup', (event) => {
 
-                	event.preventDefault();
+                    event.preventDefault();
 
                     if (record["timeout" + prop]) {
                         clearTimeout(record["timeout" + prop]);
@@ -1326,17 +1333,17 @@ const MREditor = (function() {
                             }
                         } 
 
-    			        if (this.libGroupMap) {
-    			        	for (const record of this.libGroupMap.values()) {
-    					        for (let i = 0; i < record.args.length; i += 1) {
-    					            const textE = record.textAreas[record.args[i].key]; 
-    					            if (textE) {
-    					                record.args[i][record.args[i].key] = textE.value;
-    					                libMap.set(record.args[i].key, textE.value);
-    					            }
-    					        }
-    				    	}
-    			    	}
+                        if (this.libGroupMap) {
+                            for (const record of this.libGroupMap.values()) {
+                                for (let i = 0; i < record.args.length; i += 1) {
+                                    const textE = record.textAreas[record.args[i].key]; 
+                                    if (textE) {
+                                        record.args[i][record.args[i].key] = textE.value;
+                                        libMap.set(record.args[i].key, textE.value);
+                                    }
+                                }
+                            }
+                        }
 
                         compile();
                     }, record.hasError ? 100 :  MREditor.recompileDelayDefault);
@@ -1454,12 +1461,12 @@ const MREditor = (function() {
                         if (!program) {
                             hasError = true;
                             if (GFX.tempErrorDirty) {
-                            	GFX.tempErrorDirty = false;
-                            	errRecord = GFX.tempPreprocessorErrRecord;
-                            	GFX.tempPreprocessorErrRecord = null;
+                                GFX.tempErrorDirty = false;
+                                errRecord = GFX.tempPreprocessorErrRecord;
+                                GFX.tempPreprocessorErrRecord = null;
                             } else {
-                            	errRecord = GFX.errRecord;
-                        	}
+                                errRecord = GFX.errRecord;
+                            }
                         } else {
                             GFX.tempCompiledShader = null;
                         }
@@ -1593,7 +1600,7 @@ const MREditor = (function() {
 
     _out.registerShaderForLiveEditing = registerShaderForLiveEditing;
 
-	return _out;
+    return _out;
 }());
 
 export {MREditor};

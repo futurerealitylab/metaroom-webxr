@@ -1,13 +1,16 @@
 "use strict"
 
+let uResolutionLoc;
+let uCursorLoc;
+let uAspectLoc;
+
+let cursor;
+
 async function setup(state) {
     let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
         { 
             key : "pnoise", path : "shaders/noise.glsl", foldDefault : true
-        },
-        {
-            key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true
-        },      
+        }    
     ]);
 
     if (!libSources) {
@@ -16,10 +19,12 @@ async function setup(state) {
 
 
     // load vertex and fragment shaders from the server, register with the editor
+    // NOTE: you can repeat this process for multiple shaders!
     let shaderSource = await MREditor.loadAndRegisterShaderForLiveEditing(
         gl,
         "mainShader",
         { 
+            // this implicitly adds the noise functions for you to use
             onNeedsCompilation : (args, libMap, userData) => {
                 const stages = [args.vertex, args.fragment];
                 const output = [args.vertex, args.fragment];
@@ -31,24 +36,18 @@ async function setup(state) {
                     for (let i = 0; i < 2; i += 1) {
                         const stageCode = stages[i];
                         const hdrEndIdx = stageCode.indexOf(';');
-                        
-                        /*
-                        const hdr = stageCode.substring(0, hdrEndIdx + 1);
-                        output[i] = hdr + "\n#line 1 1\n" + 
-                                    libCode + "\n#line " + (hdr.split('\n').length) + " 0\n" + 
-                                    stageCode.substring(hdrEndIdx + 1);
-                        console.log(output[i]);
-                        */
+                    
                         const hdr = stageCode.substring(0, hdrEndIdx + 1);
                         
                         output[i] = hdr + "\n#line 2 1\n" + 
                                     "#include<pnoise>\n#line " + (hdr.split('\n').length + 1) + " 0" + 
                             stageCode.substring(hdrEndIdx + 1);
-
-                        console.log(output[i]);
                     }
                 }
 
+                // this does some custom preprocessing of the shader strings
+                // so the implicit addition of the noise functions works 
+                // (not part of the GLSL language)
                 MREditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
                     output[0],
                     output[1],
@@ -65,15 +64,79 @@ async function setup(state) {
                 state.uViewLoc         = gl.getUniformLocation(program, 'uView');
                 state.uProjLoc         = gl.getUniformLocation(program, 'uProj');
                 state.uTimeLoc         = gl.getUniformLocation(program, 'uTime');
+            
+                const cvs = MR.getCanvas();
+
+                // you can also use global variables if you want -- state is just
+                // a convenience object package for your convenience, 
+                // though you might want to store objects
+                // that deal with logic
+                uResolutionLoc = gl.getUniformLocation(program, 'uResolution');
+                uAspectLoc     = gl.getUniformLocation(program, 'uAspect');
+                
+                // pass the surface resolution
+                gl.uniform2fv(uResolutionLoc, new Float32Array([cvs.clientWidth, cvs.clientHeight]));
+                // pass the surface aspect ratio width / height (you could do height / width too)
+                gl.uniform1f(uAspectLoc, cvs.clientWidth / cvs.clientHeight);
+
+
+                // define a callback for when the canvas resizes
+                // so you can act accordingly
+                CanvasUtil.setOnResizeEventHandler(
+                    (target, width, height) => {
+                        // update the resolution if the target is resized
+                        gl.uniform2fv(uResolutionLoc, new Float32Array([width, height]));
+                        gl.uniform1f(uAspectLoc, width / height);
+                    }
+                );
+
+                // get a cursor
+                //
+                // cursor.position() gives you an array [x, y, z]
+                // cursor.x(), cursor.y(), cursor.z() give you the components
+                // cursor.prevPosition gives you a Float32Array [x, y, z] of the coordinates from
+                // last frame that you can pass directly as a uniform
+                //
+                // NOTE: the cursor coordinates are in screen pixel coordinates, 
+                //      based on the actual resolution.
+                // you need to transform these points into a different space depending on
+                // what you want (matching with vPos for example requires a transformation)
+                cursor = ScreenCursor.trackCursor(
+                    // pass the canvas or target for the cursor
+                    MR.getCanvas(), 
+                    /* optionally define callbacks precisely when the mouse triggers an event,
+                    for example if you want the in-between mouse positions for more accuracy and
+                    you'd like to add events to your own queue
+                    {
+                        up : (c) => {
+                            // do something specific with the cursor c
+                        },
+                        down : (c) => {
+                            // do something specific with the cursor c
+                        },
+                        move : (c) => {
+                            // do something specific with the cursor c
+                        }
+                    }
+                    */);
+
+                // call hide to hide the mouse cursor graphic (e.g. make your own in your graphics application)
+                cursor.hide();
+                // or show it
+                // cursor.show();
+
+                uCursorLoc = gl.getUniformLocation(program, 'uCursor');
             } 
         },
         {
+            // local paths to your shaders
             paths : {
                 vertex   : "shaders/vertex.vert.glsl",
                 fragment : "shaders/fragment.frag.glsl"
             },
+            // whether to hide the shader stage by default
             foldDefault : {
-                vertex   : true,
+                vertex   : false,
                 fragment : false
             }
         }
@@ -116,10 +179,14 @@ function onStartFrame(t, state) {
 
     gl.uniform1f(state.uTimeLoc, now / 1000.0);
 
+    // update the cursor position
+    gl.uniform3fv(uCursorLoc, cursor.position());
+
     gl.enable(gl.DEPTH_TEST);
 }
 
-function onDraw(t, projMat, viewMat, state, eyeIdx) {
+
+function onDraw(t, projMat, viewMat, state) {
     const sec = state.time / 1000;
 
     const my = state;
@@ -135,7 +202,7 @@ function onEndFrame(t, state) {
 
 export default function main() {
     const def = {
-        name         : 'week2',
+        name         : 'week4',
         setup        : setup,
         onStartFrame : onStartFrame,
         onEndFrame   : onEndFrame,

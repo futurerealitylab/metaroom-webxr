@@ -422,7 +422,7 @@ window.VRCanvasWrangler = (function() {
             CanvasUtil.handleResizeEvent(this._canvas, this._canvas.clientWidth, this._canvas.clientHeight);
           } else {
             CanvasUtil.resizeToDisplaySize(this._canvas, 0.22);
-            CanvasUtil.handleResizeEvent(this._canvas);
+            CanvasUtil.handleResizeEvent(this._canvas, this._canvas.clientWidth, this._canvas.clientHeight);
           }          
         }
       }
