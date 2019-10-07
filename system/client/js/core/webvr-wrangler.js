@@ -144,10 +144,31 @@ window.VRCanvasWrangler = (function() {
       return this.configure(options);
     }
 
+    onReload(options) {
+      console.log("ON RELOAD");
+      const conf = this.config;
+      conf.onStartFrame = options.onStartFrame || conf.onStartFrame;
+      conf.onEndFrame = options.onEndFrame || conf.onEndFrame;
+      conf.onDraw = options.onDraw || conf.onDraw;
+      conf.onAnimationFrame = options.onAnimationFrame || conf.onAnimationFrame;
+      conf.onAnimationFrameWindow = options.onAnimationFrameWindow || conf.onAnimationFrameWindow;
+      conf.onSelectStart = options.onSelectStart || conf.onSelectStart;
+      conf.onReload = options.onReload || conf.onReload;
+
+      conf.onSelect = options.onSelect || conf.onSelect;
+      conf.onSelectEnd = options.selectEnd || conf.selectEnd;
+
+      if (conf.onReload) {
+          conf.onReload(this.customState);
+      }
+    }
+
     async configure(options) {
 
       this._clearConfig();
       this._reset();
+
+      this.reloadGeneration = 0;
 
       options = options || {};
 
@@ -157,6 +178,7 @@ window.VRCanvasWrangler = (function() {
       options.onAnimationFrame = options.onAnimationFrame || this._onAnimationFrame.bind(this);
       options.onAnimationFrameWindow = options.onAnimationFrameWindow || this._onAnimationFrameWindow.bind(this);
       options.onSelectStart = options.onSelectStart || function(t, state) {};
+      options.onReload = options.onReload || function(t, state) {};
 
       options.onSelect = options.onSelect || (function(t, state) {});
       options.onSelectEnd = options.selectEnd || (function(t, state) {});
@@ -178,7 +200,12 @@ window.VRCanvasWrangler = (function() {
       }
 
       if (options.setup) {
-        await options.setup(this.customState, this, this._session);
+        // try {
+          await options.setup(this.customState, this, this._session);
+        // } catch (e) {
+        //   console.error(e);
+        //   throw new Error("setup unsuccessful");
+        // }
       }
 
       this.start();
@@ -413,14 +440,17 @@ window.VRCanvasWrangler = (function() {
         }
         modalCanvasInit();
 
+      let sizeToggle = false;
       this.keyboardEventCallback = (ev) => {
 
         if (ev.key === 'Alt') {
-          if (this._canvas.width !== this.options.outputWidth) {
-            this._canvas.width = this.options.outputWidth;
-            this._canvas.height = this.options.outputHeight;
+          if (sizeToggle) {
+            sizeToggle = false;
+            this._canvas.width = CanvasUtil.baseCanvasDimensions.width;
+            this._canvas.height = CanvasUtil.baseCanvasDimensions.height;
             CanvasUtil.handleResizeEvent(this._canvas, this._canvas.clientWidth, this._canvas.clientHeight);
           } else {
+            sizeToggle = true;
             CanvasUtil.resizeToDisplaySize(this._canvas, 0.22);
             CanvasUtil.handleResizeEvent(this._canvas, this._canvas.clientWidth, this._canvas.clientHeight);
           }          
@@ -443,12 +473,15 @@ window.VRCanvasWrangler = (function() {
       options.onDraw = (function(t, p, v, state, eyeIdx) {});
       options.onAnimationFrame = this._onAnimationFrame.bind(this);
       options.onAnimationFrameWindow = this._onAnimationFrameWindow.bind(this);
+      options.onReload = function(t, state) {};
       //options.onWindowFrame = this._onWindowFrame.bind(this);
 
       // selection
       options.onSelectStart = (function(t, state) {});
       options.onSelect = (function(t, state) {});
       options.onSelectEnd = (function(t, state) {});
+
+      this.reloadGeneration = 0;
     }
 
     _reset() {
