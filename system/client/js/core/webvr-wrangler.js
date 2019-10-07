@@ -124,6 +124,8 @@ window.VRCanvasWrangler = (function() {
       this.persistentStateMap = null;
       this.globalPersistentState = null;
 
+      this.reloadGeneration = 0;
+
       this._clearConfig();
 
       this._init();
@@ -144,14 +146,9 @@ window.VRCanvasWrangler = (function() {
       return this.configure(options);
     }
 
-    onReload(options) {
-      console.log("ON RELOAD");
+    async onReload(options) {
       const conf = this.config;
-      conf.onStartFrame = options.onStartFrame || conf.onStartFrame;
-      conf.onEndFrame = options.onEndFrame || conf.onEndFrame;
-      conf.onDraw = options.onDraw || conf.onDraw;
-      conf.onAnimationFrame = options.onAnimationFrame || conf.onAnimationFrame;
-      conf.onAnimationFrameWindow = options.onAnimationFrameWindow || conf.onAnimationFrameWindow;
+
       conf.onSelectStart = options.onSelectStart || conf.onSelectStart;
       conf.onReload = options.onReload || conf.onReload;
 
@@ -159,16 +156,20 @@ window.VRCanvasWrangler = (function() {
       conf.onSelectEnd = options.selectEnd || conf.selectEnd;
 
       if (conf.onReload) {
-          conf.onReload(this.customState);
+          await conf.onReload(this.customState);
       }
+
+      conf.onStartFrame = options.onStartFrame || conf.onStartFrame;
+      conf.onEndFrame = options.onEndFrame || conf.onEndFrame;
+      conf.onDraw = options.onDraw || conf.onDraw;
+      conf.onAnimationFrame = options.onAnimationFrame || conf.onAnimationFrame;
+      conf.onAnimationFrameWindow = options.onAnimationFrameWindow || conf.onAnimationFrameWindow;
     }
 
     async configure(options) {
 
       this._clearConfig();
       this._reset();
-
-      this.reloadGeneration = 0;
 
       options = options || {};
 
@@ -480,8 +481,6 @@ window.VRCanvasWrangler = (function() {
       options.onSelectStart = (function(t, state) {});
       options.onSelect = (function(t, state) {});
       options.onSelectEnd = (function(t, state) {});
-
-      this.reloadGeneration = 0;
     }
 
     _reset() {

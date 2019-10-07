@@ -71,7 +71,7 @@ window.hotReloadFile = function(localPath) {
 
     let saveTo = localPath;
 
-    saveTo = getPath(localPath);
+    saveTo = localPath;
 
     const origin = window.location.origin;
     const originIdx = saveTo.indexOf(origin);
@@ -88,7 +88,6 @@ window.hotReloadFile = function(localPath) {
             console.log("file does not match");
             return;
         }
-        console.log("updating file TODO", filename);
 
         MR.wrangler.reloadGeneration += 1;
 
