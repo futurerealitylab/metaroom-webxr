@@ -154,7 +154,7 @@ window.ScreenCursor = (function() {
         };
 
 
-    	
+        
         // mouse-up handler
         target.onmouseup = function(e) {
             if (e.which != 1) {
@@ -167,7 +167,7 @@ window.ScreenCursor = (function() {
                info.up(info);
             }
         };
-    	
+        
 
         targetEventCleanupFuncs.push(function() {
             target.set         = undefined;

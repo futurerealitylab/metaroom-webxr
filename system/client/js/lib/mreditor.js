@@ -1571,7 +1571,7 @@ const MREditor = (function() {
             compile();
             if (record.hasError) {
                 console.warn("First-time compilation failed, using default error condition shader");
-                const defaultErrVertex = `#version 300 es
+                const defaultErrorVertex = `#version 300 es
                 precision highp float;
 
                 void main() {

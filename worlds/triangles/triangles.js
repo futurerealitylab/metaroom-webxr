@@ -5,52 +5,7 @@
 // variable declarations:
 
 //////////////////////////
-// time
-let time        =  0;
-let timeMS      =  0;
-
-let timeStart   = -1;
-let timeStartMS = -1;
-
-let timePrev    =  0;
-let timePrevMS  =  0;
-
-let timeDelta   =  0;
-let timeDeltaMS =  0;
-
-let cursorState = null;
-
-// attribute locations
-let aPosLoc;
-// uniform locations
-// matrices
-let uModelLoc;
-let uViewLoc;
-let uProjLoc;
-// time
-let uTimeLoc;
-// cursor
-let uCursorLoc;
-// cursor clipspace
-let uCursorClipspaceLoc;
-// cursor direction
-let uCursorDirLoc;
-// cursor velocity
-let uCursorVelLoc;
-// resolution
-let uResolutionLoc;
-
-// shader program 
-// (only one for now, but you can switch between many
-// to achieve different effects in a more complex pipeline
-let program;
-
-// a vertex array object
-let vao;
-// a vertex buffer object
-let vbo;
-// an element buffer object
-let ebo;
+let cursor = null;
 
 const usingTriList  = true;
 const usingIndexing = true;
@@ -96,20 +51,20 @@ let recompiled = false;
 
 //////////////////////////
 
-function initTriangleList() {
+function initTriangleList(state) {
     console.log("triangle list");
 
     // vertex array object (VAO) stores the format of the vertex data, stores vertex objects
-    vao = gl.createVertexArray();
-    gl.bindVertexArray(vao);
+    state.vao = gl.createVertexArray();
+    gl.bindVertexArray(state.vao);
 
     // create a vertex buffer object (VBO) to store attribute data (GPU memory)
     // you can interleave attribute data or store it across multiple buffers
     // you can make multiple buffers, or oftentimes store data for many objects
     // in one buffer
-    vbo = gl.createBuffer();
+    state.vbo = gl.createBuffer();
     // bind it (mark it as the current buffer we're looking at)
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bindBuffer(gl.ARRAY_BUFFER, state.vbo);
 
     // upload the data to the GPU
     gl.bufferData(
@@ -127,10 +82,10 @@ function initTriangleList() {
 
     // tell the GPU what per-vertex attributes exist in the uploaded data (setting a pointer
     // and offsets to mark where in the buffer each attribute is, we currently have one attribute: position)
-    aPosLoc = gl.getAttribLocation(program, 'aPos');
-    gl.enableVertexAttribArray(aPosLoc);
+    state.aPosLoc = gl.getAttribLocation(state.program, 'aPos');
+    gl.enableVertexAttribArray(state.aPosLoc);
     gl.vertexAttribPointer(
-        aPosLoc,                            // attributeLocation: 
+        state.aPosLoc,                            // attributeLocation: 
                                             //      the layout location of the attribute (see vertex shader)
         3,                                  // size: 
                                             //      3 components per iteration vec3(x, y, z)
@@ -150,20 +105,20 @@ function initTriangleList() {
     gl.bindVertexArray(null);
 }
 
-function initIndexedTriangleList() {
+function initIndexedTriangleList(state) {
     console.log("indexed triangle list");
 
     // vertex array object (VAO) stores the format of the vertex data, stores vertex objects
-    vao = gl.createVertexArray();
-    gl.bindVertexArray(vao);
+    state.vao = gl.createVertexArray();
+    gl.bindVertexArray(state.vao);
 
     // create a vertex buffer object (VBO) to store attribute data (GPU memory)
     // you can interleave attribute data or store it across multiple buffers
     // you can make multiple buffers, or oftentimes store data for many objects
     // in one buffer
-    vbo = gl.createBuffer();
+    state.vbo = gl.createBuffer();
     // bind it (mark it as the current buffer we're looking at)
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bindBuffer(gl.ARRAY_BUFFER, state.vbo);
 
     // upload the data to the GPU
     gl.bufferData(
@@ -181,10 +136,10 @@ function initIndexedTriangleList() {
 
     // tell the GPU what per-vertex attributes exist in the uploaded data (setting a pointer
     // and offsets to mark where in the buffer each attribute is, we currently have one attribute: position)
-    aPosLoc = gl.getAttribLocation(program, 'aPos');
-    gl.enableVertexAttribArray(aPosLoc);
+    state.aPosLoc = gl.getAttribLocation(state.program, 'aPos');
+    gl.enableVertexAttribArray(state.aPosLoc);
     gl.vertexAttribPointer(
-        aPosLoc,                            // attributeLocation: 
+        state.aPosLoc,                            // attributeLocation: 
                                             //      the layout location of the attribute (see vertex shader)
         3,                                  // size: 
                                             //      3 components per iteration vec3(x, y, z)
@@ -203,27 +158,27 @@ function initIndexedTriangleList() {
     // for larger meshes with duplicate triangle vertices,
     // an ebo can help you save memory by letting you use
     // indices to refer to the same vertex from a vbo
-    ebo = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
+    state.ebo = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, state.ebo);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, triListElementData, gl.STATIC_DRAW, 0);
 
     gl.bindVertexArray(null);
 }
 
-function initTriangleStrip() {
+function initTriangleStrip(state) {
     console.log("triangle strip");
 
     // vertex array object (VAO) stores the format of the vertex data, stores vertex objects
-    vao = gl.createVertexArray();
-    gl.bindVertexArray(vao);
+    state.vao = gl.createVertexArray();
+    gl.bindVertexArray(state.vao);
 
     // create a vertex buffer object (VBO) to store attribute data (GPU memory)
     // you can interleave attribute data or store it across multiple buffers
     // you can make multiple buffers, or oftentimes store data for many objects
     // in one buffer
-    vbo = gl.createBuffer();
+    state.vbo = gl.createBuffer();
     // bind it (mark it as the current buffer we're looking at)
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bindBuffer(gl.ARRAY_BUFFER, state.vbo);
 
     // upload the data to the GPU
     gl.bufferData(
@@ -241,10 +196,10 @@ function initTriangleStrip() {
 
     // tell the GPU what per-vertex attributes exist in the uploaded data (setting a pointer
     // and offsets to mark where in the buffer each attribute is, we currently have one attribute: position)
-    aPosLoc = gl.getAttribLocation(program, 'aPos');
-    gl.enableVertexAttribArray(aPosLoc);
+    state.aPosLoc = gl.getAttribLocation(state.program, 'aPos');
+    gl.enableVertexAttribArray(state.aPosLoc);
     gl.vertexAttribPointer(
-        aPosLoc,                            // attributeLocation: 
+        state.aPosLoc,                            // attributeLocation: 
                                             //      the layout location of the attribute (see vertex shader)
         3,                                  // size: 
                                             //      3 components per iteration vec3(x, y, z)
@@ -264,20 +219,20 @@ function initTriangleStrip() {
     gl.bindVertexArray(null);
 }
 
-function initIndexedTriangleStrip() {
+function initIndexedTriangleStrip(state) {
     console.log("indexed triangle strip");
 
     // vertex array object (VAO) stores the format of the vertex data, stores vertex objects
-    vao = gl.createVertexArray();
-    gl.bindVertexArray(vao);
+    state.vao = gl.createVertexArray();
+    gl.bindVertexArray(state.vao);
 
     // create a vertex buffer object (VBO) to store attribute data (GPU memory)
     // you can interleave attribute data or store it across multiple buffers
     // you can make multiple buffers, or oftentimes store data for many objects
     // in one buffer
-    vbo = gl.createBuffer();
+    state.vbo = gl.createBuffer();
     // bind it (mark it as the current buffer we're looking at)
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bindBuffer(gl.ARRAY_BUFFER, state.vbo);
 
     // upload the data to the GPU
     gl.bufferData(
@@ -295,10 +250,10 @@ function initIndexedTriangleStrip() {
 
     // tell the GPU what per-vertex attributes exist in the uploaded data (setting a pointer
     // and offsets to mark where in the buffer each attribute is, we currently have one attribute: position)
-    aPosLoc = gl.getAttribLocation(program, 'aPos');
-    gl.enableVertexAttribArray(aPosLoc);
+    state.aPosLoc = gl.getAttribLocation(state.program, 'aPos');
+    gl.enableVertexAttribArray(state.aPosLoc);
     gl.vertexAttribPointer(
-        aPosLoc,                            // attributeLocation: 
+        state.aPosLoc,                            // attributeLocation: 
                                             //      the layout location of the attribute (see vertex shader)
         3,                                  // size: 
                                             //      3 components per iteration vec3(x, y, z)
@@ -317,11 +272,15 @@ function initIndexedTriangleStrip() {
     // for larger meshes with duplicate triangle vertices,
     // an ebo can help you save memory by letting you use
     // indices to refer to the same vertex from a vbo
-    ebo = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
+    state.ebo = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, state.ebo);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, triStripElementData, gl.STATIC_DRAW, 0);
 
     gl.bindVertexArray(null);
+}
+
+function onReload() {
+
 }
 
 // Define a setup function
@@ -334,6 +293,14 @@ function initIndexedTriangleStrip() {
 // for convenience, e.g. if you want to attach objects to a single package for organization
 // For simple programs, globals are fine.
 async function setup(state) {
+
+    CanvasUtil.resize(MR.getCanvas(), 1280, 720);
+
+
+    let cursorValue = () => {
+       let p = cursor.position(), canvas = MR.getCanvas();
+       return [ p[0] / canvas.clientWidth * 2 - 1, 1 - p[1] / canvas.clientHeight * 2, p[2] ];
+    }
 
     // NOTE: we have created custom functions to hook into the system editor functionality
     // Beyond this class you may want to create your own system for creating, compiling, and updating shaders.
@@ -352,14 +319,13 @@ async function setup(state) {
     let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
         { 
             key : "pnoise", path : "shaders/noise.glsl", foldDefault : true
-        },
-        {
-            key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true
-        },      
+        },     
     ]);
     if (!libSources) {
         throw new Error("Could not load shader library");
     }
+
+
 
 
     // Editor Specific:
@@ -415,10 +381,10 @@ async function setup(state) {
             // your code, and update all the uniform locations, which are no longer valid from
             // the previous version of the program!
             onAfterCompilation : (shaderProgram) => {
-                program = shaderProgram;
+                state.program = shaderProgram;
 
                 // a shader must be activated with this call
-                gl.useProgram(program);
+                gl.useProgram(state.program);
 
                 // store uniform locations 
                 // (these point to the memory associated 
@@ -430,24 +396,24 @@ async function setup(state) {
                 // can also be used to store bundles of uniforms that can
                 // be updated across multiple shaders with one call. 
                 // Other graphics APIs use (or require) them as well.
-                uModelLoc        = gl.getUniformLocation(program, 'uModel');
-                uViewLoc         = gl.getUniformLocation(program, 'uView');
-                uProjLoc         = gl.getUniformLocation(program, 'uProj');
-                uTimeLoc         = gl.getUniformLocation(program, 'uTime');
+                state.uModelLoc        = gl.getUniformLocation(state.program, 'uModel');
+                state.uViewLoc         = gl.getUniformLocation(state.program, 'uView');
+                state.uProjLoc         = gl.getUniformLocation(state.program, 'uProj');
+                state.uTimeLoc         = gl.getUniformLocation(state.program, 'uTime');
                 
-                uCursorLoc       = gl.getUniformLocation(program, 'uCursor');
-                uCursorClipspaceLoc = gl.getUniformLocation(program, 'uCursorClipspace');
-                uCursorDirLoc    = gl.getUniformLocation(program, 'uCursorDir');
-                uCursorVelLoc    = gl.getUniformLocation(program, 'uCursorVel');
-
-                uResolutionLoc   = gl.getUniformLocation(program, 'uResolution');
+                state.uCursorLoc       = gl.getUniformLocation(state.program, 'uCursor');
+                state.uResolutionLoc   = gl.getUniformLocation(state.program, 'uResolution');
+                state.uAspectLoc       = gl.getUniformLocation(state.program, 'uAspect');
 
                 const cvs = MR.getCanvas();
-                gl.uniform2fv(uResolutionLoc, new Float32Array([cvs.clientWidth, cvs.clientHeight]));
+                // resolution
+                gl.uniform2fv(state.uResolutionLoc, new Float32Array([cvs.clientWidth, cvs.clientHeight]));
+                // aspect ratio
+                gl.uniform1f(state.uAspectLoc, cvs.clientWidth / cvs.clientHeight);
 
                 // reupload the static model matrix
                 gl.uniformMatrix4fv(
-                    uModelLoc, 
+                    state.uModelLoc, 
                     false, 
                     new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1])
                 );
@@ -463,7 +429,7 @@ async function setup(state) {
             },
             // whether the editor should hide the shader sections by  default
             foldDefault : {
-                vertex   : true,
+                vertex   : false,
                 fragment : false
             }
         }
@@ -474,103 +440,28 @@ async function setup(state) {
 
     if (usingIndexing) {
         if (usingTriList) {
-            initIndexedTriangleList();
+            initIndexedTriangleList(state);
         } else {
-            initIndexedTriangleStrip();
+            initIndexedTriangleStrip(state);
         }
     } else {
         if (usingTriList) {
-            initTriangleList();
+            initTriangleList(state);
         } else {
-            initTriangleStrip();
+            initTriangleStrip(state);
         }
     }
 
     // set mouse handler
-    {
-        const buf = new Float32Array([0, 0, 0]);
-        cursorState = ScreenCursor.trackCursor(MR.getCanvas(), {
-            up   : (cursorInfo) => {
-                const pos = cursorInfo.position();
-
-                gl.uniform3fv(uCursorLoc, pos);
-                const cvs = MR.getCanvas();
-                const w = cvs.clientWidth;
-                const h = cvs.clientHeight;
-
-                // clip space
-                // clip space
-                pos[0] = (2.0 * (pos[0] / w)) - 1.0;
-                pos[1] = -1.0 * ((2.0 * (pos[1] / h)) - 1.0);
-
-                gl.uniform3fv(uCursorClipspaceLoc, pos);
-
-                gl.uniform3fv(uCursorDirLoc, cursorState.direction());
-
-                const velocity = cursorInfo.toClipPosition(cursorInfo.positionChange(), w, h);
-                velocity[0] *= timeDelta;
-                velocity[1] *= timeDelta;
-                velocity[2] *= timeDelta;
-
-                gl.uniform3fv(uCursorVelLoc, velocity);
-            },
-            down : (cursorInfo) => { 
-                const pos = cursorInfo.position();
-
-                gl.uniform3fv(uCursorLoc, pos);
-                const cvs = MR.getCanvas();
-                const w = cvs.clientWidth;
-                const h = cvs.clientHeight;
-
-                // clip space
-                pos[0] = (2.0 * (pos[0] / w)) - 1.0;
-                pos[1] = -1.0 * ((2.0 * (pos[1] / h)) - 1.0);
-
-                gl.uniform3fv(uCursorClipspaceLoc, pos);
-
-                gl.uniform3fv(uCursorDirLoc, cursorState.direction());
-
-                const velocity = cursorInfo.toClipPosition(cursorInfo.positionChange(), w, h);
-                velocity[0] *= timeDelta;
-                velocity[1] *= timeDelta;
-                velocity[2] *= timeDelta;
-
-                gl.uniform3fv(uCursorVelLoc, velocity);
-            },
-            move : (cursorInfo) => {
-                const pos = cursorInfo.position();
-
-                gl.uniform3fv(uCursorLoc, pos);
-                const cvs = MR.getCanvas();
-                const w = cvs.clientWidth;
-                const h = cvs.clientHeight;
-
-                // clip space
-                pos[0] = (2.0 * (pos[0] / w)) - 1.0;
-                pos[1] = -1.0 * ((2.0 * (pos[1] / h)) - 1.0);
-
-                gl.uniform3fv(uCursorClipspaceLoc, pos);
-
-                gl.uniform3fv(uCursorDirLoc, cursorState.direction());
-                
-
-                const velocity = cursorInfo.toClipPosition(cursorInfo.positionChange(), w, h);
-                velocity[0] *= timeDelta;
-                velocity[1] *= timeDelta;
-                velocity[2] *= timeDelta;
-
-                gl.uniform3fv(uCursorVelLoc, velocity);
+    cursor = ScreenCursor.trackCursor(MR.getCanvas());
 
 
-            },
-        });
 
-        // make the mouse cursor invisible while on the canvas
-        cursorState.hide();
-    }
-
+    // update resolution upon resize
     CanvasUtil.setOnResizeEventHandler((cvs, w, h) => {
-        gl.uniform2fv(uResolutionLoc, new Float32Array([w, h]));
+        gl.uniform2fv(state.uResolutionLoc, new Float32Array([w, h]));
+        // aspect ratio
+        gl.uniform1f(state.uAspectLoc, cvs.clientWidth / cvs.clientHeight);
     });
 }
 
@@ -582,9 +473,9 @@ async function setup(state) {
 // adjusted times locally)
 function onStartFrame(t, state) {
     // set start time if this is the first time
-    if (timeStartMS === -1) { // only occurs once at the beginning
-        timeStartMS = t;
-        timeStart   = t / 1000.0;
+    if (state.timeStartMS === -1) { // only occurs once at the beginning
+        state.timeStartMS = t;
+        state.timeStart   = t / 1000.0;
 
         // For this world, we want the depth test so opaque
         // objects can be rendered in unsorted order
@@ -594,7 +485,7 @@ function onStartFrame(t, state) {
         // we only render one static quad to the screen, 
         // which means we only need to upload the model, view, and projection matrices once
         gl.uniformMatrix4fv(
-            uModelLoc, 
+            state.uModelLoc, 
             false, 
             new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-1,1])
         );
@@ -605,19 +496,19 @@ function onStartFrame(t, state) {
         // update time
         //////////////////////////
         // in milliseconds
-        timeMS = t - timeStartMS;
+        state.timeMS = t - state.timeStartMS;
         // in seconds
-        time   = timeMS / 1000.0; // shaders much prefer time in seconds
+        state.time   = state.timeMS / 1000.0; // shaders much prefer time in seconds
         // time between frames
         // in milliseconds 
-        timeDeltaMS = timeMS - timePrevMS;
+        state.timeDeltaMS = state.timeMS - state.timePrevMS;
         // in seconds
-        timeDelta   = timeDeltaMS / 1000.0;
+        state.timeDelta   = state.timeDeltaMS / 1000.0;
         // update the previous time so delta time can be calculated next frame
         // in milliseconds
-        timePrevMS = timeMS;
+        state.timePrevMS = state.timeMS;
         // in seconds
-        timePrev   = time;
+        state.timePrev   = state.time;
         //////////////////////////
     }
 
@@ -626,9 +517,9 @@ function onStartFrame(t, state) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // update the time uniform used in our shader
-    gl.uniform1f(uTimeLoc, time);
+    gl.uniform1f(state.uTimeLoc, state.time);
 
-    gl.bindVertexArray(vao);
+    gl.bindVertexArray(state.vao);
 }
 
 // This function is called every time the frame needs to be drawn,
@@ -646,8 +537,8 @@ function onDrawTriangleList(t, projMat, viewMat, state) {
 
     // update the view and projection matrices (Unnecessary if they don't change, but 
     // we don't make that optimization here
-    gl.uniformMatrix4fv(uViewLoc, false, new Float32Array(viewMat));
-    gl.uniformMatrix4fv(uProjLoc, false, new Float32Array(projMat));
+    gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
+    gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
 
     gl.drawArrays(gl.TRIANGLES, 0, triListVertexCount);
 }
@@ -657,8 +548,8 @@ function onDrawIndexedTriangleList(t, projMat, viewMat, state) {
 
     // update the view and projection matrices (Unnecessary if they don't change, but 
     // we don't make that optimization here
-    gl.uniformMatrix4fv(uViewLoc, false, new Float32Array(viewMat));
-    gl.uniformMatrix4fv(uProjLoc, false, new Float32Array(projMat));
+    gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
+    gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
 
     gl.drawElements(gl.TRIANGLES, triListElementCount, gl.UNSIGNED_SHORT, 0);
 }
@@ -668,8 +559,8 @@ function onDrawTriangleStrip(t, projMat, viewMat, state) {
 
     // update the view and projection matrices (Unnecessary if they don't change, but 
     // we don't make that optimization here
-    gl.uniformMatrix4fv(uViewLoc, false, new Float32Array(viewMat));
-    gl.uniformMatrix4fv(uProjLoc, false, new Float32Array(projMat));
+    gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
+    gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, triStripVertexCount);
 }
@@ -678,8 +569,8 @@ function onDrawIndexedTriangleStrip(t, projMat, viewMat, state) {
 
     // update the view and projection matrices (Unnecessary if they don't change, but 
     // we don't make that optimization here
-    gl.uniformMatrix4fv(uViewLoc, false, new Float32Array(viewMat));
-    gl.uniformMatrix4fv(uProjLoc, false, new Float32Array(projMat));
+    gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
+    gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
 
     // indexed data uses drawElements, which takes the primitive type,
     // the number of indices, the type of indices (could be different byte sizes), and
@@ -712,11 +603,12 @@ function onEndFrame(t, state) {
 // with these exact properties set to your function callbacks
 export default function main() {
     const def = {
-        name         : 'week3',
+        name         : 'triangles',
         setup        : setup,
         onStartFrame : onStartFrame,
         onEndFrame   : onEndFrame,
         onDraw       : onDraw,
+        onReload     : onReload
     };
 
     return def;

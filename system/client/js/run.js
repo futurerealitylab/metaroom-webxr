@@ -46,6 +46,64 @@ function treq(data) {
 }
 window.treq = treq;
 
+
+
+window.watchFiles = function(arr, status = {}) {
+    if (!arr) {
+        status.message = "ERR_NO_FILES_SPECIFIED";
+        console.error("No files specified");
+        return false;
+    }
+    if (MR.server.sock.readyState !== WebSocket.OPEN) {
+        status.message = "ERR_SERVER_UNAVAILABLE";
+        console.error("Server is unavailable");
+
+        return false;
+    }
+
+    MR.server.sock.send(JSON.stringify({"MR_Message" : "Watch_Files", "files" : arr}));
+}
+
+
+
+window.hotReloadFile = function(localPath) {
+    const parentPath = getCurrentPath(window.location.pathname);
+
+    let saveTo = localPath;
+
+    saveTo = getPath(localPath);
+
+    const origin = window.location.origin;
+    const originIdx = saveTo.indexOf(origin);
+    saveTo = saveTo.substring(originIdx + origin.length + 1);
+
+    if (parentPath !== '/' && parentPath !== '\\') {
+        const parentIdx = saveTo.indexOf(parentPath);
+        saveTo = saveTo.substring(parentIdx + parentPath.length);
+    }
+
+    console.log(saveTo);
+    MR.server.subsLocal.subscribe("Update_File", (filename, args) => {
+        if (args.file !== filename) {
+            console.log("file does not match");
+            return;
+        }
+        console.log("updating file TODO", filename);
+
+        MR.wrangler.reloadGeneration += 1;
+
+        import(window.location.href + filename + "?generation=" + MR.wrangler.reloadGeneration).then(
+            (world) => {
+                const conf = world.default();
+                MR.wrangler.onReload(conf);
+            }).catch(err => { console.error(err); });
+
+    }, saveTo);
+
+    watchFiles([saveTo], {});
+}
+
+
 // db.initLoggerSystem({
 //   logger : new db.LoggerDefault()
 // });
@@ -67,7 +125,7 @@ default: {
     // frees gl resources upon world switch
     glDoResourceTracking   : true,
     glEnableEditorHook     : true,
-    enableMultipleWorlds   : false,
+    enableMultipleWorlds   : true,
     enableEntryByButton    : true,
     enableBellsAndWhistles : false,
     // main() is the system's entry point
@@ -106,7 +164,6 @@ default: {
 
           while (worldIt !== null) {
             const src = worldIt.src;
-
             const world     = await import(src);
             const localPath = getCurrentPath(src)
 
@@ -120,6 +177,7 @@ default: {
           setPath(worldInfo.localPath);
 
           MR.wrangler.beginSetup(worldInfo.world.default()).catch(err => {
+              console.trace();
               console.error(err);
               MR.wrangler.doWorldTransition();
           });
@@ -135,7 +193,8 @@ default: {
           setPath(getCurrentPath(src));
 
           const world = await import(src);
-          MR.wrangler.configure(world.default()).catch(err => {
+          MR.wrangler.beginSetup(world.default()).catch(err => {
+              console.trace();
               console.error(err);
           });
         } catch (err) {
@@ -155,11 +214,16 @@ default: {
 
           console.log("transitioning to world: [" + MR.worldIdx + "]");
 
+          CanvasUtil.setOnResizeEventHandler(null);
+          CanvasUtil.resize(MR.getCanvas(), 
+              MR.wrangler.options.outputWidth, 
+              MR.wrangler.options.outputHeight
+          );
+
           gl.useProgram(null);
           MR.wrangler._reset();
           MR.wrangler._glFreeResources();
           ScreenCursor.clearTargetEvents();
-          //
 
           try {
             // call the main function of the selected world
@@ -171,6 +235,8 @@ default: {
 
             const worldInfo = MR.worlds[MR.worldIdx];
             setPath(worldInfo.localPath);
+
+
 
             MR.wrangler.beginSetup(worldInfo.world.default()).catch((e) => {
                 console.error(e);
