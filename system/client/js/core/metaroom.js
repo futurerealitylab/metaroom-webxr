@@ -210,3 +210,7 @@ MR.timeMS = () => MR.wrangler.timeMS;
 MR.getMessagePublishSubscriber = () => { 
     return MR.server.subsLocal; 
 }
+
+MR.dynamicImport = function(path) {
+    return import(path + "?generation=" + MR.wrangler.reloadGeneration);
+};

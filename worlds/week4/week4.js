@@ -251,18 +251,16 @@ class Transform {
 let matrixModule;
 let Matrix;
 
-
 //
 async function onReload(state) {
-    console.trace()
-    console.log("WEE", MR.wrangler.reloadGeneration);
-
-    matrixModule = await import(getPath("matrix.js"));
-    Matrix = matrixModule.Matrix;
+    return MR.dynamicImport(getPath("matrix.js")).then((myModule) => {
+        matrixModule = myModule;
+        Matrix = matrixModule.Matrix;
+    });
 }
 
 async function setup(state) {
-    hotReloadFile("week4.js");
+    hotReloadFile(getPath("week4.js"));
 
     state.spheres = [
     new Sphere(
@@ -364,10 +362,6 @@ state.polyhedra = [
 
 
     window.state = state;
-
-    console.log("BLARGH")
-
-
 
     let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
         { 
