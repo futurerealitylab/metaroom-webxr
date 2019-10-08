@@ -1019,6 +1019,21 @@ const MREditor = (function() {
 
     _out.insertTextSupported = true;
 
+    function updateShaderCompilationCallbacks(key, callbacks) {
+        if (!key) {
+            return;
+        }
+
+        const record = MREditor.shaderMap.get(key);
+        if (!record) {
+            return;
+        }
+
+        record.onNeedsCompilation = callbacks.onNeedsCompilation || record.onNeedsCompilation;
+        record.onAfterCompilation = callbacks.onAfterCompilation || record.onAfterCompilation;
+    }
+    _out.updateShaderCompilationCallbacks = updateShaderCompilationCallbacks;
+
     function registerShaderForLiveEditing(_gl, key, args, callbacks, options) {
         if (!key) {
             console.error("No shader key specified");
@@ -1029,9 +1044,6 @@ const MREditor = (function() {
 
         const onAfterCompilation = callbacks.onAfterCompilation;
         const userData = (options && options.userData) ? options.userData : null;
-
-
-        // TODO(KTR): make a div per shader program in addition to the blocks per shader pass
 
         const libMap = this.libMap || null;
 
@@ -1051,6 +1063,8 @@ const MREditor = (function() {
                 headers : {},
                 paths : {},
                 lineAdjustments : {},
+                onAfterCompilation : onAfterCompilation,
+                onNeedsCompilation : onNeedsCompilation
             };
 
             MREditor.shaderMap.set(key, record);
@@ -1445,9 +1459,9 @@ const MREditor = (function() {
             let status    = null;
             let program   = null;
             let errRecord = null;
-            if (onNeedsCompilation) {
+            if (record.onNeedsCompilation) {
                 try {
-                    status = onNeedsCompilation(record.args, libMap);
+                    status = record.onNeedsCompilation(record.args, libMap);
                 } catch (err) {
                     console.error(err);
                     return;
@@ -1496,11 +1510,11 @@ const MREditor = (function() {
                 textAreaElements.vertex.style.backgroundColor   = BG_COLOR_NO_ERROR;
                 textAreaElements.fragment.style.backgroundColor = BG_COLOR_NO_ERROR;
 
-                if (!onAfterCompilation) {
+                if (!record.onAfterCompilation) {
                     console.warn("onAfterCompilation unspecified");
                 } else {
                     try {
-                        onAfterCompilation(program, userData);
+                        record.onAfterCompilation(program, userData);
                     } catch (err) {
                         console.error(err);
                         return;
@@ -1591,7 +1605,9 @@ const MREditor = (function() {
                 `;
 
                 const shaderRecord = GFX.createShaderProgramFromStrings(defaultErrorVertex, defaultErrorFragment);
-                onAfterCompilation(shaderRecord.program, userData);
+                if (record.onAfterCompilation) {
+                    record.onAfterCompilation(shaderRecord.program, userData);
+                }
             }
         }
 
