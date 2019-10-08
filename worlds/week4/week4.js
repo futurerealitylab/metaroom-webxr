@@ -256,8 +256,65 @@ async function onReload(state) {
     return MR.dynamicImport(getPath("matrix.js")).then((myModule) => {
         matrixModule = myModule;
         Matrix = matrixModule.Matrix;
-    });
-}
+
+        MREditor.updateShaderCompilationCallbacks("mainShader",
+        {
+            onAfterCompilation : (program) => {
+                state.program = program;
+
+                gl.useProgram(program);
+
+                state.uCursorLoc       = gl.getUniformLocation(program, 'uCursor');
+                state.uModelLoc        = gl.getUniformLocation(program, 'uModel');
+                state.uProjLoc         = gl.getUniformLocation(program, 'uProj');
+                state.uTimeLoc         = gl.getUniformLocation(program, 'uTime');
+                state.uViewLoc         = gl.getUniformLocation(program, 'uView');
+            
+                gl.uniform4fv(gl.getUniformLocation(program, "ambient"), [0.045, 0.12, 0.1, 1.0]);
+                gl.uniform1i(gl.getUniformLocation(program,  "sphere_count"),     3);
+                gl.uniform1i(gl.getUniformLocation(program,  "polyhedron_count"), 2);
+                gl.uniform1i(gl.getUniformLocation(program,  "plane_count"),      0);
+
+                gl.uniformMatrix4fv(gl.getUniformLocation(program, "quad_surf_sphere"),
+                    false,
+                    [1.,0.,0.,0., 
+                    0.,1.,0.,0., 
+                    0.,0.,1.,0., 
+                    0.,0.,0.,-1.]
+                );
+
+                gl.uniformMatrix4fv(gl.getUniformLocation(program, "quad_surf_tube"),
+                    false,
+                    [1.,0.,0.,0., 
+                    0.,1.,0.,0., 
+                    0.,0.,0.,0., 
+                    0.,0.,0.,-1.]
+                );
+
+                for (let i = 0; i <state.spheres.length; i += 1) {
+                    const sphere =state.spheres[i];
+                    let prefix = "spheres[" + i + "]";
+                    sphere.setUniforms(prefix, program);
+                    sphere.upload.all();
+                    sphere.mat.upload.all();
+                    sphere.xform.model   = state.H.pushIdentity();
+                    sphere.xform.inverse = state.H.pushIdentity();
+                    sphere.xform.upload.all();
+                }
+
+                for (let i = 0; i <state.polyhedra.length; i += 1) {
+                    const polyhedron =state.polyhedra[i];
+                    let prefix = "polyhedra[" + i + "]";
+                    polyhedron.setUniforms(prefix, program);
+                    polyhedron.upload.all();
+                    polyhedron.mat.upload.all();
+                    polyhedron.xform.model = state.H.pushIdentity();
+                    polyhedron.xform.inverse = state.H.pushIdentity();
+                    polyhedron.xform.upload.all();
+                }
+            } 
+        });
+});}
 
 async function setup(state) {
     hotReloadFile(getPath("week4.js"));

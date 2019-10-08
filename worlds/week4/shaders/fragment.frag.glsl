@@ -15,7 +15,7 @@ out vec4 fragColor;
 uniform mat4 quad_surf_sphere;
 uniform mat4 quad_surf_tube;
 
-
+//
 float sin01(float v) {
     return (1.0 + sin(v)) / 2.0;
 }
