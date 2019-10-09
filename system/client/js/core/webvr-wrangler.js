@@ -179,7 +179,7 @@ window.VRCanvasWrangler = (function() {
       options.onAnimationFrame = options.onAnimationFrame || this._onAnimationFrame.bind(this);
       options.onAnimationFrameWindow = options.onAnimationFrameWindow || this._onAnimationFrameWindow.bind(this);
       options.onSelectStart = options.onSelectStart || function(t, state) {};
-      options.onReload = options.onReload || function(t, state) {};
+      options.onReload = options.onReload || function(state) {};
 
       options.onSelect = options.onSelect || (function(t, state) {});
       options.onSelectEnd = options.selectEnd || (function(t, state) {});
@@ -474,7 +474,7 @@ window.VRCanvasWrangler = (function() {
       options.onDraw = (function(t, p, v, state, eyeIdx) {});
       options.onAnimationFrame = this._onAnimationFrame.bind(this);
       options.onAnimationFrameWindow = this._onAnimationFrameWindow.bind(this);
-      options.onReload = function(t, state) {};
+      options.onReload = function(state) {};
       //options.onWindowFrame = this._onWindowFrame.bind(this);
 
       // selection
