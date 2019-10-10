@@ -343,56 +343,6 @@ const MREditor = (function() {
         document.getElementById("text-areas").style.paddingBottom = 
             (MR.wrangler.menu.el.getBoundingClientRect().height * 1.5) + "px";
 
-
-
-        // TODO
-        // MR.wrangler.menu.reset = new MenuItem(
-        //     MR.wrangler.menu.el, 'ge_menu', 'Reset Shaders',
-        //     (event) => {
-        //         const shaderIt = MREditor.shaderMap.entries();
-        //         for (let shader of shaderIt) {
-        //             const shaderRecord = shader[1];
-        //             const originals = shaderRecord.originals;
-        //             const headers =  shaderRecord.headers;
-        //             const textAreas = shaderRecord.textAreas;
-
-        //             shaderRecord.logs.clearLogErrors();
-        //             shaderRecord.hasError = false;
-
-        //             {
-        //                 const errorStates = shaderRecord.errorStates;
-        //                 for (let entry of errorStates) {
-        //                     entry[1] = false;
-        //                 }
-        //             }
-
-        //             for (let prop in originals) {
-        //                 if (Object.prototype.hasOwnProperty.call(originals, prop)) {
-        //                     const tArea = textAreas[prop];
-        //                     if (tArea) {
-        //                         tArea.value = originals[prop];
-        //                         tArea.style.backgroundColor = BG_COLOR_NO_ERROR;
-        //                         tArea.style.color = TEXT_COLOR_NO_ERROR
-        //                     }
-        //                 }
-        //             }
-
-        //             shaderRecord.compile();
-        //         }
-        //     }
-        // );
-
-        // TODO(KTR): don't show the button when the server is unavailable
-        // MR.wrangler.menu.instaniateServerDependentMenuArray = [];
-        // MR.wrangler.menu.instaniateServerDependentMenuArray.push(() => {
-        //     MR.wrangler.menu.save = new MenuItem(MR.wrangler.menu.el, 'ge_menu', 'Save', saveCallback);
-        //     document.addEventListener("keydown", function(e) {
-        //       if ((window.navigator.platform.match("Mac") ? e.metaKey : e.ctrlKey)  && e.keyCode == 83) {
-        //         e.preventDefault();
-        //         saveCallback(e);
-        //       }
-        //     }, false);
-        // });
         MR.wrangler.menu.save = new MenuItem(MR.wrangler.menu.el, 'ge_menu', 'Save', saveCallback);
         document.addEventListener("keydown", function(e) {
           if ((window.navigator.platform.match("Mac") ? e.metaKey : e.ctrlKey)  && e.keyCode == 83) {

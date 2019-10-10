@@ -236,6 +236,21 @@ window.VRCanvasWrangler = (function() {
       this.timeStart = 0;
       window.timeStart = this.timeStart;
 
+        this.menu = new Menu();
+        if (this.options.enableMultipleWorlds) {
+          this.menu.menus.transition = new MenuItem(
+            this.menu.el, 
+            'ge_menu', 
+            'Prev',
+            () => { MR.wrangler.doWorldTransition(-1); }
+          );
+          this.menu.menus.transition = new MenuItem(
+            this.menu.el, 
+            'ge_menu', 
+            'Next',
+            () => { return MR.wrangler.doWorldTransition(+1); }
+          );
+        }
       if (this.options.enableBellsAndWhistles) {
         const status = await this._initWebVR();
         if (!status) {
@@ -337,21 +352,6 @@ window.VRCanvasWrangler = (function() {
     }
 
     _initFallback() {
-        this.menu = new Menu();
-        if (this.options.enableMultipleWorlds) {
-          this.menu.menus.transition = new MenuItem(
-            this.menu.el, 
-            'ge_menu', 
-            'Prev',
-            () => { MR.wrangler.doWorldTransition(-1); }
-          );
-          this.menu.menus.transition = new MenuItem(
-            this.menu.el, 
-            'ge_menu', 
-            'Next',
-            () => { return MR.wrangler.doWorldTransition(+1); }
-          );
-        }
 
       const modalCanvasInit = () => {
           const bodyWidth = document.body.getBoundingClientRect().width;
