@@ -370,6 +370,7 @@ window.VRCanvasWrangler = (function() {
 
           let shiftDown__ = false;
           let mouseDown__ = false;
+          let altDown = false;
           let clientX = 0;
           let clientY = 0;
 
@@ -381,122 +382,78 @@ window.VRCanvasWrangler = (function() {
             return clientY;
           }
 
-          // window.addEventListener('scroll', function ( event ) {
-          //   return;
-          //   let curr = parseInt(P.style.top);
-
-          //   P.style.top = "" + (window.scrollY + shiftY) + "px";
-          //   P.style.left = "" + (window.scrollX + shiftX) + "px";
-
-          // });
-
-
-
           const mouseMoveHandler__ = function(event) {
             const w = MR.wrangler._canvas.clientWidth;
             const h = MR.wrangler._canvas.clientHeight;
             P.style.left = (clientX - (w / 2.0)) + "px";
             P.style.top = (clientY - (h / 2.0)) + "px";
-            // const doc = document;
-            // const body = document.body;
-            
-            // let pageX = event.clientX +
-            //   (doc && doc.scrollLeft || body && body.scrollLeft || 0) -
-            //   (doc && doc.clientLeft || body && body.clientLeft || 0);
-            // let pageY = event.clientY +
-            //   (doc && doc.scrollTop  || body && body.scrollTop  || 0) -
-            //   (doc && doc.clientTop  || body && body.clientTop  || 0 );
-
-
-
-            // let prevLeft = parseInt(P.style.left);
-            // let prevTop = parseInt(P.style.top);
-
-            // let nextLeft = (pageX - (w / 2.0));
-            // let nextTop = (pageY - (h / 2.0));
-
-            // P.style.left = "" + (window.scrollX + nextLeft) + "px";
-            // P.style.top   = "" + (window.scrollY + nextTop) + "px";
-
-            // shiftX = nextLeft;
-            // shiftY = nextTop;
           };
 
-          window.addEventListener('mousemove', (event) => {
-            clientX = event.clientX;
-            clientY = event.clientY;
-          });
-          window.addEventListener('mousedown', (event) => {
-            clientX = event.clientX;
-            clientY = event.clientY;
-          });
-          window.addEventListener('mouseup', (event) => {
-            clientX = event.clientX;
-            clientY = event.clientY;
-          });
-          window.addEventListener('keydown', function (event) {
-            if (event.key == "`") {
-              window.addEventListener('mousemove', mouseMoveHandler__);
-              shiftDown__ = true;
-              mouseMoveHandler__({clientX : clientX, clientY : clientY});
-            }
-          });
-          window.addEventListener('keyup', function (event) {
-            if (event.key == "`") {
-              window.removeEventListener('mousemove', mouseMoveHandler__);
-              shiftDown__ = false;
-            }
-          });
-        }
-        modalCanvasInit();
+          let beforeW;
+          let beforeH;
+          let altInitDown = true;
+          let initialX = 0;
 
-      let sizeToggle = false;
-      let beforeW;
-      let beforeH;
-      let firstDown = true;
-      let initialX = 0;
-      this.keyboardEventCallback = (ev) => {
+          document.addEventListener('mousemove', (event) => {
+            clientX = event.clientX;
+            clientY = event.clientY;
 
-          if (ev.key === 'Alt') {
-              const cursorX = window.getClientX();
-              if (firstDown) {
-                firstDown = false;
+            if (altDown) {
+              const cursorX = clientX;
+              if (altInitDown) {
+                altInitDown = false;
                 beforeW = CanvasUtil.baseCanvasDimensions.width;
                 beforeH = CanvasUtil.baseCanvasDimensions.height;
                 initialX = cursorX;
               }
 
-              const xDist = ((cursorX - initialX));
-              this._canvas.width = beforeW + xDist;
+              const xDist = (cursorX - initialX);
+              this._canvas.width = Math.max(64, beforeW + xDist);
               this._canvas.height = Math.floor(beforeH * ((this._canvas.width / beforeW)));
-
-              console.log(xDist);
               
               CanvasUtil.baseCanvasDimensions.width = this._canvas.clientWidth;
               CanvasUtil.baseCanvasDimensions.height = this._canvas.clientHeight;
               CanvasUtil.handleResizeEvent(this._canvas, this._canvas.clientWidth, this._canvas.clientHeight);
-              ev.preventDefault();        
-          }
-      }
+            }
+          });
+          document.addEventListener('mousedown', (event) => {
+            clientX = event.clientX;
+            clientY = event.clientY;
+          });
+          document.addEventListener('mouseup', (event) => {
+            clientX = event.clientX;
+            clientY = event.clientY;
+          });
+          document.addEventListener('keydown', (event) => {
+            if (event.key == "`") {
+              window.addEventListener('mousemove', mouseMoveHandler__);
+              shiftDown__ = true;
+              mouseMoveHandler__({clientX : clientX, clientY : clientY});
+            } else if (event.key == 'Alt') {
+              altDown = true;
 
-      document.addEventListener('keydown', (ev) => {
-          this.keyboardEventCallback(ev);
+              event.preventDefault();
+            }
+          });
+          document.addEventListener('keyup', (event) => {
+            if (event.key == "`") {
+              window.removeEventListener('mousemove', mouseMoveHandler__);
+              shiftDown__ = false;
+            } else if (event.key == 'Alt') {
+                CanvasUtil.baseCanvasDimensions.width = this._canvas.clientWidth;
+                CanvasUtil.baseCanvasDimensions.height = this._canvas.clientHeight;
+                CanvasUtil.handleResizeEvent(this._canvas, this._canvas.clientWidth, this._canvas.clientHeight);
 
-          return false;
-      }, false);
+                altInitDown = true;
+                altDown = false;
 
-      document.addEventListener('keyup', (ev) => {
-          if (ev.key === 'Alt') {
-            firstDown = true;
+                event.preventDefault();
+            }
+          });
+        }
+        modalCanvasInit();
 
-            CanvasUtil.baseCanvasDimensions.width = this._canvas.clientWidth;
-            CanvasUtil.baseCanvasDimensions.height = this._canvas.clientHeight;
-            CanvasUtil.handleResizeEvent(this._canvas, this._canvas.clientWidth, this._canvas.clientHeight);
-            ev.preventDefault();
-          }
 
-          return false;
-      }, false);
     }
 
     _clearConfig() {

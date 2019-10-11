@@ -101,7 +101,7 @@ default: {
     glEnableEditorHook     : true,
     enableMultipleWorlds   : true,
     enableEntryByButton    : true,
-    enableBellsAndWhistles : true,
+    enableBellsAndWhistles : false,
     // main() is the system's entry point
     main : async () => {
 
@@ -176,7 +176,7 @@ default: {
         }
       }
 
-      wrangler.defineWorldTransitionProcedure(function(direction=+1) {
+      wrangler.defineWorldTransitionProcedure(function(direction = +1) {
         let ok = false;
 
         // try to transition to the next world
@@ -209,8 +209,6 @@ default: {
 
             const worldInfo = MR.worlds[MR.worldIdx];
             setPath(worldInfo.localPath);
-
-
 
             MR.wrangler.beginSetup(worldInfo.world.default()).catch((e) => {
                 console.error(e);

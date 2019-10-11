@@ -1103,7 +1103,7 @@ const MREditor = (function() {
                             continue;
                         }
 
-                        errMsgNode.nodeValue = errText;
+                        errMsgNode.nodeValue = errText.trim();
 
                         globalErrorMsgState[prop] = errMsgNode.nodeValue + 
                             "\t in FILE : " + 
