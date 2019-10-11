@@ -515,7 +515,9 @@ window.VRCanvasWrangler = (function() {
 
         return;
       }
-      this._canvas.width /= 2.0;
+      if (this.VRIsActive) {
+        this._canvas.width /= 2.0;
+      }
       this.VRIsActive = false;
 
 
