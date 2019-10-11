@@ -16,7 +16,7 @@ const CanvasUtil = (function() {
 	  }
 	}
 	function resize(canvas, resx, resy) {
-		canvas.width = resx;
+		canvas.width = resx * ((MR && MR.wrangler && MR.wrangler.VRIsActive) ? 2.0 : 1.0);
 		canvas.height = resy;
 
 		CanvasUtil.baseCanvasDimensions.width  = resx;

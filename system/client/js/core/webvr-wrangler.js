@@ -105,6 +105,7 @@ window.VRCanvasWrangler = (function() {
 
       this.buttonsCache = [];
 
+      this.VRIsActive = false;
       // Bound functions
       this.onVRRequestPresent = this._onVRRequestPresent.bind(this);
       this.onVRExitPresent = this._onVRExitPresent.bind(this);
@@ -372,6 +373,14 @@ window.VRCanvasWrangler = (function() {
           let clientX = 0;
           let clientY = 0;
 
+          window.getClientX = () => {
+            return clientX;
+          }
+
+          window.getClientY = () => {
+            return clientY;
+          }
+
           // window.addEventListener('scroll', function ( event ) {
           //   return;
           //   let curr = parseInt(P.style.top);
@@ -442,24 +451,49 @@ window.VRCanvasWrangler = (function() {
         modalCanvasInit();
 
       let sizeToggle = false;
+      let beforeW;
+      let beforeH;
+      let firstDown = true;
+      let initialX = 0;
       this.keyboardEventCallback = (ev) => {
 
-        if (ev.key === 'Alt') {
-          if (sizeToggle) {
-            sizeToggle = false;
-            this._canvas.width = CanvasUtil.baseCanvasDimensions.width;
-            this._canvas.height = CanvasUtil.baseCanvasDimensions.height;
-            CanvasUtil.handleResizeEvent(this._canvas, this._canvas.clientWidth, this._canvas.clientHeight);
-          } else {
-            sizeToggle = true;
-            CanvasUtil.resizeToDisplaySize(this._canvas, 0.22);
-            CanvasUtil.handleResizeEvent(this._canvas, this._canvas.clientWidth, this._canvas.clientHeight);
-          }          
-        }
+          if (ev.key === 'Alt') {
+              const cursorX = window.getClientX();
+              if (firstDown) {
+                firstDown = false;
+                beforeW = CanvasUtil.baseCanvasDimensions.width;
+                beforeH = CanvasUtil.baseCanvasDimensions.height;
+                initialX = cursorX;
+              }
+
+              const xDist = ((cursorX - initialX));
+              this._canvas.width = beforeW + xDist;
+              this._canvas.height = Math.floor(beforeH * ((this._canvas.width / beforeW)));
+
+              console.log(xDist);
+              
+              CanvasUtil.baseCanvasDimensions.width = this._canvas.clientWidth;
+              CanvasUtil.baseCanvasDimensions.height = this._canvas.clientHeight;
+              CanvasUtil.handleResizeEvent(this._canvas, this._canvas.clientWidth, this._canvas.clientHeight);
+              ev.preventDefault();        
+          }
       }
 
-      document.addEventListener('keyup', (ev) => {
+      document.addEventListener('keydown', (ev) => {
           this.keyboardEventCallback(ev);
+
+          return false;
+      }, false);
+
+      document.addEventListener('keyup', (ev) => {
+          if (ev.key === 'Alt') {
+            firstDown = true;
+
+            CanvasUtil.baseCanvasDimensions.width = this._canvas.clientWidth;
+            CanvasUtil.baseCanvasDimensions.height = this._canvas.clientHeight;
+            CanvasUtil.handleResizeEvent(this._canvas, this._canvas.clientWidth, this._canvas.clientHeight);
+            ev.preventDefault();
+          }
 
           return false;
       }, false);
@@ -512,6 +546,22 @@ window.VRCanvasWrangler = (function() {
     }
 
     _onVRPresentChange() {
+      if (this._vrDisplay == null) {
+        return;
+      }
+
+      if (this._vrDisplay.isPresenting) {
+        if (!this.VRIsActive) {
+          this._canvas.width *= 2;
+        }
+        this.VRIsActive = true;
+
+        return;
+      }
+      this._canvas.width /= 2.0;
+      this.VRIsActive = false;
+
+
     }
 
     _onFrameXR(t) {

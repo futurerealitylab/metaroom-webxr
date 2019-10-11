@@ -4,31 +4,6 @@ import {MREditor} from "./lib/mreditor.js";
 
 window.MREditor = MREditor;
 
-// const codemirror = false;
-// if (codemirror) {
-//   const editorDiv = document.createElement('div');
-//   editorDiv.setAttribute('class', 'ge_editor');
-
-//   document.body.prepend(editorDiv);
-
-//   window.editor = CodeMirror(editorDiv, {
-//     lineNumbers: true,
-//     keyMap: 'sublime',
-//     theme:  "monokai",
-//     mode:   'x-shader/x-fragment',
-//     showCursorWhenSelecting: true,
-//     lineWrapping: true,
-//     autofocus: false
-//   });
-
-
-//   window.editor.setOption("extraKeys", {
-//     Tab: function(cm){cm.replaceSelection("    ");},
-//     Enter: function(cm){cm.replaceSelection("\n");},
-//     '`': function(cm) {},
-//   });
-// }
-
 function treq(data) {
   fetch("/world_transition", {
       method: "POST",
