@@ -101,7 +101,7 @@ default: {
     glEnableEditorHook     : true,
     enableMultipleWorlds   : true,
     enableEntryByButton    : true,
-    enableBellsAndWhistles : true,
+    enableBellsAndWhistles : false,
     // main() is the system's entry point
     main : async () => {
 
