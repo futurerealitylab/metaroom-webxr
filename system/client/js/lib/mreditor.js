@@ -320,23 +320,24 @@ const MREditor = (function() {
             style : ["none", "block"],
             classes : ["hidden", "shown"]
         };
+        MREditor.hideEditor = (event) => {
+            MR.wrangler.menu.hide.name = 
+                showHideState.text[showHideState.idx];
+            document.getElementById('text-areas').style.display = 
+                showHideState.style[showHideState.idx];
+
+            showHideState.idx ^= 1;
+
+            const classes = showHideState.classes;
+            globalErrorMsgNode.classList.remove(classes[1 - showHideState.idx]);
+            globalErrorMsgNode.classList.add(classes[showHideState.idx]);
+
+            MR.wrangler.codeIsHidden = (showHideState.idx === 1);
+        };
+
         MR.wrangler.menu.hide = new MenuItem(
             MR.wrangler.menu.el, 'ge_menu', 'Hide', 
-            (event) => {
-
-                MR.wrangler.menu.hide.name = 
-                    showHideState.text[showHideState.idx];
-                document.getElementById('text-areas').style.display = 
-                    showHideState.style[showHideState.idx];
-
-                showHideState.idx ^= 1;
-
-                const classes = showHideState.classes;
-                globalErrorMsgNode.classList.remove(classes[1 - showHideState.idx]);
-                globalErrorMsgNode.classList.add(classes[showHideState.idx]);
-
-                MR.wrangler.codeIsHidden = (showHideState.idx === 1);
-            }
+            MREditor.hideEditor
         );
         MR.wrangler.codeIsHidden = false;
 

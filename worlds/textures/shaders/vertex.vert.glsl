@@ -43,7 +43,7 @@ vec2 rotate_2D_point_around(const vec2 pt, const vec2 origin, const float angle)
 
 void main() {
   // Multiply the position by the matrix.
-  gl_Position = uProj * uView * uModel * vec4(aPos + vec3(2.0 * cos(uTime), 0., -2.0 * (sin01(uTime) + 1.0)), 1.0);
+  gl_Position = uProj * uView * uModel * vec4(aPos, 1.0);
   
   vNor = aNor;
   // Pass the texcoord to the fragment shader.

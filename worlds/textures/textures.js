@@ -165,6 +165,7 @@ const mydata = new UserData();
 // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
 // (return JavaScript "Promises" like in loadImages())
 async function setup(state) {
+    MREditor.hideEditor();
     // load initial images, then continue setup after waiting is done
     const images = await imgutil.loadImagesPromise([
         getPath("resources/textures/brick.png"),
@@ -453,9 +454,41 @@ async function setup(state) {
 
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+    // MR.registerKeyDownHandler((e) => {
+
+    // });
+
+    // MR.registerKeyUpHandler((e) => {
+
+    // });
 }
 
+const KEY_LEFT  = 37;
+const KEY_UP    = 38;
+const KEY_RIGHT = 39;
+const KEY_DOWN  = 40;
+const KEY_MOVE_VERT = 16; // shift
+const KEY_RESET_POS = 48; // 0
+const MAX_SPEED = 14.0;
+const FRICTION = 0.002;
+const startPosition = [0, 0, 5]
+function clamp(val,min_,max_){return Math.max(min_,Math.min(max_,val));}
+
+
 function onStartFrame(t, state) {
+    state.world = state.world || { 
+        cam_pos : [
+            startPosition[0], 
+            startPosition[1], 
+            startPosition[2]
+        ], 
+        v : [0.0, 0.0, 0.0] 
+    };
+    Input.updateKeyState();
+
+
+
     // update time
     let tStart = t;
     if (!state.tStart) {
@@ -468,6 +501,7 @@ function onStartFrame(t, state) {
     const now = (t - tStart);
 
     state.deltaTime = now - state.time;
+    state.deltaTimeS = state.deltaTime / 1000.0;
     state.time = now;
 
     // put logic updates here
@@ -476,6 +510,64 @@ function onStartFrame(t, state) {
 
     // update rendering state here
 
+    if (Input.keyWentDown(KEY_RESET_POS)) {
+        const v = state.world.v;
+        v[0] = 0;
+        v[1] = 0;
+        v[2] = 0;
+
+        state.world.cam_pos[0] = startPosition[0];
+        state.world.cam_pos[1] = startPosition[1];
+        state.world.cam_pos[2] = startPosition[2];
+    } else {
+
+        const v = state.world.v;
+        if (Input.keyIsDown(KEY_LEFT)) {
+            v[0] -= 1;
+        }
+        if (Input.keyIsDown(KEY_RIGHT)) {
+            v[0] += 1;
+        }
+        if (Input.keyIsDown(KEY_UP)) {
+            if (Input.keyIsDown(KEY_MOVE_VERT)) {
+                v[1] += 1;
+            } else {
+                v[2] -= 1;
+            }
+        }
+        if (Input.keyIsDown(KEY_DOWN)) {
+            if (Input.keyIsDown(KEY_MOVE_VERT)) {
+                v[1] -= 1;
+            } else {
+                v[2] += 1;
+            }
+        }
+        v[0] = clamp(v[0], -MAX_SPEED, MAX_SPEED);
+        v[1] = clamp(v[1], -MAX_SPEED, MAX_SPEED);
+        v[2] = clamp(v[2], -MAX_SPEED, MAX_SPEED);
+
+        const drag = Math.pow(FRICTION, state.deltaTimeS);
+        if (Math.abs(v[0]) < drag) {
+            v[0] = 0;
+        } else {
+            v[0] *= drag;
+        }
+        if (Math.abs(v[1]) < drag) {
+            v[1] = 0;
+        } else {
+            v[1] *= drag;
+        }
+        if (Math.abs(v[2]) < drag) {
+            v[2] = 0;
+        } else {
+            v[2] *= drag;
+        }
+
+        const cam_pos = state.world.cam_pos;
+        cam_pos[0] += state.world.v[0] * state.deltaTimeS;
+        cam_pos[1] += state.world.v[1] * state.deltaTimeS;
+        cam_pos[2] += state.world.v[2] * state.deltaTimeS;
+    }
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -499,10 +591,17 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     // (KTR): or just use MR.time for seconds, MR.timeMS for milliseconds
 
     gl.uniformMatrix4fv(mydata.uModelLoc, false, 
-        new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0, -1.0,1])
+        new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0, 0.0,1])
     );           
-    gl.uniformMatrix4fv(mydata.uViewLoc, false, new Float32Array(viewMat));
-    gl.uniformMatrix4fv(mydata.uProjLoc, false, new Float32Array(projMat));
+    
+
+    // TODO: temp without proper translation;
+    viewMat[12] = -state.world.cam_pos[0];
+    viewMat[13] = -state.world.cam_pos[1];
+    viewMat[14] = -state.world.cam_pos[2];
+
+    gl.uniformMatrix4fv(mydata.uViewLoc, false, viewMat);
+    gl.uniformMatrix4fv(mydata.uProjLoc, false, projMat);
 
     const primitive = gl.TRIANGLES;
     const offset    = 0;

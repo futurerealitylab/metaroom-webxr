@@ -20,7 +20,7 @@ Metaroom.prototype = {
         } else {
             this.worlds.push(world);
         }
-  }
+    }
 };
 
 // NGV220 says: we need to document the API boundary of the Metaroom, Metaroom_*, and
@@ -214,3 +214,118 @@ MR.getMessagePublishSubscriber = () => {
 MR.dynamicImport = function(path) {
     return import(path + "?generation=" + MR.wrangler.reloadGeneration);
 };
+
+
+MR._keydown = null;
+MR._keyup = null;
+
+//code.iamkate.com
+function Queue(){var a=[],b=0;this.getLength=function(){return a.length-b};this.isEmpty=function(){return 0==a.length};this.enqueue=function(b){a.push(b)};this.dequeue=function(){if(0!=a.length){var c=a[b];2*++b>=a.length&&(a=a.slice(b),b=0);return c}};this.peek=function(){return 0<a.length?a[b]:void 0}};
+MR._keyQueue = new Queue();
+
+
+MR.input = {
+    keyPrev : null,
+    keyCurr : null,
+};
+
+MR.initKeyEvents = function(keypoll) {
+
+    MR._keypoll = keypoll;
+
+    MR.input.keyPrev = new Uint8Array(512);
+    MR.input.keyCurr = new Uint8Array(512);
+
+    for (let i = 0; i < 512; i += 1) {
+        MR.input.keyPrev[i] = 0;
+    }
+    for (let i = 0; i < 512; i += 1) {
+        MR.input.keyCurr[i] = 0;
+    }
+
+    document.addEventListener("keydown", (e) => {
+        MR._keyQueue.enqueue(e);
+
+        if (MR._keydown) {
+            MR._keydown(e);
+        }
+    });
+    document.addEventListener("keyup", (e) => {
+        MR._keyQueue.enqueue(e);
+
+        if (MR._keyup) {
+            MR._keyup(e);
+        }
+    });
+};
+
+window.Input = {};
+window.Input.INPUT_TYPE_KEYDOWN = "keydown";
+window.Input.INPUT_TYPE_KEYUP   = "keyup";
+window.Input.updateKeyState = function() {
+    const keyPrev    = MR.input.keyPrev;
+    const keyPrevLen = MR.input.keyPrev.length;
+    const keyCurr    = MR.input.keyCurr;
+
+    for (let i = 0; i < keyPrevLen; i += 1) {
+        keyPrev[i] = keyCurr[i];
+    }
+
+    const Q = MR._keyQueue;
+    const currState = MR.input.keyCurr;
+    while (!Q.isEmpty()) {
+        const e = Q.dequeue();
+        const keyCode = e.keyCode;
+        switch (e.type) {
+        case Input.INPUT_TYPE_KEYDOWN: {
+            keyCurr[keyCode] = 1;
+            break;
+        }
+        case Input.INPUT_TYPE_KEYUP: {
+            keyCurr[keyCode] = 0;
+            break;
+        }
+        default: {
+
+        }
+        }
+    }
+};
+
+window.Input.keyWentDown = function(code) {
+    return !MR.input.keyPrev[code] && MR.input.keyCurr[code];
+};
+window.Input.keyWentDownNum = function(code) {
+    return (~MR.input.keyPrev[code]) & MR.input.keyCurr[code];
+};
+
+window.Input.keyIsDown = function(code) {
+    return MR.input.keyCurr[code];
+};
+window.Input.keyIsDownNum = function(code) {
+    return MR.input.keyCurr[code];
+};
+window.Input.keyIsUp = function(code) {
+    return !MR.input.keyCurr[code];
+};
+window.Input.keyIsUpNum = function(code) {
+    return ~MR.input.keyCurr[code];
+};
+
+window.Input.keyWentUp = function(code) {
+    return MR.input.keyPrev[code] && !MR.input.keyCurr[code];
+};
+window.Input.keyWentUpNum = function(code) {
+    return MR.input.keyPrev[code] & (~MR.input.keyCurr[code]);
+};
+
+window.Input.registerKeyDownHandler = function(handler) {
+    MR._keydown = handler;
+}
+window.Input.registerKeyUpHandler = function(handler) {
+    MR._keyup = handler;
+}
+window.Input.deregisterKeyHandlers = function() {
+    MR._keydown = null;
+    MR._keyup   = null;
+}
