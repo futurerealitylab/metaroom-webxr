@@ -245,13 +245,13 @@ window.VRCanvasWrangler = (function() {
             this.menu.el, 
             'ge_menu', 
             'Prev',
-            () => { MR.wrangler.doWorldTransition(-1); }
+            () => { MR.wrangler.doWorldTransition({direction : -1, broadcast : true}); }
           );
           this.menu.menus.transition = new MenuItem(
             this.menu.el, 
             'ge_menu', 
             'Next',
-            () => { return MR.wrangler.doWorldTransition(+1); }
+            () => { return MR.wrangler.doWorldTransition({direction : +1, broadcast : true}); }
           );
         }
       if (this.options.enableBellsAndWhistles) {
@@ -582,7 +582,7 @@ window.VRCanvasWrangler = (function() {
         if (!vrDisplay) {
             this.config.onAnimationFrameWindow(t);
             if (this.options.enableMultipleWorlds && doTransition) {
-               this.doWorldTransition();
+               this.doWorldTransition({direction : 1, broadcast : true});
             }
             return;
         }
@@ -592,7 +592,7 @@ window.VRCanvasWrangler = (function() {
         if (!vrDisplay.isPresenting) {
             this.config.onAnimationFrameWindow(t);
             if (this.options.enableMultipleWorlds && doTransition) {
-               this.doWorldTransition();
+               this.doWorldTransition({direction : 1, broadcast : true});
             }
             return;
         }
@@ -613,7 +613,7 @@ window.VRCanvasWrangler = (function() {
         }
         this.config.onEndFrame(t);
         if (this.options.enableMultipleWorlds && doTransition) {
-           this.doWorldTransition();
+           this.doWorldTransition({direction : 1, broadcast : true});
         }
 
         vrDisplay.submitFrame();

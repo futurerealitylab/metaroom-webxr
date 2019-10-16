@@ -431,12 +431,17 @@ try {
 
 					break;
 				}
+				case "Load_World": {
+					console.log("Load_World command received");
+			  		for (let sock__ of websocketMap.values()) {
+		  				sock__.send(JSON.stringify({
+		  					"MR_Message" : "Load_World", "key" : "TODO", "content" : "TODO"
+		  				}));
+					}
+					break;
+				}
 				}
 			}
-
-			//userMap[ws.index] = "hooray";//data;
-
-
 		});
 
 		ws.on('close', () => {

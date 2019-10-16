@@ -127,6 +127,8 @@ default: {
       //   console.error(err);
       // }
 
+
+
       let sourceFiles = document.getElementsByClassName("worlds");
       
       // call the main function of the selected world
@@ -153,7 +155,7 @@ default: {
           MR.wrangler.beginSetup(worldInfo.world.default()).catch(err => {
               console.trace();
               console.error(err);
-              MR.wrangler.doWorldTransition();
+              MR.wrangler.doWorldTransition({direction : 1, broadcast : true});
           });
 
         } catch (err) {
@@ -176,7 +178,16 @@ default: {
         }
       }
 
-      wrangler.defineWorldTransitionProcedure(function(direction = +1) {
+      wrangler.defineWorldTransitionProcedure(function(args) {
+        const direction = args.direction;
+
+        if (args.broadcast) {
+          MR.server.sock.send(JSON.stringify({
+            "MR_Message" : "Load_World", "key" : "TODO", "content" : "TODO"})
+          );
+          return;
+        }
+
         let ok = false;
 
         // try to transition to the next world
@@ -185,6 +196,8 @@ default: {
           if (MR.worldIdx < 0) {
             MR.worldIdx = MR.worlds.length - 1;
           }
+
+
 
           console.log("transitioning to world: [" + MR.worldIdx + "]");
 
@@ -215,7 +228,7 @@ default: {
                 console.error(e);
                 setTimeout(function(){ 
                     console.log("Trying another world");
-                    wrangler.doWorldTransition();
+                    wrangler.doWorldTransition({direction : 1, broadcast : true});
                 }, 500);  
             });
 
@@ -231,6 +244,29 @@ default: {
           }
         }
       });
+/*
+    MR.server.subsLocal.subscribe("Update_File", (filename, args) => {
+        if (args.file !== filename) {
+            console.log("file does not match");
+            return;
+        }
+
+        MR.wrangler.reloadGeneration += 1;
+
+        import(window.location.href + filename + "?generation=" + MR.wrangler.reloadGeneration).then(
+            (world) => {
+                const conf = world.default();
+                MR.wrangler.onReload(conf);
+            }).catch(err => { console.error(err); });
+
+    }, saveTo);
+*/    
+      MR.server.subs.subscribe("Load_World", (_, args) => {
+        console.log("WEE");
+          // TODO args will need to contain a string specifying the world name
+          MR.wrangler.doWorldTransition({direction : 1, broadcast : false});
+      });
+
     },
     useExternalWindow : (new URLSearchParams(window.location.search)).has('externWin')
   });
