@@ -131,7 +131,7 @@ window.VRCanvasWrangler = (function() {
 
       this._init();
 
-      MR.initKeyEvents(this._canvas);
+      Input.initKeyEvents(this._canvas);
     }
 
     start() {

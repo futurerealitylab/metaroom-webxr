@@ -320,7 +320,7 @@ const MREditor = (function() {
             style : ["none", "block"],
             classes : ["hidden", "shown"]
         };
-        MREditor.hideEditor = (event) => {
+        MREditor.toggleHideEditor = (event) => {
             MR.wrangler.menu.hide.name = 
                 showHideState.text[showHideState.idx];
             document.getElementById('text-areas').style.display = 
@@ -334,10 +334,38 @@ const MREditor = (function() {
 
             MR.wrangler.codeIsHidden = (showHideState.idx === 1);
         };
+        MREditor.hideEditor = (event) => {
+            MR.wrangler.menu.hide.name = 
+                showHideState.text[0];
+            document.getElementById('text-areas').style.display = 
+                showHideState.style[0];
+
+            showHideState.idx = 1;
+
+            const classes = showHideState.classes;
+            globalErrorMsgNode.classList.remove(classes[1]);
+            globalErrorMsgNode.classList.add(classes[0]);
+
+            MR.wrangler.codeIsHidden = true;
+        };
+        MREditor.showEditor = (event) => {
+            MR.wrangler.menu.hide.name = 
+                showHideState.text[1];
+            document.getElementById('text-areas').style.display = 
+                showHideState.style[1];
+
+            showHideState.idx = 0;
+
+            const classes = showHideState.classes;
+            globalErrorMsgNode.classList.remove(classes[0]);
+            globalErrorMsgNode.classList.add(classes[1]);
+
+            MR.wrangler.codeIsHidden = false;
+        };
 
         MR.wrangler.menu.hide = new MenuItem(
             MR.wrangler.menu.el, 'ge_menu', 'Hide', 
-            MREditor.hideEditor
+            MREditor.toggleHideEditor
         );
         MR.wrangler.codeIsHidden = false;
 

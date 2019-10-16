@@ -227,9 +227,14 @@ MR._keyQueue = new Queue();
 MR.input = {
     keyPrev : null,
     keyCurr : null,
+    isInit  : false
 };
 
-MR.initKeyEvents = function(keypoll) {
+window.Input = {};
+window.Input.INPUT_TYPE_KEYDOWN = "keydown";
+window.Input.INPUT_TYPE_KEYUP   = "keyup";
+
+window.Input.initKeyEvents = function(keypoll) {
 
     MR._keypoll = keypoll;
 
@@ -243,25 +248,27 @@ MR.initKeyEvents = function(keypoll) {
         MR.input.keyCurr[i] = 0;
     }
 
-    document.addEventListener("keydown", (e) => {
-        MR._keyQueue.enqueue(e);
+    if (!MR.input.isInit) {
+        document.addEventListener("keydown", (e) => {
+            MR._keyQueue.enqueue(e);
 
-        if (MR._keydown) {
-            MR._keydown(e);
-        }
-    });
-    document.addEventListener("keyup", (e) => {
-        MR._keyQueue.enqueue(e);
+            if (MR._keydown) {
+                MR._keydown(e);
+            }
+        });
+        document.addEventListener("keyup", (e) => {
+            MR._keyQueue.enqueue(e);
 
-        if (MR._keyup) {
-            MR._keyup(e);
-        }
-    });
+            if (MR._keyup) {
+                MR._keyup(e);
+            }
+        });
+
+        MR.input.isInit = true;
+    }
 };
 
-window.Input = {};
-window.Input.INPUT_TYPE_KEYDOWN = "keydown";
-window.Input.INPUT_TYPE_KEYUP   = "keyup";
+
 window.Input.updateKeyState = function() {
     const keyPrev    = MR.input.keyPrev;
     const keyPrevLen = MR.input.keyPrev.length;

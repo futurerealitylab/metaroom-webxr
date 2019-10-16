@@ -14,6 +14,7 @@ uniform vec2 uResolution;
 out vec2 vUV;
 out vec2 vUV2;
 out vec3 vPos;
+out vec3 vWorld;
 
 out vec3 vNor;
 
@@ -53,4 +54,5 @@ void main() {
   vUV2 = rotate_2D_point_around(aUV, vec2(0.5), uTime);
 
   vPos = gl_Position.xyz;
+  vWorld = (uModel * vec4(aPos, 1.0)).xyz;
 }

@@ -198,7 +198,7 @@ default: {
           MR.wrangler._reset();
           MR.wrangler._glFreeResources();
           ScreenCursor.clearTargetEvents();
-          MR.deregisterKeyHandlers();
+          Input.deregisterKeyHandlers();
 
           try {
             // call the main function of the selected world
