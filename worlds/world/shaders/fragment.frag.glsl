@@ -21,10 +21,10 @@ out vec4 fragColor;
 
 void main() {
     if (uTextureActive == 1) {
-        vec4 color0 = texture(uTex0, vUV + sin(uTime));
-        vec4 color1 = texture(uTex1, vUV2);
+        vec4 color0 = texture(uTex0, vUV /*+ sin(uTime)*/);
+        vec4 color1 = texture(uTex0, vUV/*2*/);
 
-        color1 = mix(color1, vec4(0.0), cos(uTime) * cos(uTime));
+        color1 = mix(color1, vec4(color0.rgb, 1.0), cos(uTime) * cos(uTime));
     
         fragColor = mix(color0, color1, sin(uTime));
     } else {

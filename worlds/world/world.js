@@ -62,8 +62,6 @@ let Mat          = null;
 let M            = null;
 
 async function onReload(state) {
-    MREditor.showEditor();
-
     return MR.dynamicImport(getPath("matrix.js")).then((myModule) => {
         matrixModule = myModule;
         Mat          = matrixModule.Matrix;
@@ -89,7 +87,16 @@ async function setup(state) {
             startPosition[1], 
             startPosition[2]
         ], 
-        v : [0.0, 0.0, 0.0] 
+        v : [0.0, 0.0, 0.0],
+        objInfo : {
+            position : [0, 0, 0],
+            velocity : [0, 0, 0], // temp
+            acceleration : 100, // temp
+            
+            isSelected : false,
+            // user id of user who selected this object
+            isSelectedByUID : -1 
+        }
     };
 
     // load initial images, then continue setup after waiting is done
@@ -327,11 +334,19 @@ const MAX_SPEED = 14.0;
 const ACC = 100.0;
 const FRICTION = 0.002;
 const startPosition = [0, 0, 5]
+const cameraRadius = 2.5;
 function clamp(val,min_,max_){return Math.max(min_,Math.min(max_,val));}
 
 
 function onStartFrame(t, state) {
     Input.updateKeyState();
+
+
+    
+
+
+
+
 
     // update time
     let tStart = t;
@@ -347,6 +362,19 @@ function onStartFrame(t, state) {
     state.deltaTime = now - state.time;
     state.deltaTimeS = state.deltaTime / 1000.0;
     state.time = now;
+
+    if (Input.keyWentDown(17)) {
+        state.world.objInfo.isSelected =
+            !state.world.objInfo.isSelected;
+
+            if (!state.world.objInfo.isSelected) {
+                window.TSTART_FALL = state.time;
+                window.POS_START = state.world.objInfo.position[1]
+            }
+    }
+    if (!state.world.objInfo.isSelected && state.world.objInfo.position[1] > 0.0) {
+        state.world.objInfo.position[1] = window.POS_START - (0.00001 * (state.time - window.TSTART_FALL) * (state.time - window.TSTART_FALL));
+    }
 
     if (Input.keyWentDown(KEY_RESET_POS)) {
         const v = state.world.v;
@@ -428,7 +456,18 @@ function onStartFrame(t, state) {
         cam_pos[0] += state.world.v[0] * state.deltaTimeS;
         cam_pos[1] += state.world.v[1] * state.deltaTimeS;
         cam_pos[2] += state.world.v[2] * state.deltaTimeS;
+    
+        if (state.world.objInfo.isSelected) {
+            state.world.objInfo.position[0] = cam_pos[0];
+            state.world.objInfo.position[1] = cam_pos[1] + cameraRadius * 0.2;
+            state.world.objInfo.position[2] = cam_pos[2] - cameraRadius * 2;
+        }
     }
+
+
+
+        gl.useProgram(state.program);
+
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.clearColor(53.0 / 255.0, 81.0 / 255.0, 192.0 / 255.0, 1.0);
@@ -436,12 +475,31 @@ function onStartFrame(t, state) {
     gl.enable(gl.CULL_FACE);
         gl.bindVertexArray(state.vao);
 
-        gl.useProgram(state.program);
 
         gl.uniform1f(state.uTimeLoc, now / 1000.0);
+
+    const userPosX = state.world.cam_pos[0];
+    const userPosY = state.world.cam_pos[1];
+    const userPosZ = state.world.cam_pos[2];
+
+    const origin = [userPosX, userPosY, userPosZ];
+    const dir = [0, 0, 0];
+    const aim = state.cursor.position();
+
+    dir[0] = aim[0] - origin[0];
+    dir[1] = aim[1] - origin[1];
+    dir[2] = -1;
+
+    const Ray = {
+        origin : origin,
+        direction : dir
+    };
+
+
 }
 
 function onEndFrame(t, state) {
+
 }
 
 // per eye
@@ -482,6 +540,8 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     // cube
     {
         M.save();
+
+            Mat.translateV(M.matrix(), state.world.objInfo.position);
             gl.uniformMatrix4fv(state.uModelLoc, false, 
                 M.matrix()
             );
