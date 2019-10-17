@@ -154,15 +154,17 @@ default: {
 
           const worldInfo = MR.worlds[MR.worldIdx];
           setPath(worldInfo.localPath);
-wrangler.isTransitioning = true;
+          wrangler.isTransitioning = true;
           MR.wrangler.beginSetup(worldInfo.world.default()).catch(err => {
               console.trace();
               console.error(err);
               MR.wrangler.doWorldTransition({direction : 1, broadcast : true});
-          }).then(() => { wrangler.isTransitioning = false;               for (let d = 0; d < deferredActions.length; d += 1) {
+          }).then(() => { wrangler.isTransitioning = false;               
+              for (let d = 0; d < deferredActions.length; d += 1) {
                 deferredActions[d]();
               }
-              deferredActions = [];});
+              deferredActions = [];
+          });
 
         } catch (err) {
           console.error(err);
@@ -189,7 +191,7 @@ wrangler.isTransitioning = true;
 
       
       wrangler.defineWorldTransitionProcedure(function(args) {
-        wrangler.isTransitioning = true;
+        console.trace();
         let ok = false;
         COUNT += 1;
         console.log(COUNT, args);
@@ -210,6 +212,9 @@ wrangler.isTransitioning = true;
             MR.worldIdx = parseInt(args.key);
             console.log(COUNT, "WORLDIDX",  MR.worldIdx);
           }
+
+
+          wrangler.isTransitioning = true;
 
           console.log(COUNT, "transitioning to world: [" + MR.worldIdx + "]");
           console.log(COUNT, "broadcast", args.broadcast, "direction: ", args.direction, "key", args.key);
@@ -248,6 +253,7 @@ wrangler.isTransitioning = true;
             }).then(() => {
               wrangler.isTransitioning = false;
 
+              console.log("now we should do deferred actions");
               console.log("ready");
 
               for (let d = 0; d < deferredActions.length; d += 1) {
@@ -270,6 +276,8 @@ wrangler.isTransitioning = true;
         }
 
 
+
+
         if (args.broadcast) {
           console.log(COUNT, "broadcasting");
           try {
@@ -283,14 +291,20 @@ wrangler.isTransitioning = true;
       });
   
       MR.server.subs.subscribe("Load_World", (_, args) => {
-          console.log("loading world", args.key);
+          if (args.key === MR.worldIdx) {
+            return;
+          }
+
+          console.log("loading world", args);
           if (wrangler.isTransitioning) {
+            console.log("is deferring transition");
             deferredActions = [];
             deferredActions.push(() => { 
               MR.wrangler.doWorldTransition({direction : null, key : args.key, broadcast : false});
             });
             return;
           }
+          console.log("not deferring transition");
           MR.wrangler.doWorldTransition({direction : null, key : args.key, broadcast : false});
       });
 
@@ -305,8 +319,9 @@ wrangler.isTransitioning = true;
 }
 }
 
-MR.initServer();
-run();
+setTimeout(() => {
+  run();
+}, 100);
 
 
 // let serverWaitInterval = 500;

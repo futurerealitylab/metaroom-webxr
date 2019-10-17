@@ -38,7 +38,7 @@ parser.addArgument(
   [ '-i', '--interval' ],
   {
     help: 'interval to broadcast to clients',
-    defaultValue: 2000
+    defaultValue: 3000
   }
 );
 parser.addArgument(
@@ -55,14 +55,22 @@ parser.addArgument(
         defaultValue: false
     }
 );
+parser.addArgument(
+    ['-mu', '--multiuser'],
+    {
+        help: 'enable multiuser world synchronization',
+        defaultValue: true
+    }
+);
 
 const args     = parser.parseArgs();
 
-const https = require('https');
-const http  = require('http');
+const https    = require('https');
+const http     = require('http');
 const host     = args.host;
 const port     = parseInt(args.port);
 let   interval = args.interval;
+const multiuser = args.multiuser;
 
 if (parser.version) {
 	console.log("Version:", 1.0);
@@ -344,10 +352,8 @@ try {
 	  .on('unwatch', path => log(`File ${path} has been removed`));
 
 	const toInit = new Map();
+	let timerID = null;
 	wss.on('connection', function(ws) {
-
-		let timerID = null;
-
 		ws.index = wsIndex++;
 		websocketMap.set(ws.index, ws);
 
@@ -359,7 +365,11 @@ try {
 
 		// ws.send(JSON.stringify({
 		//     "MR_Message" : "Load_World", "key" : worldIdx, "content" : "TODO", "count" : ""})
-		// ); <- BUG?
+		// ); //<- BUG?
+		
+		ws.send(JSON.stringify({
+		    "MR_Message" : "Init", "key" : worldIdx})
+		); //<- BUG?
 
 		// preprocess(
 		// 	systemRoot,
@@ -462,6 +472,7 @@ try {
 		  				sock__.send(data);
 		  				i__ += 1;
 					}
+					console.log(worldIdx);
 					break;
 				}
 				case "Init": {
@@ -487,21 +498,23 @@ try {
 			websocketMap.delete(ws.index);
 			toInit.delete(ws.index);
 			console.log("close: websocketMap.keys():", Array.from(websocketMap.keys()));
-			clearInterval(timerID);
 		});
-
-		setInterval(() => {
-			// for (let sock__ of toInit.values()) {
-			// 	console.log("trying to confirm init with socket ", ws.index);
-			// 	sock__.send(JSON.stringify({"MR_Message" : "Confirm_Connection"}));
-			// }
-		}, interval)
-
 	});
 
 	wss.on('close', function() {
+		clearInterval(timerID);
 		console.log("closing");
 	})
+
+	if (multiuser) {
+		setInterval(() => {
+			// for (let sock__ of toInit.values()) {
+			// 	sock__.send(JSON.stringify({
+	  //             "MR_Message" : "Load_World", "key" : worldIdx, "content" : "TODO", "count" : ""})
+	  //           );
+			// }
+		}, interval)
+	}
 
 } catch (err) {
 	console.error("couldn't load websocket", err);
