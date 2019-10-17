@@ -373,7 +373,7 @@ function onStartFrame(t, state) {
             }
     }
     if (!state.world.objInfo.isSelected && state.world.objInfo.position[1] > 0.0) {
-        state.world.objInfo.position[1] = window.POS_START - (0.00001 * (state.time - window.TSTART_FALL) * (state.time - window.TSTART_FALL));
+        state.world.objInfo.position[1] = Math.max(0.0, window.POS_START - (0.00001 * (state.time - window.TSTART_FALL) * (state.time - window.TSTART_FALL)));
     }
 
     if (Input.keyWentDown(KEY_RESET_POS)) {
