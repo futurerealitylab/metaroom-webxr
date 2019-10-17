@@ -320,6 +320,8 @@ try {
 
 	const log = console.log.bind(console);
 
+	let worldIdx = 0;
+
 	watcher
 	  .on('add', path => log(`File ${path} has been added`))
 	  .on('change', path => {
@@ -341,6 +343,7 @@ try {
 	  .on('unlink', path => log(`File ${path} has been removed`))
 	  .on('unwatch', path => log(`File ${path} has been removed`));
 
+	const toInit = new Map();
 	wss.on('connection', function(ws) {
 
 		let timerID = null;
@@ -351,6 +354,12 @@ try {
 		console.log("connection: ", ws.index);
 
 		worldsSources = [];
+
+		toInit.set(ws.index, ws);
+
+		// ws.send(JSON.stringify({
+		//     "MR_Message" : "Load_World", "key" : worldIdx, "content" : "TODO", "count" : ""})
+		// ); <- BUG?
 
 		// preprocess(
 		// 	systemRoot,
@@ -432,31 +441,60 @@ try {
 					break;
 				}
 				case "Load_World": {
-					console.log("Load_World command received");
+					// console.log("Load_World command received");
+
+					// if (msg.mode && msg.mode == "get") {
+					// 	let i__ = 0;
+					// 	msg.key = worldIdx;
+						
+					// 	const newData = JSON.stringify(msg);
+
+			  // 			ws.send(newData);
+
+					// 	break;
+					// }
+
+
+					worldIdx = msg.key;
+					let i__ = 0;
 			  		for (let sock__ of websocketMap.values()) {
-		  				sock__.send(JSON.stringify({
-		  					"MR_Message" : "Load_World", "key" : "TODO", "content" : "TODO"
-		  				}));
+			  			console.log("Sending load world command to " + i__);
+		  				sock__.send(data);
+		  				i__ += 1;
 					}
 					break;
 				}
+				case "Init": {
+					ws.send(JSON.stringify({"MR_Message" : "Init", "key" : worldIdx}));
+				}
+				default: {
+
+				}
+				// case "Confirm_Connection": {
+				// 	toInit.delete(ws.index);
+				// 	console.log("connection confirmed, sending init info");
+				// 	ws.send(JSON.stringify({
+		  //             "MR_Message" : "Load_World", "key" : worldIdx, "content" : "TODO", "count" : ""})
+		  //           );
+
+				// 	break;
+				// }
 				}
 			}
 		});
 
 		ws.on('close', () => {
 			websocketMap.delete(ws.index);
+			toInit.delete(ws.index);
 			console.log("close: websocketMap.keys():", Array.from(websocketMap.keys()));
 			clearInterval(timerID);
 		});
 
 		setInterval(() => {
-			//console.log("tick:", ws.index, (Date.now() - timeStart) / 1000.0);
-			//for (let [key, value] of websocketMap) {
-				//if (key != ws.index) { // TODO re-enable check later since I'm testing whether messages are received
-					//value.send(JSON.stringify(userMap));
-				//}
-			//}
+			// for (let sock__ of toInit.values()) {
+			// 	console.log("trying to confirm init with socket ", ws.index);
+			// 	sock__.send(JSON.stringify({"MR_Message" : "Confirm_Connection"}));
+			// }
 		}, interval)
 
 	});
@@ -468,9 +506,4 @@ try {
 } catch (err) {
 	console.error("couldn't load websocket", err);
 }
-
-/*
-});
-});
-*/
 

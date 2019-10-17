@@ -81,7 +81,7 @@ window.hotReloadFile = function(localPath) {
 // db.initLoggerSystem({
 //   logger : new db.LoggerDefault()
 // });
-
+function run() {
 const VERSION = document.getElementById("version").getAttribute("value");
 switch (VERSION) {
 case 1: {
@@ -89,6 +89,9 @@ case 1: {
 }
 default: {
   console.log("running version:", VERSION);
+
+  let deferredActions = [];
+
 
   const RESOLUTION = document.getElementById("resolution").getAttribute("value").split(',');
   MR.wrangler.init({
@@ -127,7 +130,7 @@ default: {
       //   console.error(err);
       // }
 
-
+      wrangler.isTransitioning = false;
 
       let sourceFiles = document.getElementsByClassName("worlds");
       
@@ -151,12 +154,15 @@ default: {
 
           const worldInfo = MR.worlds[MR.worldIdx];
           setPath(worldInfo.localPath);
-
+wrangler.isTransitioning = true;
           MR.wrangler.beginSetup(worldInfo.world.default()).catch(err => {
               console.trace();
               console.error(err);
               MR.wrangler.doWorldTransition({direction : 1, broadcast : true});
-          });
+          }).then(() => { wrangler.isTransitioning = false;               for (let d = 0; d < deferredActions.length; d += 1) {
+                deferredActions[d]();
+              }
+              deferredActions = [];});
 
         } catch (err) {
           console.error(err);
@@ -178,28 +184,35 @@ default: {
         }
       }
 
+
+      window.COUNT = 0;
+
+      
       wrangler.defineWorldTransitionProcedure(function(args) {
-        const direction = args.direction;
-
-        if (args.broadcast) {
-          MR.server.sock.send(JSON.stringify({
-            "MR_Message" : "Load_World", "key" : "TODO", "content" : "TODO"})
-          );
-          return;
-        }
-
+        wrangler.isTransitioning = true;
         let ok = false;
-
+        COUNT += 1;
+        console.log(COUNT, args);
         // try to transition to the next world
         while (!ok) {
-          MR.worldIdx = (MR.worldIdx + direction) % MR.worlds.length;
-          if (MR.worldIdx < 0) {
-            MR.worldIdx = MR.worlds.length - 1;
+          if (args.direction) {
+            console.log(COUNT, "has direction");
+            MR.worldIdx = (MR.worldIdx + args.direction) % MR.worlds.length;
+            if (MR.worldIdx < 0) {
+              MR.worldIdx = MR.worlds.length - 1;
+            }
+          } else if (args.key !== null) {
+            console.log(COUNT, "key exists", args.key, "worldidx", MR.worldIdx);
+            if (args.key == MR.worldIdx) {
+              ok = true;
+              continue;
+            }
+            MR.worldIdx = parseInt(args.key);
+            console.log(COUNT, "WORLDIDX",  MR.worldIdx);
           }
 
-
-
-          console.log("transitioning to world: [" + MR.worldIdx + "]");
+          console.log(COUNT, "transitioning to world: [" + MR.worldIdx + "]");
+          console.log(COUNT, "broadcast", args.broadcast, "direction: ", args.direction, "key", args.key);
 
           CanvasUtil.setOnResizeEventHandler(null);
           CanvasUtil.resize(MR.getCanvas(), 
@@ -207,11 +220,13 @@ default: {
               MR.wrangler.options.outputHeight
           );
 
-          gl.useProgram(null);
+          MR.wrangler._gl.useProgram(null);
           MR.wrangler._reset();
           MR.wrangler._glFreeResources();
           ScreenCursor.clearTargetEvents();
           Input.deregisterKeyHandlers();
+
+          console.log(COUNT, "SWITCH");
 
           try {
             // call the main function of the selected world
@@ -230,6 +245,16 @@ default: {
                     console.log("Trying another world");
                     wrangler.doWorldTransition({direction : 1, broadcast : true});
                 }, 500);  
+            }).then(() => {
+              wrangler.isTransitioning = false;
+
+              console.log("ready");
+
+              for (let d = 0; d < deferredActions.length; d += 1) {
+                deferredActions[d]();
+              }
+              deferredActions = [];
+
             });
 
             ok = true;
@@ -239,38 +264,75 @@ default: {
 
 
             setTimeout(function(){ 
-              console.log("Trying another world");
+              console.log(COUNT, "Trying another world");
             }, 500);
           }
         }
-      });
-/*
-    MR.server.subsLocal.subscribe("Update_File", (filename, args) => {
-        if (args.file !== filename) {
-            console.log("file does not match");
-            return;
+
+
+        if (args.broadcast) {
+          console.log(COUNT, "broadcasting");
+          try {
+            MR.server.sock.send(JSON.stringify({
+              "MR_Message" : "Load_World", "key" : MR.worldIdx, "content" : "TODO", "count" : COUNT})
+            );
+          } catch (e) {
+            console.error(e);
+          }
         }
-
-        MR.wrangler.reloadGeneration += 1;
-
-        import(window.location.href + filename + "?generation=" + MR.wrangler.reloadGeneration).then(
-            (world) => {
-                const conf = world.default();
-                MR.wrangler.onReload(conf);
-            }).catch(err => { console.error(err); });
-
-    }, saveTo);
-*/    
+      });
+  
       MR.server.subs.subscribe("Load_World", (_, args) => {
-        console.log("WEE");
-          // TODO args will need to contain a string specifying the world name
-          MR.wrangler.doWorldTransition({direction : 1, broadcast : false});
+          console.log("loading world", args.key);
+          if (wrangler.isTransitioning) {
+            deferredActions = [];
+            deferredActions.push(() => { 
+              MR.wrangler.doWorldTransition({direction : null, key : args.key, broadcast : false});
+            });
+            return;
+          }
+          MR.wrangler.doWorldTransition({direction : null, key : args.key, broadcast : false});
       });
 
     },
     useExternalWindow : (new URLSearchParams(window.location.search)).has('externWin')
   });
 
+
+
   break;
 }
 }
+}
+
+MR.initServer();
+run();
+
+
+// let serverWaitInterval = 500;
+// let initInfoSuccess = false;
+// function requestInitInfo() {
+//   try {
+
+//   } catch (e) {
+//     console.error(e);
+//     return initInfoSuccess;
+//   }
+//   initInfoSuccess = true;
+//   return initInfoSuccess;
+// }  
+
+// let attemptCount = 0;
+// let initId = 0;
+
+// // keep trying to get init info
+// if (!requestInitInfo()) {
+//   initId = setInterval(() => {
+//       attemptCount += 1;
+//       if (requestInitInfo() || attemptCount == 2) {
+//           clearInterval(initId);
+//           start();
+//           return;        
+//       }
+//   }, serverWaitInterval);
+// }

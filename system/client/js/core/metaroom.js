@@ -121,6 +121,7 @@ const SOCKET_STATE_MAP = {
 }
 
 MR.server = {};
+MR.server.onOpen = null;
 MR.initServer = () => {
     console.log("initializing server");
 
@@ -141,6 +142,7 @@ MR.initServer = () => {
     MR.server.sock.onerror = () => {
       console.log("Socket state:", SOCKET_STATE_MAP[MR.server.sock.readyState]);
     };
+
 
     // if (MR.server.sock.readyState !== WebSocket.CLOSED) {
     MR.server.sock.addEventListener('open', () => {
@@ -163,7 +165,9 @@ MR.initServer = () => {
       console.log("socket closed");
     });  
 }
-MR.initServer();
+
+
+
 
 class ServerPublishSubscribe {
     constructor() {
