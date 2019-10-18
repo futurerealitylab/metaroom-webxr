@@ -341,13 +341,6 @@ function clamp(val,min_,max_){return Math.max(min_,Math.min(max_,val));}
 function onStartFrame(t, state) {
     Input.updateKeyState();
 
-
-    
-
-
-
-
-
     // update time
     let tStart = t;
     if (!state.tStart) {

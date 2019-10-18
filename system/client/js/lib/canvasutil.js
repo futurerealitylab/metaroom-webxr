@@ -55,7 +55,15 @@ const CanvasUtil = (function() {
 		_onResizeEventHandler = handler;
 	}
 
-	function handleResizeEvent(target, width, height) {
+	function rightAlignCanvasContainer(target, container) {
+        const P = container || document.getElementById('output-container');
+        const bodyWidth = document.body.getBoundingClientRect().width;
+
+        P.style.left = Math.max(0.0, (bodyWidth - target.clientWidth)) + "px";
+    };
+
+	function handleResizeEvent(target, width, height, container) {
+		CanvasUtil.rightAlignCanvasContainer(target, container);
 		if (!_onResizeEventHandler) {
 			return;
 		}
@@ -69,7 +77,8 @@ const CanvasUtil = (function() {
 	  setOnResizeEventHandler : setOnResizeEventHandler,
 	  handleResizeEvent : handleResizeEvent,
 	  resize : resize,
-	  baseCanvasDimensions : {}
+	  baseCanvasDimensions : {},
+	  rightAlignCanvasContainer : rightAlignCanvasContainer
 	};
 
 	return _out;

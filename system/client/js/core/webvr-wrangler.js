@@ -356,7 +356,6 @@ window.VRCanvasWrangler = (function() {
     }
 
     _initFallback() {
-
       const modalCanvasInit = () => {
           const bodyWidth = document.body.getBoundingClientRect().width;
           const parent = document.getElementById('output-container');
