@@ -63,7 +63,6 @@ const CanvasUtil = (function() {
     };
 
 	function handleResizeEvent(target, width, height, container) {
-		CanvasUtil.rightAlignCanvasContainer(target, container);
 		if (!_onResizeEventHandler) {
 			return;
 		}

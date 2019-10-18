@@ -164,6 +164,8 @@ default: {
                 deferredActions[d]();
               }
               deferredActions = [];
+
+              CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
           });
 
         } catch (err) {
@@ -180,6 +182,8 @@ default: {
           MR.wrangler.beginSetup(world.default()).catch(err => {
               console.trace();
               console.error(err);
+
+              CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
           });
         } catch (err) {
           console.error(err);
@@ -260,6 +264,8 @@ default: {
                 deferredActions[d]();
               }
               deferredActions = [];
+
+              CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
 
             });
 
