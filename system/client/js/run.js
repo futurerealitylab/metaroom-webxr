@@ -278,7 +278,7 @@ default: {
 
 
 
-        if (args.broadcast) {
+        if (args.broadcast && MR.server.sock.readyState == WebSocket.OPEN) {
           console.log(COUNT, "broadcasting");
           try {
             MR.server.sock.send(JSON.stringify({
