@@ -319,6 +319,14 @@ default: {
 }
 }
 
+// TODO initialization order revision
+MR.initialWorldIdx = 0;
+MR.server.subs.subscribe("Init", (_, args) => {
+  MR.worldIdx = args.key || 0;
+  MR.initialWorldIdx = args.key || 0;
+});
+MR.initServer();
+
 setTimeout(() => {
   run();
 }, 100);
