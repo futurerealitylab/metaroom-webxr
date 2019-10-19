@@ -256,19 +256,23 @@ window.Input.initKeyEvents = function(keypoll) {
 
     if (!MR.input.isInit) {
         document.addEventListener("keydown", (e) => {
+            if (e.target != document.body) { return; }
+
             MR._keyQueue.enqueue(e);
 
             if (MR._keydown) {
                 MR._keydown(e);
             }
-        });
+        }, false);
         document.addEventListener("keyup", (e) => {
+            if (e.target != document.body) { return; }
+
             MR._keyQueue.enqueue(e);
 
             if (MR._keyup) {
                 MR._keyup(e);
             }
-        });
+        }, false);
 
         MR.input.isInit = true;
     }

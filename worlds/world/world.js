@@ -532,13 +532,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
     // cube
     {
-        M.save();
 
-            Mat.translateV(M.matrix(), state.world.objInfo.position);
-            gl.uniformMatrix4fv(state.uModelLoc, false, 
-                M.matrix()
-            );
-        M.restore();
 
         gl.uniform1i(state.uTextureActiveLoc, 1);
         // Note: we could choose to optimize memory use further by using 
@@ -548,7 +542,35 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         const primitive = gl.TRIANGLES;
         const offset    = 0;
         const count     = cubeIndexCount;
-        gl.drawElements(primitive, count, gl.UNSIGNED_SHORT, offset);
+        
+        if (state.world.objInfo.isSelected) {
+        for (let i = 0; i < 10; i += 1) {
+        M.save();
+            let X = [ state.world.objInfo.position[0], 
+             state.world.objInfo.position[1],  state.world.objInfo.position[2]];
+             X[0] += 7.0 * Math.cos(sec + i * (Math.PI * 2) / 10);
+             X[2] += 7.0 * Math.sin(sec + i * (Math.PI * 2) / 10);
+            Mat.translateV(M.matrix(), X);
+            Mat.rotateX(M.matrix(), sec + (i ));
+            Mat.rotateY(M.matrix(), sec + (i ));
+            Mat.rotateZ(M.matrix(), -sec + (i ));
+            gl.uniformMatrix4fv(state.uModelLoc, false, 
+                M.matrix()
+            );
+        
+            gl.drawElements(primitive, count, gl.UNSIGNED_SHORT, offset);
+        M.restore();
+        }
+        } else {
+        M.save();
+            Mat.translateV(M.matrix(), state.world.objInfo.position);
+            gl.uniformMatrix4fv(state.uModelLoc, false, 
+                M.matrix()
+            );
+            gl.drawElements(primitive, count, gl.UNSIGNED_SHORT, offset);
+        M.restore();        
+        }
+
     }
 }
 
