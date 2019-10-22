@@ -330,38 +330,11 @@ MR.initialWorldIdx = 0;
 MR.server.subs.subscribe("Init", (_, args) => {
   MR.worldIdx = args.key || 0;
   MR.initialWorldIdx = args.key || 0;
+  MR.server.uid = args.uid;
 });
+
 MR.initServer();
 
 setTimeout(() => {
   run();
 }, 100);
-
-
-// let serverWaitInterval = 500;
-// let initInfoSuccess = false;
-// function requestInitInfo() {
-//   try {
-
-//   } catch (e) {
-//     console.error(e);
-//     return initInfoSuccess;
-//   }
-//   initInfoSuccess = true;
-//   return initInfoSuccess;
-// }  
-
-// let attemptCount = 0;
-// let initId = 0;
-
-// // keep trying to get init info
-// if (!requestInitInfo()) {
-//   initId = setInterval(() => {
-//       attemptCount += 1;
-//       if (requestInitInfo() || attemptCount == 2) {
-//           clearInterval(initId);
-//           start();
-//           return;        
-//       }
-//   }, serverWaitInterval);
-// }

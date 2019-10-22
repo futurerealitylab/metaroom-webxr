@@ -92,11 +92,16 @@ uniform Material u_mats[10];
 const int MODE_FLOOR   = 0;
 const int MODE_TEXTURE = 1;
 const int MODE_COLOR   = 2;
+const int MODE_USER = 3;
 uniform int whichTexture;
 void main() {
 
     fragColor = vec4(vec3(0.0), 1.0);
     switch (uMode) {
+    case MODE_USER: {
+        fragColor = texture(uTex3, vUV);
+        break;
+    }
     case MODE_TEXTURE: {
         vec4 color0;
         vec4 color1;  
@@ -121,7 +126,6 @@ void main() {
                 vec3(71.0 / 255.0, 182.0 / 255.0, 37.0 / 255.0) / wXYZ)), 
            1.0);   
            fragColor *= vec4(texture(uTex2, vUV * 1024.0 * 0.5).rgb, 1.0);
- 
         } else {
             fragColor = vec4(vec3(0.0), 1.0);
         }

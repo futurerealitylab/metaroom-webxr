@@ -265,6 +265,7 @@ function updateVideoTexture(gl, texture, video) {
   const internalFormat = gl.RGBA;
   const srcFormat = gl.RGBA;
   const srcType = gl.UNSIGNED_BYTE;
+  gl.activeTexture(gl.TEXTURE0 + 3);
   gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
                 srcFormat, srcType, video);
@@ -273,6 +274,8 @@ function updateVideoTexture(gl, texture, video) {
 // (return JavaScript "Promises" like in loadImages())
 async function setup(state) {
     hotReloadFile(getPath("hp.js"));
+
+
 
     matrixModule = await import(getPath("matrix.js"));
     Mat          = matrixModule.Matrix;
@@ -289,7 +292,7 @@ async function setup(state) {
     Input.initKeyEvents();
 
     state.world = { 
-        cam_pos : [
+        pos : [
             startPosition[0], 
             startPosition[1], 
             startPosition[2]
@@ -312,11 +315,52 @@ async function setup(state) {
         mapDimY : 64,
         mapGridSize : 8,
         heightMap : [],
+        remoteUserInfo : {
+
+        },
+        activeView : -1
     };
     for (let i = 0; i < (state.world.mapDimX * state.world.mapDimY) / state.world.mapGridSize; i += 1) {
         state.world.heightMap.push({h : 0.0, obj : [{init : false, position : [0, 0, 0], scale : [0.5, 0.5, 0.5]}]});
     }
 
+
+    MR.getMessagePublishSubscriber().subscribe("User_State", (_, args) => {
+        const info = args.info;
+        if (!info) {
+            console.warn("no user state found");
+            return;
+        }
+        console.log("received info for uid: ", info.uid);
+        state.world.remoteUserInfo[info.uid] = info;
+
+    });
+
+    MR.getMessagePublishSubscriber().subscribe("User_Leave", (_, args) => {
+        const info = args.info;
+        if (!info) {
+            console.warn("no user state found");
+            return;
+        }
+        console.log("user leave", info.uid);
+        delete state.world.remoteUserInfo[info.uid];
+        if (state.world.activeView == info.uid) {
+            state.world.activeView = -1;
+        }
+    });
+
+    window.TESTswitchView = (uid) => {
+        if (uid == -1) {
+            state.world.activeView = -1;
+            return;
+        }
+        console.log(state.world.remoteUserInfo);
+        if (!state.world.remoteUserInfo[uid]) {
+            console.warn("UID does not exist");
+            return;
+        }
+        state.world.activeView = uid;
+    }
 
 
     state.fog_color = [53.0 / 255.0, 81.0 / 255.0, 192.0 / 255.0, 1.0];
@@ -452,6 +496,7 @@ async function setup(state) {
                     state.MAT_MODE_FLOOR = 0;
                     state.MAT_MODE_TEXTURE = 1;
                     state.MAT_MODE_COLOR = 2;
+                    state.MAT_MODE_USER = 3;
 
                     state.mat_count = 2;
                     state.u_matsLoc = gl.getUniformLocation(program, 'u_mats');
@@ -1015,12 +1060,12 @@ function onStartFrame(t, state) {
         v[1] = 0;
         v[2] = 0;
 
-        state.world.cam_pos[0] = startPosition[0];
-        state.world.cam_pos[1] = startPosition[1];
-        state.world.cam_pos[2] = startPosition[2];
+        state.world.pos[0] = startPosition[0];
+        state.world.pos[1] = startPosition[1];
+        state.world.pos[2] = startPosition[2];
         state.world.dir = [
             state.world.initDir[0], 
-            state.world.initDir[1], 
+            state.world.initDir[1],
             state.world.initDir[2], 
             0
         ];
@@ -1094,15 +1139,15 @@ function onStartFrame(t, state) {
             v[2] *= drag;
         }
 
-        const cam_pos = state.world.cam_pos;
-        cam_pos[0] += state.world.v[0] * state.deltaTimeS;
-        cam_pos[1] += state.world.v[1] * state.deltaTimeS;
-        cam_pos[2] += state.world.v[2] * state.deltaTimeS;
+        const pos = state.world.pos;
+        pos[0] += state.world.v[0] * state.deltaTimeS;
+        pos[1] += state.world.v[1] * state.deltaTimeS;
+        pos[2] += state.world.v[2] * state.deltaTimeS;
     
         if (state.world.objInfo.isSelected) {
-            state.world.objInfo.position[0] = cam_pos[0];
-            state.world.objInfo.position[1] = cam_pos[1] + cameraRadius * 0.2;
-            state.world.objInfo.position[2] = cam_pos[2] - cameraRadius * 2;
+            state.world.objInfo.position[0] = pos[0];
+            state.world.objInfo.position[1] = pos[1] + cameraRadius * 0.2;
+            state.world.objInfo.position[2] = pos[2] - cameraRadius * 2;
         }
     }
 */
@@ -1165,17 +1210,17 @@ function onStartFrame(t, state) {
         v[2] *= drag;
         state.world.angularVelocity *= drag;
 
-        const cam_pos = state.world.cam_pos;
-        cam_pos[0] += state.world.v[0] * state.deltaTimeS;
-        cam_pos[1] += state.world.v[1] * state.deltaTimeS;
-        cam_pos[2] += state.world.v[2] * state.deltaTimeS;
+        const pos = state.world.pos;
+        pos[0] += state.world.v[0] * state.deltaTimeS;
+        pos[1] += state.world.v[1] * state.deltaTimeS;
+        pos[2] += state.world.v[2] * state.deltaTimeS;
     
-        // console.log("grid pos", cam_pos[0], cam_pos[2], 
-        // Math.floor(cam_pos[0]) + state.world.mapDimX * 0.5,
-        // Math.floor(cam_pos[2]) + state.world.mapDimY * 0.5);
+        // console.log("grid pos", pos[0], pos[2], 
+        // Math.floor(pos[0]) + state.world.mapDimX * 0.5,
+        // Math.floor(pos[2]) + state.world.mapDimY * 0.5);
 
-        const gridX = Math.floor((Math.floor(cam_pos[0]) + state.world.mapDimX * 0.5) / state.world.mapGridSize);
-        const gridY = Math.floor((Math.floor(cam_pos[2]) + state.world.mapDimY * 0.5) / state.world.mapGridSize);
+        const gridX = Math.floor((Math.floor(pos[0]) + state.world.mapDimX * 0.5) / state.world.mapGridSize);
+        const gridY = Math.floor((Math.floor(pos[2]) + state.world.mapDimY * 0.5) / state.world.mapGridSize);
 
         window.setGridH = (x, y, h) => {
             const ___idx = (y * state.world.mapDimX) + x;
@@ -1212,13 +1257,13 @@ function onStartFrame(t, state) {
             return null;            
         }
 
-        cam_pos[1] = Math.max(0.0, cam_pos[1]);
-        cam_pos[1] = Math.max(window.getCurrGridH(), cam_pos[1]);
+        pos[1] = Math.max(0.0, pos[1]);
+        pos[1] = Math.max(window.getCurrGridH(), pos[1]);
         const currGrid =  window.getCurrGrid();
         if (currGrid != null) {
-            currGrid.obj[0].position[0] = cam_pos[0];
-            currGrid.obj[0].position[1] = cam_pos[1];
-            currGrid.obj[0].position[2] = cam_pos[2];
+            currGrid.obj[0].position[0] = pos[0];
+            currGrid.obj[0].position[1] = pos[1];
+            currGrid.obj[0].position[2] = pos[2];
             currGrid.obj[0].draw = state.drawSphere;
             currGrid.obj[0].init = true;
 
@@ -1226,9 +1271,9 @@ function onStartFrame(t, state) {
 
 
         if (state.world.objInfo.isSelected) {
-            state.world.objInfo.position[0] = cam_pos[0];
-            state.world.objInfo.position[1] = cam_pos[1] + cameraRadius * 0.2;
-            state.world.objInfo.position[2] = cam_pos[2] - cameraRadius * 2;
+            state.world.objInfo.position[0] = pos[0];
+            state.world.objInfo.position[1] = pos[1] + cameraRadius * 0.2;
+            state.world.objInfo.position[2] = pos[2] - cameraRadius * 2;
         }
     }
 
@@ -1248,9 +1293,9 @@ function onStartFrame(t, state) {
 
     gl.uniform1f(state.uTimeLoc, now / 1000.0);
 
-    const userPosX = state.world.cam_pos[0];
-    const userPosY = state.world.cam_pos[1];
-    const userPosZ = state.world.cam_pos[2];
+    const userPosX = state.world.pos[0];
+    const userPosY = state.world.pos[1];
+    const userPosZ = state.world.pos[2];
 
     const origin = [userPosX, userPosY, userPosZ];
     const dir = [0, 0, 0];
@@ -1288,7 +1333,14 @@ function onStartFrame(t, state) {
 }
 
 function onEndFrame(t, state) {
-
+    MR.server.sock.send(JSON.stringify({
+        "MR_Message" : "User_State", 
+        "info" : {
+            uid   : MR.uid(), 
+            pos   : state.world.pos,
+            angle : state.world.angle
+        } 
+    }));
 }
 
 // per eye
@@ -1298,14 +1350,28 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
     const M = state.M;
 
-    Mat.rotateY(viewMat,
-        state.world.angle
-    );
-    Mat.translate(viewMat, 
-        -state.world.cam_pos[0],
-        -state.world.cam_pos[1],
-        -state.world.cam_pos[2]
-    );
+    if (state.world.activeView == -1) {
+        Mat.rotateY(viewMat,
+            state.world.angle
+        );
+        Mat.translate(viewMat, 
+            -state.world.pos[0],
+            -state.world.pos[1],
+            -state.world.pos[2]
+        );
+    } else {
+        const userInfo = state.world.remoteUserInfo[state.world.activeView];
+        Mat.rotateY(viewMat,
+            userInfo.angle
+        );
+        Mat.translate(viewMat, 
+            -userInfo.pos[0],
+            -userInfo.pos[1],
+            -userInfo.pos[2]
+        ); 
+    }
+
+
 
 
 
@@ -1348,6 +1414,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         }
         M.save();
             Mat.translateV(M.matrix(), state.world.objInfo.position);
+
             gl.uniformMatrix4fv(state.uModelLoc, false, 
                 M.matrix()
             );
@@ -1374,7 +1441,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         //         }
         //         X += 1;
         //         M.save();
-        //         const target = state.world.cam_pos;
+        //         const target = state.world.pos;
         //         const dt__ = state.deltaTimeS;
 
         //         next__[0] = gridInfo.obj[0].position[0];
@@ -1402,9 +1469,37 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         // }
         // M.restore();
 
+        gl.uniform1i(state.uModeLoc, 3);
+        gl.uniform1i(state.whichTextureLoc, 1);
 
-    
-    
+                     M.save();
+                    Mat.identity(M.matrix());
+                    Mat.translateV(M.matrix(), state.world.pos);
+                    Mat.rotateY(M.matrix(),
+                        state.world.angle
+                    );
+                    //Mat.scale(M.matrix(), 0.5, 0.5, 0.5);
+                    gl.uniformMatrix4fv(state.uModelLoc, false, 
+                        M.matrix()
+                    );
+                    state.drawCube();
+                M.restore();  
+        for (let key in state.world.remoteUserInfo) {
+            if (state.world.remoteUserInfo.hasOwnProperty(key)) {
+                M.save();
+                    Mat.identity(M.matrix());
+                    Mat.translateV(M.matrix(), state.world.remoteUserInfo[key].pos);
+                    Mat.rotateY(M.matrix(),
+                        state.world.remoteUserInfo[key].angle
+                    );
+                    //Mat.scale(M.matrix(), 0.5, 0.5, 0.5);
+                    gl.uniformMatrix4fv(state.uModelLoc, false, 
+                        M.matrix()
+                    );
+                    state.drawCube();
+                M.restore();               
+            }
+        }
     }
 
 }

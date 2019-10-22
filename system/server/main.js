@@ -357,7 +357,7 @@ try {
 		ws.index = wsIndex++;
 		websocketMap.set(ws.index, ws);
 
-		console.log("connection: ", ws.index);
+		console.log("connection:", ws.index);
 
 		worldsSources = [];
 
@@ -368,7 +368,7 @@ try {
 		// ); //<- BUG?
 		
 		ws.send(JSON.stringify({
-		    "MR_Message" : "Init", "key" : worldIdx})
+		    "MR_Message" : "Init", "key" : worldIdx, uid : ws.index})
 		); //<- BUG?
 
 		// preprocess(
@@ -477,6 +477,26 @@ try {
 				}
 				case "Init": {
 					ws.send(JSON.stringify({"MR_Message" : "Init", "key" : worldIdx}));
+					break;
+				}
+				case "Broadcast_All": {
+					// TODO
+					break;
+				}
+				case "Broadcast_To": {
+					// TODO
+					break;
+				}
+				case "User_State": {
+					for (let sock__ of websocketMap.values()) {
+						if (sock__.index == ws.index) {
+							continue;
+						}
+						if (sock__.readyState === ws.OPEN) {
+							sock__.send(data);
+						}
+					}
+					break;
 				}
 				default: {
 
@@ -497,7 +517,17 @@ try {
 		ws.on('close', () => {
 			websocketMap.delete(ws.index);
 			toInit.delete(ws.index);
-			console.log("close: websocketMap.keys():", Array.from(websocketMap.keys()));
+			console.log("close:", ws.index, "websocketMap.keys() updated:", Array.from(websocketMap.keys()));
+
+			for (let sock__ of websocketMap.values()) {
+				if (sock__.index == ws.index) {
+					console.log("Ignoring self update");
+					continue;
+				}
+				if (sock__.readyState === ws.OPEN) {
+					sock__.send(JSON.stringify({"MR_Message" : "User_Leave", "info" : { uid : ws.index }}));
+				}
+			}
 		});
 	});
 

@@ -177,7 +177,7 @@ window.VRCanvasWrangler = (function() {
       options = options || {};
 
       options.onStartFrame = options.onStartFrame || (function(t, state) {});
-      options.onEndFrame = options.onEndFrame || (function(t) {});
+      options.onEndFrame = options.onEndFrame || (function(t, state) {});
       options.onDraw = options.onDraw || (function(t, p, v, state, eyeIdx) {}); // projMat, viewMat
       options.onAnimationFrame = options.onAnimationFrame || this._onAnimationFrame.bind(this);
       options.onAnimationFrameWindow = options.onAnimationFrameWindow || this._onAnimationFrameWindow.bind(this);
@@ -543,7 +543,7 @@ window.VRCanvasWrangler = (function() {
 
         GFX.viewportXOffset = 0;
         this.config.onDraw(t, this._projectionMatrix, this._viewMatrix, this.customState);
-        this.config.onEndFrame(t);
+        this.config.onEndFrame(t, this.customState);
     }
 
     _onAnimationFrame(t) {

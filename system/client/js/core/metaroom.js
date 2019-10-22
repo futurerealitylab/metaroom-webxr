@@ -207,6 +207,11 @@ MR.server.echo = (message) => {
   }));
 };
 
+MR.server.uid = 0;
+MR.uid = () => {
+    return MR.server.uid;
+}
+
 
 
 MR.getCanvas = () => MR.wrangler._canvas;
