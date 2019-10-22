@@ -38,7 +38,7 @@ parser.addArgument(
   [ '-i', '--interval' ],
   {
     help: 'interval to broadcast to clients',
-    defaultValue: 2000
+    defaultValue: 3000
   }
 );
 parser.addArgument(
@@ -55,14 +55,22 @@ parser.addArgument(
         defaultValue: false
     }
 );
+parser.addArgument(
+    ['-mu', '--multiuser'],
+    {
+        help: 'enable multiuser world synchronization',
+        defaultValue: true
+    }
+);
 
 const args     = parser.parseArgs();
 
-const https = require('https');
-const http  = require('http');
+const https    = require('https');
+const http     = require('http');
 const host     = args.host;
 const port     = parseInt(args.port);
 let   interval = args.interval;
+const multiuser = args.multiuser;
 
 if (parser.version) {
 	console.log("Version:", 1.0);
@@ -320,6 +328,8 @@ try {
 
 	const log = console.log.bind(console);
 
+	let worldIdx = 0;
+
 	watcher
 	  .on('add', path => log(`File ${path} has been added`))
 	  .on('change', path => {
@@ -341,16 +351,25 @@ try {
 	  .on('unlink', path => log(`File ${path} has been removed`))
 	  .on('unwatch', path => log(`File ${path} has been removed`));
 
+	const toInit = new Map();
+	let timerID = null;
 	wss.on('connection', function(ws) {
-
-		let timerID = null;
-
 		ws.index = wsIndex++;
 		websocketMap.set(ws.index, ws);
 
-		console.log("connection: ", ws.index);
+		console.log("connection:", ws.index);
 
 		worldsSources = [];
+
+		toInit.set(ws.index, ws);
+
+		// ws.send(JSON.stringify({
+		//     "MR_Message" : "Load_World", "key" : worldIdx, "content" : "TODO", "count" : ""})
+		// ); //<- BUG?
+		
+		ws.send(JSON.stringify({
+		    "MR_Message" : "Init", "key" : worldIdx, uid : ws.index})
+		); //<- BUG?
 
 		// preprocess(
 		// 	systemRoot,
@@ -431,41 +450,103 @@ try {
 
 					break;
 				}
+				case "Load_World": {
+					// console.log("Load_World command received");
+
+					// if (msg.mode && msg.mode == "get") {
+					// 	let i__ = 0;
+					// 	msg.key = worldIdx;
+						
+					// 	const newData = JSON.stringify(msg);
+
+			  // 			ws.send(newData);
+
+					// 	break;
+					// }
+
+
+					worldIdx = msg.key;
+					let i__ = 0;
+			  		for (let sock__ of websocketMap.values()) {
+			  			console.log("Sending load world command to " + i__);
+		  				sock__.send(data);
+		  				i__ += 1;
+					}
+					console.log(worldIdx);
+					break;
+				}
+				case "Init": {
+					ws.send(JSON.stringify({"MR_Message" : "Init", "key" : worldIdx}));
+					break;
+				}
+				case "Broadcast_All": {
+					// TODO
+					break;
+				}
+				case "Broadcast_To": {
+					// TODO
+					break;
+				}
+				case "User_State": {
+					for (let sock__ of websocketMap.values()) {
+						if (sock__.index == ws.index) {
+							continue;
+						}
+						if (sock__.readyState === ws.OPEN) {
+							sock__.send(data);
+						}
+					}
+					break;
+				}
+				default: {
+
+				}
+				// case "Confirm_Connection": {
+				// 	toInit.delete(ws.index);
+				// 	console.log("connection confirmed, sending init info");
+				// 	ws.send(JSON.stringify({
+		  //             "MR_Message" : "Load_World", "key" : worldIdx, "content" : "TODO", "count" : ""})
+		  //           );
+
+				// 	break;
+				// }
 				}
 			}
-
-			//userMap[ws.index] = "hooray";//data;
-
-
 		});
 
 		ws.on('close', () => {
 			websocketMap.delete(ws.index);
-			console.log("close: websocketMap.keys():", Array.from(websocketMap.keys()));
-			clearInterval(timerID);
+			toInit.delete(ws.index);
+			console.log("close:", ws.index, "websocketMap.keys() updated:", Array.from(websocketMap.keys()));
+
+			for (let sock__ of websocketMap.values()) {
+				if (sock__.index == ws.index) {
+					console.log("Ignoring self update");
+					continue;
+				}
+				if (sock__.readyState === ws.OPEN) {
+					sock__.send(JSON.stringify({"MR_Message" : "User_Leave", "info" : { uid : ws.index }}));
+				}
+			}
 		});
-
-		setInterval(() => {
-			//console.log("tick:", ws.index, (Date.now() - timeStart) / 1000.0);
-			//for (let [key, value] of websocketMap) {
-				//if (key != ws.index) { // TODO re-enable check later since I'm testing whether messages are received
-					//value.send(JSON.stringify(userMap));
-				//}
-			//}
-		}, interval)
-
 	});
 
 	wss.on('close', function() {
+		clearInterval(timerID);
 		console.log("closing");
 	})
+
+	if (multiuser) {
+		setInterval(() => {
+			// for (let sock__ of toInit.values()) {
+			// 	sock__.send(JSON.stringify({
+	  //             "MR_Message" : "Load_World", "key" : worldIdx, "content" : "TODO", "count" : ""})
+	  //           );
+			// }
+		}, interval)
+	}
 
 } catch (err) {
 	console.error("couldn't load websocket", err);
 }
-
-/*
-});
-});
-*/
 

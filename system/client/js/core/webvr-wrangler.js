@@ -130,6 +130,8 @@ window.VRCanvasWrangler = (function() {
       this._clearConfig();
 
       this._init();
+
+      Input.initKeyEvents(this._canvas);
     }
 
     start() {
@@ -175,7 +177,7 @@ window.VRCanvasWrangler = (function() {
       options = options || {};
 
       options.onStartFrame = options.onStartFrame || (function(t, state) {});
-      options.onEndFrame = options.onEndFrame || (function(t) {});
+      options.onEndFrame = options.onEndFrame || (function(t, state) {});
       options.onDraw = options.onDraw || (function(t, p, v, state, eyeIdx) {}); // projMat, viewMat
       options.onAnimationFrame = options.onAnimationFrame || this._onAnimationFrame.bind(this);
       options.onAnimationFrameWindow = options.onAnimationFrameWindow || this._onAnimationFrameWindow.bind(this);
@@ -203,14 +205,15 @@ window.VRCanvasWrangler = (function() {
 
       if (options.setup) {
         // try {
-          await options.setup(this.customState, this, this._session);
+          return options.setup(this.customState, this, this._session).then(() => {
+              this.start();
+          })
         // } catch (e) {
         //   console.error(e);
         //   throw new Error("setup unsuccessful");
         // }
       }
-
-      this.start();
+      return this.start();
     }
 
     //
@@ -243,13 +246,13 @@ window.VRCanvasWrangler = (function() {
             this.menu.el, 
             'ge_menu', 
             'Prev',
-            () => { MR.wrangler.doWorldTransition(-1); }
+            () => { MR.wrangler.doWorldTransition({direction : -1, broadcast : true}); }
           );
           this.menu.menus.transition = new MenuItem(
             this.menu.el, 
             'ge_menu', 
             'Next',
-            () => { return MR.wrangler.doWorldTransition(+1); }
+            () => { return MR.wrangler.doWorldTransition({direction : +1, broadcast : true}); }
           );
         }
       if (this.options.enableBellsAndWhistles) {
@@ -353,7 +356,6 @@ window.VRCanvasWrangler = (function() {
     }
 
     _initFallback() {
-
       const modalCanvasInit = () => {
           const bodyWidth = document.body.getBoundingClientRect().width;
           const parent = document.getElementById('output-container');
@@ -541,7 +543,7 @@ window.VRCanvasWrangler = (function() {
 
         GFX.viewportXOffset = 0;
         this.config.onDraw(t, this._projectionMatrix, this._viewMatrix, this.customState);
-        this.config.onEndFrame(t);
+        this.config.onEndFrame(t, this.customState);
     }
 
     _onAnimationFrame(t) {
@@ -580,7 +582,7 @@ window.VRCanvasWrangler = (function() {
         if (!vrDisplay) {
             this.config.onAnimationFrameWindow(t);
             if (this.options.enableMultipleWorlds && doTransition) {
-               this.doWorldTransition();
+               this.doWorldTransition({direction : 1, broadcast : true});
             }
             return;
         }
@@ -590,7 +592,7 @@ window.VRCanvasWrangler = (function() {
         if (!vrDisplay.isPresenting) {
             this.config.onAnimationFrameWindow(t);
             if (this.options.enableMultipleWorlds && doTransition) {
-               this.doWorldTransition();
+               this.doWorldTransition({direction : 1, broadcast : true});
             }
             return;
         }
@@ -611,7 +613,7 @@ window.VRCanvasWrangler = (function() {
         }
         this.config.onEndFrame(t);
         if (this.options.enableMultipleWorlds && doTransition) {
-           this.doWorldTransition();
+           this.doWorldTransition({direction : 1, broadcast : true});
         }
 
         vrDisplay.submitFrame();

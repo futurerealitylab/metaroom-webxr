@@ -1,106 +1,5 @@
 "use strict"
 
-
-
-
-function declareUniform(uniformData, name, type, size) {
-    uniformData[name] = {type : type, size : size};
-}
-
-function setUniform(uniformData, name, data) {
-    uniformData[name].data = data;
-}
-
-// cube without element indexing, attributes in separate buffers
-const geometryPosData = new Float32Array([
-    -1.0, -1.0,  -1.0,
-    -1.0,  1.0,  -1.0,
-     1.0, -1.0,  -1.0,
-    -1.0,  1.0,  -1.0,
-     1.0,  1.0,  -1.0,
-     1.0, -1.0,  -1.0,
-
-    -1.0, -1.0,   1.0,
-     1.0, -1.0,   1.0,
-    -1.0,  1.0,   1.0,
-    -1.0,  1.0,   1.0,
-     1.0, -1.0,   1.0,
-     1.0,  1.0,   1.0,
-
-    -1.0,   1.0, -1.0,
-    -1.0,   1.0,  1.0,
-     1.0,   1.0, -1.0,
-    -1.0,   1.0,  1.0,
-     1.0,   1.0,  1.0,
-     1.0,   1.0, -1.0,
-
-    -1.0,  -1.0, -1.0,
-     1.0,  -1.0, -1.0,
-    -1.0,  -1.0,  1.0,
-    -1.0,  -1.0,  1.0,
-     1.0,  -1.0, -1.0,
-     1.0,  -1.0,  1.0,
-
-    -1.0,  -1.0, -1.0,
-    -1.0,  -1.0,  1.0,
-    -1.0,   1.0, -1.0,
-    -1.0,  -1.0,  1.0,
-    -1.0,   1.0,  1.0,
-    -1.0,   1.0, -1.0,
-
-     1.0,  -1.0, -1.0,
-     1.0,   1.0, -1.0,
-     1.0,  -1.0,  1.0,
-     1.0,  -1.0,  1.0,
-     1.0,   1.0, -1.0,
-     1.0,   1.0,  1.0,        
-]);
-
-const geometryUVData = new Float32Array([
-    0,0,
-    0,1,
-    1,0,
-    1,0,
-    0,1,
-    1,1,
-
-    0,0,
-    0,1,
-    1,0,
-    1,0,
-    0,1,
-    1,1,
-
-    0,0,
-    0,1,
-    1,0,
-    1,0,
-    0,1,
-    1,1,
-
-    0,0,
-    0,1,
-    1,0,
-    1,0,
-    0,1,
-    1,1,
-
-    0,0,
-    0,1,
-    1,0,
-    1,0,
-    0,1,
-    1,1,
-
-    0,0,
-    0,1,
-    1,0,
-    1,0,
-    0,1,
-    1,1,
-]);
-
-
 // data for interleaved attribute cube
 const cubeVertexCount = 24;
 const cubeIndexCount  = 36;
@@ -157,14 +56,49 @@ const cubeIndexData = new Uint16Array([
     22, 23, 20
 ]);
 
-// an object to hold your data
-function UserData() {
+
+let matrixModule = null;
+let Mat          = null;
+let M            = null;
+
+async function onReload(state) {
+    return MR.dynamicImport(getPath("matrix.js")).then((myModule) => {
+        matrixModule = myModule;
+        Mat          = matrixModule.Matrix;
+    });
 }
-const mydata = new UserData();
 
 // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
 // (return JavaScript "Promises" like in loadImages())
 async function setup(state) {
+    hotReloadFile(getPath("world.js"));
+
+    matrixModule = await import(getPath("matrix.js"));
+    Mat = matrixModule.Matrix;
+    state.M = new matrixModule.Dynamic_Matrix4x4_Stack();
+
+    state.cursor = ScreenCursor.trackCursor(MR.getCanvas());
+
+    Input.initKeyEvents();
+
+    state.world = { 
+        cam_pos : [
+            startPosition[0], 
+            startPosition[1], 
+            startPosition[2]
+        ], 
+        v : [0.0, 0.0, 0.0],
+        objInfo : {
+            position : [0, 0, 0],
+            velocity : [0, 0, 0], // temp
+            acceleration : 100, // temp
+            
+            isSelected : false,
+            // user id of user who selected this object
+            isSelectedByUID : -1 
+        }
+    };
+
     // load initial images, then continue setup after waiting is done
     const images = await imgutil.loadImagesPromise([
         getPath("resources/textures/brick.png"),
@@ -179,7 +113,7 @@ async function setup(state) {
     // in this world to store objects together...
     // "state" is optional in other words. Here I'm using my own
     // non-Meta_Room-controlled state. 
-    mydata.images = images;
+    state.images = images;
 
     let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
         { 
@@ -231,21 +165,24 @@ async function setup(state) {
                     );
                 },
                 onAfterCompilation : (program) => {
-                    mydata.program = program;
+                    state.program = program;
 
                     gl.useProgram(program);
 
                     // initialize uniforms (store them in the object passed-in)
-                    GFX.getAndStoreIndividualUniformLocations(gl, program, mydata);
+                    GFX.getAndStoreIndividualUniformLocations(gl, program, state);
 
                     // uncomment the line below to get the maximum number of 
                     // texture image units available for your GPU hardware
                     // const maxTextureUnitCount = GL.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
 
                     // set texture unit 0 at uTex0
-                    gl.uniform1i(mydata.uTex0Loc, 0);
+                    gl.uniform1i(state.uTex0Loc, 0);
                     // set texture unit 1 at uTex1
-                    gl.uniform1i(mydata.uTex1Loc, 1); 
+                    gl.uniform1i(state.uTex1Loc, 1);
+
+
+                    gl.uniform1i(state.uTextureActiveLoc, 1);
                 } 
             },      
             {
@@ -264,149 +201,81 @@ async function setup(state) {
 
     // save all attribute and uniform locations
 
-    mydata.aPosLoc = 0;
-    mydata.aNorLoc = 1;
-    mydata.aUVLoc  = 2;
-    //GFX.getAndStoreAttributeLocations(gl, mydata.program, mydata);
-
-    // note: could also use a uniform buffer instead of individual uniforms
-    // to share uniforms across shader programs
-    // mydata.uniformData.uModelLoc = gl.getUniformLocation(mydata.program, "uModel");
-    // mydata.uniformData.uViewLoc  = gl.getUniformLocation(mydata.program, "uView");
-    // mydata.uProjLoc  = gl.getUniformLocation(mydata.program, "uProj");
-    // mydata.uTimeLoc  = gl.getUniformLocation(mydata.program, "uTime");
-    // mydata.uTex0Loc  = gl.getUniformLocation(mydata.program, "uTex0");
-    // mydata.uTex1Loc  = gl.getUniformLocation(mydata.program, "uTex1");
-
-    // NOTE: individual as opposed to the uniform buffers that may be added in an example later
-    // GFX.getAndStoreIndividualUniformLocations(gl, mydata.program, mydata);
-
-    // // commented line would give you the maximum number of 
-    // // texture image units availabl on your hardware
-    // // const maxTextureUnitCount = GL.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
-
-    // gl.uniform1i(mydata.uTex0Loc, 0); // set texture unit 0 at uTex0
-    // gl.uniform1i(mydata.uTex1Loc, 1); // set texture unit 1 at uTex1
+    state.aPosLoc = 0;
+    state.aNorLoc = 1;
+    state.aUVLoc  = 2;
 
     // attribute state
-    mydata.vao = gl.createVertexArray();
-    gl.bindVertexArray(mydata.vao);
+    state.vao = gl.createVertexArray();
+    gl.bindVertexArray(state.vao);
     
     // create buffer for attributes
-    // Version 1: (RECOMMENDED)
     {
         // Step 1: create GPU buffers
 
         // create buffer for vertex attribute data
-        mydata.vertexBuf = gl.createBuffer();
+        state.vertexBuf = gl.createBuffer();
         // set this to be the buffer we're currently looking at
-        gl.bindBuffer(gl.ARRAY_BUFFER, mydata.vertexBuf);
+        gl.bindBuffer(gl.ARRAY_BUFFER, state.vertexBuf);
         // upload data to buffer
         gl.bufferData(gl.ARRAY_BUFFER, cubeVertexData, gl.STATIC_DRAW, 0);
 
         // create buffer for indexing into vertex buffer
-        mydata.elementBuf = gl.createBuffer();
+        state.elementBuf = gl.createBuffer();
         // set this to be the buffer we're currently looking at
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mydata.elementBuf);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, state.elementBuf);
         // upload data to buffer
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, cubeIndexData, gl.STATIC_DRAW, 0);
 
         // Step 2: specify the attributes
 
-        // TODO(KTR): possible helper function call
-        //function setAttribPointers(state.attribData.aPosLoc, size, type, normalize, stride, offset, bytesPerElement);
-        
         // position
         {
             gl.vertexAttribPointer( 
-                mydata.aPosLoc,                     // attributeLocation: the layout location of the attribute
+                state.aPosLoc,                     // attributeLocation: the layout location of the attribute
                 3,                                  // size: 3 components per iteration
                 gl.FLOAT,                           // type: the data is 32-bit floats
                 false,                              // normalize: don't normalize data
                 Float32Array.BYTES_PER_ELEMENT * 8, // stride: move forward (size * sizeof(type)) ... using 3 for ps, 3 for normal, 2 for uv (8)
                 Float32Array.BYTES_PER_ELEMENT * 0  // offset: set how the data is accessed in the buffer
             );
-            gl.enableVertexAttribArray(mydata.aPosLoc); // enable the attribute
+            gl.enableVertexAttribArray(state.aPosLoc); // enable the attribute
         }
         // normals
         {
             // set how the data is accessed in the buffer
             gl.vertexAttribPointer( 
-                mydata.aNorLoc,                     // attributeLocation: the layout location of the attribute
+                state.aNorLoc,                     // attributeLocation: the layout location of the attribute
                 3,                                  // size: 3 components per iteration
                 gl.FLOAT,                           // type: the data is 32-bit floats
                 false,                              // normalize: don't normalize data
                 Float32Array.BYTES_PER_ELEMENT * 8, // stride: move forward (size * sizeof(type)) ... using 3 for ps, 3 for normal, 2 for uv (8)
                 Float32Array.BYTES_PER_ELEMENT * 3  // offset: set how the data is accessed in the buffer
             );
-            gl.enableVertexAttribArray(mydata.aNorLoc); // enable the attribute
+            gl.enableVertexAttribArray(state.aNorLoc); // enable the attribute
         }
         // uv coords
         {
             // set how the data is accessed in the buffer
             gl.vertexAttribPointer( 
-                mydata.aUVLoc,                      // attributeLocation: the layout location of the attribute
+                state.aUVLoc,                      // attributeLocation: the layout location of the attribute
                 2,                                  // size: 3 components per iteration
                 gl.FLOAT,                           // type: the data is 32-bit floats
                 false,                              // normalize: don't normalize data
                 Float32Array.BYTES_PER_ELEMENT * 8, // stride: move forward (size * sizeof(type)) ... using 3 for ps, 3 for normal, 2 for uv (8)
                 Float32Array.BYTES_PER_ELEMENT * 6  // offset: set how the data is accessed in the buffer
             );
-            gl.enableVertexAttribArray(mydata.aUVLoc); // enable the attribute
+            gl.enableVertexAttribArray(state.aUVLoc); // enable the attribute
         }
     }
-    // Version 2: (Separate Buffers Per Attribute)
-    // This version uses 2 buffers to store position and UV/texture coord
-    // attributes separately, but usually we may want to use a single
-    // buffer with interleaved data
-    // {
-    //     {   
-    //         // position buffer
-    //         mydata.posBuffer = gl.createBuffer();
-    //         // set this to be the buffer we're currently looking at
-    //         gl.bindBuffer(gl.ARRAY_BUFFER, mydatae.posBuffer);
-    //         // upload data to buffer
-    //         gl.bufferData(gl.ARRAY_BUFFER, geometryPosData, gl.STATIC_DRAW);
-
-    //         const size = 3;          // 3 components per iteration
-    //         const type = gl.FLOAT;   // the data is 32-bit floats
-    //         const normalize = false; // don't normalize data
-    //         const stride = 0;        // 0 = move forward (size * sizeof(type))
-    //         const offset = 0;        // start at beginning of the buffer
-    //         // set how the data is accessed in the buffer
-    //         gl.vertexAttribPointer( 
-    //             mydata.aPosLoc, size, type, normalize, stride, offset
-    //         );
-    //         gl.enableVertexAttribArray(mydata.aPosLoc); // enable the attribute
-    //     }
-
-    //     {
-    //         // uv buffer
-    //         mydata.uvBuffer = gl.createBuffer();
-    //         // set this to be the buffer we're currently looking at
-    //         gl.bindBuffer(gl.ARRAY_BUFFER, mydata.uvBuffer);
-    //         // upload data to buffer
-    //         gl.bufferData(gl.ARRAY_BUFFER, geometryUVData, gl.STATIC_DRAW); 
-
-    //         const size = 2;
-    //         const type = gl.FLOAT;
-    //         const normalize = true;
-    //         const stride = 0;
-    //         const offset = 0;
-    //         gl.vertexAttribPointer(
-    //             mydata.aUVLoc, size, type, normalize, stride, offset
-    //         );
-    //         gl.enableVertexAttribArray(mydata.aUVLoc); // enable the attribute
-    //     }
-    // }
 
     // Step 3: load textures if you have any,
     // alternatively could combine the images into one and use an atlas
     {
-        mydata.textures = [];
+        state.textures = [];
 
-        const texArr = mydata.textures;
-        for (let i = 0; i < mydata.images.length; i += 1) {
+        const texArr = state.textures;
+        for (let i = 0; i < state.images.length; i += 1) {
             const tex = gl.createTexture();
             texArr.push(tex);
 
@@ -440,7 +309,7 @@ async function setup(state) {
                 internalFormat,
                 srcFormat,
                 srcType,
-                mydata.images[i]
+                state.images[i]
             );
             // generate mipmaps for the texture 
             // (note: mipmapping is not required for all
@@ -448,14 +317,30 @@ async function setup(state) {
             gl.generateMipmap(gl.TEXTURE_2D);
         }
         // discard images unless we actually need them later (in this example, we don't)
-        mydata.images = undefined;
+        state.images = undefined;
     }
 
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 }
 
+const KEY_LEFT  = 37;
+const KEY_UP    = 38;
+const KEY_RIGHT = 39;
+const KEY_DOWN  = 40;
+const KEY_MOVE_VERT = 16; // shift
+const KEY_RESET_POS = 48; // 0
+const MAX_SPEED = 14.0;
+const ACC = 100.0;
+const FRICTION = 0.002;
+const startPosition = [0, 0, 5]
+const cameraRadius = 2.5;
+function clamp(val,min_,max_){return Math.max(min_,Math.min(max_,val));}
+
+
 function onStartFrame(t, state) {
+    Input.updateKeyState();
+
     // update time
     let tStart = t;
     if (!state.tStart) {
@@ -468,27 +353,146 @@ function onStartFrame(t, state) {
     const now = (t - tStart);
 
     state.deltaTime = now - state.time;
+    state.deltaTimeS = state.deltaTime / 1000.0;
     state.time = now;
 
-    // put logic updates here
-    // {
-    // }
+    if (Input.keyWentDown(17)) {
+        state.world.objInfo.isSelected =
+            !state.world.objInfo.isSelected;
 
-    // update rendering state here
+            if (!state.world.objInfo.isSelected) {
+                window.TSTART_FALL = state.time;
+                window.POS_START = state.world.objInfo.position[1]
+            }
+    }
+    if (!state.world.objInfo.isSelected && state.world.objInfo.position[1] > 0.0) {
+        state.world.objInfo.position[1] = Math.max(0.0, window.POS_START - (0.00001 * (state.time - window.TSTART_FALL) * (state.time - window.TSTART_FALL)));
+    }
+
+    if (Input.keyWentDown(KEY_RESET_POS)) {
+        const v = state.world.v;
+        v[0] = 0;
+        v[1] = 0;
+        v[2] = 0;
+
+        state.world.cam_pos[0] = startPosition[0];
+        state.world.cam_pos[1] = startPosition[1];
+        state.world.cam_pos[2] = startPosition[2];
+    } else {
+
+        const v = state.world.v;
+
+        let up   = 0;
+        let down = 0;
+        let left;
+        let right;
+        let forward;
+        let backward;
+
+        left      = -Input.keyIsDown(KEY_LEFT);
+        right     =  Input.keyIsDown(KEY_RIGHT);
+        forward   = -Input.keyIsDown(KEY_UP);
+        backward  =  Input.keyIsDown(KEY_DOWN);
+        if (Input.keyIsDown(KEY_MOVE_VERT)) {
+            up       = -forward;
+            down     = -backward;
+            forward  = 0;
+            backward = 0;
+
+            const hz = left + right;
+            const vt = up + down;
+            const hypo = Math.sqrt((hz * hz) + (vt * vt));
+            if (hypo != 0) {
+                const hcomp = ACC * (hz / hypo);
+                const vcomp = ACC * (vt / hypo);
+
+                v[0] += hcomp * state.deltaTimeS;
+                v[1] += vcomp * state.deltaTimeS;
+            }
+        } else {
+            const hz = left + right;
+            const vt = forward + backward;
+            const hypo = Math.sqrt((hz * hz) + (vt * vt));
+
+            if (hypo != 0) {
+                const hcomp = ACC * (hz / hypo);
+                const vcomp = ACC * (vt / hypo);
+
+                v[0] += hcomp * state.deltaTimeS;
+                v[2] += vcomp * state.deltaTimeS;
+            }
+        }
+
+
+        v[0] = clamp(v[0], -MAX_SPEED, MAX_SPEED);
+        v[1] = clamp(v[1], -MAX_SPEED, MAX_SPEED);
+        v[2] = clamp(v[2], -MAX_SPEED, MAX_SPEED);
+
+        const drag = Math.pow(FRICTION, state.deltaTimeS);
+        if (Math.abs(v[0]) < drag) {
+            v[0] = 0;
+        } else {
+            v[0] *= drag;
+        }
+        if (Math.abs(v[1]) < drag) {
+            v[1] = 0;
+        } else {
+            v[1] *= drag;
+        }
+        if (Math.abs(v[2]) < drag) {
+            v[2] = 0;
+        } else {
+            v[2] *= drag;
+        }
+
+        const cam_pos = state.world.cam_pos;
+        cam_pos[0] += state.world.v[0] * state.deltaTimeS;
+        cam_pos[1] += state.world.v[1] * state.deltaTimeS;
+        cam_pos[2] += state.world.v[2] * state.deltaTimeS;
+    
+        if (state.world.objInfo.isSelected) {
+            state.world.objInfo.position[0] = cam_pos[0];
+            state.world.objInfo.position[1] = cam_pos[1] + cameraRadius * 0.2;
+            state.world.objInfo.position[2] = cam_pos[2] - cameraRadius * 2;
+        }
+    }
+
+
+
+        gl.useProgram(state.program);
 
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
+    gl.clearColor(53.0 / 255.0, 81.0 / 255.0, 192.0 / 255.0, 1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
-        gl.bindVertexArray(mydata.vao);
+        gl.bindVertexArray(state.vao);
 
-        gl.useProgram(mydata.program);
 
-        gl.uniform1f(mydata.uTimeLoc, now / 1000.0);
+        gl.uniform1f(state.uTimeLoc, now / 1000.0);
+
+    const userPosX = state.world.cam_pos[0];
+    const userPosY = state.world.cam_pos[1];
+    const userPosZ = state.world.cam_pos[2];
+
+    const origin = [userPosX, userPosY, userPosZ];
+    const dir = [0, 0, 0];
+    const aim = state.cursor.position();
+
+    dir[0] = aim[0] - origin[0];
+    dir[1] = aim[1] - origin[1];
+    dir[2] = -1;
+
+    const Ray = {
+        origin : origin,
+        direction : dir
+    };
+
+
 }
 
 function onEndFrame(t, state) {
+
 }
 
 // per eye
@@ -496,31 +500,89 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     // do draw calls here
     const sec = state.time / 1000;
 
-    // (KTR): or just use MR.time for seconds, MR.timeMS for milliseconds
+    const M = state.M;
 
-    gl.uniformMatrix4fv(mydata.uModelLoc, false, 
-        new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0, -1.0,1])
-    );           
-    gl.uniformMatrix4fv(mydata.uViewLoc, false, new Float32Array(viewMat));
-    gl.uniformMatrix4fv(mydata.uProjLoc, false, new Float32Array(projMat));
+    Mat.translate(viewMat, 
+        -state.world.cam_pos[0],
+        -state.world.cam_pos[1],
+        -state.world.cam_pos[2]
+    );
 
-    const primitive = gl.TRIANGLES;
-    const offset    = 0;
-    const count     = cubeIndexCount;
 
-    // Note: we could choose to optimize memory use further by using UNSIGNED_BYTE since we have so few indices (< 255),
-    // but most of the time you would use UNSIGNED_SHORT or UNSIGNED_INT
-    gl.drawElements(primitive, count, gl.UNSIGNED_SHORT, offset);
+    gl.uniformMatrix4fv(state.uViewLoc, false, viewMat);
+    gl.uniformMatrix4fv(state.uProjLoc, false, projMat);
+
+    // floor
+    {
+        M.save();
+            Mat.translate(M.matrix(), 0.0, -1.0, 0.0);
+            Mat.scale(M.matrix(), 1000.0, 0.0, 1000.0);
+            gl.uniformMatrix4fv(state.uModelLoc, false, 
+                M.matrix()
+            );
+        M.restore();
+
+        gl.uniform1i(state.uTextureActiveLoc, 0);
+    
+        const primitive = gl.TRIANGLES;
+        const offset    = 0;
+        const count     = cubeIndexCount;
+        gl.drawElements(primitive, count, gl.UNSIGNED_SHORT, offset);
+    }
+
+    // cube
+    {
+
+
+        gl.uniform1i(state.uTextureActiveLoc, 1);
+        // Note: we could choose to optimize memory use further by using 
+        // UNSIGNED_BYTE since we have so few indices (< 255),
+        // but most of the time you would use UNSIGNED_SHORT or UNSIGNED_INT
+    
+        const primitive = gl.TRIANGLES;
+        const offset    = 0;
+        const count     = cubeIndexCount;
+        
+        if (state.world.objInfo.isSelected) {
+        for (let i = 0; i < 10; i += 1) {
+        M.save();
+            let X = [ state.world.objInfo.position[0], 
+             state.world.objInfo.position[1],  state.world.objInfo.position[2]];
+             X[0] += 7.0 * Math.cos(sec + i * (Math.PI * 2) / 10);
+             X[2] += 7.0 * Math.sin(sec + i * (Math.PI * 2) / 10);
+            Mat.translateV(M.matrix(), X);
+            Mat.rotateX(M.matrix(), sec + (i ));
+            Mat.rotateY(M.matrix(), sec + (i ));
+            Mat.rotateZ(M.matrix(), -sec + (i ));
+            gl.uniformMatrix4fv(state.uModelLoc, false, 
+                M.matrix()
+            );
+        
+            gl.drawElements(primitive, count, gl.UNSIGNED_SHORT, offset);
+        M.restore();
+        }
+        } else {
+        M.save();
+            Mat.translateV(M.matrix(), state.world.objInfo.position);
+            gl.uniformMatrix4fv(state.uModelLoc, false, 
+                M.matrix()
+            );
+            gl.drawElements(primitive, count, gl.UNSIGNED_SHORT, offset);
+        M.restore();        
+        }
+
+    }
 }
 
 
 export default function main() {
     const def = {
-        name         : 'textures',
+        name         : 'world',
         setup        : setup,
         onStartFrame : onStartFrame,
         onEndFrame   : onEndFrame,
         onDraw       : onDraw,
+        onReload     : onReload
     };
 
     return def;

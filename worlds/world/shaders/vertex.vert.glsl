@@ -14,6 +14,8 @@ uniform vec2 uResolution;
 out vec2 vUV;
 out vec2 vUV2;
 out vec3 vPos;
+out vec3 vWorld;
+//
 
 out vec3 vNor;
 
@@ -43,7 +45,7 @@ vec2 rotate_2D_point_around(const vec2 pt, const vec2 origin, const float angle)
 
 void main() {
   // Multiply the position by the matrix.
-  gl_Position = uProj * uView * uModel * vec4(aPos + vec3(2.0 * cos(uTime), 0., -2.0 * (sin01(uTime) + 1.0)), 1.0);
+  gl_Position = uProj * uView * uModel * vec4(aPos, 1.0);
   
   vNor = aNor;
   // Pass the texcoord to the fragment shader.
@@ -53,4 +55,5 @@ void main() {
   vUV2 = rotate_2D_point_around(aUV, vec2(0.5), uTime);
 
   vPos = gl_Position.xyz;
+  vWorld = (uModel * vec4(aPos, 1.0)).xyz;
 }
