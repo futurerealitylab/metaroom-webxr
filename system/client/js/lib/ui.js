@@ -109,7 +109,6 @@
       const div = document.createElement("div");
       div.classList.add("vertical-menu");
       window.CLICKMENU = function(id) {
-        console.log("WEE", id)
           const el = document.getElementById(id);
           el.classList = "active";
           MR.wrangler.doWorldTransition({direction : null, key : id, broadcast : true}); 
@@ -130,6 +129,7 @@
         }
         worldsMenuItems[id].classList.add("active");
       }
+      const worlds = MR.worlds;
       div.innerHTML = `
       <div id=0 onclick="window.CLICKMENU(this.id)
       ">A</div>
