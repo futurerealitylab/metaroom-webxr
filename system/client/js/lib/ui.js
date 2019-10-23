@@ -131,7 +131,7 @@
         worldsMenuItems[id].classList.add("active");
       }
       div.innerHTML = `
-      <div class="active" id=0 onclick="window.CLICKMENU(this.id)
+      <div id=0 onclick="window.CLICKMENU(this.id)
       ">A</div>
       <div id=1 onclick="window.CLICKMENU(this.id)
       ">B</div>
