@@ -165,6 +165,7 @@ window.VRCanvasWrangler = (function() {
       conf.onStartFrame = options.onStartFrame || conf.onStartFrame;
       conf.onEndFrame = options.onEndFrame || conf.onEndFrame;
       conf.onDraw = options.onDraw || conf.onDraw;
+      options.onDrawXR = options.onDrawXR || options.onDraw;
       conf.onAnimationFrame = options.onAnimationFrame || conf.onAnimationFrame;
       conf.onAnimationFrameWindow = options.onAnimationFrameWindow || conf.onAnimationFrameWindow;
     }
@@ -179,6 +180,7 @@ window.VRCanvasWrangler = (function() {
       options.onStartFrame = options.onStartFrame || (function(t, state) {});
       options.onEndFrame = options.onEndFrame || (function(t, state) {});
       options.onDraw = options.onDraw || (function(t, p, v, state, eyeIdx) {}); // projMat, viewMat
+      options.onDrawXR = options.onDrawXR || options.onDraw;
       options.onAnimationFrame = options.onAnimationFrame || this._onAnimationFrame.bind(this);
       options.onAnimationFrameWindow = options.onAnimationFrameWindow || this._onAnimationFrameWindow.bind(this);
       options.onSelectStart = options.onSelectStart || function(t, state) {};
@@ -277,6 +279,29 @@ window.VRCanvasWrangler = (function() {
             'Next',
             () => { return MR.wrangler.doWorldTransition({direction : +1, broadcast : true}); }
           );
+
+
+
+
+          // this.usersScroll = createVerticalMenuElement();
+          // this.usersScrollEnabled = 0;
+          // this.usersScroll.style.display = "none";
+          // const usersScrollDisplayOpt = ["none", ""];
+
+          // this.menu.enableDisableUsersScroll = () => { 
+          //     this.usersScrollEnabled = 1 - this.usersScrollEnabled; 
+          //     this.usersScroll.style.display = 
+          //       usersScrollDisplayOpt[this.usersScrollEnabled]; 
+          // }
+
+          // this.menu.menus.usersSelection = new MenuItem(
+          //   this.menu.el,
+          //   'ge_menu',
+          //   "Users",
+          //   this.menu.enableDisableUsersScroll
+          // );
+
+          // this.menu.menus.usersSelection.el.appendChild(this.usersScroll);
         }
       if (this.options.enableBellsAndWhistles) {
         const status = await this._initWebVR();
@@ -488,6 +513,7 @@ window.VRCanvasWrangler = (function() {
       options.onStartFrame = (function(t, state) {});
       options.onEndFrame = (function(t, state) {});
       options.onDraw = (function(t, p, v, state, eyeIdx) {});
+      options.onDrawXR = (function(t, p, v, state, eyeIdx) {});
       options.onAnimationFrame = this._onAnimationFrame.bind(this);
       options.onAnimationFrameWindow = this._onAnimationFrameWindow.bind(this);
       options.onReload = function(state) {};
@@ -627,14 +653,14 @@ window.VRCanvasWrangler = (function() {
             // left eye
             gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
             GFX.viewportXOffset = 0;
-            this.config.onDraw(t, frame.leftProjectionMatrix, frame.leftViewMatrix, this.customState);
+            this.config.onDrawXR(t, frame.leftProjectionMatrix, frame.leftViewMatrix, this.customState);
             
             // right eye
             gl.viewport(gl.canvas.width * 0.5, 0, gl.canvas.width * 0.5, gl.canvas.height);
             GFX.viewportXOffset = gl.canvas.width * 0.5;
-            this.config.onDraw(t, frame.rightProjectionMatrix, frame.rightViewMatrix, this.customState);
+            this.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, this.customState);
         }
-        this.config.onEndFrame(t);
+        this.config.onEndFrame(t, this.customState);
         if (this.options.enableMultipleWorlds && doTransition) {
            this.doWorldTransition({direction : 1, broadcast : true});
         }
