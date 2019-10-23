@@ -303,6 +303,14 @@ window.VRCanvasWrangler = (function() {
 
           // this.menu.menus.usersSelection.el.appendChild(this.usersScroll);
         }
+
+          this.menu.menus.worldsSelection = new MenuItem(
+            this.menu.el,
+            'ge_menu',
+            "Reconnect",
+            MR.initServer
+          );
+
       if (this.options.enableBellsAndWhistles) {
         const status = await this._initWebVR();
         if (!status) {

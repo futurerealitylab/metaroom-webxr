@@ -138,6 +138,7 @@ h1 {
   color: white;
   background-color: var(--ui-base-color);
   filter: alpha(opacity=100);
+  cursor: pointer;
 }
 
 .vertical-menu div.active {
