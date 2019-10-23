@@ -166,6 +166,8 @@ default: {
               deferredActions = [];
 
               CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
+
+              window.DISABLEMENUFORWORLDSEXCEPT(MR.worldIdx);
           });
 
         } catch (err) {
@@ -266,6 +268,8 @@ default: {
               deferredActions = [];
 
               CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
+
+              window.DISABLEMENUFORWORLDSEXCEPT(MR.worldIdx);
 
             });
 

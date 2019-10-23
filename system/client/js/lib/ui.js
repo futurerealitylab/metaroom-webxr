@@ -92,13 +92,56 @@
     //         // this.menus.autoupdate.button.style.color = 'white';
     //     }
     // });
-      document.body.appendChild(this.el);
+      
+        document.body.appendChild(this.el);
+        
+
+        //
+
+
     }
 
     addMenuItem(name, callback) {
 
     }
   }
+  window.createVerticalMenuElement = function() {
+      const div = document.createElement("div");
+      div.classList.add("vertical-menu");
+      window.CLICKMENU = function(id) {
+        console.log("WEE", id)
+          const el = document.getElementById(id);
+          el.classList = "active";
+          MR.wrangler.doWorldTransition({direction : null, key : id, broadcast : true}); 
+          MR.wrangler.menu.enableDisableWorldsScroll();     
 
+          window.DISABLEMENUFORWORLDSEXCEPT(id);   
+      }
+      window.DISABLEMENUFORWORLDSEXCEPT = function(id) {
+        const worldsMenuItems = div.getElementsByTagName("div");
+        console.log(worldsMenuItems);
+
+        id = parseInt(id);
+        for (let i = 0; i < id; i += 1) {
+          worldsMenuItems[i].classList.remove("active");
+        }
+        for (let i = id + 1; i < worldsMenuItems.length; i += 1) {
+          worldsMenuItems[i].classList.remove("active");
+        }
+        worldsMenuItems[id].classList.add("active");
+      }
+      div.innerHTML = `
+      <div class="active" id=0 onclick="window.CLICKMENU(this.id)
+      ">A</div>
+      <div id=1 onclick="window.CLICKMENU(this.id)
+      ">B</div>
+      <div id=2 onclick="window.CLICKMENU(this.id)
+      ">C</div>
+      <div id=3 onclick=" window.CLICKMENU(this.id)
+      ">D</div>`;
+
+
+    return div;
+  }
   window.Menu = Menu;
   window.MenuItem = MenuItem;

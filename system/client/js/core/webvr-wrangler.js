@@ -240,8 +240,31 @@ window.VRCanvasWrangler = (function() {
       this.timeStart = 0;
       window.timeStart = this.timeStart;
 
+
+
         this.menu = new Menu();
         if (this.options.enableMultipleWorlds) {
+
+          this.worldsScroll = createVerticalMenuElement();
+          this.worldsScrollEnabled = 0;
+          this.worldsScroll.style.display = "none";
+          const worldsScrollDisplayOpt = ["none", ""];
+
+          this.menu.enableDisableWorldsScroll = () => { 
+              this.worldsScrollEnabled = 1 - this.worldsScrollEnabled; 
+              this.worldsScroll.style.display = 
+                worldsScrollDisplayOpt[this.worldsScrollEnabled]; 
+          }
+
+          this.menu.menus.worldsSelection = new MenuItem(
+            this.menu.el,
+            'ge_menu',
+            "Worlds",
+            this.menu.enableDisableWorldsScroll
+          );
+
+          this.menu.menus.worldsSelection.el.appendChild(this.worldsScroll);
+
           this.menu.menus.transition = new MenuItem(
             this.menu.el, 
             'ge_menu', 

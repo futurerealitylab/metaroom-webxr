@@ -110,3 +110,38 @@ h1 {
     color: var(--color-section-error);
     cursor: pointer;
 }
+
+.vertical-menu {
+  width: 150px;
+  height: 150px;
+  overflow-y: auto;
+  font:10px courier;
+  position: absolute;
+  bottom: 37px;
+  filter: alpha(opacity=50);
+  z-index: var(--z-menu);
+  background-color: #ccca;
+}
+
+
+.vertical-menu div {
+  background-color: #ccca;
+  color: black;
+  display: block;
+  padding: 4px;
+  text-drecoration: none;
+  font:20px courier;
+  filter: alpha(opacity=50);
+}
+
+.vertical-menu div:hover {
+  color: white;
+  background-color: var(--ui-base-color);
+  filter: alpha(opacity=100);
+}
+
+.vertical-menu div.active {
+  color: white;
+  filter: alpha(opacity=50);
+  background-color: var(--ui-base-color);
+}

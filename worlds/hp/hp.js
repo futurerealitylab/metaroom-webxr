@@ -1287,6 +1287,9 @@ function onStartFrame(t, state) {
     gl.clearColor(state.fog_color[0], state.fog_color[1], state.fog_color[2], state.fog_color[3]);
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
+
+        // splitscreen test
+//    gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
     
     gl.bindVertexArray(state.vao);
 
