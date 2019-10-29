@@ -130,7 +130,7 @@ window.VRCanvasWrangler = (function() {
                 return this._frameData;
             }
             MR.frameData = this.frameData;
-            
+
             this.customState = null;
             this.persistentStateMap = null;
             this.globalPersistentState = null;
@@ -578,14 +578,21 @@ window.VRCanvasWrangler = (function() {
 
             if (this._vrDisplay.isPresenting) {
                 if (!this._VRIsActive) {
-                    this._canvas.width *= 2;
+                    this._oldCanvasWidth = this._canvas.width;
+                    this._oldCanvasHeight = this._canvas.height;
+                    const leftEye = this._vrDisplay.getEyeParameters('left');
+                    const rightEye = this._vrDisplay.getEyeParameters('right');
+
+                    this._canvas.width  = Math.max(leftEye.renderWidth, rightEye.renderWidth) * 2;
+                    this._canvas.height = Math.max(leftEye.renderHeight, rightEye.renderHeight);
                 }
                 this._VRIsActive = true;
 
                 return;
             }
             if (this._VRIsActive) {
-                this._canvas.width /= 2.0;
+                this.canvas.width   = this._oldCanvasWidth;
+                this._canvas.height = this._oldCanvasHeight;
             }
             this._VRIsActive = false;
 
