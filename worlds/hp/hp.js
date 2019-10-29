@@ -288,6 +288,7 @@ async function setup(state) {
     cubeIndexCount  = geometryModule.cubeIndexCount;
 
     state.cursor = ScreenCursor.trackCursor(MR.getCanvas());
+    state.cursor.position()[1] = MR.getCanvas().clientHeight / 2.0;
 
     Input.initKeyEvents();
 
@@ -331,7 +332,7 @@ async function setup(state) {
             console.warn("no user state found");
             return;
         }
-        console.log("received info for uid: ", info.uid);
+        //console.log("received info for uid: ", info.uid);
         state.world.remoteUserInfo[info.uid] = info;
 
     });
@@ -1020,6 +1021,15 @@ function clamp(val,min_,max_){return Math.max(min_,Math.min(max_,val));}
 function onStartFrame(t, state) {
     Input.updateKeyState();
 
+    if (MR.VRIsActive()) {
+        const frameData = MR.frameData;
+        if (frameData != null) {
+            state.localWorldPosition    = frameData.pose.position;
+            state.localWorldOrientation = frameData.pose.orientation;
+            state.frameDataTimestamp    = frameData.timestamp;
+        }
+    }
+
     // update time
     let tStart = t;
     if (!state.tStart) {
@@ -1354,8 +1364,16 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     const M = state.M;
 
     if (state.world.activeView == -1) {
+        const cpos = state.cursor.position();
+        const xRes = MR.getCanvas().clientWidth;
+        const xRot = -0.5 * Math.PI * (((cpos[0] / xRes) * 2) - 1)
+        const yRes = MR.getCanvas().clientHeight;
+        const yRot = (0.5 * Math.PI * (((cpos[1] / yRes) * 2) - 1));
+        // Mat.rotateX(viewMat,
+        //     yRot
+        // );
         Mat.rotateY(viewMat,
-            state.world.angle
+            state.world.angle //- xRot
         );
         Mat.translate(viewMat, 
             -state.world.pos[0],

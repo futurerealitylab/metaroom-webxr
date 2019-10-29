@@ -105,7 +105,12 @@ window.VRCanvasWrangler = (function() {
 
             this.buttonsCache = [];
 
-            this.VRIsActive = false;
+            this._VRIsActive = false;
+
+            this.VRIsActive = () => {
+                return this._VRIsActive;
+            }
+            MR.VRIsActive = this.VRIsActive;
             // Bound functions
             this.onVRRequestPresent = this._onVRRequestPresent.bind(this);
             this.onVRExitPresent = this._onVRExitPresent.bind(this);
@@ -121,6 +126,11 @@ window.VRCanvasWrangler = (function() {
             this._version = null;
             this._button = null;
             this._frameData = null;
+            this.frameData = () => {
+                return this._frameData;
+            }
+            MR.frameData = this.frameData;
+            
             this.customState = null;
             this.persistentStateMap = null;
             this.globalPersistentState = null;
@@ -567,17 +577,17 @@ window.VRCanvasWrangler = (function() {
             }
 
             if (this._vrDisplay.isPresenting) {
-                if (!this.VRIsActive) {
+                if (!this._VRIsActive) {
                     this._canvas.width *= 2;
                 }
-                this.VRIsActive = true;
+                this._VRIsActive = true;
 
                 return;
             }
-            if (this.VRIsActive) {
+            if (this._VRIsActive) {
                 this._canvas.width /= 2.0;
             }
-            this.VRIsActive = false;
+            this._VRIsActive = false;
 
 
         }
@@ -654,6 +664,8 @@ window.VRCanvasWrangler = (function() {
              return;
          }
          vrDisplay.getFrameData(frame);
+
+         
 
          this._animationHandle = vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
          this.config.onStartFrame(t, this.customState);
