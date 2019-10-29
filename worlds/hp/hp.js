@@ -1022,7 +1022,7 @@ function onStartFrame(t, state) {
     Input.updateKeyState();
 
     if (MR.VRIsActive()) {
-        const frameData = MR.frameData;
+        const frameData = MR.frameData();
         if (frameData != null) {
             state.localWorldPosition    = frameData.pose.position;
             state.localWorldOrientation = frameData.pose.orientation;
