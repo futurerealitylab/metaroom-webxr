@@ -76,6 +76,11 @@
     outline: none;
     text-align: left;
     letter-spacing: 0.05em !important;
+
+  -webkit-user-select: none;  
+  -moz-user-select: none;    
+  -ms-user-select: none;      
+  user-select: none;
 }
 
 .ge_menu_highlight {

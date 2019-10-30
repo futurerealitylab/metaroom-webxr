@@ -112,7 +112,6 @@ h1 {
 }
 
 .vertical-menu {
-  width: 150px;
   height: 150px;
   overflow-y: auto;
   font:10px courier;
@@ -121,6 +120,11 @@ h1 {
   filter: alpha(opacity=50);
   z-index: var(--z-menu);
   background-color: #ccca;
+
+  -webkit-user-select: none;  
+  -moz-user-select: none;    
+  -ms-user-select: none;      
+  user-select: none;
 }
 
 

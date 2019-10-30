@@ -18,6 +18,7 @@ window.VRCanvasWrangler = (function() {
 
         // Initialization.
         init(options) {
+            MR.perspective = mat4.perspective;
 
             if (options.useExternalWindow) {
                 this.externalWindow = window.open('', "Editor", 
@@ -180,6 +181,19 @@ window.VRCanvasWrangler = (function() {
             conf.onAnimationFrameWindow = options.onAnimationFrameWindow || conf.onAnimationFrameWindow;
         }
 
+        initMultiViewpointSystem() {
+            this.viewpointInfo = {};
+            this.viewpointInfo.splitscreen = true;
+        }
+
+        enableMultiViewpointSplitscreen(opt) {
+            this.viewpointInfo.splitscreen = opt;
+        }
+
+        setHostViewpoint(id) {
+            // TODO
+        }
+
         async configure(options) {
 
             this._clearConfig();
@@ -258,6 +272,47 @@ window.VRCanvasWrangler = (function() {
             if (this.options.enableMultipleWorlds) {
 
                 this.worldsScroll = createVerticalMenuElement();
+
+                MR.initWorldsScroll = () => {
+                    window.CLICKMENU = (id) => {
+                        const el = document.getElementById(id);
+                        el.classList = "active";
+                        MR.wrangler.doWorldTransition({direction : null, key : id, broadcast : true}); 
+                        MR.wrangler.menu.enableDisableWorldsScroll();     
+
+                        window.DISABLEMENUFORWORLDSEXCEPT(id);   
+                    }
+                    window.DISABLEMENUFORWORLDSEXCEPT = (id) => {
+                        const worldsMenuItems = this.worldsScroll.getElementsByTagName("div");
+                        console.log(worldsMenuItems);
+
+                        id = parseInt(id);
+                        for (let i = 0; i < id; i += 1) {
+                            worldsMenuItems[i].classList.remove("active");
+                        }
+                        for (let i = id + 1; i < worldsMenuItems.length; i += 1) {
+                            worldsMenuItems[i].classList.remove("active");
+                        }
+                        worldsMenuItems[id].classList.add("active");
+                    }
+                    const worlds = MR.worlds;
+                    const wCount = worlds.length;
+                    const contentArr = [];
+                    for (let i = 0; i < wCount; i += 1) {
+                        contentArr.push(
+                            "<div id="
+                        );
+                        contentArr.push(i);
+                        contentArr.push(' onclick="window.CLICKMENU(this.id)">');
+                        contentArr.push(i);
+                        contentArr.push(' ');
+                        contentArr.push(worlds[i].world.default().name);
+                        contentArr.push("</div>\n");
+                    }
+
+                    this.worldsScroll.innerHTML = contentArr.join('');
+                };
+
                 this.worldsScrollEnabled = 0;
                 this.worldsScroll.style.display = "none";
                 const worldsScrollDisplayOpt = ["none", ""];

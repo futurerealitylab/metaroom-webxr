@@ -273,9 +273,11 @@ function updateVideoTexture(gl, texture, video) {
 // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
 // (return JavaScript "Promises" like in loadImages())
 async function setup(state) {
+    CanvasUtil.resize(MR.getCanvas(), 1280, 720);
+    
     hotReloadFile(getPath("hp.js"));
 
-
+    MR.wrangler.initMultiViewpointSystem();
 
     matrixModule = await import(getPath("matrix.js"));
     Mat          = matrixModule.Matrix;

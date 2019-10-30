@@ -117,6 +117,7 @@ default: {
             // main() is the system's entry point
             main : async () => {
 
+
                 MREditor.enable();
 
                 MREditor.init({
@@ -201,7 +202,8 @@ default: {
                     }
                 }
 
-
+                MR.initWorldsScroll();
+                
                 window.COUNT = 0;
 
                 
