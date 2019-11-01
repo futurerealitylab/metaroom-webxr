@@ -163,6 +163,56 @@ function vec4_divide(v0, v1, out) {
     return out;    
 }
 
+// borrowed from glMatrix
+
+/**
+ * Calculates a 4x4 matrix from the given quaternion
+ *
+ * @param {mat4} out mat4 receiving operation result
+ * @param {quat} q Quaternion to create matrix from
+ *
+ * @returns {mat4} out
+ */
+const fromQuatMat = new Float32Array(16);
+function fromQuat(out, q) {
+  let x = q[0], y = q[1], z = q[2], w = q[3];
+  let x2 = x + x;
+  let y2 = y + y;
+  let z2 = z + z;
+
+  let xx = x * x2;
+  let yx = y * x2;
+  let yy = y * y2;
+  let zx = z * x2;
+  let zy = z * y2;
+  let zz = z * z2;
+  let wx = w * x2;
+  let wy = w * y2;
+  let wz = w * z2;
+
+  out[0] = 1 - yy - zz;
+  out[1] = yx + wz;
+  out[2] = zx - wy;
+  out[3] = 0;
+
+  out[4] = yx - wz;
+  out[5] = 1 - xx - zz;
+  out[6] = zy + wx;
+  out[7] = 0;
+
+  out[8] = zx + wy;
+  out[9] = zy - wx;
+  out[10] = 1 - xx - yy;
+  out[11] = 0;
+
+  out[12] = 0;
+  out[13] = 0;
+  out[14] = 0;
+  out[15] = 1;
+
+  return out;
+}
+
 
 function sin01(val) {
     return (1.0 + sin(val)) / 2.0;
@@ -273,9 +323,11 @@ function updateVideoTexture(gl, texture, video) {
 // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
 // (return JavaScript "Promises" like in loadImages())
 async function setup(state) {
+    CanvasUtil.resize(MR.getCanvas(), 1280, 720);
+    
     hotReloadFile(getPath("hp.js"));
 
-
+    MR.wrangler.initMultiViewpointSystem();
 
     matrixModule = await import(getPath("matrix.js"));
     Mat          = matrixModule.Matrix;
@@ -288,6 +340,7 @@ async function setup(state) {
     cubeIndexCount  = geometryModule.cubeIndexCount;
 
     state.cursor = ScreenCursor.trackCursor(MR.getCanvas());
+    state.cursor.position()[1] = MR.getCanvas().clientHeight / 2.0;
 
     Input.initKeyEvents();
 
@@ -331,7 +384,8 @@ async function setup(state) {
             console.warn("no user state found");
             return;
         }
-        console.log("received info for uid: ", info.uid);
+        //console.log("received info for uid: ", info.uid);
+        //console.log(info.pos);
         state.world.remoteUserInfo[info.uid] = info;
 
     });
@@ -1073,84 +1127,7 @@ function onStartFrame(t, state) {
         state.world.angularVelocity = 0.0;
 
     } else {
-/*
-        const v = state.world.v;
 
-        let up   = 0;
-        let down = 0;
-        let left;
-        let right;
-        let forward;
-        let backward;
-
-        left      = -Input.keyIsDown(KEY_LEFT);
-        right     =  Input.keyIsDown(KEY_RIGHT);
-        forward   = -Input.keyIsDown(KEY_UP);
-        backward  =  Input.keyIsDown(KEY_DOWN);
-        if (Input.keyIsDown(KEY_MOVE_VERT)) {
-            up       = -forward;
-            down     = -backward;
-            forward  = 0;
-            backward = 0;
-
-            const hz = left + right;
-            const vt = up + down;
-            const hypo = Math.sqrt((hz * hz) + (vt * vt));
-            if (hypo != 0) {
-                const hcomp = ACC * (hz / hypo);
-                const vcomp = ACC * (vt / hypo);
-
-                v[0] += hcomp * state.deltaTimeS;
-                v[1] += vcomp * state.deltaTimeS;
-            }
-        } else {
-            const hz = left + right;
-            const vt = forward + backward;
-            const hypo = Math.sqrt((hz * hz) + (vt * vt));
-
-            if (hypo != 0) {
-                const hcomp = ACC * (hz / hypo);
-                const vcomp = ACC * (vt / hypo);
-
-                v[0] += hcomp * state.deltaTimeS;
-                v[2] += vcomp * state.deltaTimeS;
-            }
-        }
-
-
-        v[0] = clamp(v[0], -MAX_SPEED, MAX_SPEED);
-        v[1] = clamp(v[1], -MAX_SPEED, MAX_SPEED);
-        v[2] = clamp(v[2], -MAX_SPEED, MAX_SPEED);
-
-        const drag = Math.pow(FRICTION, state.deltaTimeS);
-        if (Math.abs(v[0]) < drag) {
-            v[0] = 0;
-        } else {
-            v[0] *= drag;
-        }
-        if (Math.abs(v[1]) < drag) {
-            v[1] = 0;
-        } else {
-            v[1] *= drag;
-        }
-        if (Math.abs(v[2]) < drag) {
-            v[2] = 0;
-        } else {
-            v[2] *= drag;
-        }
-
-        const pos = state.world.pos;
-        pos[0] += state.world.v[0] * state.deltaTimeS;
-        pos[1] += state.world.v[1] * state.deltaTimeS;
-        pos[2] += state.world.v[2] * state.deltaTimeS;
-    
-        if (state.world.objInfo.isSelected) {
-            state.world.objInfo.position[0] = pos[0];
-            state.world.objInfo.position[1] = pos[1] + cameraRadius * 0.2;
-            state.world.objInfo.position[2] = pos[2] - cameraRadius * 2;
-        }
-    }
-*/
         const v = state.world.v;
 
         let up   = 0;
@@ -1210,10 +1187,26 @@ function onStartFrame(t, state) {
         v[2] *= drag;
         state.world.angularVelocity *= drag;
 
-        const pos = state.world.pos;
-        pos[0] += state.world.v[0] * state.deltaTimeS;
-        pos[1] += state.world.v[1] * state.deltaTimeS;
-        pos[2] += state.world.v[2] * state.deltaTimeS;
+        let pos;
+        let frameData;
+        if (MR.VRIsActive()) {
+            frameData = MR.frameData();
+            if (frameData != null) {
+                state.world.localWorldPosition    = frameData.pose.position;
+                state.world.localWorldOrientation = frameData.pose.orientation;
+                state.world.frameDataTimestamp    = frameData.timestamp;
+
+                window.pose = frameData.pose;
+                //console.log(window.pose.position);
+                pos = state.world.localWorldPosition || [startPosition[2], startPosition[2], startPosition[2]];
+            }
+        } else {
+            pos = state.world.pos;
+
+            pos[0] += state.world.v[0] * state.deltaTimeS;
+            pos[1] += state.world.v[1] * state.deltaTimeS;
+            pos[2] += state.world.v[2] * state.deltaTimeS;
+        }
     
         // console.log("grid pos", pos[0], pos[2], 
         // Math.floor(pos[0]) + state.world.mapDimX * 0.5,
@@ -1257,6 +1250,7 @@ function onStartFrame(t, state) {
             return null;            
         }
 
+        // temp disable
         pos[1] = Math.max(0.0, pos[1]);
         pos[1] = Math.max(window.getCurrGridH(), pos[1]);
         const currGrid =  window.getCurrGrid();
@@ -1267,7 +1261,7 @@ function onStartFrame(t, state) {
             currGrid.obj[0].draw = state.drawSphere;
             currGrid.obj[0].init = true;
 
-        }   
+        }
 
 
         if (state.world.objInfo.isSelected) {
@@ -1287,6 +1281,9 @@ function onStartFrame(t, state) {
     gl.clearColor(state.fog_color[0], state.fog_color[1], state.fog_color[2], state.fog_color[3]);
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
+
+        // splitscreen test
+//    gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
     
     gl.bindVertexArray(state.vao);
 
@@ -1333,54 +1330,116 @@ function onStartFrame(t, state) {
 }
 
 function onEndFrame(t, state) {
-    MR.server.sock.send(JSON.stringify({
-        "MR_Message" : "User_State", 
-        "info" : {
-            uid   : MR.uid(), 
-            pos   : state.world.pos,
-            angle : state.world.angle
-        } 
-    }));
+    if (MR.server.sock.readyState != WebSocket.OPEN) {
+        return;
+    }
+
+    if (!MR.VRIsActive()) {
+        //console.log("NOT VR WEEEE");
+        MR.server.sock.send(JSON.stringify({
+            "MR_Message" : "User_State", 
+            "info" : {
+                uid   : MR.uid(), 
+                pos   : state.world.pos,
+                angle : state.world.angle,
+                isVR  : false
+            } 
+        }));
+    } else {
+        //console.log("VR WEE");
+        MR.server.sock.send(JSON.stringify({
+            "MR_Message" : "User_State", 
+            "info" : {
+                uid   : MR.uid(), 
+                pos   : state.world.localWorldPosition,
+                angle : state.world.localWorldOrientation,
+                isVR  : true 
+            } 
+        }));        
+    }
 }
+
 
 // per eye
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
     // do draw calls here
     const sec = state.time / 1000;
-
     const M = state.M;
 
-    if (state.world.activeView == -1) {
-        Mat.rotateY(viewMat,
-            state.world.angle
-        );
-        Mat.translate(viewMat, 
-            -state.world.pos[0],
-            -state.world.pos[1],
-            -state.world.pos[2]
-        );
+    if (!MR.VRIsActive()) {
+        if (state.world.activeView == -1) {
+            const cpos = state.cursor.position();
+            const xRes = MR.getCanvas().clientWidth;
+            const xRot = -0.5 * Math.PI * (((cpos[0] / xRes) * 2) - 1)
+            const yRes = MR.getCanvas().clientHeight;
+            const yRot = (0.5 * Math.PI * (((cpos[1] / yRes) * 2) - 1));
+            // Mat.rotateX(viewMat,
+            //     yRot
+            // );
+
+
+            Mat.rotateY(viewMat,
+                state.world.angle //- xRot
+            );
+            Mat.translate(viewMat, 
+                -state.world.pos[0],
+                -state.world.pos[1],
+                -state.world.pos[2]
+            );
+        } else {
+            
+            const userInfo = state.world.remoteUserInfo[state.world.activeView];
+        
+            if (!userInfo.isVR) {
+                Mat.rotateY(viewMat,
+                    userInfo.angle
+                );
+                Mat.translate(viewMat, 
+                    -userInfo.pos[0],
+                    -userInfo.pos[1],
+                    -userInfo.pos[2]
+                ); 
+            } else {
+                Mat.identity(fromQuatMat);
+
+
+                const quat = state.world.remoteUserInfo[state.world.activeView].angle;
+                //quat[0] = 0;
+                //quat[2] = 0;
+                fromQuat(fromQuatMat, quat);
+                Mat.inverse(fromQuatMat, fromQuatMat);
+
+                Mat.multiply(
+                    viewMat,
+                    fromQuatMat,
+                    viewMat
+                );
+
+                Mat.translate(viewMat, 
+                    -userInfo.pos[0],
+                    -userInfo.pos[1],
+                    -userInfo.pos[2]
+                ); 
+
+
+
+            }
+  
+        }
     } else {
-        const userInfo = state.world.remoteUserInfo[state.world.activeView];
-        Mat.rotateY(viewMat,
-            userInfo.angle
-        );
-        Mat.translate(viewMat, 
-            -userInfo.pos[0],
-            -userInfo.pos[1],
-            -userInfo.pos[2]
-        ); 
+        const POS = state.world.localWorldPosition;
+        // Mat.scale(viewMat, 0.2, 0.2, 0.2);
+        // Mat.translate(viewMat, 0.0, -(1.0/0.2), 0.0);
+
     }
-
-
-
-
-
 
     gl.uniformMatrix4fv(state.uViewLoc, false, viewMat);
     gl.uniformMatrix4fv(state.uProjLoc, false, projMat);
 
     gl.uniform1i(state.uMatIdxLoc, 0);
-    // floor
+
+    M.save();
+    //floor
     {
         M.save();
             Mat.translate(M.matrix(), 0.0, -1.0, 0.0);
@@ -1421,87 +1480,80 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             state.drawCube();
         M.restore();        
 
-
-        // M.save();
-        // Mat.identity(M.matrix());
-        // let X = 0;
-        // const next__ = [0.0, 0.0, 0.0];
-        // for (let i = 0; i < state.world.mapDimY; i += 1) {
-        //     for (let j = 0; j < state.world.mapDimX; j += 1) {
-        //         const gridInfo = window.getGrid(i, j);
-        //         if (!gridInfo) {
-        //             continue;
-        //         }
-        //         if (gridInfo.obj.length == 0) {
-        //             continue;
-        //         }
-
-        //         if (!gridInfo.obj[0].init) {
-        //             continue;
-        //         }
-        //         X += 1;
-        //         M.save();
-        //         const target = state.world.pos;
-        //         const dt__ = state.deltaTimeS;
-
-        //         next__[0] = gridInfo.obj[0].position[0];
-        //         next__[1] = gridInfo.obj[0].position[1];
-        //         next__[2] = gridInfo.obj[0].position[2];
-
-        //         next__[0] += (target[0] - next__[0]) * dt__;
-        //         next__[1] += (target[1] - next__[1]) * dt__;
-        //         next__[2] += (target[2] - next__[2]) * dt__;
-
-        //         gridInfo.obj[0].position[0] = next__[0];
-        //         gridInfo.obj[0].position[1] = next__[1];
-        //         gridInfo.obj[0].position[2] = next__[2];
-
-        //         Mat.translateV(M.matrix(), next__);
-        //         Mat.scaleV(M.matrix(), [0.25, 0.25, 0.25]);
-        //         gl.uniformMatrix4fv(state.uModelLoc, false,
-        //             M.matrix()
-        //         );
-
-        //         gridInfo.obj[0].draw();
-
-        //         M.restore();
-        //     }
-        // }
-        // M.restore();
-
         gl.uniform1i(state.uModeLoc, 3);
         gl.uniform1i(state.whichTextureLoc, 1);
 
-                     M.save();
-                    Mat.identity(M.matrix());
-                    Mat.translateV(M.matrix(), state.world.pos);
-                    Mat.rotateY(M.matrix(),
-                        state.world.angle
-                    );
-                    //Mat.scale(M.matrix(), 0.5, 0.5, 0.5);
-                    gl.uniformMatrix4fv(state.uModelLoc, false, 
-                        M.matrix()
-                    );
-                    state.drawCube();
-                M.restore();  
+        // draw users
+        // local user
+        M.save();
+            Mat.identity(M.matrix());
+
+            if (!MR.VRIsActive()) {
+                Mat.translateV(M.matrix(), state.world.pos);
+                Mat.rotateY(M.matrix(),
+                    state.world.angle
+                );
+            } else {
+                //console.log("rendering VR local");
+                Mat.translateV(M.matrix(), state.world.localWorldPosition);
+
+                Mat.identity(fromQuatMat);
+                const quat = state.world.localWorldOrientation;
+                //quat[0] = 0;
+                //quat[2] = 0;
+                fromQuat(fromQuatMat, state.world.localWorldOrientation);
+
+                Mat.multiply(
+                    M.matrix(),
+                    fromQuatMat,
+                    M.matrix()
+                );                      
+            }
+            //Mat.scale(M.matrix(), 0.5, 0.5, 0.5);
+            gl.uniformMatrix4fv(state.uModelLoc, false, 
+                M.matrix()
+            );
+            state.drawCube();
+        M.restore();
+        // remote users
         for (let key in state.world.remoteUserInfo) {
             if (state.world.remoteUserInfo.hasOwnProperty(key)) {
+
                 M.save();
                     Mat.identity(M.matrix());
                     Mat.translateV(M.matrix(), state.world.remoteUserInfo[key].pos);
-                    Mat.rotateY(M.matrix(),
-                        state.world.remoteUserInfo[key].angle
-                    );
+
+                    if (state.world.remoteUserInfo[key].isVR) { 
+                        //console.log("rendering VR remote");
+
+                        Mat.identity(fromQuatMat);
+                        const quat = state.world.remoteUserInfo[key].angle;
+                        //quat[0] = 0;
+                        //quat[2] = 0;
+                        fromQuat(fromQuatMat, quat);
+
+                        Mat.multiply(
+                            M.matrix(),
+                            fromQuatMat,
+                            M.matrix()
+                        );
+                    } else {
+                        Mat.rotateY(M.matrix(),
+                            state.world.remoteUserInfo[key].angle
+                        );
+                    }
+
                     //Mat.scale(M.matrix(), 0.5, 0.5, 0.5);
                     gl.uniformMatrix4fv(state.uModelLoc, false, 
                         M.matrix()
                     );
+
                     state.drawCube();
                 M.restore();               
             }
         }
     }
-
+    M.restore();
 }
 
 

@@ -63,12 +63,12 @@ Metaroom_WebVR.prototype = Object.create(
         type : {value : Metaroom.BACKEND_TYPE.WEBVR},
         wrangler : {value : new VRCanvasWrangler()},
     }
-);
+    );
 
 Metaroom.create = function(type = Metaroom.BACKEND_TYPE.WEBXR) {
     this.type = type;
     switch (type) {
-    case Metaroom.BACKEND_TYPE.WEBXR: {
+        case Metaroom.BACKEND_TYPE.WEBXR: {
         // return new Metaroom_WebXR();
         console.error("WebXR not yet implemented");
         break;
@@ -79,7 +79,7 @@ Metaroom.create = function(type = Metaroom.BACKEND_TYPE.WEBXR) {
         console.error("ERROR: unsupported type");
         break;
     }
-  }
+}
 }   
 
 // Argument defaults
@@ -107,10 +107,10 @@ window.MR = Metaroom.create(type);
 // );
 
 const SOCKET_STATE_MAP = {
-  [WebSocket.CLOSED]     : "CLOSED",
-  [WebSocket.CLOSING]    : "CLOSING",
-  [WebSocket.CONNECTING] : "CONNECTING",
-  [WebSocket.OPEN]       : "OPEN",
+    [WebSocket.CLOSED]     : "CLOSED",
+    [WebSocket.CLOSING]    : "CLOSING",
+    [WebSocket.CONNECTING] : "CONNECTING",
+    [WebSocket.OPEN]       : "OPEN",
 };
 
 {
@@ -133,25 +133,25 @@ MR.initServer = () => {
     };
     try {
         MR.server.sock = new WebSocket(  
-          "ws://" + window.IP + ":" + window.PORT
-        );
+            "ws://" + window.IP + ":" + window.PORT
+            );
     } catch (err) {
         console.log(err);
     }
 
     MR.server.sock.onerror = () => {
-      console.log("Socket state:", SOCKET_STATE_MAP[MR.server.sock.readyState]);
+        console.log("Socket state:", SOCKET_STATE_MAP[MR.server.sock.readyState]);
     };
 
 
     // if (MR.server.sock.readyState !== WebSocket.CLOSED) {
-    MR.server.sock.addEventListener('open', () => {
-      console.log("connected to server");
-      MR.server.subs.publish('open', null);
-    });
+        MR.server.sock.addEventListener('open', () => {
+            console.log("connected to server");
+            MR.server.subs.publish('open', null);
+        });
 
 
-    MR.server.sock.addEventListener('message', (ev) => {
+        MR.server.sock.addEventListener('message', (ev) => {
       //console.log("received message from server");
 
       const data = JSON.parse(ev.data);
@@ -159,76 +159,76 @@ MR.initServer = () => {
         MR.server.subs.publish(data.MR_Message, data);
         MR.server.subsLocal.publish(data.MR_Message, data);
       }
-    });
+  });
 
-    MR.server.sock.addEventListener('close', (ev) => {
-      console.log("socket closed");
-    });  
-}
-
-
-
-
-class ServerPublishSubscribe {
-    constructor() {
-        this.subscribers = {};
-        this.subscribersOneShot = {};
+        MR.server.sock.addEventListener('close', (ev) => {
+            console.log("socket closed");
+        });  
     }
-    subscribe(channel, subscriber, data) {
-        this.subscribers[channel] = this.subscribers[channel] || new Map();
-        this.subscribers[channel].set(subscriber, {sub: subscriber, data: data});
-    }
-    unsubscribeAll(subscriber) {
-        for (let prop in this.subscribers) {
-            if (Object.prototype.hasOwnProperty.call(this.subscribers, prop)) {
-                const setObj = this.subscribers[prop].delete(subscriber);
-            }
+
+
+
+
+    class ServerPublishSubscribe {
+        constructor() {
+            this.subscribers = {};
+            this.subscribersOneShot = {};
         }
-        
+        subscribe(channel, subscriber, data) {
+            this.subscribers[channel] = this.subscribers[channel] || new Map();
+            this.subscribers[channel].set(subscriber, {sub: subscriber, data: data});
+        }
+        unsubscribeAll(subscriber) {
+            for (let prop in this.subscribers) {
+                if (Object.prototype.hasOwnProperty.call(this.subscribers, prop)) {
+                    const setObj = this.subscribers[prop].delete(subscriber);
+                }
+            }
+            
+        }
+        subscribeOneShot(channel, subscriber, data) {
+            this.subscribersOneShot[channel] = this.subscribersOneShot[channel] || new Map();
+            this.subscribersOneShot[channel].set(subscriber, {sub: subscriber, data: data});    
+        }
+        publish (channel, ...args) {
+            (this.subscribers[channel] || new Map()).forEach((value, key) => value.sub(value.data, ...args));
+            (this.subscribersOneShot[channel] || new Map()).forEach((value, key) => value.sub(value.data, ...args));
+            this.subscribersOneShot = {};
+        }
     }
-    subscribeOneShot(channel, subscriber, data) {
-        this.subscribersOneShot[channel] = this.subscribersOneShot[channel] || new Map();
-        this.subscribersOneShot[channel].set(subscriber, {sub: subscriber, data: data});    
+    MR.server.subs = new ServerPublishSubscribe();
+    MR.server.subsLocal = new ServerPublishSubscribe();
+    MR.server.echo = (message) => {   
+        MR.server.sock.send(JSON.stringify({
+            "MR_Message" : "Echo",
+            "data": {
+                "message" : message || ""
+            }
+        }));
+    };
+
+    MR.server.uid = 0;
+    MR.uid = () => {
+        return MR.server.uid;
     }
-    publish (channel, ...args) {
-        (this.subscribers[channel] || new Map()).forEach((value, key) => value.sub(value.data, ...args));
-        (this.subscribersOneShot[channel] || new Map()).forEach((value, key) => value.sub(value.data, ...args));
-        this.subscribersOneShot = {};
+
+
+
+    MR.getCanvas = () => MR.wrangler._canvas;
+    MR.time = () => MR.wrangler.time;
+    MR.timeMS = () => MR.wrangler.timeMS;
+
+    MR.getMessagePublishSubscriber = () => { 
+        return MR.server.subsLocal; 
     }
-}
-MR.server.subs = new ServerPublishSubscribe();
-MR.server.subsLocal = new ServerPublishSubscribe();
-MR.server.echo = (message) => {   
-  MR.server.sock.send(JSON.stringify({
-    "MR_Message" : "Echo",
-    "data": {
-      "message" : message || ""
-    }
-  }));
-};
 
-MR.server.uid = 0;
-MR.uid = () => {
-    return MR.server.uid;
-}
+    MR.dynamicImport = function(path) {
+        return import(path + "?generation=" + MR.wrangler.reloadGeneration);
+    };
 
 
-
-MR.getCanvas = () => MR.wrangler._canvas;
-MR.time = () => MR.wrangler.time;
-MR.timeMS = () => MR.wrangler.timeMS;
-
-MR.getMessagePublishSubscriber = () => { 
-    return MR.server.subsLocal; 
-}
-
-MR.dynamicImport = function(path) {
-    return import(path + "?generation=" + MR.wrangler.reloadGeneration);
-};
-
-
-MR._keydown = null;
-MR._keyup = null;
+    MR._keydown = null;
+    MR._keyup = null;
 
 //code.iamkate.com
 function Queue(){var a=[],b=0;this.getLength=function(){return a.length-b};this.isEmpty=function(){return 0==a.length};this.enqueue=function(b){a.push(b)};this.dequeue=function(){if(0!=a.length){var c=a[b];2*++b>=a.length&&(a=a.slice(b),b=0);return c}};this.peek=function(){return 0<a.length?a[b]:void 0}};
@@ -299,17 +299,17 @@ window.Input.updateKeyState = function() {
         const e = Q.dequeue();
         const keyCode = e.keyCode;
         switch (e.type) {
-        case Input.INPUT_TYPE_KEYDOWN: {
-            keyCurr[keyCode] = 1;
-            break;
-        }
-        case Input.INPUT_TYPE_KEYUP: {
-            keyCurr[keyCode] = 0;
-            break;
-        }
-        default: {
+            case Input.INPUT_TYPE_KEYDOWN: {
+                keyCurr[keyCode] = 1;
+                break;
+            }
+            case Input.INPUT_TYPE_KEYUP: {
+                keyCurr[keyCode] = 0;
+                break;
+            }
+            default: {
 
-        }
+            }
         }
     }
 };

@@ -15,7 +15,6 @@ out vec2 vUV;
 out vec2 vUV2;
 out vec3 vPos;
 out vec3 vWorld;
-//
 
 out vec3 vNor;
 

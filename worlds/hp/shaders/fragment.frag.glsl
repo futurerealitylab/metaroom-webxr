@@ -142,7 +142,6 @@ void main() {
         0.0, 1.0
     );
 
-
     Material mat = Material(
       fog_color.rgb,
       vec3(226. / 255., 88. / 255., 34. / 255.),

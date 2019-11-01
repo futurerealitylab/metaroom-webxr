@@ -117,15 +117,13 @@ window.ScreenCursor = (function() {
         // sets cursor coordinates offset from the top-left of the program bounding rectangle
         target.set = function(x, y, z) {
             const r = this.getBoundingClientRect();
-
             prevCursor[0] = cursor[0];
             prevCursor[1] = cursor[1];
+            prevCursor[2] = cursor[2];
+
             cursor[0] = (1 + x - r.left) || 0;
             cursor[1] = (1 + y - r.top)  || 0;
-
-            if (z !== undefined) {
-                cursor[2] = z;
-            }
+            cursor[2] = z;
         };
 
         
