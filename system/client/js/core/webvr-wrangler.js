@@ -176,7 +176,7 @@ window.VRCanvasWrangler = (function() {
             conf.onStartFrame = options.onStartFrame || conf.onStartFrame;
             conf.onEndFrame = options.onEndFrame || conf.onEndFrame;
             conf.onDraw = options.onDraw || conf.onDraw;
-            options.onDrawXR = options.onDrawXR || options.onDraw;
+            conf.onDrawXR = options.onDrawXR || conf.onDraw;
             conf.onAnimationFrame = options.onAnimationFrame || conf.onAnimationFrame;
             conf.onAnimationFrameWindow = options.onAnimationFrameWindow || conf.onAnimationFrameWindow;
         }
@@ -640,6 +640,8 @@ window.VRCanvasWrangler = (function() {
 
                     this._canvas.width  = Math.max(leftEye.renderWidth, rightEye.renderWidth) * 2;
                     this._canvas.height = Math.max(leftEye.renderHeight, rightEye.renderHeight);
+
+                    this._vrDisplay.resetPose();
                 }
                 this._VRIsActive = true;
 

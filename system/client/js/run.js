@@ -6,17 +6,17 @@ window.MREditor = MREditor;
 
 function treq(data) {
     fetch("/world_transition", {
-            method: "POST",
-            body: JSON.stringify(data),         
-            headers: {
-                'Content-Type': 'application/json',
-                // 'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            mode: 'cors'
+        method: "POST",
+        body: JSON.stringify(data),         
+        headers: {
+            'Content-Type': 'application/json',
+            // 'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        mode: 'cors'
     }).then(res => res.json()).then(parsed => {
-            console.log(parsed);
+        console.log(parsed);
     }).error(err => {
-            console.error(err);
+        console.error(err);
     });
 }
 window.treq = treq;
@@ -24,57 +24,58 @@ window.treq = treq;
 
 
 window.watchFiles = function(arr, status = {}) {
-        if (!arr) {
-                status.message = "ERR_NO_FILES_SPECIFIED";
-                console.error("No files specified");
-                return false;
-        }
-        if (MR.server.sock.readyState !== WebSocket.OPEN) {
-                status.message = "ERR_SERVER_UNAVAILABLE";
-                console.error("Server is unavailable");
+    if (!arr) {
+        status.message = "ERR_NO_FILES_SPECIFIED";
+        console.error("No files specified");
+        return false;
+    }
+    if (MR.server.sock.readyState !== WebSocket.OPEN) {
+        status.message = "ERR_SERVER_UNAVAILABLE";
+        console.error("Server is unavailable");
 
-                return false;
-        }
+        return false;
+    }
 
-        MR.server.sock.send(JSON.stringify({"MR_Message" : "Watch_Files", "files" : arr}));
+    MR.server.sock.send(JSON.stringify({"MR_Message" : "Watch_Files", "files" : arr}));
 }
 
 
 
 window.hotReloadFile = function(localPath) {
-        const parentPath = getCurrentPath(window.location.pathname);
+    const parentPath = getCurrentPath(window.location.pathname);
 
-        let saveTo = localPath;
+    let saveTo = localPath;
 
-        saveTo = localPath;
+    saveTo = localPath;
 
-        const origin = window.location.origin;
-        const originIdx = saveTo.indexOf(origin);
-        saveTo = saveTo.substring(originIdx + origin.length + 1);
+    const origin = window.location.origin;
+    const originIdx = saveTo.indexOf(origin);
+    saveTo = saveTo.substring(originIdx + origin.length + 1);
 
-        if (parentPath !== '/' && parentPath !== '\\') {
-                const parentIdx = saveTo.indexOf(parentPath);
-                saveTo = saveTo.substring(parentIdx + parentPath.length);
+    if (parentPath !== '/' && parentPath !== '\\') {
+        const parentIdx = saveTo.indexOf(parentPath);
+        saveTo = saveTo.substring(parentIdx + parentPath.length);
+    }
+
+    console.log(saveTo);
+	MR.server.subsLocal.subscribe("Update_File", (filename, args) => {
+        if (args.file !== filename) {
+            console.log("file does not match");
+            return;
         }
 
-        console.log(saveTo);
-        MR.server.subsLocal.subscribe("Update_File", (filename, args) => {
-                if (args.file !== filename) {
-                        console.log("file does not match");
-                        return;
-                }
+        MR.wrangler.reloadGeneration += 1;
 
-                MR.wrangler.reloadGeneration += 1;
+        import(window.location.href + filename + "?generation=" + MR.wrangler.reloadGeneration).then(
+            (world) => {
+      
+                    const conf = world.default();
+                    MR.wrangler.onReload(conf);
+            }).catch(err => { console.error(err); });
 
-                import(window.location.href + filename + "?generation=" + MR.wrangler.reloadGeneration).then(
-                        (world) => {
-                                const conf = world.default();
-                                MR.wrangler.onReload(conf);
-                        }).catch(err => { console.error(err); });
+    }, saveTo);
 
-        }, saveTo);
-
-        watchFiles([saveTo], {});
+    watchFiles([saveTo], {});
 }
 
 
@@ -113,7 +114,8 @@ default: {
             glEnableEditorHook     : true,
             enableMultipleWorlds   : true,
             enableEntryByButton    : true,
-            enableBellsAndWhistles : false,
+            enableBellsAndWhistles : true,
+            synchronizeTimeWithServer : false,
             // main() is the system's entry point
             main : async () => {
 
@@ -153,6 +155,7 @@ default: {
 
                         while (worldIt !== null) {
                             const src = worldIt.src;
+                            console.log("loading world:", src);
                             const world     = await import(src);
                             const localPath = getCurrentPath(src)
 
@@ -203,7 +206,7 @@ default: {
                 }
 
                 MR.initWorldsScroll();
-                
+
                 window.COUNT = 0;
 
                 
