@@ -184,7 +184,14 @@ window.VRCanvasWrangler = (function() {
         initMultiViewpointSystem() {
             this.viewpointInfo = {};
             this.viewpointInfo.splitscreen = true;
+            this.viewpointInfo.activeViewID = -1;
+
+            MR.multiViewpointSystem = () => {
+                return this.viewpointInfo;
+            }
         }
+
+
 
         enableMultiViewpointSplitscreen(opt) {
             this.viewpointInfo.splitscreen = opt;
@@ -284,7 +291,6 @@ window.VRCanvasWrangler = (function() {
                     }
                     window.DISABLEMENUFORWORLDSEXCEPT = (id) => {
                         const worldsMenuItems = this.worldsScroll.getElementsByTagName("div");
-                        console.log(worldsMenuItems);
 
                         id = parseInt(id);
                         for (let i = 0; i < id; i += 1) {
@@ -328,8 +334,7 @@ window.VRCanvasWrangler = (function() {
                     'ge_menu',
                     "Worlds",
                     this.menu.enableDisableWorldsScroll
-                    );
-
+                );
                 this.menu.menus.worldsSelection.el.appendChild(this.worldsScroll);
 
                 this.menu.menus.transition = new MenuItem(
@@ -346,27 +351,58 @@ window.VRCanvasWrangler = (function() {
                     );
 
 
+                MR.switchView = (uid) => {
+                    if (uid == -1) {
+                        MR.multiViewpointSystem().activeViewID = -1;
+                        return -1;
+                    }
+                    console.log(MR.wrangler.customState.world.remoteUserInfo);
+                    if (!MR.wrangler.customState.world.remoteUserInfo[uid]) {
+                        console.warn("UID does not exist");
+                        return -2;
+                    }
+                    MR.multiViewpointSystem().activeViewID = uid;
+                    return uid;
+                }
 
+                let inputBox = document.createElement("input");
+                inputBox.setAttribute('id', 'user-view-selection');
+                inputBox.setAttribute('value', -1);
+                inputBox.setAttribute('type', 'number');
+                inputBox.classList.add('user-view-selection');
+                this.userSelection = inputBox;
 
-                    // this.usersScroll = createVerticalMenuElement();
-                    // this.usersScrollEnabled = 0;
-                    // this.usersScroll.style.display = "none";
-                    // const usersScrollDisplayOpt = ["none", ""];
+                this.userSelectionEnabled = 0;
+                this.userSelection.style.display = "none";
+                const userSelectionDisplayOpt = ["none", ""];
+                this.userSelection.addEventListener("keyup", (event) => {
+                    if (event.key == "Enter") {
+                        try {
+                            MR.switchView(parseInt(inputBox.value));
+                        } catch (e) {
+                            console.error(e);
+                        }
+                        this.menu.enableDisableUserSelection();
+                    }
+                });
+                this.menu.enableDisableUserSelection = () => {
+                    this.userSelectionEnabled = 1 - this.userSelectionEnabled; 
+                    this.userSelection.style.display = 
+                    userSelectionDisplayOpt[this.userSelectionEnabled];
+                    inputBox.value = MR.multiViewpointSystem().activeViewID;
+                    if (this.userSelectionEnabled) {
+                        inputBox.focus();
+                        inputBox.select();
+                    }
+                }
+                this.menu.menus.observe = new MenuItem(
+                    this.menu.el,
+                    'ge_menu',
+                    'Peer Mode',
+                    this.menu.enableDisableUserSelection
+                );
+                this.menu.menus.observe.el.appendChild(inputBox);
 
-                    // this.menu.enableDisableUsersScroll = () => { 
-                    //     this.usersScrollEnabled = 1 - this.usersScrollEnabled; 
-                    //     this.usersScroll.style.display = 
-                    //       usersScrollDisplayOpt[this.usersScrollEnabled]; 
-                    // }
-
-                    // this.menu.menus.usersSelection = new MenuItem(
-                    //   this.menu.el,
-                    //   'ge_menu',
-                    //   "Users",
-                    //   this.menu.enableDisableUsersScroll
-                    // );
-
-                    // this.menu.menus.usersSelection.el.appendChild(this.usersScroll);
                 }
 
                 this.menu.menus.worldsSelection = new MenuItem(
@@ -697,7 +733,7 @@ window.VRCanvasWrangler = (function() {
 
                                 if (cache[j] != null && !cache[j] && gamepad.buttons[j].pressed) {
                                     console.log('pressed gamepad', i, 'button', j);
-                                    doTransition = true;
+                                    //doTransition = true;
                                 }
                                 cache[j] = gamepad.buttons[j].pressed;
                             }

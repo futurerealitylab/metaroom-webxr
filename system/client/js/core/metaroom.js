@@ -232,6 +232,7 @@ MR.initServer = () => {
 
 //code.iamkate.com
 function Queue(){var a=[],b=0;this.getLength=function(){return a.length-b};this.isEmpty=function(){return 0==a.length};this.enqueue=function(b){a.push(b)};this.dequeue=function(){if(0!=a.length){var c=a[b];2*++b>=a.length&&(a=a.slice(b),b=0);return c}};this.peek=function(){return 0<a.length?a[b]:void 0}};
+
 MR._keyQueue = new Queue();
 
 
@@ -351,3 +352,15 @@ window.Input.deregisterKeyHandlers = function() {
     MR._keydown = null;
     MR._keyup   = null;
 }
+
+window.Input.KEY_LEFT  = 37;
+window.Input.KEY_UP    = 38;
+window.Input.KEY_RIGHT = 39;
+window.Input.KEY_DOWN  = 40;
+window.Input.KEY_SHIFT = 16; // shift
+window.Input.KEY_ZERO  = 48; // 0
+window.Input.KEY_CONTROL = 17; // control
+window.Input.KEY_A = 65;
+window.Input.KEY_W = 87
+window.Input.KEY_D = 68;
+window.Input.KEY_S = 83;

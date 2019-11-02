@@ -145,7 +145,7 @@ window.ScreenCursor = (function() {
         // mouse-move handler
         target.onmousemove = function(e) {
             // set cursor state using the given cursor event "e"
-            this.set(e.clientX, e.clientY);
+            this.set(e.clientX, e.clientY, cursor[2]);
             if (moveCallback != null) {
                info.move(info);
            }
