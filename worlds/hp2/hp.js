@@ -1,6 +1,6 @@
 "use strict"
 
-// math utilities ///////////////////////
+// math utilities ///////////////////////////////////////////////////////////////
 const cos = Math.cos;
 const sin = Math.sin;
 const tan = Math.tan;
@@ -167,7 +167,6 @@ function vec4_divide(v0, v1, out) {
 }
 
 // borrowed from glMatrix
-
 /**
  * Calculates a 4x4 matrix from the given quaternion
  *
@@ -221,7 +220,7 @@ function sin01(val) {
     return (1.0 + sin(val)) / 2.0;
 }
 
-/////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -258,14 +257,17 @@ async function onReload(state) {
         }).then(() => {
           MR.dynamicImport(getPath("simple_movement_controller.js")).then((myModule) => {
             moveControllerModule = myModule;
-            MovementController       = myModule.SimpleMovementController;
+            MovementController   = myModule.SimpleMovementController;
           })
         });
     });
 }
 
+// Video utilities ///////////////////////////////////////////////////////////////////////
+// This could be made into a utility for 
+// uploading videos as animated textures
+// it's based on documentation online
 var copyVideo = false;
-
 function setupVideo(url) {
   const video = document.createElement('video');
 
@@ -342,6 +344,10 @@ function updateVideoTexture(gl, texture, video) {
   gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
                 srcFormat, srcType, video);
 }
+//////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
 // (return JavaScript "Promises" like in loadImages())
 async function setup(state) {
@@ -407,21 +413,28 @@ async function setup(state) {
 
         },
     };
-    for (let i = 0; i < (state.world.mapDimX * state.world.mapDimY) / state.world.mapGridSize; i += 1) {
-        state.world.heightMap.push({h : 0.0, obj : [{init : false, position : [0, 0, 0], scale : [0.5, 0.5, 0.5]}]});
+    for (let i = 0; 
+        i < (state.world.mapDimX * state.world.mapDimY) / state.world.mapGridSize; 
+        i += 1) {
+        state.world.heightMap.push({
+            h : 0.0, obj : [{init : false, position : [0, 0, 0], scale : [0.5, 0.5, 0.5]}]}
+        );
     }
 
-
+    // NOTE: until we have the finalized multi-user synchronization system,
+    // we can use the publish/subscrie system here
     MR.getMessagePublishSubscriber().subscribe("User_State", (_, args) => {
         const info = args.info;
         if (!info) {
             console.warn("no user state found");
             return;
         }
-        //console.log("received info for uid: ", info.uid);
-        //console.log(info.pos);
-        state.world.remoteUserInfo[info.uid] = info;
 
+        // save a user record in this specific spot
+        //
+        // NOTE: may eventually be a good idea to defer using the updated
+        // value until another frame to achieve a smoother look
+        state.world.remoteUserInfo[info.uid] = info;
     });
 
     MR.getMessagePublishSubscriber().subscribe("User_Leave", (_, args) => {
@@ -430,7 +443,8 @@ async function setup(state) {
             console.warn("no user state found");
             return;
         }
-        console.log("user leave", info.uid);
+        console.log("user left:", info.uid);
+        // delete the user record
         delete state.world.remoteUserInfo[info.uid];
         if (MR.multiViewpointSystem().activeViewID == info.uid) {
             MR.multiViewpointSystem().activeViewID = -1;
@@ -449,15 +463,6 @@ async function setup(state) {
 
     state.videoTexture = initVideoTexture(gl);
     state.video = setupVideo(getPath("resources/textures/bla2.mp4"));
-
-    // this line only executes after the images are loaded asynchronously
-    // "await" is syntactic sugar that makes the code continue to look linear (avoid messy callbacks or "then" clauses)
-
-
-    // this is an object I declare globally
-    // in this world to store objects together...
-    // "state" is optional in other words. Here I'm using my own
-    // non-Meta_Room-controlled state. 
     state.images = images;
 
     let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
@@ -486,14 +491,6 @@ async function setup(state) {
                         for (let i = 0; i < 2; i += 1) {
                             const stageCode = stages[i];
                             const hdrEndIdx = stageCode.indexOf(';');
-                            
-                            /*
-                            const hdr = stageCode.substring(0, hdrEndIdx + 1);
-                            output[i] = hdr + "\n#line 1 1\n" + 
-                                        libCode + "\n#line " + (hdr.split('\n').length) + " 0\n" + 
-                                        stageCode.substring(hdrEndIdx + 1);
-                            console.log(output[i]);
-                            */
                             const hdr = stageCode.substring(0, hdrEndIdx + 1);
                             
                             output[i] = hdr + "\n#line 2 1\n" + 
@@ -620,6 +617,10 @@ async function setup(state) {
     state.vao = gl.createVertexArray();
     gl.bindVertexArray(state.vao);
 
+    // this is an object to help assemble multiple triangle geometry
+    // into one contiguous buffer,
+    // the following functions also create convenience draw"X" functions
+    // that know the correct offsets into the buffer to draw the correct shape
     state.layoutBuilder = {
         vertexByteOffset : 0.,
         indexByteOffset : 0,
@@ -918,7 +919,7 @@ async function setup(state) {
         state.vertexBuf = gl.createBuffer();
         // set this to be the buffer we're currently looking at
         gl.bindBuffer(gl.ARRAY_BUFFER, state.vertexBuf);
-        // allocate buffer memory
+        // allocate buffer memory to store all shapes in one contiguous memory region
         gl.bufferData(gl.ARRAY_BUFFER, 
             Float32Array.BYTES_PER_ELEMENT * 
                 (cubeVertexData.length + 
@@ -1085,32 +1086,8 @@ const startPosition = [0, 0, 5]
 const cameraRadius = 2.5;
 
 
-
-function onStartFrame(t, state) {
-    Input.updateKeyState();
-
-    // update time ////////
-    let tStartMS = t;
-    if (!state.tStart) {
-        state.tStart = t;
-        state.timeMS = t;
-    }
-
-    tStartMS = state.tStart;
-
-    const now = (t - tStartMS);
-
-    state.deltaTimeMS = now - state.timeMS;
-    state.deltaTime = state.deltaTimeMS / 1000.0;
-    state.timeMS = now;
-    state.time = state.timeMS / 1000.0;
-
-    ////////
-
+function updateFallingCubeWithBasicGravity(state) {
     const time = state.time;
-    const deltaTime = state.deltaTime;
-
-    // this is the falling cube that you can pick-up
     if (Input.keyWentDown(Input.KEY_CONTROL)) {
         state.world.objInfo.isSelected =
             !state.world.objInfo.isSelected;
@@ -1126,19 +1103,52 @@ function onStartFrame(t, state) {
         state.world.objInfo.position[1] = window.POS_START - (10 * (state.time - window.TSTART_FALL) * (state.time - window.TSTART_FALL));
     }
     state.world.objInfo.position[1] = Math.max(0.0, state.world.objInfo.position[1]);
+}
+
+
+function onStartFrame(t, state) {
+    Input.updateKeyState();
+
+    // update time ////////
+    let tStartMS = t;
+    if (!state.tStart) {
+        state.tStart = t;
+        state.timeMS = t;
+    }
+
+    tStartMS = state.tStart;
+
+    const now = (t - tStartMS);
+
+    // update time delta between frames (ms and s)
+    state.deltaTimeMS = now - state.timeMS;
+    state.deltaTime   = state.deltaTimeMS / 1000.0;
+    // update elapsed time (ms and s)
+    state.timeMS = now;
+    state.time   = state.timeMS / 1000.0;
+
+    ////////
+    // cache time values for ease-of-use
+    const time = state.time;
+    const deltaTime = state.deltaTime;
+
+    // this is logic for the falling cube that you can pick-up
+    updateFallingCubeWithBasicGravity(state);
 
     let pos;
     let frameData;
+    // WebVR-specific way of getting position and orientation
     if (MR.VRIsActive()) {
         frameData = MR.frameData();
         if (frameData != null) {
+            // position is stored as a 3-element Float32Array representing a vector
             state.world.localWorldPosition    = frameData.pose.position;
+            // orientation is stored as a 4-element Float32Array representing a quaternion
             state.world.localWorldOrientation = frameData.pose.orientation;
             state.world.frameDataTimestamp    = frameData.timestamp;
 
-            window.pose = frameData.pose;
-            //console.log(window.pose.position);
-            pos = state.world.localWorldPosition || [startPosition[2], startPosition[2], startPosition[2]];
+            pos = state.world.localWorldPosition || 
+                [startPosition[2], startPosition[2], startPosition[2]];
         }
     } else {
         // use the movement controller to move a camera for a desktop client,
@@ -1148,7 +1158,7 @@ function onStartFrame(t, state) {
             state.world.userCam.reset();
         } else {
             if (state.cursor.z()) {
-                // press down to look around
+                // press down the mouse cursor to look around in the non-VR view
                 const cvs = MR.getCanvas();
                 const cpos = state.cursor.position();
                 state.world.userCam.updateWithCursor(
@@ -1183,93 +1193,81 @@ function onStartFrame(t, state) {
 
     }
     
-    // (Hide Away?) 
-    const gridX = Math.floor((Math.floor(pos[0]) + state.world.mapDimX * 0.5) / state.world.mapGridSize);
-    const gridY = Math.floor((Math.floor(pos[2]) + state.world.mapDimY * 0.5) / state.world.mapGridSize);
+    //
+    // These are functions for setting the height of the ground on the map. Will be useful in the future
+    // For now we can just clamp the min height to 0.0 and move these functions somewhere else
+    // for the example. 
+    // const gridX = Math.floor((Math.floor(pos[0]) + state.world.mapDimX * 0.5) / state.world.mapGridSize);
+    // const gridY = Math.floor((Math.floor(pos[2]) + state.world.mapDimY * 0.5) / state.world.mapGridSize);
 
-    window.setGridH = (x, y, h) => {
-        const ___idx = (y * state.world.mapDimX) + x;
-        if (state.world.heightMap.length > ___idx) {
-            state.world.heightMap[(y * state.world.mapDimX) + x].h = h;
-        }
-    }
-    window.setCurrGridH = (h) => {
-        const ___idx = (gridY * state.world.mapDimX) + gridX;
-        if (state.world.heightMap.length > ___idx) {
-            state.world.heightMap[___idx].h = h;
-        }
-    }
-    window.getCurrGridH = () => {
-        const ___idx = (gridY * state.world.mapDimX) + gridX;
-        if (state.world.heightMap.length > ___idx && state.world.heightMap[___idx]) {
+    // window.setGridH = (x, y, h) => {
+    //     const ___idx = (y * state.world.mapDimX) + x;
+    //     if (state.world.heightMap.length > ___idx) {
+    //         state.world.heightMap[(y * state.world.mapDimX) + x].h = h;
+    //     }
+    // }
+    // window.setCurrGridH = (h) => {
+    //     const ___idx = (gridY * state.world.mapDimX) + gridX;
+    //     if (state.world.heightMap.length > ___idx) {
+    //         state.world.heightMap[___idx].h = h;
+    //     }
+    // }
+    // window.getCurrGridH = () => {
+    //     const ___idx = (gridY * state.world.mapDimX) + gridX;
+    //     if (state.world.heightMap.length > ___idx && state.world.heightMap[___idx]) {
             
-            return state.world.heightMap[___idx].h;
-        }
-        return 0.0;
-    }
-    window.getGrid = (x, y) => {
-        const ___idx = (y * state.world.mapDimX) + x;
-        if (state.world.heightMap.length > ___idx) {
-            return state.world.heightMap[___idx];
-        }
-        return null;            
-    }
-    window.getCurrGrid = () => {
-        const ___idx = (gridY * state.world.mapDimX) + gridX;
-        if (state.world.heightMap.length > ___idx) {
-            return state.world.heightMap[___idx];
-        }
-        return null;            
-    }
+    //         return state.world.heightMap[___idx].h;
+    //     }
+    //     return 0.0;
+    // }
+    // window.getGrid = (x, y) => {
+    //     const ___idx = (y * state.world.mapDimX) + x;
+    //     if (state.world.heightMap.length > ___idx) {
+    //         return state.world.heightMap[___idx];
+    //     }
+    //     return null;            
+    // }
+    // window.getCurrGrid = () => {
+    //     const ___idx = (gridY * state.world.mapDimX) + gridX;
+    //     if (state.world.heightMap.length > ___idx) {
+    //         return state.world.heightMap[___idx];
+    //     }
+    //     return null;            
+    // }
 
     pos[1] = Math.max(0.0, pos[1]);
-    pos[1] = Math.max(window.getCurrGridH(), pos[1]);
-    const currGrid =  window.getCurrGrid();
-    if (currGrid != null) {
-        currGrid.obj[0].position[0] = pos[0];
-        currGrid.obj[0].position[1] = pos[1];
-        currGrid.obj[0].position[2] = pos[2];
-        currGrid.obj[0].draw = state.drawSphere;
-        currGrid.obj[0].init = true;
+    // pos[1] = Math.max(window.getCurrGridH(), pos[1]);
+    // const currGrid =  window.getCurrGrid();
+    // if (currGrid != null) {
+    //     currGrid.obj[0].position[0] = pos[0];
+    //     currGrid.obj[0].position[1] = pos[1];
+    //     currGrid.obj[0].position[2] = pos[2];
+    //     currGrid.obj[0].draw = state.drawSphere;
+    //     currGrid.obj[0].init = true;
 
-    }
+    // }
 
 
+    // update falling cube if selected
     if (state.world.objInfo.isSelected) {
         state.world.objInfo.position[0] = pos[0];
         state.world.objInfo.position[1] = pos[1] + cameraRadius * 0.2;
         state.world.objInfo.position[2] = pos[2] - cameraRadius * 2;
-    }
-    
+    }    
 
-
-
-
+    // begin graphics rendering pipeline - once per frame
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.clearColor(state.fog_color[0], state.fog_color[1], state.fog_color[2], state.fog_color[3]);
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
 
-    // splitscreen test
-    // gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
-}
-
-// per eye
-function onDraw(t, projMat, viewMat, state, eyeIdx) {
-    // do draw calls here
-    const time = state.time;
-    const M = state.M;
-
-    gl.bindVertexArray(state.vao);
-
     gl.useProgram(state.program);
-    
-    gl.uniform1f(state.uTimeLoc, time);
 
     state.fog_color = [0.0, 81.0 / 255.0, 192.0 / 255.0, 1.0];
     gl.uniform4fv(state.fog_colorLoc, state.fog_color);
 
-    // upload dynamic lights 
+    // upload lights 
+    // (may want to do this once instead if the lights don't move)
     state.lights = [
         new Float32Array([
             -1.0, -0.1, -0.5, 0.0, 
@@ -1287,198 +1285,238 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         gl.uniform4fv(state.shader0Info.lights[i].colorLoc, colorArr)
     }
 
-    // desktop view
-    // (Hide Away?) 
-    if (!MR.VRIsActive()) {
-        // self view
-        if (MR.multiViewpointSystem().activeViewID == -1) {
+    // splitscreen test
+    // gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
+}
+
+
+function calculateSelfOrPeerViewMatrix(M, viewMat, state) {
+    const world          = state.world;
+    const userCam        = world.userCam;
+    const remoteUserInfo = world.remoteUserInfo;
+    const activeViewID   = MR.multiViewpointSystem().activeViewID;
+
+    // calculate the view matrix from your perspective
+    if (activeViewID == -1) {
+        Mat.rotateX(viewMat,
+            userCam.rotateX
+        );
+        Mat.rotateY(viewMat,
+            userCam.angle - userCam.rotateY
+        );
+        Mat.translate(viewMat, 
+            -userCam.position[0],
+            -userCam.position[1],
+            -userCam.position[2]
+        );
+    // calculate the view matrix from another user's perspective
+    } else {
+        
+        const userInfo = remoteUserInfo[activeViewID];
+    
+        if (!userInfo.isVR) {
             Mat.rotateX(viewMat,
-                state.world.userCam.rotateX
+                userInfo.rotateX
             );
             Mat.rotateY(viewMat,
-                state.world.userCam.angle - state.world.userCam.rotateY
+                userInfo.angle - userInfo.rotateY
             );
             Mat.translate(viewMat, 
-                -state.world.userCam.position[0],
-                -state.world.userCam.position[1],
-                -state.world.userCam.position[2]
-            );
-        // remote user view
+                -userInfo.pos[0],
+                -userInfo.pos[1],
+                -userInfo.pos[2]
+            ); 
         } else {
-            
-            const userInfo = state.world.remoteUserInfo[MR.multiViewpointSystem().activeViewID];
-        
-            if (!userInfo.isVR) {
-                Mat.rotateX(viewMat,
-                    userInfo.rotateX
-                );
-                Mat.rotateY(viewMat,
-                    userInfo.angle - userInfo.rotateY
-                );
-                Mat.translate(viewMat, 
-                    -userInfo.pos[0],
-                    -userInfo.pos[1],
-                    -userInfo.pos[2]
-                ); 
-            } else {
-                // WebVR uses quaternions for orientation
+            // WebVR uses quaternions for orientation
 
-                Mat.identity(fromQuatMat);
+            Mat.identity(fromQuatMat);
 
-                const quat = state.world.remoteUserInfo[MR.multiViewpointSystem().activeViewID].angle;
-                fromQuat(fromQuatMat, quat);
+            const quat = userInfo.angle;
+            fromQuat(fromQuatMat, quat);
 
-                Mat.inverse(fromQuatMat, fromQuatMat);
+            Mat.inverse(fromQuatMat, fromQuatMat);
 
-                Mat.multiply(
-                    viewMat,
-                    fromQuatMat,
-                    viewMat
-                );
+            Mat.multiply(
+                viewMat,
+                fromQuatMat,
+                viewMat
+            );
 
-                Mat.translate(viewMat, 
-                    -userInfo.pos[0],
-                    -userInfo.pos[1],
-                    -userInfo.pos[2]
-                );
-            }
-  
+            Mat.translate(viewMat, 
+                -userInfo.pos[0],
+                -userInfo.pos[1],
+                -userInfo.pos[2]
+            );
         }
+
     }
 
+    return viewMat;
+}
+function basicDrawUsers(M, state, drawCallback) {
+    const world          = state.world;
+    const userCam        = world.userCam;
+    const remoteUserInfo = world.remoteUserInfo;
+
+    M.save();
+        Mat.identity(M.matrix());
+
+        if (!MR.VRIsActive()) {
+            Mat.translateV(M.matrix(), userCam.position);
+
+            Mat.rotateX(M.matrix(),
+                -userCam.rotateX
+            );
+            Mat.rotateY(M.matrix(),
+                -userCam.angle + userCam.rotateY
+            );
+        } else {
+            //console.log("rendering VR local");
+            Mat.translateV(M.matrix(), world.localWorldPosition);
+
+            Mat.identity(fromQuatMat);
+            const quat = world.localWorldOrientation;
+
+            fromQuat(fromQuatMat, world.localWorldOrientation);
+
+            Mat.multiply(
+                M.matrix(),
+                fromQuatMat,
+                M.matrix()
+            );                      
+        }
+
+        drawCallback(M, state);
+
+    M.restore();
+
+    // draw remote users
+    for (let key in state.world.remoteUserInfo) {
+        if (remoteUserInfo.hasOwnProperty(key)) {
+            const remoteUser = remoteUserInfo[key];
+            M.save();
+                Mat.identity(M.matrix());
+                Mat.translateV(M.matrix(), remoteUser.pos);
+
+                if (remoteUser.isVR) { 
+                    //console.log("rendering VR remote");
+
+                    Mat.identity(fromQuatMat);
+                    const quat = remoteUser.angle;
+
+                    fromQuat(fromQuatMat, quat);
+
+                    Mat.multiply(
+                        M.matrix(),
+                        fromQuatMat,
+                        M.matrix()
+                    );
+                } else {
+
+                    Mat.rotateX(M.matrix(),
+                        -remoteUser.rotateX
+                    );
+                    Mat.rotateY(M.matrix(),
+                        -remoteUser.angle + remoteUser.rotateY
+                    );
+                }
+
+                drawCallback(M, state);
+
+            M.restore();               
+        }
+    }
+}
+
+
+// called per-eye
+function onDraw(t, projMat, viewMat, state, eyeIdx) {
+    // do draw calls here
+    const time = state.time;
+    const M    = state.M;
+
+    gl.bindVertexArray(state.vao);
+
+    gl.useProgram(state.program);
+    
+    gl.uniform1f(state.uTimeLoc, time);
+
+    // non-VR mode - either calculate the local view
+    // or see and interact from another user's perspective in non-VR mode
+    if (!MR.VRIsActive()) {
+        calculateSelfOrPeerViewMatrix(M, viewMat, state);
+    }
+
+    // upload view and projection matrices
     gl.uniformMatrix4fv(state.uViewLoc, false, viewMat);
     gl.uniformMatrix4fv(state.uProjLoc, false, projMat);
 
-    // Note: I don't want to keep using a material switch statement in the shader,
-    // so this doesn't need to stay
+    // Note: I use a uniform id to select draw modes in the shader, but 
+    // I think multiple shaders should be used instead. This was a shortcut
     gl.uniform1i(state.uMatIdxLoc, 0);
 
-    M.save();
-    //floor (We'd like a floor for the virtual world, most likely)
+    M.save(); 
     {
-        M.save();
-            Mat.translate(M.matrix(), 0.0, -1.0, 0.0);
-            Mat.scale(M.matrix(), 1024.0, 0.0, 1024.0);
-            gl.uniformMatrix4fv(state.uModelLoc, false, 
-                M.matrix()
-            );
-        M.restore();
+        // floor (We'd like a floor for the virtual world)
+        {
+            M.save();
+                Mat.translate(M.matrix(), 0.0, -1.0, 0.0);
+                Mat.scale(M.matrix(), 1024.0, 0.0, 1024.0);
+                gl.uniformMatrix4fv(state.uModelLoc, false, 
+                    M.matrix()
+                );
+            M.restore();
 
-        gl.uniform1i(state.uModeLoc, state.MAT_MODE_FLOOR);
-    
-        state.drawCube();
-    }
-
-    // cube
-    {// example of pressing control key to select something
-
-        updateVideoTexture(gl, state.videoTexture, state.video);
+            gl.uniform1i(state.uModeLoc, state.MAT_MODE_FLOOR);
         
-        // Note: we could choose to optimize memory use further by using 
-        // UNSIGNED_BYTE since we have so few indices (< 255),
-        // but most of the time you would use UNSIGNED_SHORT or UNSIGNED_INT
-        if (state.world.objInfo.isSelected) {
-            //gl.uniform1i(state.uModeLoc, state.MAT_MODE_COLOR);
-            gl.uniform1i(state.uModeLoc, state.MAT_MODE_TEXTURE);
-            gl.uniform1i(state.whichTextureLoc, 1);
-        } else {
-
-            gl.uniform1i(state.uModeLoc, state.MAT_MODE_TEXTURE);
-            gl.uniform1i(state.whichTextureLoc, 0);
-        }
-        M.save();
-            Mat.translateV(M.matrix(), state.world.objInfo.position);
-
-            gl.uniformMatrix4fv(state.uModelLoc, false, 
-                M.matrix()
-            );
             state.drawCube();
-        M.restore();        
+        }
 
+        // cube
+        // example of user interaction (press control key to select the cube)
+        // NOTE: not yet synchronized
+        {   
+
+            updateVideoTexture(gl, state.videoTexture, state.video);
+            
+            // Note: we could choose to optimize memory use further by using 
+            // UNSIGNED_BYTE since we have so few indices (< 255),
+            // but most of the time you would use UNSIGNED_SHORT or UNSIGNED_INT
+            if (state.world.objInfo.isSelected) {
+                //gl.uniform1i(state.uModeLoc, state.MAT_MODE_COLOR);
+                gl.uniform1i(state.uModeLoc, state.MAT_MODE_TEXTURE);
+                gl.uniform1i(state.whichTextureLoc, 1);
+            } else {
+
+                gl.uniform1i(state.uModeLoc, state.MAT_MODE_TEXTURE);
+                gl.uniform1i(state.whichTextureLoc, 0);
+            }
+            M.save();
+                Mat.translateV(M.matrix(), state.world.objInfo.position);
+
+                gl.uniformMatrix4fv(state.uModelLoc, false, 
+                    M.matrix()
+                );
+                state.drawCube();
+            M.restore();        
+        }
+
+        // draw users
         gl.uniform1i(state.uModeLoc, 3);
         gl.uniform1i(state.whichTextureLoc, 1);
 
-        // draw users
-        // (Hide Away?) 
-        // local user
-        M.save();
-            Mat.identity(M.matrix());
-
-            if (!MR.VRIsActive()) {
-                Mat.translateV(M.matrix(), state.world.userCam.position);
-
-                Mat.rotateX(M.matrix(),
-                    -state.world.userCam.rotateX
-                );
-                Mat.rotateY(M.matrix(),
-                    -state.world.userCam.angle + state.world.userCam.rotateY
-                );
-            } else {
-                //console.log("rendering VR local");
-                Mat.translateV(M.matrix(), state.world.localWorldPosition);
-
-                Mat.identity(fromQuatMat);
-                const quat = state.world.localWorldOrientation;
-
-                fromQuat(fromQuatMat, state.world.localWorldOrientation);
-
-                Mat.multiply(
-                    M.matrix(),
-                    fromQuatMat,
-                    M.matrix()
-                );                      
-            }
+        basicDrawUsers(M, state, (M, state) => {
             gl.uniformMatrix4fv(state.uModelLoc, false, 
                 M.matrix()
             );
             state.drawCube();
-        M.restore();
-        // (Hide Away?) 
-        // draw remote users
-        for (let key in state.world.remoteUserInfo) {
-            if (state.world.remoteUserInfo.hasOwnProperty(key)) {
-
-                M.save();
-                    Mat.identity(M.matrix());
-                    Mat.translateV(M.matrix(), state.world.remoteUserInfo[key].pos);
-
-                    if (state.world.remoteUserInfo[key].isVR) { 
-                        //console.log("rendering VR remote");
-
-                        Mat.identity(fromQuatMat);
-                        const quat = state.world.remoteUserInfo[key].angle;
-
-                        fromQuat(fromQuatMat, quat);
-
-                        Mat.multiply(
-                            M.matrix(),
-                            fromQuatMat,
-                            M.matrix()
-                        );
-                    } else {
-
-                        Mat.rotateX(M.matrix(),
-                            -state.world.remoteUserInfo[key].rotateX
-                        );
-                        Mat.rotateY(M.matrix(),
-                            -state.world.remoteUserInfo[key].angle + state.world.remoteUserInfo[key].rotateY
-                        );
-                    }
-
-                    //Mat.scale(M.matrix(), 0.5, 0.5, 0.5);
-                    gl.uniformMatrix4fv(state.uModelLoc, false, 
-                        M.matrix()
-                    );
-
-                    state.drawCube();
-                M.restore();               
-            }
-        }
-    }
+        });
+    } 
     M.restore();
 }
 
 function onEndFrame(t, state) {
+    // server communications
     if (MR.server.sock.readyState != WebSocket.OPEN) {
         return;
     }
@@ -1488,12 +1526,12 @@ function onEndFrame(t, state) {
         MR.server.sock.send(JSON.stringify({
             "MR_Message" : "User_State", 
             "info" : {
-                uid   : MR.uid(), 
-                pos   : state.world.userCam.position,
-                angle : state.world.userCam.angle,
+                uid     : MR.uid(), 
+                pos     : state.world.userCam.position,
+                angle   : state.world.userCam.angle,
                 rotateY : state.world.userCam.rotateY,
                 rotateX : state.world.userCam.rotateX,
-                isVR  : false
+                isVR    : false
             } 
         }));
     } else {
@@ -1512,7 +1550,9 @@ function onEndFrame(t, state) {
 
 export default function main() {
     const def = {
-        name         : 'hp2',
+        // Please start naming the world 
+        // with your name so we can identify the author
+        name         : 'hp2', 
         setup        : setup,
         onStartFrame : onStartFrame,
         onEndFrame   : onEndFrame,

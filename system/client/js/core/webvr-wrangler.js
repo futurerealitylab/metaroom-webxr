@@ -398,7 +398,7 @@ window.VRCanvasWrangler = (function() {
                 this.menu.menus.observe = new MenuItem(
                     this.menu.el,
                     'ge_menu',
-                    'Observe',
+                    'Peer Mode',
                     this.menu.enableDisableUserSelection
                 );
                 this.menu.menus.observe.el.appendChild(inputBox);
