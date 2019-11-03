@@ -302,7 +302,7 @@ async function setup(state) {
         // could be used to control objects as well
         userCam : new MovementController({
           startPosition : [0.0, 0.0, 5.0],
-          accleration   : 100.0,
+          acceleration   : 100.0,
           maxSpeed      : 28
         }),
         // this is the test cube that you can select,
