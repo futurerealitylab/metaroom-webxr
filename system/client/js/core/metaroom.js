@@ -364,3 +364,30 @@ window.Input.KEY_A = 65;
 window.Input.KEY_W = 87
 window.Input.KEY_D = 68;
 window.Input.KEY_S = 83;
+
+// TODO VR controls (?)
+window.Input.OCQ_SOMETHING = 0;
+
+window.Input.OCQ_input_ = {};
+Input.OCQ_input_.controllerStatePrev = [];
+Input.OCQ_input_.controllerStateCurr = [];
+Input.OCQ_input_.controllerStateLeft = {};
+Input.OCQ_input_.controllerStateRight = {};
+
+window.Input.initControllerEvents = function() {
+	window.addEventListener('gamepadconnected', function(e) {
+		console.log('Gamepad ' + e.gamepad.index + ' disconnected.');
+	});
+
+	window.addEventListener('gamepaddisconnected', function(e) {
+		console.log('Gamepad ' + e.gamepad.index + ' disconnected.');
+	});
+	// TODO
+}
+
+window.Input.updateControllerState = function() {
+	// TODO
+}
+
+
+
