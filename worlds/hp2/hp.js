@@ -263,91 +263,6 @@ async function onReload(state) {
     });
 }
 
-// Video utilities ///////////////////////////////////////////////////////////////////////
-// This could be made into a utility for 
-// uploading videos as animated textures
-// it's based on documentation online
-var copyVideo = false;
-function setupVideo(url) {
-  const video = document.createElement('video');
-
-  var playing = false;
-  var timeupdate = false;
-
-  video.autoplay = true;
-  video.muted = true;
-  video.loop = true;
-
-  // Waiting for these 2 events ensures
-  // there is data in the video
-
-  video.addEventListener('playing', function() {
-     playing = true;
-     checkReady();
-  }, true);
-
-  video.addEventListener('timeupdate', function() {
-     timeupdate = true;
-     checkReady();
-  }, true);
-
-  video.src = url;
-  video.play();
-
-  function checkReady() {
-    if (playing && timeupdate) {
-      copyVideo = true;
-    }
-  }
-
-  return video;
-}
-
-function initVideoTexture(gl) {
-  const texture = gl.createTexture();
-  gl.activeTexture(gl.TEXTURE0 + 3);
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-
-
-  // Because video has to be download over the internet
-  // they might take a moment until it's ready so
-  // put a single pixel in the texture so we can
-  // use it immediately.
-  const level = 0;
-  const internalFormat = gl.RGBA;
-  const width = 1;
-  const height = 1;
-  const border = 0;
-  const srcFormat = gl.RGBA;
-  const srcType = gl.UNSIGNED_BYTE;
-  const pixel = new Uint8Array([0, 0, 255, 255]);  // opaque blue
-  gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
-                width, height, border, srcFormat, srcType,
-                pixel);
-
-  // Turn off mips and set  wrapping to clamp to edge so it
-  // will work regardless of the dimensions of the video.
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-
-  return texture;
-}
-
-function updateVideoTexture(gl, texture, video) {
-  const level = 0;
-  const internalFormat = gl.RGBA;
-  const srcFormat = gl.RGBA;
-  const srcType = gl.UNSIGNED_BYTE;
-  gl.activeTexture(gl.TEXTURE0 + 3);
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
-                srcFormat, srcType, video);
-}
-//////////////////////////////////////////////////////////////////////////////////////////
-
-
-
 // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
 // (return JavaScript "Promises" like in loadImages())
 async function setup(state) {
@@ -461,8 +376,8 @@ async function setup(state) {
         getPath("resources/textures/wood.png")
     ]);
 
-    state.videoTexture = initVideoTexture(gl);
-    state.video = setupVideo(getPath("resources/textures/bla2.mp4"));
+    state.videoTexture = GFX.initVideoTexture(gl, gl.TEXTURE3);
+    state.video = GFX.setupVideo(getPath("resources/textures/bla2.mp4"));
     state.images = images;
 
     let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
@@ -621,21 +536,22 @@ async function setup(state) {
     // into one contiguous buffer,
     // the following functions also create convenience draw"X" functions
     // that know the correct offsets into the buffer to draw the correct shape
-    state.layoutBuilder = {
-        vertexByteOffset : 0.,
-        indexByteOffset : 0,
-        vertexOffset : 0,
-        indexOffset : 0,
-        vertexCount : 0,
-        idx : 0
+    function LayoutBuilder() { 
+        this.vertexByteOffset = 0;
+        this.indexByteOffset = 0;
+        this.vertexOffset = 0;
+        this.indexOffset = 0;
+        this.vertexCount = 0;
+        this.idx = 0;
     }
+    state.layoutBuilder = new LayoutBuilder();
 
     const LB = state.layoutBuilder;
 
     state.layouts = [
     ];
 
-    function addCubeToBufferLayout(lb, layouts, fnName, count = 1) {
+    function addCubeToBufferLayout(state, lb, layouts, fnName, count = 1) {
         const entry = {
             vertexByteOffset : lb.vertexByteOffset,
             indexByteOffset  : lb.indexByteOffset,
@@ -644,7 +560,7 @@ async function setup(state) {
             primitive        : gl.TRIANGLES
         };
 
-        state.layouts.push(entry);
+        layouts.push(entry);
         lb.vertexByteOffset += entry.vertexCount * Float32Array.BYTES_PER_ELEMENT * count;
         lb.indexByteOffset  += entry.indexCount * Uint16Array.BYTES_PER_ELEMENT * count;
         
@@ -663,7 +579,7 @@ async function setup(state) {
         }
     }
 
-    addCubeToBufferLayout(state.layoutBuilder, state.layouts, "drawCube");
+    addCubeToBufferLayout(state, state.layoutBuilder, state.layouts, "drawCube");
 
 
     function generateParametricSphere(vertices, offset, u, v, opts = {}) {
@@ -846,7 +762,7 @@ async function setup(state) {
 
     }
 
-    function addParametricGeometryToBufferLayout(lb, layouts, info, fnName, count = 1) {
+    function addParametricGeometryToBufferLayout(state, lb, layouts, info, fnName, count = 1) {
         const entry = {
             vertexByteOffset : lb.vertexByteOffset,
             indexByteOffset  : lb.indexByteOffset,
@@ -873,42 +789,47 @@ async function setup(state) {
         }
     }
 
-    const Parametric_Triangle_Strip = {
+    const ParametricTriangleStripType = {
         Sphere : generateParametricSphere,
         Torus  : generateParametricTorus || function() {},
         Capped_Cylinder : generateParametricCappedCylinder || function() {},
     }
 
-
-    state.Parametric_Triangle_Strip = Parametric_Triangle_Strip;
+    state.ParametricTriangleStripType = ParametricTriangleStripType;
     let sphereInfo = generateParametricGeometryIndexedTriangleStrip(
         state.layoutBuilder.vertexOffset, 24, 24, 
-        Parametric_Triangle_Strip.Sphere, {rangeFactorTheta : 1}
+        ParametricTriangleStripType.Sphere, {rangeFactorTheta : 1}
     );
     if (sphereInfo == null) {
         return;
     }
-    addParametricGeometryToBufferLayout(state.layoutBuilder, state.layouts, sphereInfo, "drawSphere");
+    addParametricGeometryToBufferLayout(
+        state, state.layoutBuilder, state.layouts, sphereInfo, "drawSphere"
+    );
 
 
     let torusInfo = generateParametricGeometryIndexedTriangleStrip(
         state.layoutBuilder.vertexOffset, 24, 24, 
-        Parametric_Triangle_Strip.Torus
+        ParametricTriangleStripType.Torus
     );
     if (torusInfo == null) {
         return;
     }
-    addParametricGeometryToBufferLayout(state.layoutBuilder, state.layouts, torusInfo, "drawTorus");
+    addParametricGeometryToBufferLayout(
+        state, state.layoutBuilder, state.layouts, torusInfo, "drawTorus"
+    );
 
 
     let cylInfo = generateParametricGeometryIndexedTriangleStrip(
         state.layoutBuilder.vertexOffset, 24, 24, 
-        Parametric_Triangle_Strip.Capped_Cylinder
+        ParametricTriangleStripType.Capped_Cylinder
     )
     if (cylInfo == null) {
         return;
     }
-    addParametricGeometryToBufferLayout(state.layoutBuilder, state.layouts, cylInfo, "drawCappedCylinder");
+    addParametricGeometryToBufferLayout(
+        state, state.layoutBuilder, state.layouts, cylInfo, "drawCappedCylinder"
+    );
 
 
     // create buffer for attributes
@@ -1109,7 +1030,7 @@ function updateFallingCubeWithBasicGravity(state) {
 function onStartFrame(t, state) {
     Input.updateKeyState();
 
-    // update time ////////
+    // update time ////////////////////////////
     let tStartMS = t;
     if (!state.tStart) {
         state.tStart = t;
@@ -1131,6 +1052,7 @@ function onStartFrame(t, state) {
     // cache time values for ease-of-use
     const time = state.time;
     const deltaTime = state.deltaTime;
+    ////////////////////////////////////////////
 
     // this is logic for the falling cube that you can pick-up
     updateFallingCubeWithBasicGravity(state);
@@ -1192,63 +1114,11 @@ function onStartFrame(t, state) {
         pos = state.world.userCam.position;
 
     }
-    
-    //
-    // These are functions for setting the height of the ground on the map. Will be useful in the future
-    // For now we can just clamp the min height to 0.0 and move these functions somewhere else
-    // for the example. 
-    // const gridX = Math.floor((Math.floor(pos[0]) + state.world.mapDimX * 0.5) / state.world.mapGridSize);
-    // const gridY = Math.floor((Math.floor(pos[2]) + state.world.mapDimY * 0.5) / state.world.mapGridSize);
-
-    // window.setGridH = (x, y, h) => {
-    //     const ___idx = (y * state.world.mapDimX) + x;
-    //     if (state.world.heightMap.length > ___idx) {
-    //         state.world.heightMap[(y * state.world.mapDimX) + x].h = h;
-    //     }
-    // }
-    // window.setCurrGridH = (h) => {
-    //     const ___idx = (gridY * state.world.mapDimX) + gridX;
-    //     if (state.world.heightMap.length > ___idx) {
-    //         state.world.heightMap[___idx].h = h;
-    //     }
-    // }
-    // window.getCurrGridH = () => {
-    //     const ___idx = (gridY * state.world.mapDimX) + gridX;
-    //     if (state.world.heightMap.length > ___idx && state.world.heightMap[___idx]) {
-            
-    //         return state.world.heightMap[___idx].h;
-    //     }
-    //     return 0.0;
-    // }
-    // window.getGrid = (x, y) => {
-    //     const ___idx = (y * state.world.mapDimX) + x;
-    //     if (state.world.heightMap.length > ___idx) {
-    //         return state.world.heightMap[___idx];
-    //     }
-    //     return null;            
-    // }
-    // window.getCurrGrid = () => {
-    //     const ___idx = (gridY * state.world.mapDimX) + gridX;
-    //     if (state.world.heightMap.length > ___idx) {
-    //         return state.world.heightMap[___idx];
-    //     }
-    //     return null;            
-    // }
-
+    // optionally clamp the y position to 0
     pos[1] = Math.max(0.0, pos[1]);
-    // pos[1] = Math.max(window.getCurrGridH(), pos[1]);
-    // const currGrid =  window.getCurrGrid();
-    // if (currGrid != null) {
-    //     currGrid.obj[0].position[0] = pos[0];
-    //     currGrid.obj[0].position[1] = pos[1];
-    //     currGrid.obj[0].position[2] = pos[2];
-    //     currGrid.obj[0].draw = state.drawSphere;
-    //     currGrid.obj[0].init = true;
-
-    // }
 
 
-    // update falling cube if selected
+    // update cube position to follow the user if the cube is selected
     if (state.world.objInfo.isSelected) {
         state.world.objInfo.position[0] = pos[0];
         state.world.objInfo.position[1] = pos[1] + cameraRadius * 0.2;
@@ -1477,7 +1347,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         // NOTE: not yet synchronized
         {   
 
-            updateVideoTexture(gl, state.videoTexture, state.video);
+            GFX.updateVideoTexture(gl, state.videoTexture, state.video);
             
             // Note: we could choose to optimize memory use further by using 
             // UNSIGNED_BYTE since we have so few indices (< 255),
