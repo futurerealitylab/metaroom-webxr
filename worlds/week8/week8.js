@@ -179,8 +179,6 @@ function onStartFrame(t, state) {
        let p = state.cursor.position(), canvas = MR.getCanvas();
        return [ p[0] / canvas.clientWidth * 2 - 1, 1 - p[1] / canvas.clientHeight * 2, p[2] ];
     }
-
-    let pos = getHeadsetPosition();
     
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.clearColor(state.bgColor[0], state.bgColor[1], state.bgColor[2], state.bgColor[3]);
@@ -200,24 +198,6 @@ function onStartFrame(t, state) {
 
 }
 
-function getHeadsetPosition(){
-    let pos;
-    let frameData;
-    if (MR.VRIsActive()) {
-        frameData = MR.frameData();
-        if (frameData != null) {
-            // position is stored as a 3-element Float32Array representing a vector
-            state.world.localWorldPosition    = frameData.pose.position;
-            // orientation is stored as a 4-element Float32Array representing a quaternion
-            state.world.localWorldOrientation = frameData.pose.orientation;
-            state.world.frameDataTimestamp    = frameData.timestamp;
-
-            pos = state.world.localWorldPosition || 
-                [startPosition[2], startPosition[2], startPosition[2]];
-        }
-      }
-    return pos;
-}
 
 //function get
 
@@ -254,7 +234,51 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     }
 }
 
-function onEndFrame(t, state) {}
+function onEndFrame(t, state) {
+  //synchronize objects
+
+  
+  if (MR.VRIsActive()) {
+     let frameData = MR.frameData();
+      if (frameData != null) {
+        //User Headset
+        let headsetPos = frameData.pose.position;
+        let headsetRot = frameData.pose.orientation;
+        let headsetTimestamp = frameData.timestamp;
+      
+         //Controllers 
+        let controllerRight = MR.controllers[0];
+        let controllerRightPos = controllerRight.pose.position;
+        let controllerRightRot = controllerRight.pose.orientation;
+        let controllerRightButtons = controllerRight.buttons;
+
+        let controllerLeft = MR.controllers[1];
+        let controllerLeftPos = controllerLeft.pose.position;
+        let controllerLeftRot = controllerLeft.pose.orientation;
+        let controllerLeftButtons = controllerLeft.buttons;
+
+        /*A quick mapping of the buttons:
+          0:
+          1:
+          2:
+          3:
+          4:
+          5:
+        */
+
+      }
+
+     
+  } 
+
+  
+
+  
+
+  //Objects
+  let objects = {};
+
+}
 
 export default function main() {
     const def = {

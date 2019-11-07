@@ -247,4 +247,4 @@ MR.input = {
 
 //Alex: Client to synchronize.
 MR.syncClient = new Client();
-MR.syncClient.connect("localhost", window.PORT_SYNC);
+MR.syncClient.connect("192.168.1.103", window.PORT_SYNC);

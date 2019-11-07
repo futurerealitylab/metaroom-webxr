@@ -75,7 +75,7 @@ class Client
         
             ws.onmessage = (ev) => {
                 try {
-                    console.log(ev);
+                    //console.log(ev);
                     let json = JSON.parse(ev.data);
         
                     // json = JSON.parse(ev.toString());
