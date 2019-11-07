@@ -245,8 +245,11 @@ function onEndFrame(t, state) {
         let headsetPos = frameData.pose.position;
         let headsetRot = frameData.pose.orientation;
         let headsetTimestamp = frameData.timestamp;
-      
-         //Controllers 
+
+      }
+
+      if(MR.controllers != null){
+          //Controllers 
         let controllerRight = MR.controllers[0];
         let controllerRightPos = controllerRight.pose.position;
         let controllerRightRot = controllerRight.pose.orientation;
@@ -258,14 +261,13 @@ function onEndFrame(t, state) {
         let controllerLeftButtons = controllerLeft.buttons;
 
         /*A quick mapping of the buttons:
-          0:
-          1:
-          2:
-          3:
-          4:
-          5:
+          0: analog stick
+          1: trigger
+          2: side trigger
+          3: x button
+          4: y button
+          5: home button
         */
-
       }
 
      
