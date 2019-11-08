@@ -234,10 +234,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     }
 }
 
-function onEndFrame(t, state) {
-  //synchronize objects
-
-  
+function pollAvatarData(){
   if (MR.VRIsActive()) {
      let frameData = MR.frameData();
       if (frameData != null) {
@@ -246,9 +243,9 @@ function onEndFrame(t, state) {
         let headsetRot = frameData.pose.orientation;
         let headsetTimestamp = frameData.timestamp;
 
-      }
+      
 
-      if(MR.controllers != null){
+      if(MR.controllers[0] != null && MR.controllers[1] != null){
           //Controllers 
         let controllerRight = MR.controllers[0];
         let controllerRightPos = controllerRight.pose.position;
@@ -260,6 +257,7 @@ function onEndFrame(t, state) {
         let controllerLeftRot = controllerLeft.pose.orientation;
         let controllerLeftButtons = controllerLeft.buttons;
 
+        //buttons have a 'pressed' variable that is a boolean.
         /*A quick mapping of the buttons:
           0: analog stick
           1: trigger
@@ -268,17 +266,67 @@ function onEndFrame(t, state) {
           4: y button
           5: home button
         */
+
+
+        let avatar_message = {
+        type: "avatar",
+        user: 0,
+        state: {
+          pos: headsetPos,
+          rot: headsetRot,
+          controllers :{
+            left:{
+              pos: [controllerLeftPos[0],controllerLeftPos[1], controllerLeftPos[2]],
+              rot: [controllerLeftRot[0],controllerLeftRot[1], controllerLeftRot[2], controllerLeftRot[3]],
+              analog: controllerLeftButtons[0].pressed,
+              trigger: controllerLeftButtons[1].pressed,
+              sideTrigger: controllerLeftButtons[2].pressed,
+              x: controllerLeftButtons[3].pressed,
+              y: controllerLeftButtons[4].pressed,
+              home: controllerLeftButtons[5].pressed,
+              analogx: controllerLeft.axes[0],
+              analogy: controllerLeft.axes[1]
+
+            },
+            right:{
+              pos: [controllerRightPos[0],controllerRightPos[1], controllerRightPos[2]],
+              rot: [controllerRightRot[0],controllerRightRot[1], controllerRightRot[2], controllerRightRot[3]],
+              analog: controllerRightButtons[0].pressed,
+              trigger: controllerRightButtons[1].pressed,
+              sideTrigger: controllerRightButtons[2].pressed,
+              x: controllerRightButtons[3].pressed,
+              y: controllerRightButtons[4].pressed,
+              home: controllerRightButtons[5].pressed,
+              analogx: controllerRight.axes[0],
+              analogy: controllerRight.axes[1],
+            }
+          }
+        } 
       }
+
+      MR.syncClient.ws.send(JSON.stringify(avatar_message));
+      }
+
+    }
 
      
   } 
+}
 
+function onEndFrame(t, state) {
+  //synchronize objects
+  pollAvatarData();
   
-
-  
-
   //Objects
-  let objects = {};
+  //Sample message:
+  let objects = {
+     type: "object",
+     uid: 0,
+     state:{
+     pos: [0,0,0],
+     rot: [0,0,0],
+     }
+  };
 
 }
 
