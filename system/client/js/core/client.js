@@ -10,9 +10,11 @@
 
 class Client 
 {
+
     constructor(heartbeat = 30000) {
         this.callbacks = {};
         this.heartbeatTick = heartbeat;
+        this.ws = null;
     }
 
     backoff(t) {
@@ -49,8 +51,8 @@ class Client
         try {
 
             console.log('ws://' + ip + ':' + port);
-            let ws = new WebSocket('ws://' + ip + ':' + port);
-
+            this.ws = new WebSocket('ws://' + ip + ':' + port);
+            console.log('connected');
             //ws.on('ping', this.heartbeat);
 
             let reconnectInterval = null;
@@ -58,13 +60,13 @@ class Client
         
             // function reconnect
 
-            ws.onopen = () => {
+            this.ws.onopen = () => {
 
                 this.heartbeat();
                 // reset t, clean up later
                 t = 0;
                 console.log('websocket is connected ...');
-                if (ws.readyState == WebSocket.OPEN) {
+                if (this.ws.readyState == WebSocket.OPEN) {
                     
                 } else {
                     // setTimeout((ws) => {if (ws.readyState == WebSocket.OPEN) {
@@ -73,7 +75,7 @@ class Client
                 // ws.send('connected');
             };
         
-            ws.onmessage = (ev) => {
+            this.ws.onmessage = (ev) => {
                 try {
                     //console.log(ev);
                     let json = JSON.parse(ev.data);
@@ -86,33 +88,38 @@ class Client
                     //     console.log("no handler registered for type [" + json["type"] + "]");
                     //     return;
                     // }
-
-                    switch(json["type"]) {
-                        case "join":
-                            console.log(json);
-                            break;
-                        case "leave":
-                            console.log(json);
-                            break;
-                        case "tick":
-                            console.log(json);
-                            break;
-                        case "lock":
-                            console.log(json);
-                            break;
-                        case "release":
-                            console.log(json);
-                            break;
-                        case "activate":
-                            console.log(json);
-                            break;
-                        case "deactivate":
-                            console.log(json);
-                            break;
-                        case "clear":
-                            console.log("delete lief");
-                            break;
+                    if (json["type"] in this.callbacks) {
+                        this.callbacks[json["type"]](json);
                     }
+                    
+                    // switch(json["type"]) {
+                    //     case "join":
+                    //         console.log(json);
+                    //         this.callbacks["join"](json);
+                    //         break;
+                    //     case "initi":
+                    //     case "leave":
+                    //         console.log(json);
+                    //         break;
+                    //     case "tick":
+                    //         //console.log(json);
+                    //         break;
+                    //     case "lock":
+                    //         console.log(json);
+                    //         break;
+                    //     case "release":
+                    //         console.log(json);
+                    //         break;
+                    //     case "activate":
+                    //         console.log(json);
+                    //         break;
+                    //     case "deactivate":
+                    //         console.log(json);
+                    //         break;
+                    //     case "clear":
+                    //         console.log("delete lief");
+                    //         break;
+                    // }
                 } catch(err) {
                     // console.log("bad json:", json);
                     console.log(err);
@@ -126,7 +133,7 @@ class Client
         
             // const interval = setInterval(() => ws.send(JSON.stringify(payload)), args.interval);
         
-            ws.onclose = (event) => {
+            this.ws.onclose = (event) => {
                 switch (event.code) {
                     // CLOSE_NORMAL
                     case 1000:
@@ -137,7 +144,7 @@ class Client
                         // console.log(event);
                         // reconnect(event);
                         console.log('reconnecting...');
-                        ws = null;
+                        this.ws = null;
                         reconnectInterval = setTimeout(() => {
                             try {
                                 this.connect(ip, port);
@@ -155,7 +162,7 @@ class Client
                 clearTimeout(this.pingTimeout);
             };
         
-            ws.onerror = (e) => {
+            this.ws.onerror = (e) => {
                 switch (e.code) {
                     case 'ECONNREFUSED':
                         // reconnect(e);

@@ -245,6 +245,15 @@ MR.input = {
 };
 
 
+
+MR.syncClient = new Client();
+MR.syncClient.connect("192.168.1.103", window.PORT_SYNC);
+MR.avatars = {};
+MR.playerid = -1;
+
+/*
 //Alex: Client to synchronize.
 MR.syncClient = new Client();
 MR.syncClient.connect("192.168.1.103", window.PORT_SYNC);
+MR.avatars = {};*/
+

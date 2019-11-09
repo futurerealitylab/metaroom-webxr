@@ -1,5 +1,15 @@
 "use strict"
 
+/////////////////////////////// CLIENT SUPPORT
+class Avatar {
+    constructor(verts, id){
+        this.playerid = id;
+        this.vertices = verts;
+        this.translate = [0,0,0];
+        this.rotate = [0,0,0,0];
+    }
+}
+
 ////////////////////////////// MATRIX SUPPORT
 
 let cos = t => Math.cos(t);
@@ -164,7 +174,32 @@ async function setup(state) {
     }
 
     state.bgColor = [0.529, 0.808, 0.922, 1.0];
+
 }
+
+MR.syncClient.registerEventHandler("initialize", (json) => {
+  console.log("we are initializing");
+  console.log(json["id"]);
+  let avatarCube = createCubeVertices();
+  let avatar = new Avatar(avatarCube, json["id"]);
+  MR.avatars = json["avatars"];
+  MR.avatars[json["id"]] = avatar;
+  MR.playerid = json["id"];
+} );
+
+MR.syncClient.registerEventHandler("join", (json) => {
+  let avatarCube = createCubeVertices();
+  let avatar = new Avatar(avatarCube, json["id"]);
+  MR.avatars[json["id"]] = avatar;
+});
+
+MR.syncClient.registerEventHandler("avatar", (json) => { 
+  const payload = json["data"];
+  for(let key in payload) {
+     MR.avatars[payload[key]["user"]].translate = payload[key]["state"]["pos"];
+     MR.avatars[payload[key]["user"]].rotate = payload[key]["state"]["rot"];
+  }
+});
 
 let noise = new ImprovedNoise();
 let m = new Matrix();
@@ -232,6 +267,48 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
           drawShape([1,1,1], gl.TRIANGLES, cubeVertices, 0);
        m.restore();
     }
+
+    //Cube that represents avatar.
+     if (MR.VRIsActive()) {
+      let frameData = MR.frameData();
+      if (frameData != null) {
+        for (let id in MR.avatars) {
+          if(MR.playerid == MR.avatars[id].playerid){
+            let headsetPos = frameData.pose.position;
+            let headsetRot = frameData.pose.orientation;
+            //console.log("user");
+            //console.log(headsetPos);
+            //console.log(headsetRot);
+            m.save();
+              m.translate(headsetPos[0],headsetPos[1],headsetPos[2]);
+              m.rotateX(headsetRot[0]);
+              m.rotateY(headsetRot[1]);
+              m.rotateZ(headsetRot[2]);
+              m.scale(.3,.3,.3);
+              drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
+            m.restore();
+          }
+          else{
+            let headsetPos = MR.avatars[id].translate;
+            let headsetRot = MR.avatars[id].rotate;
+            //console.log("other user");
+            //console.log(headsetPos);
+            //console.log(headsetRot);
+            m.save();
+              m.translate(headsetPos[0],headsetPos[1],headsetPos[2]);
+              m.rotateX(headsetRot[0]);
+              m.rotateY(headsetRot[1]);
+              m.rotateZ(headsetRot[2]);
+              m.scale(.3,.3,.3);
+              drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
+            m.restore();
+          }
+        
+        }
+
+    }
+  }
+
 }
 
 function pollAvatarData(){
@@ -270,7 +347,7 @@ function pollAvatarData(){
 
         let avatar_message = {
         type: "avatar",
-        user: 0,
+        user: MR.playerid,
         state: {
           pos: headsetPos,
           rot: headsetRot,
@@ -304,24 +381,28 @@ function pollAvatarData(){
         } 
       }
 
-      MR.syncClient.ws.send(JSON.stringify(avatar_message));
+      if(MR.playerid != -1) {
+        MR.syncClient.ws.send(JSON.stringify(avatar_message));
       }
+     }
 
     }
 
      
   } 
 }
+ 
 
 function onEndFrame(t, state) {
   //synchronize objects
   pollAvatarData();
-  
+
   //Objects
   //Sample message:
   let objects = {
      type: "object",
      uid: 0,
+     lockid: 0,
      state:{
      pos: [0,0,0],
      rot: [0,0,0],
