@@ -178,26 +178,60 @@ async function setup(state) {
 }
 
 MR.syncClient.registerEventHandler("initialize", (json) => {
-  console.log("we are initializing");
-  console.log(json["id"]);
+
+  const id = json["id"];
+
   let avatarCube = createCubeVertices();
-  let avatar = new Avatar(avatarCube, json["id"]);
-  MR.avatars = json["avatars"];
-  MR.avatars[json["id"]] = avatar;
-  MR.playerid = json["id"];
+  let playerAvatar = new Avatar(avatarCube, id);
+
+  MR.avatars = {};
+  for (let key in json["avatars"]) {
+    const avid =  json["avatars"][key]["user"];
+    let avatar = new Avatar(avatarCube, avid);
+    MR.avatars[avid] = avatar;
+  }
+
+  MR.playerid = id;
+  console.log("player id is", id);
+  console.log(MR.avatars);
 } );
 
 MR.syncClient.registerEventHandler("join", (json) => {
-  let avatarCube = createCubeVertices();
-  let avatar = new Avatar(avatarCube, json["id"]);
-  MR.avatars[json["id"]] = avatar;
+  console.log(json);
+  const id = json["id"];
+  
+  if (id in MR.avatars) {
+
+  } else {
+    let avatarCube = createCubeVertices();
+    let avatar = new Avatar(avatarCube, id);
+    MR.avatars[id] = avatar;
+  }
+  
+  console.log(MR.avatars);
+});
+
+MR.syncClient.registerEventHandler("leave", (json) => {
+  console.log(json);
+  delete MR.avatars[json["user"]];
 });
 
 MR.syncClient.registerEventHandler("avatar", (json) => { 
   const payload = json["data"];
+  // console.log(json);
   for(let key in payload) {
-     MR.avatars[payload[key]["user"]].translate = payload[key]["state"]["pos"];
-     MR.avatars[payload[key]["user"]].rotate = payload[key]["state"]["rot"];
+    // console.log( payload[key]["state"]["pos"]);
+    if (payload[key]["user"] in MR.avatars) {
+      MR.avatars[payload[key]["user"]].translate = payload[key]["state"]["pos"];
+      MR.avatars[payload[key]["user"]].rotate = payload[key]["state"]["rot"];
+    } else { // never seen, create
+      // let avatarCube = createCubeVertices();
+      // MR.avatars[payload[key]["user"]] = new Avatar(avatarCube, payload[key]["user"]);
+      // console.log();
+      // payload[key]["state"]["pos"];
+    }
+    // MR.avatars[payload[key]["user"]].translate = payload[key]["state"]["pos"];
+    // MR.avatars[payload[key]["user"]].rotate = payload[key]["state"]["rot"];
   }
 });
 
@@ -269,11 +303,18 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     }
 
     //Cube that represents avatar.
+    // uncomment three following three lines once testing off headset is done
      if (MR.VRIsActive()) {
       let frameData = MR.frameData();
       if (frameData != null) {
         for (let id in MR.avatars) {
+          if (!headsetPos) {
+            
+            console.log(id);
+            console.log("not defined");
+          }
           if(MR.playerid == MR.avatars[id].playerid){
+
             let headsetPos = frameData.pose.position;
             let headsetRot = frameData.pose.orientation;
             //console.log("user");
@@ -287,13 +328,13 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
               m.scale(.3,.3,.3);
               drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
             m.restore();
-          }
-          else{
+          } else {
             let headsetPos = MR.avatars[id].translate;
             let headsetRot = MR.avatars[id].rotate;
             //console.log("other user");
-            //console.log(headsetPos);
-            //console.log(headsetRot);
+            // console.log(headsetPos);
+            // console.log(headsetRot);
+
             m.save();
               m.translate(headsetPos[0],headsetPos[1],headsetPos[2]);
               m.rotateX(headsetRot[0]);
@@ -307,6 +348,48 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         }
 
     }
+  } else {
+    for (let id in MR.avatars) {
+      let headsetPos = MR.avatars[id].translate;
+      let headsetRot = MR.avatars[id].rotate;
+      if (!headsetPos) {
+        
+        console.log(id);
+        console.log("not defined");
+      }
+      if(MR.playerid == MR.avatars[id].playerid){
+
+        // let headsetPos = frameData.pose.position;
+        // let headsetRot = frameData.pose.orientation;
+        //console.log("user");
+        //console.log(headsetPos);
+        //console.log(headsetRot);
+        m.save();
+          m.translate(headsetPos[0],headsetPos[1],headsetPos[2]);
+          m.rotateX(headsetRot[0]);
+          m.rotateY(headsetRot[1]);
+          m.rotateZ(headsetRot[2]);
+          m.scale(.3,.3,.3);
+          drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
+        m.restore();
+      }
+      else{
+        
+        //console.log("other user");
+        // console.log(headsetPos);
+        // console.log(headsetRot);
+
+        m.save();
+          m.translate(headsetPos[0],headsetPos[1],headsetPos[2]);
+          m.rotateX(headsetRot[0]);
+          m.rotateY(headsetRot[1]);
+          m.rotateZ(headsetRot[2]);
+          m.scale(.3,.3,.3);
+          drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
+        m.restore();
+      }
+    
+    }
   }
 
 }
@@ -319,8 +402,6 @@ function pollAvatarData(){
         let headsetPos = frameData.pose.position;
         let headsetRot = frameData.pose.orientation;
         let headsetTimestamp = frameData.timestamp;
-
-      
 
       if(MR.controllers[0] != null && MR.controllers[1] != null){
           //Controllers 
@@ -395,11 +476,11 @@ function pollAvatarData(){
 
 function onEndFrame(t, state) {
   //synchronize objects
-  pollAvatarData();
+  // pollAvatarData();
 
   //Objects
   //Sample message:
-  let objects = {
+  let response = {
      type: "object",
      uid: 0,
      lockid: 0,
@@ -408,7 +489,25 @@ function onEndFrame(t, state) {
      rot: [0,0,0],
      }
   };
+  
+  // MR.syncClient.ws.send(JSON.stringify(response));
+  // FAKE STAND IN FOR DEBUGGING
+  if(MR.playerid == -1) {
+    return;
+  }
 
+  const headsetPos = [Math.sin(Date.now()), 0.0, 0.0];
+  const headsetRot = [Math.sin(Date.now()), 0.0, 0.0];
+    const avatar_message = {
+      type: "avatar",
+      user: MR.playerid,
+      state: {
+        pos: headsetPos,
+        rot: headsetRot
+      }
+    };
+    // console.log(avatar_message);
+    MR.syncClient.ws.send(JSON.stringify(avatar_message));
 }
 
 export default function main() {
