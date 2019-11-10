@@ -298,6 +298,25 @@ MR.syncClient.registerEventHandler("object", (json) => {
   // update update metadata for next frame's rendering
 });
 
+// on success
+  // const response = {
+  //   "type": "calibrate",
+  //   "x": ret.x,
+  //   "z": ret.z,
+  //   "theta": ret.theta,
+  //   "success": true
+  // };
+
+// on failure:
+//   const response = {
+//     "type": "calibrate",
+//     "success": false
+// };
+
+MR.syncClient.registerEventHandler("calibration", (json) => {
+  console.log("world tick: ", json);
+});
+
 let noise = new ImprovedNoise();
 let m = new Matrix();
 let turnAngle = 0, cursorPrev = [0,0,0];
@@ -568,21 +587,8 @@ function onEndFrame(t, state) {
 
   // // Calibration
   // // Sample message:
-  // on success
-  // const response = {
-  //   "type": "calibrate",
-  //   "x": ret.x,
-  //   "z": ret.z,
-  //   "theta": ret.theta,
-  //   "success": true
-  // };
-
-// on failure:
-//   const response = {
-//     "type": "calibrate",
-//     "success": false
-// };
-
+  // you should use 2 points, 2 known anchors in your world (fixedPoints) that map to real space and 2 points that represent your clicks in world space (inputPoints)
+  // { type: "calibrate", fixedPoints: [], inputPoints: [] }
 
   // MR.syncClient.ws.send(JSON.stringify(response));
   // FAKE STAND IN FOR DEBUGGING, remove once we have real data
