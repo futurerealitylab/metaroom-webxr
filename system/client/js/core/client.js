@@ -1,12 +1,6 @@
-//const WebSocket = require('ws');
-//const argparse = require('argparse');
-
 // TODO: add ping pong heartbeart to keep connections alive
 // TODO: finish automatic reconnection
 // TODO: max retries + timeout
-// TODO: abstract out into a class for easy use in client side code
-// TODO: and register callbacks with above class
-
 
 class Client 
 {
@@ -47,6 +41,13 @@ class Client
         }, this.heartbeatTick + 1000);
     }
 
+    // expected as a js object
+    // TODO:
+    // add guaranteed delivery
+    send(message) {
+       this.ws.send(JSON.stringify(message));
+    }
+
     connect(ip, port) {
         try {
 
@@ -55,7 +56,7 @@ class Client
             console.log('connected');
             //ws.on('ping', this.heartbeat);
 
-            let reconnectInterval = null;
+            let reconnectTimeout = null;
             let t = 0;
         
             // function reconnect
@@ -67,7 +68,8 @@ class Client
                 t = 0;
                 console.log('websocket is connected ...');
                 if (this.ws.readyState == WebSocket.OPEN) {
-                    
+                    // TODO:
+                    // send message with client side config if needed
                 } else {
                     // setTimeout((ws) => {if (ws.readyState == WebSocket.OPEN) {
                     // }, 10);
@@ -90,6 +92,8 @@ class Client
                     // }
                     if (json["type"] in this.callbacks) {
                         this.callbacks[json["type"]](json);
+                    } else {
+                        console.log("message of type %s is not supported yet", json["type"]);
                     }
                     
                     // switch(json["type"]) {
@@ -144,20 +148,25 @@ class Client
                         // console.log(event);
                         // reconnect(event);
                         console.log('reconnecting...');
-                        this.ws = null;
-                        reconnectInterval = setTimeout(() => {
+                        // /*
+                        // this.ws = null;
+                        reconnectTimeout = setTimeout(() => {
                             try {
+                                // t = this.backoff(t);
                                 this.connect(ip, port);
+                                clearTimeout(reconnectTimeout);
                             } catch(err) {
                                 console.log(err);
                                 // console.log('.');
-                                // clearInterval(reconnectInterval);
-                                // reconnectInterval = setTimeout(reconnect, t);
+                                // clearInterval(reconnectTimeout);
+                                // reconnectTimeout = setTimeout(reconnect, t);
                             }
-            }, t);
+                            
+                        }, t);
                         break;
+                        // */
                     }
-                // console.log("disconnected");
+                console.log("disconnected");
                 // clearInterval(interval);
                 clearTimeout(this.pingTimeout);
             };
@@ -165,7 +174,9 @@ class Client
             this.ws.onerror = (e) => {
                 switch (e.code) {
                     case 'ECONNREFUSED':
+                        console.log(e);
                         // reconnect(e);
+                        this.ws.close();
                         break;
                     default:
                         // this.onerror(e);

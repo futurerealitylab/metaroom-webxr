@@ -216,23 +216,86 @@ MR.syncClient.registerEventHandler("leave", (json) => {
   delete MR.avatars[json["user"]];
 });
 
+MR.syncClient.registerEventHandler("tick", (json) => {
+  console.log("world tick: ", json);
+});
+
 MR.syncClient.registerEventHandler("avatar", (json) => { 
   const payload = json["data"];
-  // console.log(json);
+
   for(let key in payload) {
-    // console.log( payload[key]["state"]["pos"]);
     if (payload[key]["user"] in MR.avatars) {
       MR.avatars[payload[key]["user"]].translate = payload[key]["state"]["pos"];
       MR.avatars[payload[key]["user"]].rotate = payload[key]["state"]["rot"];
     } else { // never seen, create
+      console.log("previously unseen user avatar");
       // let avatarCube = createCubeVertices();
       // MR.avatars[payload[key]["user"]] = new Avatar(avatarCube, payload[key]["user"]);
-      // console.log();
-      // payload[key]["state"]["pos"];
     }
-    // MR.avatars[payload[key]["user"]].translate = payload[key]["state"]["pos"];
-    // MR.avatars[payload[key]["user"]].rotate = payload[key]["state"]["rot"];
   }
+});
+
+/*
+// expected format of message
+  const response = {
+    "type": "lock",
+    "uid": key,
+    "success": boolean
+};
+
+ */
+
+MR.syncClient.registerEventHandler("lock", (json) => {
+  console.log("lock: ", json);
+  // is this mine?
+  // success?
+  // failure
+  // not mine
+  // note it?
+});
+
+/*
+// expected format of message
+  const response = {
+    "type": "release",
+    "uid": key,
+    "success": boolean
+  };
+
+ */
+
+MR.syncClient.registerEventHandler("release", (json) => {
+  console.log("release: ", json);
+  // is this mine?
+  // success?
+  // failure
+  // not mine
+  // note it?
+});
+
+/*
+//on success:
+
+  const response = {
+    "type": "object",
+    "uid": key,
+    "state": json,
+    "lockid": lockid,
+    "success": true
+  };
+
+//on failure:
+
+  const response = {
+    "type": "object",
+    "uid": key,
+    "success": false
+  };
+ */
+
+MR.syncClient.registerEventHandler("object", (json) => {
+  console.log("object moved: ", json);
+  // update update metadata for next frame's rendering
 });
 
 let noise = new ImprovedNoise();
@@ -266,9 +329,6 @@ function onStartFrame(t, state) {
 
 
 }
-
-
-//function get
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
     gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
@@ -463,7 +523,7 @@ function pollAvatarData(){
       }
 
       if(MR.playerid != -1) {
-        MR.syncClient.ws.send(JSON.stringify(avatar_message));
+        MR.syncClient.send(avatar_message);
       }
      }
 
@@ -480,7 +540,7 @@ function onEndFrame(t, state) {
 
   //Objects
   //Sample message:
-  let response = {
+  const response = {
      type: "object",
      uid: 0,
      lockid: 0,
@@ -490,8 +550,25 @@ function onEndFrame(t, state) {
      }
   };
   
+  // // Lock
+  // //Sample message:
+  // const response = {
+  //   type: "lock",
+  //   uid: 0,
+  //   lockid: 0
+  // };
+
+  // // Release
+  // //Sample message:
+  // const response = {
+  //   type: "release",
+  //   uid: 0,
+  //   lockid: 0
+  // };
+
+
   // MR.syncClient.ws.send(JSON.stringify(response));
-  // FAKE STAND IN FOR DEBUGGING
+  // FAKE STAND IN FOR DEBUGGING, remove once we have real data
   if(MR.playerid == -1) {
     return;
   }
@@ -506,8 +583,14 @@ function onEndFrame(t, state) {
         rot: headsetRot
       }
     };
+
+    try {
+      MR.syncClient.send(avatar_message);
+    } catch(err) {
+      console.log(err);
+    }
     // console.log(avatar_message);
-    MR.syncClient.ws.send(JSON.stringify(avatar_message));
+    
 }
 
 export default function main() {
