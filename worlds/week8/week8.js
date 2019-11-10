@@ -566,6 +566,23 @@ function onEndFrame(t, state) {
   //   lockid: 0
   // };
 
+  // // Calibration
+  // // Sample message:
+  // on success
+  // const response = {
+  //   "type": "calibrate",
+  //   "x": ret.x,
+  //   "z": ret.z,
+  //   "theta": ret.theta,
+  //   "success": true
+  // };
+
+// on failure:
+//   const response = {
+//     "type": "calibrate",
+//     "success": false
+// };
+
 
   // MR.syncClient.ws.send(JSON.stringify(response));
   // FAKE STAND IN FOR DEBUGGING, remove once we have real data
