@@ -588,7 +588,11 @@ function onEndFrame(t, state) {
   // // Calibration
   // // Sample message:
   // you should use 2 points, 2 known anchors in your world (fixedPoints) that map to real space and 2 points that represent your clicks in world space (inputPoints)
-  // { type: "calibrate", fixedPoints: [], inputPoints: [] }
+  // const response = {
+    // type: "calibrate",
+    // fixedPoints: [],
+    // inputPoints: []
+  // }
 
   // MR.syncClient.ws.send(JSON.stringify(response));
   // FAKE STAND IN FOR DEBUGGING, remove once we have real data
