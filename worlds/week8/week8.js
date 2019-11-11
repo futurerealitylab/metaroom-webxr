@@ -387,15 +387,15 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
       let frameData = MR.frameData();
       if (frameData != null) {
         for (let id in MR.avatars) {
-          if (!headsetPos) {
-            
-            console.log(id);
-            console.log("not defined");
-          }
           if(MR.playerid == MR.avatars[id].playerid){
 
             let headsetPos = frameData.pose.position;
             let headsetRot = frameData.pose.orientation;
+            if (typeof headsetPos == 'undefined') {
+            
+              console.log(id);
+              console.log("not defined");
+            }
             //console.log("user");
             //console.log(headsetPos);
             //console.log(headsetRot);
@@ -410,6 +410,11 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
           } else {
             let headsetPos = MR.avatars[id].translate;
             let headsetRot = MR.avatars[id].rotate;
+            if (typeof headsetPos == 'undefined') {
+            
+              console.log(id);
+              console.log("not defined");
+            }
             //console.log("other user");
             // console.log(headsetPos);
             // console.log(headsetRot);
@@ -562,7 +567,7 @@ function pollAvatarData(){
 
 function onEndFrame(t, state) {
   //synchronize objects
-  // pollAvatarData();
+  pollAvatarData();
 
   //Objects
   //Sample message:
