@@ -387,6 +387,13 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
       let frameData = MR.frameData();
       if (frameData != null) {
         for (let id in MR.avatars) {
+
+          // if (!headsetPos) {
+            
+          //   console.log(id);
+          //   console.log("not defined");
+          // }
+
           if(MR.playerid == MR.avatars[id].playerid){
 
             let headsetPos = frameData.pose.position;
@@ -432,49 +439,50 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         }
 
     }
-  } else {
-    for (let id in MR.avatars) {
-      let headsetPos = MR.avatars[id].translate;
-      let headsetRot = MR.avatars[id].rotate;
-      if (!headsetPos) {
+  } 
+  // else {
+  //   for (let id in MR.avatars) {
+  //     let headsetPos = MR.avatars[id].translate;
+  //     let headsetRot = MR.avatars[id].rotate;
+  //     if (!headsetPos) {
         
-        console.log(id);
-        console.log("not defined");
-      }
-      if(MR.playerid == MR.avatars[id].playerid){
+  //       console.log(id);
+  //       console.log("not defined");
+  //     }
+  //     if(MR.playerid == MR.avatars[id].playerid){
 
-        // let headsetPos = frameData.pose.position;
-        // let headsetRot = frameData.pose.orientation;
-        //console.log("user");
-        //console.log(headsetPos);
-        //console.log(headsetRot);
-        m.save();
-          m.translate(headsetPos[0],headsetPos[1],headsetPos[2]);
-          m.rotateX(headsetRot[0]);
-          m.rotateY(headsetRot[1]);
-          m.rotateZ(headsetRot[2]);
-          m.scale(.3,.3,.3);
-          drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
-        m.restore();
-      }
-      else{
+  //       // let headsetPos = frameData.pose.position;
+  //       // let headsetRot = frameData.pose.orientation;
+  //       //console.log("user");
+  //       //console.log(headsetPos);
+  //       //console.log(headsetRot);
+  //       m.save();
+  //         m.translate(headsetPos[0],headsetPos[1],headsetPos[2]);
+  //         m.rotateX(headsetRot[0]);
+  //         m.rotateY(headsetRot[1]);
+  //         m.rotateZ(headsetRot[2]);
+  //         m.scale(.3,.3,.3);
+  //         drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
+  //       m.restore();
+  //     }
+  //     else{
         
-        //console.log("other user");
-        // console.log(headsetPos);
-        // console.log(headsetRot);
+  //       //console.log("other user");
+  //       // console.log(headsetPos);
+  //       // console.log(headsetRot);
 
-        m.save();
-          m.translate(headsetPos[0],headsetPos[1],headsetPos[2]);
-          m.rotateX(headsetRot[0]);
-          m.rotateY(headsetRot[1]);
-          m.rotateZ(headsetRot[2]);
-          m.scale(.3,.3,.3);
-          drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
-        m.restore();
-      }
+  //       m.save();
+  //         m.translate(headsetPos[0],headsetPos[1],headsetPos[2]);
+  //         m.rotateX(headsetRot[0]);
+  //         m.rotateY(headsetRot[1]);
+  //         m.rotateZ(headsetRot[2]);
+  //         m.scale(.3,.3,.3);
+  //         drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
+  //       m.restore();
+  //     }
     
-    }
-  }
+  //   }
+  // }
 
 }
 
@@ -551,11 +559,12 @@ function pollAvatarData(){
       }
 
 
-    try {
-       MR.syncClient.send(avatar_message);
-    } catch(err) {
-       console.log(err);
-    }
+      try {
+        console.log(avatar_message);
+         MR.syncClient.send(avatar_message);
+      } catch(err) {
+         console.log(err);
+      }
     }
 
     }
@@ -629,7 +638,7 @@ function onEndFrame(t, state) {
   //     console.log(err);
   //   }
   //   // console.log(avatar_message);
-    
+
 }
 
 export default function main() {
