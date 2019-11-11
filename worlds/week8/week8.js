@@ -541,10 +541,17 @@ function pollAvatarData(){
         } 
       }
 
-      if(MR.playerid != -1) {
-        MR.syncClient.send(avatar_message);
+      if(MR.playerid == -1) {
+        return;
       }
-     }
+
+
+    try {
+       MR.syncClient.send(avatar_message);
+    } catch(err) {
+       console.log(err);
+    }
+    }
 
     }
 
