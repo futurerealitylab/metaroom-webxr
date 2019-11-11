@@ -150,6 +150,7 @@ class Client
                         console.log('reconnecting...');
                         // /*
                         // this.ws = null;
+                        /*
                         reconnectTimeout = setTimeout(() => {
                             try {
                                 // t = this.backoff(t);
@@ -163,6 +164,7 @@ class Client
                             }
                             
                         }, t);
+                        */
                         break;
                         // */
                     }

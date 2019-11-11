@@ -549,7 +549,7 @@ function pollAvatarData(){
         */
 
 
-        let avatar_message = {
+      let avatar_message = {
         type: "avatar",
         user: MR.playerid,
         state: {
