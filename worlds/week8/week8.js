@@ -387,11 +387,11 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
       let frameData = MR.frameData();
       if (frameData != null) {
         for (let id in MR.avatars) {
-          if (!headsetPos) {
+          // if (!headsetPos) {
             
-            console.log(id);
-            console.log("not defined");
-          }
+          //   console.log(id);
+          //   console.log("not defined");
+          // }
           if(MR.playerid == MR.avatars[id].playerid){
 
             let headsetPos = frameData.pose.position;
@@ -556,7 +556,7 @@ function pollAvatarData(){
 
 function onEndFrame(t, state) {
   //synchronize objects
-  // pollAvatarData();
+  pollAvatarData();
 
   //Objects
   //Sample message:
