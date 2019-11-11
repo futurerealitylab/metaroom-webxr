@@ -235,22 +235,24 @@ MR.syncClient.registerEventHandler("tick", (json) => {
 });
 
 MR.syncClient.registerEventHandler("avatar", (json) => { 
-  const payload = json["data"];
-  console.log(json);
-  console.log(payload);
-  for(let key in payload) {
-    if (payload[key]["user"] in MR.avatars) {
-      MR.avatars[payload[key]["user"]].translate = payload[key]["state"]["pos"];
-      MR.avatars[payload[key]["user"]].rotate = payload[key]["state"]["rot"];
-      console.log(payload[key]["state"]);
-      MR.avatars[payload[key]["user"]].leftController.translate = payload[key]["state"].controllers.left.pos;
-      MR.avatars[payload[key]["user"]].leftController.rotate =  payload[key]["state"].controllers.left.rot;
-      MR.avatars[payload[key]["user"]].rightController.translate = payload[key]["state"].controllers.right.pos;
-      MR.avatars[payload[key]["user"]].rightController.rotate = payload[key]["state"].controllers.right.rot;
-    } else { // never seen, create
-      console.log("previously unseen user avatar");
-      // let avatarCube = createCubeVertices();
-      // MR.avatars[payload[key]["user"]] = new Avatar(avatarCube, payload[key]["user"]);
+  if (MR.VRIsActive()) {
+    const payload = json["data"];
+    //console.log(json);
+    //console.log(payload);
+    for(let key in payload) {
+      if (payload[key]["user"] in MR.avatars) {
+        MR.avatars[payload[key]["user"]].translate = payload[key]["state"]["pos"];
+        MR.avatars[payload[key]["user"]].rotate = payload[key]["state"]["rot"];
+        //console.log(payload[key]["state"]);
+        MR.avatars[payload[key]["user"]].leftController.translate = payload[key]["state"].controllers.left.pos;
+        MR.avatars[payload[key]["user"]].leftController.rotate =  payload[key]["state"].controllers.left.rot;
+        MR.avatars[payload[key]["user"]].rightController.translate = payload[key]["state"].controllers.right.pos;
+        MR.avatars[payload[key]["user"]].rightController.rotate = payload[key]["state"].controllers.right.rot;
+      } else { // never seen, create
+        console.log("previously unseen user avatar");
+        // let avatarCube = createCubeVertices();
+        // MR.avatars[payload[key]["user"]] = new Avatar(avatarCube, payload[key]["user"]);
+      }
     }
   }
 });
@@ -425,15 +427,18 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
       let frameData = MR.frameData();
       if (frameData != null) {
         for (let id in MR.avatars) {
+
           // if (!headsetPos) {
             
           //   console.log(id);
           //   console.log("not defined");
           // }
+
           if(MR.playerid == MR.avatars[id].playerid){
 
             let headsetPos = frameData.pose.position;
             let headsetRot = frameData.pose.orientation;
+
             const rcontroller = MR.controllers[0];
             const lcontroller = MR.controllers[1];
             //console.log("user");
@@ -453,18 +458,23 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
           } else {
             let headsetPos = MR.avatars[id].translate;
             let headsetRot = MR.avatars[id].rotate;
+            if (typeof headsetPos == 'undefined') {
+            
+              console.log(id);
+              console.log("not defined");
+            }
             //console.log("other user");
             // console.log(headsetPos);
             // console.log(headsetRot);
-            console.log(MR.avatars[id]);
-            const rcontroller = MR.avatars[id].controllers.right;
-            const lcontroller = MR.avatars[id].controllers.left;
+            //console.log(MR.avatars[id]);
+            const rcontroller = MR.avatars[id].rightController;
+            const lcontroller = MR.avatars[id].leftController;
             //console.log("user");
             //console.log(headsetPos);
             //console.log(headsetRot);
             drawAvatar(id, headsetPos, headsetRot, .1, state);
-            drawAvatar(id, rcontroller.pose.position, rcontroller.pose.orientation, 0.05, state);
-            drawAvatar(id, lcontroller.pose.position, lcontroller.pose.orientation, 0.05, state);
+            drawAvatar(id, rcontroller.translate, rcontroller.rotate, 0.05, state);
+            drawAvatar(id, lcontroller.translate, lcontroller.rotate, 0.05, state);
           }
         
         }
@@ -585,10 +595,18 @@ function pollAvatarData(){
         } 
       }
 
-      if(MR.playerid != -1) {
-        MR.syncClient.send(avatar_message);
+      if(MR.playerid == -1) {
+        return;
       }
-     }
+
+
+      try {
+        console.log(avatar_message);
+         MR.syncClient.send(avatar_message);
+      } catch(err) {
+         console.log(err);
+      }
+    }
 
     }
 
