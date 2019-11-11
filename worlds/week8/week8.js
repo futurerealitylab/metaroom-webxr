@@ -596,27 +596,27 @@ function onEndFrame(t, state) {
 
   // MR.syncClient.ws.send(JSON.stringify(response));
   // FAKE STAND IN FOR DEBUGGING, remove once we have real data
-  if(MR.playerid == -1) {
-    return;
-  }
+  // if(MR.playerid == -1) {
+  //   return;
+  // }
 
-  const headsetPos = [Math.sin(Date.now()), 0.0, 0.0];
-  const headsetRot = [Math.sin(Date.now()), 0.0, 0.0];
-    const avatar_message = {
-      type: "avatar",
-      user: MR.playerid,
-      state: {
-        pos: headsetPos,
-        rot: headsetRot
-      }
-    };
+  // const headsetPos = [Math.sin(Date.now()), 0.0, 0.0];
+  // const headsetRot = [Math.sin(Date.now()), 0.0, 0.0];
+  //   const avatar_message = {
+  //     type: "avatar",
+  //     user: MR.playerid,
+  //     state: {
+  //       pos: headsetPos,
+  //       rot: headsetRot
+  //     }
+  //   };
 
-    try {
-      MR.syncClient.send(avatar_message);
-    } catch(err) {
-      console.log(err);
-    }
-    // console.log(avatar_message);
+  //   try {
+  //     MR.syncClient.send(avatar_message);
+  //   } catch(err) {
+  //     console.log(err);
+  //   }
+  //   // console.log(avatar_message);
     
 }
 
