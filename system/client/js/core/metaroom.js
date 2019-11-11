@@ -248,6 +248,10 @@ MR.input = {
 };
 
 
+//TODO: We should do this more cleanly.
+MR.VRIsActive = () => {
+                return false;
+            }
 
 MR.syncClient = new Client();
 MR.syncClient.connect(window.IP_SYNC, window.PORT_SYNC);
