@@ -2,12 +2,22 @@
 
 /////////////////////////////// CLIENT SUPPORT
 class Avatar {
-    constructor(verts, id){
+    constructor(verts, id, leftController, rightController){
         this.playerid = id;
         this.vertices = verts;
         this.translate = [0,0,0];
         this.rotate = [0,0,0,0];
+        this.leftController = leftController;
+        this.rightController = rightController;
     }
+}
+
+class Controller {
+  constructor(verts) {
+    this.vertices = verts;
+    this.translate = [0,0,0];
+    this.rotate = [0,0,0,0];
+  }
 }
 
 ////////////////////////////// MATRIX SUPPORT
@@ -182,12 +192,14 @@ MR.syncClient.registerEventHandler("initialize", (json) => {
   const id = json["id"];
 
   let avatarCube = createCubeVertices();
-  let playerAvatar = new Avatar(avatarCube, id);
+  let leftController = new Controller(avatarCube);
+  let rightController = new Controller(avatarCube);
+  let playerAvatar = new Avatar(avatarCube, id, leftController, rightController);
 
   MR.avatars = {};
   for (let key in json["avatars"]) {
     const avid =  json["avatars"][key]["user"];
-    let avatar = new Avatar(avatarCube, avid);
+    let avatar = new Avatar(avatarCube, avid, leftController, rightController);
     MR.avatars[avid] = avatar;
   }
 
@@ -204,7 +216,9 @@ MR.syncClient.registerEventHandler("join", (json) => {
 
   } else {
     let avatarCube = createCubeVertices();
-    let avatar = new Avatar(avatarCube, id);
+    let leftController = new Controller(avatarCube);
+    let rightController = new Controller(avatarCube);
+    let avatar = new Avatar(avatarCube, id, leftController, rightController);
     MR.avatars[id] = avatar;
   }
   
@@ -222,11 +236,17 @@ MR.syncClient.registerEventHandler("tick", (json) => {
 
 MR.syncClient.registerEventHandler("avatar", (json) => { 
   const payload = json["data"];
-
+  console.log(json);
+  console.log(payload);
   for(let key in payload) {
     if (payload[key]["user"] in MR.avatars) {
       MR.avatars[payload[key]["user"]].translate = payload[key]["state"]["pos"];
       MR.avatars[payload[key]["user"]].rotate = payload[key]["state"]["rot"];
+      console.log(payload[key]["state"]);
+      MR.avatars[payload[key]["user"]].leftController.translate = payload[key]["state"].controllers.left.pos;
+      MR.avatars[payload[key]["user"]].leftController.rotate =  payload[key]["state"].controllers.left.rot;
+      MR.avatars[payload[key]["user"]].rightController.translate = payload[key]["state"].controllers.right.pos;
+      MR.avatars[payload[key]["user"]].rightController.rotate = payload[key]["state"].controllers.right.rot;
     } else { // never seen, create
       console.log("previously unseen user avatar");
       // let avatarCube = createCubeVertices();
@@ -349,6 +369,24 @@ function onStartFrame(t, state) {
 
 }
 
+function drawAvatar(id, pos, rot, scale, state) {
+  let drawShape = (color, type, vertices, texture) => {
+    gl.uniform3fv(state.uColorLoc, color);
+    gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
+    gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( vertices ), gl.STATIC_DRAW);
+    gl.drawArrays(type, 0, vertices.length / VERTEX_SIZE);
+ }
+m.save();
+  m.translate(pos[0],pos[1],pos[2]);
+  m.rotateX(rot[0]);
+  m.rotateY(rot[1]);
+  m.rotateZ(rot[2]);
+  m.scale(scale,scale,scale);
+  drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
+m.restore();
+}
+
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
     gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
     gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
@@ -396,32 +434,37 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
             let headsetPos = frameData.pose.position;
             let headsetRot = frameData.pose.orientation;
+            const rcontroller = MR.controllers[0];
+            const lcontroller = MR.controllers[1];
             //console.log("user");
             //console.log(headsetPos);
             //console.log(headsetRot);
-            m.save();
-              m.translate(headsetPos[0],headsetPos[1],headsetPos[2]);
-              m.rotateX(headsetRot[0]);
-              m.rotateY(headsetRot[1]);
-              m.rotateZ(headsetRot[2]);
-              m.scale(.3,.3,.3);
-              drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
-            m.restore();
+            drawAvatar(id, headsetPos, headsetRot, .1, state);
+            drawAvatar(id, rcontroller.pose.position, rcontroller.pose.orientation, 0.05, state);
+            drawAvatar(id, lcontroller.pose.position, lcontroller.pose.orientation, 0.05, state);
+            // m.save();
+            //   m.translate(headsetPos[0],headsetPos[1],headsetPos[2]);
+            //   m.rotateX(headsetRot[0]);
+            //   m.rotateY(headsetRot[1]);
+            //   m.rotateZ(headsetRot[2]);
+            //   m.scale(.1,.1,.1);
+            //   drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
+            // m.restore();
           } else {
             let headsetPos = MR.avatars[id].translate;
             let headsetRot = MR.avatars[id].rotate;
             //console.log("other user");
             // console.log(headsetPos);
             // console.log(headsetRot);
-
-            m.save();
-              m.translate(headsetPos[0],headsetPos[1],headsetPos[2]);
-              m.rotateX(headsetRot[0]);
-              m.rotateY(headsetRot[1]);
-              m.rotateZ(headsetRot[2]);
-              m.scale(.3,.3,.3);
-              drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
-            m.restore();
+            console.log(MR.avatars[id]);
+            const rcontroller = MR.avatars[id].controllers.right;
+            const lcontroller = MR.avatars[id].controllers.left;
+            //console.log("user");
+            //console.log(headsetPos);
+            //console.log(headsetRot);
+            drawAvatar(id, headsetPos, headsetRot, .1, state);
+            drawAvatar(id, rcontroller.pose.position, rcontroller.pose.orientation, 0.05, state);
+            drawAvatar(id, lcontroller.pose.position, lcontroller.pose.orientation, 0.05, state);
           }
         
         }
