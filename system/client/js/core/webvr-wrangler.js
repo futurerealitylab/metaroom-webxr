@@ -178,6 +178,7 @@ window.VRCanvasWrangler = (function() {
             conf.onEndFrame = options.onEndFrame || conf.onEndFrame;
             conf.onDraw = options.onDraw || conf.onDraw;
             conf.onDrawXR = options.onDrawXR || conf.onDraw;
+            conf.onExit = options.onExit || conf.onExit;
             conf.onAnimationFrame = options.onAnimationFrame || conf.onAnimationFrame;
             conf.onAnimationFrameWindow = options.onAnimationFrameWindow || conf.onAnimationFrameWindow;
         }
@@ -203,6 +204,9 @@ window.VRCanvasWrangler = (function() {
         }
 
         async configure(options) {
+            if (this.config.onExit) {
+                this.config.onExit(this.customState);
+            }
 
             this._clearConfig();
             this._reset();
@@ -217,6 +221,7 @@ window.VRCanvasWrangler = (function() {
             options.onAnimationFrameWindow = options.onAnimationFrameWindow || this._onAnimationFrameWindow.bind(this);
             options.onSelectStart = options.onSelectStart || function(t, state) {};
             options.onReload = options.onReload || function(state) {};
+            options.onExit = options.onExit || function(state) {};
 
             options.onSelect = options.onSelect || (function(t, state) {});
             options.onSelectEnd = options.selectEnd || (function(t, state) {});
@@ -627,6 +632,7 @@ window.VRCanvasWrangler = (function() {
                 options.onAnimationFrame = this._onAnimationFrame.bind(this);
                 options.onAnimationFrameWindow = this._onAnimationFrameWindow.bind(this);
                 options.onReload = function(state) {};
+                options.onExit = function(state) {};
             //options.onWindowFrame = this._onWindowFrame.bind(this);
 
             // selection
@@ -641,8 +647,6 @@ window.VRCanvasWrangler = (function() {
             } else {
                 window.cancelAnimationFrame(this._animationHandle);
             }
-
-
         }
 
         _onVRRequestPresent () {

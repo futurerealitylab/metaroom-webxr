@@ -1052,6 +1052,8 @@ function onStartFrame(t, state) {
     // cache time values for ease-of-use
     const time = state.time;
     const deltaTime = state.deltaTime;
+
+    
     ////////////////////////////////////////////
 
     // this is logic for the falling cube that you can pick-up
@@ -1417,6 +1419,10 @@ function onEndFrame(t, state) {
         }));        
     }
 }
+function onExit() {
+    console.log("WEE, goodbye!");
+
+}
 
 export default function main() {
     const def = {
@@ -1427,7 +1433,8 @@ export default function main() {
         onStartFrame : onStartFrame,
         onEndFrame   : onEndFrame,
         onDraw       : onDraw,
-        onReload     : onReload
+        onReload     : onReload,
+        onExit       : onExit
     };
 
     return def;
