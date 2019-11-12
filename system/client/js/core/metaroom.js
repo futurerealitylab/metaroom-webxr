@@ -114,8 +114,9 @@ const SOCKET_STATE_MAP = {
 };
 
 {
-    const IP_ELEMENT   = document.getElementById("server-ip");
-    window.IP          = (IP_ELEMENT && IP_ELEMENT.getAttribute("value")) || "localhost";
+    //const IP_ELEMENT   = document.getElementById("server-ip");
+    //window.IP          = (IP_ELEMENT && IP_ELEMENT.getAttribute("value")) || "localhost";
+    window.IP          = window.location.hostname;
     const PORT_ELEMENT = document.getElementById("server-comm-port");
     window.PORT        = (PORT_ELEMENT && PORT_ELEMENT.getAttribute("value")) || "3001";
 }
