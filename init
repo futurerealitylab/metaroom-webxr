@@ -6,3 +6,4 @@ cd ../..
 cd webxr-server
 npm install
 cd ..
+git submodule update --recursive
