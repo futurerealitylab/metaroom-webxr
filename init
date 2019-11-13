@@ -3,3 +3,6 @@
 cd system/server
 npm install
 cd ../..
+cd webxr-server
+npm install
+cd ..
