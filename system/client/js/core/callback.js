@@ -47,7 +47,7 @@ MR.syncClient.registerEventHandler("leave", (json) => {
 });
 
 MR.syncClient.registerEventHandler("tick", (json) => {
-  console.log("world tick: ", json);
+  // console.log("world tick: ", json);
 });
 
 MR.syncClient.registerEventHandler("avatar", (json) => { 
