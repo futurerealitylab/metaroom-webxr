@@ -244,23 +244,29 @@ async function onReload(state) {
     // and you'd like to update your older objects based on those changes
     // or if you'd like to use some new functions you defined in other modules,
     // for example
-    return MR.dynamicImport(getPath("matrix.js")).then((myModule) => {
-        matrixModule = myModule;
-        Mat          = matrixModule.Matrix;
-    }).then(() => {
-        MR.dynamicImport(getPath("geometry.js")).then((myModule) => {
-            geometryModule  = myModule;
-            cubeVertexData  = geometryModule.cubeVertexData;
-            cubeIndexData   = geometryModule.cubeIndexData;
-            cubeVertexCount = geometryModule.cubeVertexCount;
-            cubeIndexCount  = geometryModule.cubeIndexCount;
-        }).then(() => {
-          MR.dynamicImport(getPath("simple_movement_controller.js")).then((myModule) => {
-            moveControllerModule = myModule;
-            MovementController   = myModule.SimpleMovementController;
-          })
-        });
-    });
+    //console.log("onReload start");
+    let myModule = null;
+    myModule = await MR.dynamicImport(getPath("matrix.js"));
+    matrixModule = myModule;
+    Mat          = matrixModule.Matrix;
+    //console.log("matrix.js");
+        
+    myModule = await MR.dynamicImport(getPath("geometry.js"))
+    geometryModule  = myModule;
+    cubeVertexData  = geometryModule.cubeVertexData;
+    cubeIndexData   = geometryModule.cubeIndexData;
+    cubeVertexCount = geometryModule.cubeVertexCount;
+    cubeIndexCount  = geometryModule.cubeIndexCount;
+    //console.log("geometry.js");
+
+    myModule = await MR.dynamicImport(getPath("simple_movement_controller.js"))
+    
+    moveControllerModule = myModule;
+    MovementController   = myModule.SimpleMovementController;
+    //console.log("simple_movement_controller.js");
+
+    //window.RELOAD_PENDING = false;
+    //console.log("onReload end");
 }
 
 // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
