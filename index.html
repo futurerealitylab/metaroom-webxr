@@ -19,8 +19,10 @@
   <script src="system/client/js/lib/imageutil.js"></script>
   <!-- WebXR Button implements a button to toggle in and out of VR. -->
   <script src="system/client/js/lib/webxr-button.js"></script>
-    <!-- WebXR Server and Client. -->
-  <script src="system/client/js/core/client.js"></script>  
+  <!-- WebXR Server and Client. -->
+  <script src="system/client/js/core/geometry.js"></script>
+  <script src="system/client/js/core/client.js"></script>
+  <script src="system/client/js/core/avatar.js"></script>
   <!-- WebXR Canvas Wrangler back-end. -->
   <script src="system/client/js/core/webvr-wrangler.js"></script>
 
@@ -30,11 +32,13 @@
   <!-- System Version Number -->
   <div id='version' value='1'></div>
   <div id='resolution'       value='640,640'></div>
-  <div id='server-ip'        value='localhost'></div>
+  <div id='server-ip'        value='192.168.1.103'></div>
   <div id='server-comm-port' value='3001'></div>
-  <div id=''                 value='localhost'></div>
+  <div id=''                 value='192.168.1.103'></div>
   <div id='server-sync-port' value='11235'></div>
   <script src="system/client/js/core/metaroom.js"></script>
+  <script src="system/client/js/core/callback.js"></script>  
+
 
   <!-- Shader Editor -->
   <script type="module" src="system/client/js/lib/mreditor.js"></script>
