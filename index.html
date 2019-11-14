@@ -4,6 +4,8 @@
   <link   rel="stylesheet" href="system/client/css/main.css">
   <link   rel="stylesheet" href="system/client/css/glslEditor/glslEditor.css">
 
+  <script src="system/client/js/lib/input.js"></script>
+  <script src="system/client/js/lib/ImprovedNoise.js"></script>
   <script src="system/client/js/lib/pathutil.js"></script>
   <script src="system/client/js/lib/cursor.js"></script>
   <script src="system/client/js/lib/canvasutil.js"></script>
@@ -17,16 +19,27 @@
   <script src="system/client/js/lib/imageutil.js"></script>
   <!-- WebXR Button implements a button to toggle in and out of VR. -->
   <script src="system/client/js/lib/webxr-button.js"></script>
+  <!-- WebXR Server and Client. -->
+  <script src="system/client/js/core/geometry.js"></script>
+  <script src="system/client/js/core/client.js"></script>
+  <script src="system/client/js/core/avatar.js"></script>
   <!-- WebXR Canvas Wrangler back-end. -->
   <script src="system/client/js/core/webvr-wrangler.js"></script>
-  
+
+
+
   <!--   System Initialization -->
   <!-- System Version Number -->
   <div id='version' value='1'></div>
   <div id='resolution'       value='640,640'></div>
  <!--  <div id='server-ip'        value='localhost'></div> -->
+  <div id='server-ip'        value='192.168.1.103'></div>
   <div id='server-comm-port' value='3001'></div>
+  <div id=''                 value='192.168.1.103'></div>
+  <div id='server-sync-port' value='11235'></div>
   <script src="system/client/js/core/metaroom.js"></script>
+  <script src="system/client/js/core/callback.js"></script>  
+
 
   <!-- Shader Editor -->
   <script type="module" src="system/client/js/lib/mreditor.js"></script>
@@ -52,6 +65,7 @@
     <script type="module" src=worlds/world/world.js></script>
     <script type="module" src=worlds/triangles/triangles.js></script>
     <script type="module" src=worlds/week6/week6.js></script>
+    <script type="module" src=worlds/week8/week8.js></script>
   </div>
   <!-- Program Entry-point -->
   <script type="module" src="system/client/js/run.js"></script>

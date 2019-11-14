@@ -131,6 +131,8 @@ window.VRCanvasWrangler = (function() {
                 return this._frameData;
             }
             MR.frameData = this.frameData;
+            MR.controllers = navigator.getGamepads();
+
 
             this.customState = null;
             this.persistentStateMap = null;
@@ -143,7 +145,6 @@ window.VRCanvasWrangler = (function() {
             this._init();
 
             Input.initKeyEvents(this._canvas);
-            Input.initControllerEvents();
         }
 
         start() {
@@ -655,6 +656,9 @@ window.VRCanvasWrangler = (function() {
                 // Nothing to do because we're handling things in onVRPresentChange.
             }, function (err) {
                 console.error(err);
+                console.log(err.name);
+                console.log(err.message);
+                console.log(err.code);
             });
         }
         
@@ -723,7 +727,7 @@ window.VRCanvasWrangler = (function() {
             this.timeMS = t;
 
                 // For now, all VR gamepad button presses trigger a world transition.
-
+                MR.controllers = navigator.getGamepads();
                 let gamepads = navigator.getGamepads();
                 let vrGamepadCount = 0;
                 let doTransition = false;
