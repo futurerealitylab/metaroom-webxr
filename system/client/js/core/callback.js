@@ -22,7 +22,7 @@ MR.syncClient.registerEventHandler("initialize", (json) => {
   MR.playerid = id;
   console.log("player id is", id);
   console.log(MR.avatars);
-} );
+});
 
 MR.syncClient.registerEventHandler("join", (json) => {
   console.log(json);

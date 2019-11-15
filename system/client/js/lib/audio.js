@@ -1,6 +1,7 @@
 class SpatialAudioContext {
 
     constructor(files) {
+
         try {
             // it appears chrome supports up to 6 audio contexts per tab, so we either need to limit contexts created, or swap buffers and change positions
             // TODO: check how many contexts are already open
@@ -26,11 +27,12 @@ class SpatialAudioContext {
         });
 
         this.initGain();
-        this.initReverb('assets/audio/Blop-Mark_DiAngelo-79054334 (1).wav');
+        this.initReverb('assets/audio/IRsample.wav');
 
         this.pausedAt = 0;
         this.startedAt = 0;
         this.playing = false;
+
     };
 
     isPlaying() { return this.playing; };
@@ -49,14 +51,18 @@ class SpatialAudioContext {
         // listener.positionX.value = head_position.x;
         // listener.positionY.value = head_position.y;
         // listener.positionZ.value = head_position.z;
-        
-        this.cache[url]
+
+        const source = this.context.createBufferSource();
+        source.buffer = this.cache[url];
+
+        source
             // .connect(this.panner)
             // .connect(this.reverbNode)
+            // .connect()
             .connect(this.gainNode)
             .connect(this.context.destination);
 
-        this.cache[url].start(this.context.currentTime + time, offset);
+        source.start(this.context.currentTime + time, offset);
 
     };
 
@@ -79,8 +85,7 @@ class SpatialAudioContext {
 
         console.log("decoding...", url);
         const audioBuffer = await this.context.decodeAudioData(response.data);
-        this.cache[url] = this.context.createBufferSource(); // creates a sound source
-        this.cache[url].buffer = audioBuffer;
+        this.cache[url] = audioBuffer;
 
     };
 
@@ -98,7 +103,7 @@ class SpatialAudioContext {
 
         console.log("decoding...", url);
         const audioBuffer = await this.context.decodeAudioData(response.data);
-        this.reverbCache[url] = this.context.createBufferSource(); // creates a sound source
+        this.reverbCache[url] = this.context.createBufferSource();
         this.reverbCache[url].buffer = audioBuffer;
 
     };

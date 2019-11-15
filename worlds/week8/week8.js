@@ -147,16 +147,16 @@ async function setup(state) {
 
     state.bgColor = [0.529, 0.808, 0.922, 1.0];
 
-    this.context = new SpatialAudioContext([
+    this.audioContext = new SpatialAudioContext([
       'https://raw.githubusercontent.com/bmahlbrand/wav/master/internet7-16.wav',
       'https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav'
     ]);
 
     // TODO: stupid hack for testing, since user must interact before context is unsuspended, figure out something clean
     document.querySelector('body').addEventListener('click', () => {
-      this.context.playFileAt('https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav');
+      this.audioContext.playFileAt('https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav');
 
-      this.context.resume().then(() => {
+      this.audioContext.resume().then(() => {
         console.log('Playback resumed successfully');
       });
       
