@@ -147,6 +147,18 @@ async function setup(state) {
 
     state.bgColor = [0.529, 0.808, 0.922, 1.0];
 
+    this.context = new SpatialAudioContext();
+
+    // TODO: stupid hack for testing, since user must interact before context is unsuspended, figure out something clean
+    document.querySelector('body').addEventListener('click', () => {
+      this.context.playFileAt('https://raw.githubusercontent.com/bmahlbrand/wav/master/internet7-16.wav');
+
+      this.context.resume().then(() => {
+        console.log('Playback resumed successfully');
+      });
+      
+    });
+
 }
 
 let noise = new ImprovedNoise();
@@ -351,7 +363,7 @@ function onEndFrame(t, state) {
      rot: [0,0,0],
      }
   };
-  
+  this.context.resume();
   // // Lock
   // //Sample message:
   // const response = {
