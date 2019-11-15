@@ -33,13 +33,14 @@ class SpatialAudioContext {
         this.playing = false;
     };
 
-    isPlaying() { return this.isPlaying; };
+    isPlaying() { return this.playing; };
 
     getDuration(url) {
         return this.cache[url].duration;
     };
 
     resume() {
+        this.playing = true;
         return this.context.resume();
     };
 
@@ -60,9 +61,8 @@ class SpatialAudioContext {
     };
 
     stop(url) {
-
         this.cache[url].stop();
-
+        this.playing = false;
     };
 
     pause(url) {
