@@ -115,14 +115,16 @@ const SOCKET_STATE_MAP = {
 };
 
 {
-    const IP_ELEMENT   = document.getElementById("server-ip");
-    window.IP          = (IP_ELEMENT && IP_ELEMENT.getAttribute("value")) || "localhost";
+
+    //const IP_ELEMENT   = document.getElementById("server-ip");
+    //window.IP          = (IP_ELEMENT && IP_ELEMENT.getAttribute("value")) || "localhost";
+    window.IP          = window.location.hostname;
 
     const PORT_ELEMENT = document.getElementById("server-comm-port");
     window.PORT        = (PORT_ELEMENT && PORT_ELEMENT.getAttribute("value")) || "3001";
 
     const IP_SYNC      = document.getElementById("server-sync-ip");
-    window.IP_SYNC     = (IP_ELEMENT && IP_ELEMENT.getAttribute("value")) || "localhost";
+    window.IP_SYNC     = (IP_SYNC && IP_SYNC.getAttribute("value")) || "localhost";
 
     const PORT_SYNC_ELEMENT = document.getElementById("server-sync-port");
     window.PORT_SYNC   = (PORT_SYNC_ELEMENT && PORT_SYNC_ELEMENT.getAttribute("value")) || "11235";
@@ -262,6 +264,7 @@ window.onbeforeunload = function() {
     websocket.onclose = function () {}; // disable onclose handler first
     websocket.close();
 };
+
 /*
 //Alex: Client to synchronize.
 MR.syncClient = new Client();
