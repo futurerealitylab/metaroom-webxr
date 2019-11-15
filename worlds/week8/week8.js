@@ -151,7 +151,7 @@ async function setup(state) {
 
     // TODO: stupid hack for testing, since user must interact before context is unsuspended, figure out something clean
     document.querySelector('body').addEventListener('click', () => {
-      this.context.playFileAt('https://raw.githubusercontent.com/bmahlbrand/wav/master/internet7-16.wav');
+      this.context.playFileAt('https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav');
 
       this.context.resume().then(() => {
         console.log('Playback resumed successfully');

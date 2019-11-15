@@ -19,6 +19,7 @@ class SpatialAudioContext {
         // this.listeners = {};
         this.listener = this.context.listener;
         this.loadFile('https://raw.githubusercontent.com/bmahlbrand/wav/master/internet7-16.wav');
+        this.loadFile('https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav');
 
     }
 
@@ -47,6 +48,14 @@ class SpatialAudioContext {
 
         this.source.stop();
 
+    }
+
+    pause() {
+
+    }
+
+    setImpulseResponse() {
+        // https://developer.mozilla.org/en-US/docs/Web/API/ConvolverNode
     }
 
     async loadFile(url) {
