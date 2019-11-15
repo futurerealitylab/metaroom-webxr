@@ -23,6 +23,8 @@ class SpatialAudioContext {
             this.loadFile(f);
         });
 
+        this.initGain();
+
     }
 
     resume() {
@@ -34,15 +36,13 @@ class SpatialAudioContext {
         // listener.positionX.value = head_position.x;
         // listener.positionY.value = head_position.y;
         // listener.positionZ.value = head_position.z;
-        this.source = this.context.createBufferSource(); // creates a sound source
-
-        this.source.buffer = this.cache[url];
-        this.source
-            // .connect(this.gain)
+        
+        this.cache[url]
             // .connect(this.panner)
+            .connect(this.gain)
             .connect(this.context.destination);
 
-        this.source.start(this.context.currentTime + time, offset);
+        this.cache[url].start(this.context.currentTime + time, offset);
 
     }
 
@@ -70,8 +70,8 @@ class SpatialAudioContext {
 
         console.log("decoding...", url);
         const audioBuffer = await this.context.decodeAudioData(response.data);
-
-        this.cache[url] = audioBuffer;
+        this.cache[url] = this.context.createBufferSource(); // creates a sound source
+        this.cache[url].buffer = audioBuffer;
 
     }
 
@@ -104,8 +104,12 @@ class SpatialAudioContext {
 
     initGain() {
 
-        this.gain = new GainNode();
+        this.gainNode = this.context.createGain();
 
+    }
+
+    setGain(level) {
+        this.gainNode.gain.value = level;
     }
 
     initReverb() {
