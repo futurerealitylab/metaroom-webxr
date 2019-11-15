@@ -1,6 +1,6 @@
 class SpatialAudioContext {
 
-    constructor() {
+    constructor(files) {
         try {
             // it appears chrome supports up to 6 audio contexts per tab, so we either need to limit contexts created, or swap buffers and change positions
             // TODO: check how many contexts are already open
@@ -18,8 +18,10 @@ class SpatialAudioContext {
         // keep track of listener objects associated with the files
         // this.listeners = {};
         this.listener = this.context.listener;
-        this.loadFile('https://raw.githubusercontent.com/bmahlbrand/wav/master/internet7-16.wav');
-        this.loadFile('https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav');
+
+        files.forEach((f) => {
+            this.loadFile(f);
+        });
 
     }
 
@@ -76,7 +78,7 @@ class SpatialAudioContext {
     unloadFile(url) {
         delete this.cache[url];
     }
-    
+
     initPanner(innerAngle = 360, outerAngle = 360, outerGain = 0.2, refDistance = 1.0, maxDistance = 10000, rollOff = 1.0) {
 
         this.panner = new PannerNode(this.context, {
