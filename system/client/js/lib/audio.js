@@ -4,8 +4,8 @@ class SpatialAudioContext {
         try {
             // it appears chrome supports up to 6 audio contexts per tab, so we either need to limit contexts created, or swap buffers and change positions
             // TODO: check how many contexts are already open
-            window.AudioContext = window.AudioContext || window.webkitAudioContext;
-            this.context = new window.AudioContext({
+            const ctx = window.AudioContext || window.webkitAudioContext;
+            this.context = new ctx({
                                 latencyHint: 'interactive',
                                 sampleRate: 44100,
                                });
@@ -15,6 +15,8 @@ class SpatialAudioContext {
 
         // store loaded buffers here
         this.cache = {};
+
+        this.reverbCache = {};
         // keep track of listener objects associated with the files
         // this.listeners = {};
         this.listener = this.context.listener;
@@ -24,12 +26,22 @@ class SpatialAudioContext {
         });
 
         this.initGain();
+        this.initReverb('assets/audio/Blop-Mark_DiAngelo-79054334 (1).wav');
 
-    }
+        this.pausedAt = 0;
+        this.startedAt = 0;
+        this.playing = false;
+    };
+
+    isPlaying() { return this.isPlaying; };
+
+    getDuration(url) {
+        return this.cache[url].duration;
+    };
 
     resume() {
         return this.context.resume();
-    }
+    };
 
     playFileAt(url, sound_position, head_position, offset = 0.0, time = 0.0) {
 
@@ -39,26 +51,23 @@ class SpatialAudioContext {
         
         this.cache[url]
             // .connect(this.panner)
-            .connect(this.gain)
+            // .connect(this.reverbNode)
+            .connect(this.gainNode)
             .connect(this.context.destination);
 
         this.cache[url].start(this.context.currentTime + time, offset);
 
-    }
+    };
 
-    stop() {
+    stop(url) {
 
-        this.source.stop();
+        this.cache[url].stop();
 
-    }
+    };
 
-    pause() {
-
-    }
-
-    setImpulseResponse() {
-        // https://developer.mozilla.org/en-US/docs/Web/API/ConvolverNode
-    }
+    pause(url) {
+        // TODO: track 
+    };
 
     async loadFile(url) {
 
@@ -73,11 +82,30 @@ class SpatialAudioContext {
         this.cache[url] = this.context.createBufferSource(); // creates a sound source
         this.cache[url].buffer = audioBuffer;
 
-    }
+    };
 
     unloadFile(url) {
         delete this.cache[url];
-    }
+    };
+
+    async loadReverbFile(url) {
+
+        console.log("fetching...", url);
+
+        const response = await axios.get(url, {
+            responseType: 'arraybuffer', // <- important param
+        });
+
+        console.log("decoding...", url);
+        const audioBuffer = await this.context.decodeAudioData(response.data);
+        this.reverbCache[url] = this.context.createBufferSource(); // creates a sound source
+        this.reverbCache[url].buffer = audioBuffer;
+
+    };
+
+    unloadReverbFile(url) {
+        delete this.reverbCache[url];
+    };
 
     initPanner(innerAngle = 360, outerAngle = 360, outerGain = 0.2, refDistance = 1.0, maxDistance = 10000, rollOff = 1.0) {
 
@@ -100,22 +128,29 @@ class SpatialAudioContext {
             coneOuterGain: outerGain
         });
 
-    }
+    };
 
     initGain() {
-
         this.gainNode = this.context.createGain();
-
-    }
+    };
 
     setGain(level) {
         this.gainNode.gain.value = level;
-    }
+    };
 
-    initReverb() {
+    initReverb(url) {
+        this.loadReverbFile(url);
 
+        this.reverbNode = this.context.createConvolver();
+        this.reverbNode.buffer = this.reverbCache[url];
+    };
 
+    setImpulseResponse(url) {
+        if (!(url in this.reverbCache)) {
+            console.log("invalid url, not currently loaded");
+        }
 
-    }
+        this.reverbNode.buffer = this.reverbCache[url];
+    };
 
 };
