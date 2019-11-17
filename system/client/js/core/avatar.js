@@ -1,4 +1,3 @@
-
 'use strict';
 
 class Avatar {
@@ -13,9 +12,9 @@ class Avatar {
 }
 
 class Controller {
-  constructor(verts) {
-    this.vertices = verts;
-    this.translate = [0,0,0];
-    this.rotate = [0,0,0,0];
-  }
+    constructor(verts) {
+        this.vertices = verts;
+        this.translate = [0,0,0];
+        this.rotate = [0,0,0,0];
+    }
 }
