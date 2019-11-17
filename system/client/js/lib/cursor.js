@@ -90,6 +90,11 @@ window.ScreenCursor = (function() {
             prevPosition : () => {
                 return prevCursor;
             },
+            updateState : () => {
+                prevCursor[0] = cursor[0];
+                prevCursor[1] = cursor[1];
+                prevCursor[2] = cursor[2];
+            },
             hide : () => {
                 if (target.style) {
                     target.style.cursor = "none";
@@ -117,9 +122,6 @@ window.ScreenCursor = (function() {
         // sets cursor coordinates offset from the top-left of the program bounding rectangle
         target.set = function(x, y, z) {
             const r = this.getBoundingClientRect();
-            prevCursor[0] = cursor[0];
-            prevCursor[1] = cursor[1];
-            prevCursor[2] = cursor[2];
 
             cursor[0] = (1 + x - r.left) || 0;
             cursor[1] = (1 + y - r.top)  || 0;
@@ -129,10 +131,6 @@ window.ScreenCursor = (function() {
         
         // mouse-down handler
         target.onmousedown = function(e) {
-            if (e.which != 1) {
-                return;
-            }
-
             // set cursor state using the given cursor event "e"
             this.set(e.clientX, e.clientY, 1);
 
@@ -155,9 +153,6 @@ window.ScreenCursor = (function() {
         
         // mouse-up handler
         target.onmouseup = function(e) {
-            if (e.which != 1) {
-                return;
-            }
             // set cursor state using the given cursor event "e"
             this.set(e.clientX, e.clientY, 0);
 

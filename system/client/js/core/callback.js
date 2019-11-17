@@ -1,9 +1,11 @@
 'use strict';
 
 
-
-
 MR.syncClient.registerEventHandler("initialize", (json) => {
+
+  if (!MR.avatars) {
+    MR.avatars = {};
+  }
 
   const id = json["id"];
 
@@ -12,13 +14,13 @@ MR.syncClient.registerEventHandler("initialize", (json) => {
   let rightController = new Controller(avatarCube);
   let playerAvatar = new Avatar(avatarCube, id, leftController, rightController);
 
-  MR.avatars = {};
   for (let key in json["avatars"]) {
     const avid =  json["avatars"][key]["user"];
     let avatar = new Avatar(avatarCube, avid, leftController, rightController);
     MR.avatars[avid] = avatar;
   }
 
+  // MR.avatars[id] = playerAvatar;
   MR.playerid = id;
   console.log("player id is", id);
   console.log(MR.avatars);
@@ -154,7 +156,6 @@ MR.syncClient.registerEventHandler("object", (json) => {
 MR.syncClient.registerEventHandler("calibration", (json) => {
   console.log("world tick: ", json);
 });
-
 
 
 
