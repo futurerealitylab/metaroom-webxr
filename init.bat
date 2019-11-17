@@ -1,3 +1,6 @@
+git submodule init
+git submodule update --recursive
+
 pushd system
 pushd server
 npm install
