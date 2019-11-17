@@ -366,7 +366,7 @@ function onEndFrame(t, state) {
      rot: [0,0,0],
      }
   };
-  this.context.resume();
+  this.audioContext.resume();
   // // Lock
   // //Sample message:
   // const response = {
