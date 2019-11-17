@@ -7,6 +7,9 @@ class Client
 
     constructor(heartbeat = 30000) {
         this.callbacks = {};
+        // system-specific callbacks that should not be reset upon
+        // world transitions
+        this.systemCallbacks = {};
         this.heartbeatTick = heartbeat;
         this.ws = null;
     }
@@ -21,13 +24,56 @@ class Client
         return t;
     }
 
+    // distinguish between world-specific
+    // and system-specific callbacks,
+    // since each world may have different requirements,
+    // whereas the system callbacks are for the back-end to use
+    // -- also, the user can define what to do immediately
+    // after the system has acted upon the event
     registerEventHandler(eventName, callback) {
-        if (eventName in this.callbacks) {
-            return false;
-        }
+        // proposal: I'd find it useful
+        // to be able to replace a callback programmatically
+        // if (eventName in this.callbacks) {
+        //     return false;
+        // }
 
         this.callbacks[eventName] = callback;
         return true;
+    }
+
+    registerSystemEventHandler(eventName, callback) {
+        // proposal: I'd find it useful
+        // to be able to replace a callback programmatically
+        // if (eventName in this.systemCallbacks) {
+        //     return false;
+        // }
+        
+        this.systemCallbacks[eventName] = callback;
+        return true;
+    }
+
+    // call upon world transition
+    deregisterEventHandlers() {
+        this.callbacks = {};
+    }
+    // call upon a system reset
+    deregisterSystemEventHandlers() {
+        this.systemCallbacks = {};
+    }
+
+    // useful for one-time events,
+    // removes the callback after only one use
+    registerEventHandlerOneShot(eventName, callback) {
+        this.callbacks[eventName] = (args) => {
+            delete this.callbacks[eventName];
+            return callback(args);
+        }
+    }
+    registerSystemEventHandlerOneShot(eventName, callback) {
+        this.systemCallbacks[eventName] = (args) => {
+            delete this.systemCallbacks[eventName];
+            return callback(args);
+        }
     }
 
     // TODO: verify this is working
@@ -90,10 +136,22 @@ class Client
                     //     console.log("no handler registered for type [" + json["type"] + "]");
                     //     return;
                     // }
-                    if (json["type"] in this.callbacks) {
-                        this.callbacks[json["type"]](json);
-                    } else {
-                        console.log("message of type %s is not supported yet", json["type"]);
+                    let msgIsSupported = false;
+                    const msgType = json["type"];
+                    
+                    // first the backend acts upon the event
+                    // and sets-up anything that the user-specific
+                    // callbacks need
+                    if (msgType in this.systemCallbacks) {
+                        this.systemCallbacks[msgType](json);
+                        msgIsSupported = true;
+                    }
+                    if (msgType in this.callbacks) {
+                        this.callbacks[msgType](json);
+                        msgIsSupported = true;
+                    }
+                    if (!msgIsSupported) {
+                        console.warn("message of type %s is not supported yet", msgType);
                     }
                     
                     // switch(json["type"]) {

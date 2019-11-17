@@ -129,19 +129,6 @@ default: {
 
                 MREditor.detectFeatures();
 
-                // MR.server.subs.subscribeOneShot("Echo", () => {
-                //   let callbacks = MR.wrangler.menu.instaniateServerDependentMenuArray;
-                //   let callbackCount = callbacks.length;
-                //   for (let i = 0; i < callbackCount; i += 1) {
-                //     callbacks[i]();
-                //   }
-                // });
-                // try {
-                //   MR.server.echo("Server is active");
-                // } catch (err) {
-                //   console.error(err);
-                // }
-
                 wrangler.isTransitioning = false;
 
                 let sourceFiles = document.getElementsByClassName("worlds");
@@ -169,18 +156,18 @@ default: {
                         setPath(worldInfo.localPath);
                         wrangler.isTransitioning = true;
                         MR.wrangler.beginSetup(worldInfo.world.default()).catch(err => {
-                                //console.trace();
-                                console.error(err);
-                                MR.wrangler.doWorldTransition({direction : 1, broadcast : true});
+                            //console.trace();
+                            console.error(err);
+                            MR.wrangler.doWorldTransition({direction : 1, broadcast : true});
                         }).then(() => { wrangler.isTransitioning = false;               
-                                for (let d = 0; d < deferredActions.length; d += 1) {
-                                    deferredActions[d]();
-                                }
-                                deferredActions = [];
+                            for (let d = 0; d < deferredActions.length; d += 1) {
+                                deferredActions[d]();
+                            }
+                            deferredActions = [];
 
-                                CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
+                            CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
 
-                                window.DISABLEMENUFORWORLDSEXCEPT(MR.worldIdx);
+                            window.DISABLEMENUFORWORLDSEXCEPT(MR.worldIdx);
                         });
 
                     } catch (err) {
@@ -195,10 +182,10 @@ default: {
 
                         const world = await import(src);
                         MR.wrangler.beginSetup(world.default()).catch(err => {
-                                console.trace();
-                                console.error(err);
+                            console.trace();
+                            console.error(err);
 
-                                CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
+                            CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
                         });
                     } catch (err) {
                         console.error(err);
@@ -241,8 +228,8 @@ default: {
 
                         CanvasUtil.setOnResizeEventHandler(null);
                         CanvasUtil.resize(MR.getCanvas(), 
-                                MR.wrangler.options.outputWidth, 
-                                MR.wrangler.options.outputHeight
+                            MR.wrangler.options.outputWidth, 
+                            MR.wrangler.options.outputHeight
                         );
 
                         MR.wrangler._gl.useProgram(null);
@@ -254,8 +241,9 @@ default: {
                         //console.log(COUNT, "SWITCH");
 
                         try {
-                            // call the main function of the selected world
+                            // remove world-specific event handlers before transitioning
                             MR.server.subsLocal = new ServerPublishSubscribe();
+                            MR.syncClient.deregisterEventHandlers();
                             MREditor.resetState();
                             
 
@@ -263,7 +251,7 @@ default: {
 
                             const worldInfo = MR.worlds[MR.worldIdx];
                             setPath(worldInfo.localPath);
-
+                            // call the main function of the selected world
                             MR.wrangler.beginSetup(worldInfo.world.default()).catch((e) => {
                                     console.error(e);
                                     setTimeout(function(){ 
