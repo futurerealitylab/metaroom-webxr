@@ -48,6 +48,10 @@ class SpatialAudioContext {
 
     playFileAt(url, sound_position, sound_orientation, head_position, head_orientation, offset = 0.0, time = 0.0) {
 
+        if (!(url in this.cache)) {
+            console.log("invalid url, not currently loaded");
+        }
+
         let listener = this.context.listener;
 
         listener.setOrientation(head_orientation.x, head_orientation.y, head_orientation.z , 0, 1, 0);
