@@ -154,8 +154,8 @@ async function setup(state) {
 
     // TODO: stupid hack for testing, since user must interact before context is unsuspended, figure out something clean
     document.querySelector('body').addEventListener('click', () => {
-      this.audioContext.playFileAt('https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav');
-
+      this.audioContext.playFileAt('https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav', {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 0});
+      
       this.audioContext.resume().then(() => {
         console.log('Playback resumed successfully');
       });
@@ -246,8 +246,6 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
        m.restore();
     }
 
-    //Cube that represents avatar.
-    // uncomment three following three lines once testing off headset is done
      if (MR.VRIsActive()) {
       let frameData = MR.frameData();
       if (frameData != null) {
@@ -366,6 +364,8 @@ function onEndFrame(t, state) {
      rot: [0,0,0],
      }
   };
+
+  // this.audioContext.playFileAt()
   this.audioContext.resume();
   // // Lock
   // //Sample message:
