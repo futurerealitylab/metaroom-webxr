@@ -149,12 +149,13 @@ async function setup(state) {
 
     this.audioContext = new SpatialAudioContext([
       'https://raw.githubusercontent.com/bmahlbrand/wav/master/internet7-16.wav',
-      'https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav'
+      'https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav',
+      'assets/audio/Blop-Mark_DiAngelo-79054334.wav'
     ]);
 
     // TODO: stupid hack for testing, since user must interact before context is unsuspended, figure out something clean
     document.querySelector('body').addEventListener('click', () => {
-      this.audioContext.playFileAt('https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav', {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 0});
+      this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 0});
       
       this.audioContext.resume().then(() => {
         console.log('Playback resumed successfully');
