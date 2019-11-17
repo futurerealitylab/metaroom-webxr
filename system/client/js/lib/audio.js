@@ -46,7 +46,7 @@ class SpatialAudioContext {
         return this.context.resume();
     };
 
-    playFileAt(url, sound_position, head_position, head_orientation, offset = 0.0, time = 0.0) {
+    playFileAt(url, sound_position, sound_orientation, head_position, head_orientation, offset = 0.0, time = 0.0) {
 
         let listener = this.context.listener;
 
@@ -60,6 +60,7 @@ class SpatialAudioContext {
         source.buffer = this.cache[url];
 
         this.panner.setPosition(sound_position.x, sound_position.y, sound_position.z);
+        this.panner.setOrientation(sound_orientation.x, sound_orientation.y, sound_orientation.z);
 
         source
             .connect(this.panner)
