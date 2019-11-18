@@ -24,6 +24,8 @@ MR.syncClient.registerEventHandler("initialize", (json) => {
   MR.playerid = id;
   console.log("player id is", id);
   console.log(MR.avatars);
+
+  MR.viewpointController.playerid = MR.playerid;
 } );
 
 MR.syncClient.registerEventHandler("join", (json) => {
@@ -49,6 +51,10 @@ MR.syncClient.registerEventHandler("leave", (json) => {
   console.log(json);
   delete MR.avatars[json["user"]];
 
+  if (MR.viewpointController.playerid == MR.avatars[json["user"]]) {
+      MR.viewpointController.switchView(MR.playerid);
+  }
+
   MR.updatePlayersMenu();
 });
 
@@ -66,9 +72,12 @@ MR.syncClient.registerEventHandler("avatar", (json) => {
         MR.avatars[payload[key]["user"]].rotate = payload[key]["state"]["rot"];
         //console.log(payload[key]["state"]);
         MR.avatars[payload[key]["user"]].leftController.translate = payload[key]["state"].controllers.left.pos;
-        MR.avatars[payload[key]["user"]].leftController.rotate =  payload[key]["state"].controllers.left.rot;
+        MR.avatars[payload[key]["user"]].leftController.rotate    =  payload[key]["state"].controllers.left.rot;
+        MR.avatars[payload[key]["user"]].leftController.trigger   = payload[key]["state"].controllers.left.trigger;
+
         MR.avatars[payload[key]["user"]].rightController.translate = payload[key]["state"].controllers.right.pos;
-        MR.avatars[payload[key]["user"]].rightController.rotate = payload[key]["state"].controllers.right.rot;
+        MR.avatars[payload[key]["user"]].rightController.rotate    = payload[key]["state"].controllers.right.rot;
+        MR.avatars[payload[key]["user"]].rightController.trigger   = payload[key]["state"].controllers.right.trigger;
       } else { // never seen, create
         console.log("previously unseen user avatar");
         // let avatarCube = createCubeVertices();
@@ -160,8 +169,6 @@ MR.syncClient.registerEventHandler("calibration", (json) => {
 });
 
 
-const MODE_TYPE_GENERIC = 0;
-const MODE_TYPE_VR      = 1;
 function syncAvatarData(){
   if (MR.VRIsActive()) {
      let frameData = MR.frameData();
@@ -173,12 +180,12 @@ function syncAvatarData(){
 
       if(MR.controllers[0] != null && MR.controllers[1] != null){
           //Controllers 
-        let controllerRight = MR.controllers[0];
+        let controllerRight = MR.rightController;
         let controllerRightPos = controllerRight.pose.position;
         let controllerRightRot = controllerRight.pose.orientation;
         let controllerRightButtons = controllerRight.buttons;
 
-        let controllerLeft = MR.controllers[1];
+        let controllerLeft = MR.leftController;
         let controllerLeftPos = controllerLeft.pose.position;
         let controllerLeftRot = controllerLeft.pose.orientation;
         let controllerLeftButtons = controllerLeft.buttons;
@@ -197,14 +204,13 @@ function syncAvatarData(){
       let avatar_message = {
         type: "avatar",
         user: MR.playerid,
-        modeType : MODE_TYPE_VR,
         state: {
           pos: headsetPos,
           rot: headsetRot,
           controllers :{
             left:{
-              pos: [controllerLeftPos[0],controllerLeftPos[1], controllerLeftPos[2]],
-              rot: [controllerLeftRot[0],controllerLeftRot[1], controllerLeftRot[2], controllerLeftRot[3]],
+              pos: [controllerLeftPos[0], controllerLeftPos[1], controllerLeftPos[2]],
+              rot: [controllerLeftRot[0], controllerLeftRot[1], controllerLeftRot[2], controllerLeftRot[3]],
               analog: controllerLeftButtons[0].pressed,
               trigger: controllerLeftButtons[1].pressed,
               sideTrigger: controllerLeftButtons[2].pressed,
@@ -213,7 +219,6 @@ function syncAvatarData(){
               home: controllerLeftButtons[5].pressed,
               analogx: controllerLeft.axes[0],
               analogy: controllerLeft.axes[1]
-
             },
             right:{
               pos: [controllerRightPos[0],controllerRightPos[1], controllerRightPos[2]],

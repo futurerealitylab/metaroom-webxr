@@ -337,38 +337,6 @@ window.VRCanvasWrangler = (function() {
                     () => { return MR.wrangler.doWorldTransition({direction : +1, broadcast : true}); }
                     );
 
-                // let inputBox = document.createElement("input");
-                // inputBox.setAttribute('id', 'user-view-selection');
-                // inputBox.setAttribute('value', -1);
-                // inputBox.setAttribute('type', 'number');
-                // inputBox.classList.add('user-view-selection');
-                // this.userSelection = inputBox;
-
-                // this.userSelectionEnabled = 0;
-                // this.userSelection.style.display = "none";
-                // const userSelectionDisplayOpt = ["none", ""];
-                // this.userSelection.addEventListener("keyup", (event) => {
-                //     if (event.key == "Enter") {
-                //         try {
-                //             MR.viewpointController.switchView(parseInt(inputBox.value));
-                //         } catch (e) {
-                //             console.error(e);
-                //         }
-                //         this.menu.enableDisableUserSelection();
-                //     }
-                // });
-                // this.menu.enableDisableUserSelection = () => {
-                //     this.userSelectionEnabled = 1 - this.userSelectionEnabled; 
-                //     this.userSelection.style.display = 
-                //     userSelectionDisplayOpt[this.userSelectionEnabled];
-                //     inputBox.value = MR.viewpointController.playerid;
-                //     if (this.userSelectionEnabled) {
-                //         inputBox.focus();
-                //         inputBox.select();
-                //     }
-                // }
-
-///////////////////////////////////////////////////////////////////////////
                 this.playerViewScroll = createVerticalMenuElement();
 
                 MR.initPlayerViewSelectionScroll = () => {

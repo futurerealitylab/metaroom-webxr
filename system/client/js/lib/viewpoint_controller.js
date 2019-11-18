@@ -3,7 +3,7 @@
 class ViewpointController {
     constructor() {
         this.splitscreen = true;
-        this.playerid    = -1;
+        this.playerid    = MR.playerid;
     }
 
     viewIsSelf() {
@@ -11,7 +11,7 @@ class ViewpointController {
     }
 
     shouldShowAlternativeView() {
-        return !MR.VRIsActive() && !MR.viewpointController.viewIsSelf();
+        return !MR.VRIsActive() && !MR.viewpointController.viewIsSelf() && this.playerid != -1;
     }
 
     switchView(playerid) {

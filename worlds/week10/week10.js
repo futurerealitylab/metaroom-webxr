@@ -238,11 +238,14 @@ function onStartFrame(t, state) {
     const m      = state.m;
 
     Input.updateKeyState();
+    // this sets MR.leftController and MR.rightController
+    // every frame since they could change
     Input.updateControllerState();
 
+    // if VR is active, use the local controller data
     if (MR.VRIsActive()) {
-        if (!input.LC) input.LC = new MNController.ControllerHandler(MR.leftController, state.m);
-        if (!input.RC) input.RC = new MNController.ControllerHandler(MR.rightController, state.m);
+        input.LC = new MNController.ControllerHandler(MR.leftController,  state.m);
+        input.RC = new MNController.ControllerHandler(MR.rightController, state.m);
 
         if (! state.calibrate) {
             m.identity();
@@ -250,6 +253,41 @@ function onStartFrame(t, state) {
             m.translate(-2.01,.04,0);
             state.calibrate = m.value().slice();
        }
+    } else {
+        // if we want to show an alternative view...
+        if (MR.viewpointController.shouldShowAlternativeView()) {
+            // get the selected client's controller data
+            const remotePlayerData = MR.avatars[MR.viewpointController.playerid];
+            if (remotePlayerData) {
+                // need position, pose, orientation, buttons,
+                // the ControllerHandler uses a different format
+                // for accessing the controller data
+                // (but we can make it consistent 
+                // with what is sent over the network later)
+                // For now, a temporary hack that does a translation
+                const LCData = remotePlayerData.leftController;
+                const RCData = remotePlayerData.rightController;
+                const left = {
+                    buttons : [0, LCData.trigger],
+                    pose : {
+                        orientation : LCData.translate,
+                        position    : LCData.rotate
+                    }
+                }
+                const right = {
+                    buttons : [0, RCData.trigger],
+                    pose : {
+                        orientation : RCData.translate,
+                        position    : RCData.rotate
+                    }
+                };
+                input.LC = new MNController.ControllerHandler(left,  state.m);
+                input.RC = new MNController.ControllerHandler(right, state.m);
+            }
+        } else {
+            input.LC = null;
+            input.RC = null;
+        }
     }
 
     if (! state.tStart)
@@ -375,7 +413,15 @@ function Obj(shape) {
 };
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
-    gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
+
+    if (MR.viewpointController.shouldShowAlternativeView()) {
+        console.log("watching", MR.viewpointController.playerid);
+
+        const user = MR.avatars[MR.viewpointController.playerid];
+    } else {
+        gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
+    }
+
     gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
 
     let prevShape = null;
