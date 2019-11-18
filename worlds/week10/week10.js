@@ -38,20 +38,20 @@ let noise = null;
 let VERTEX_SIZE = 8;
 
 // (New Info): temp save modules as global "namespaces" upon loads
-let MNcontroller;
-let gfx;
+let ControllerHandler = null;
+let gfx               = null;
+
 
 // (New Info):
 // handle reloading of imports (called in setup() and in onReload())
 async function initCommon(state) {
-    MNcontroller = await MR.dynamicImport(
-        getPath('lib/MetaNook_OCtouchcontroller.js')
-    );
     // (New Info): use the previously loaded module saved in state, use in global scope
     // TODO automatic re-setting of loaded libraries to reduce boilerplate?
     gfx = state.gfx;
     state.m = new gfx.Matrix();
     noise = state.noise;
+
+    ControllerHandler = state.ControllerHandler.ControllerHandler;
 }
 
 // (New Info):
@@ -73,6 +73,8 @@ async function onExit(state) {
     console.log("Goodbye! =)");
 }
 
+
+
 async function setup(state) {
     hotReloadFile(getPath('week10.js'));
     // (New Info): Here I am loading the graphics module once
@@ -85,7 +87,15 @@ async function setup(state) {
     // after a reload
     state.gfx = await MR.dynamicImport(getPath('lib/graphics.js'));
     state.noise = new ImprovedNoise();
+
+    // week 9 K.P. VR controller object type, takes a controller + matrix
+    state.ControllerHandler = await MR.dynamicImport(
+        getPath("lib/MetaNook_OCtouchcontroller.js")
+    )
+    ControllerHandler = state.ControllerHandler.ControllerHandler;
     await initCommon(state);
+
+
 
     // (New Info): input state in a sub-object that can be cached
     // for convenience
@@ -244,8 +254,8 @@ function onStartFrame(t, state) {
 
     // if VR is active, use the local controller data
     if (MR.VRIsActive()) {
-        input.LC = new MNController.ControllerHandler(MR.leftController,  state.m);
-        input.RC = new MNController.ControllerHandler(MR.rightController, state.m);
+        input.LC = new ControllerHandler(MR.leftController,  state.m);
+        input.RC = new ControllerHandler(MR.rightController, state.m);
 
         if (! state.calibrate) {
             m.identity();
@@ -253,40 +263,34 @@ function onStartFrame(t, state) {
             m.translate(-2.01,.04,0);
             state.calibrate = m.value().slice();
        }
-    } else {
-        // if we want to show an alternative view...
-        if (MR.viewpointController.shouldShowAlternativeView()) {
-            // get the selected client's controller data
-            const remotePlayerData = MR.avatars[MR.viewpointController.playerid];
-            if (remotePlayerData) {
-                // need position, pose, orientation, buttons,
-                // the ControllerHandler uses a different format
-                // for accessing the controller data
-                // (but we can make it consistent 
-                // with what is sent over the network later)
-                // For now, a temporary hack that does a translation
-                const LCData = remotePlayerData.leftController;
-                const RCData = remotePlayerData.rightController;
-                const left = {
-                    buttons : [0, LCData.trigger],
-                    pose : {
-                        orientation : LCData.translate,
-                        position    : LCData.rotate
-                    }
+    } else if (!MR.viewpointController.viewIsSelf()) {
+        // get the selected client's controller data
+        const remotePlayerData = MR.avatars[MR.viewpointController.playerid];
+        if (remotePlayerData) {
+            // need position, pose, orientation, buttons,
+            // the ControllerHandler uses a different format
+            // for accessing the controller data
+            // (but we can make it consistent 
+            // with what is sent over the network later)
+            // For now, a temporary hack that does a translation
+            const LCData = remotePlayerData.leftController;
+            const RCData = remotePlayerData.rightController;
+            const left = {
+                buttons : [0, LCData.trigger],
+                pose : {
+                    orientation : LCData.translate,
+                    position    : LCData.rotate
                 }
-                const right = {
-                    buttons : [0, RCData.trigger],
-                    pose : {
-                        orientation : RCData.translate,
-                        position    : RCData.rotate
-                    }
-                };
-                input.LC = new MNController.ControllerHandler(left,  state.m);
-                input.RC = new MNController.ControllerHandler(right, state.m);
             }
-        } else {
-            input.LC = null;
-            input.RC = null;
+            const right = {
+                buttons : [0, RCData.trigger],
+                pose : {
+                    orientation : RCData.translate,
+                    position    : RCData.rotate
+                }
+            };
+            input.LC = new ControllerHandler(left,  state.m);
+            input.RC = new ControllerHandler(right, state.m);
         }
     }
 
@@ -355,7 +359,7 @@ function onStartFrame(t, state) {
         const getX = C => {
             m.save();
                 m.identity();
-                m.rotateQ(fromQuaternion(C.orientation()));
+                m.rotateQ(gfx.fromQuaternion(C.orientation()));
                 m.rotateX(.75);
                 let x = (m.value())[1];
             m.restore();
