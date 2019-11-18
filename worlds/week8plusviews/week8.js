@@ -52,6 +52,7 @@ async function setup(state) {
             },
             onAfterCompilation : (program) => {
                 gl.useProgram(state.program = program);
+
                 state.uColorLoc    = gl.getUniformLocation(program, 'uColor');
                 state.uCursorLoc   = gl.getUniformLocation(program, 'uCursor');
                 state.uModelLoc    = gl.getUniformLocation(program, 'uModel');
@@ -323,7 +324,6 @@ function drawUsers(m, state, drawOwnAvatarCallback, drawRemoteAvatarCallback) {
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
     gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
     gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
-
     let drawShape = (color, type, vertices, texture) => {
        gl.uniform3fv(state.uColorLoc, color);
        gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
