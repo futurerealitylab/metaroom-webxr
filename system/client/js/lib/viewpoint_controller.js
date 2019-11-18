@@ -13,7 +13,7 @@ class ViewpointController {
     shouldShowAlternativeView() {
         return !MR.VRIsActive() && !MR.viewpointController.viewIsSelf();
     }
-    
+
     switchView(playerid) {
         if (playerid == -1) {
             this.playerid = MR.playerid;
@@ -23,7 +23,7 @@ class ViewpointController {
             console.warn("playerid does not exist");
             return -1;
         }
-        this.playerid = this.playerid;
+        this.playerid = playerid;
         return this.playerid;
     }
 }
