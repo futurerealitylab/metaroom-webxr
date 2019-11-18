@@ -327,8 +327,6 @@ async function setup(state) {
     
     hotReloadFile(getPath("hp.js"));
 
-    MR.wrangler.initMultiViewpointSystem();
-
     matrixModule = await import(getPath("matrix.js"));
     Mat          = matrixModule.Matrix;
     state.M      = new matrixModule.Dynamic_Matrix4x4_Stack();
@@ -403,18 +401,18 @@ async function setup(state) {
         }
     });
 
-    window.TESTswitchView = (uid) => {
-        if (uid == -1) {
-            state.world.activeView = -1;
-            return;
-        }
-        console.log(state.world.remoteUserInfo);
-        if (!state.world.remoteUserInfo[uid]) {
-            console.warn("UID does not exist");
-            return;
-        }
-        state.world.activeView = uid;
-    }
+    // window.TESTswitchView = (uid) => {
+    //     if (uid == -1) {
+    //         state.world.activeView = -1;
+    //         return;
+    //     }
+    //     console.log(state.world.remoteUserInfo);
+    //     if (!state.world.remoteUserInfo[uid]) {
+    //         console.warn("UID does not exist");
+    //         return;
+    //     }
+    //     state.world.activeView = uid;
+    // }
 
 
     state.fog_color = [53.0 / 255.0, 81.0 / 255.0, 192.0 / 255.0, 1.0];

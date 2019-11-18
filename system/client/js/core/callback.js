@@ -1,10 +1,15 @@
 'use strict';
 
+
 MR.syncClient.registerEventHandler("platform", (json) => {
   
 });
 
 MR.syncClient.registerEventHandler("initialize", (json) => {
+
+  if (!MR.avatars) {
+    MR.avatars = {};
+  }
 
   const id = json["id"];
 
@@ -13,13 +18,13 @@ MR.syncClient.registerEventHandler("initialize", (json) => {
   let rightController = new Controller(avatarCube);
   let playerAvatar = new Avatar(avatarCube, id, leftController, rightController);
 
-  MR.avatars = {};
   for (let key in json["avatars"]) {
     const avid =  json["avatars"][key]["user"];
     let avatar = new Avatar(avatarCube, avid, leftController, rightController);
     MR.avatars[avid] = avatar;
   }
 
+  // MR.avatars[id] = playerAvatar;
   MR.playerid = id;
   console.log("player id is", id);
   console.log(MR.avatars);
@@ -40,11 +45,15 @@ MR.syncClient.registerEventHandler("join", (json) => {
   }
   
   console.log(MR.avatars);
+
+  MR.updatePlayersMenu();
 });
 
 MR.syncClient.registerEventHandler("leave", (json) => {
   console.log(json);
   delete MR.avatars[json["user"]];
+
+  MR.updatePlayersMenu();
 });
 
 MR.syncClient.registerEventHandler("tick", (json) => {
@@ -57,7 +66,10 @@ MR.syncClient.registerEventHandler("avatar", (json) => {
     //console.log(json);
     //console.log(payload);
     for(let key in payload) {
-      if (payload[key]["user"] in MR.avatars) {
+      //TODO: We should not be handling visible avatars like this.
+      //TODO: This is just a temporary bandaid. 
+      if (payload[key]["user"] in MR.avatars && payload[key]["state"]["mode"] == MR.UserType.vr) {
+
         MR.avatars[payload[key]["user"]].translate = payload[key]["state"]["pos"];
         MR.avatars[payload[key]["user"]].rotate = payload[key]["state"]["rot"];
         //console.log(payload[key]["state"]);
@@ -65,13 +77,17 @@ MR.syncClient.registerEventHandler("avatar", (json) => {
         MR.avatars[payload[key]["user"]].leftController.rotate =  payload[key]["state"].controllers.left.rot;
         MR.avatars[payload[key]["user"]].rightController.translate = payload[key]["state"].controllers.right.pos;
         MR.avatars[payload[key]["user"]].rightController.rotate = payload[key]["state"].controllers.right.rot;
-      } else { // never seen, create
-        console.log("previously unseen user avatar");
+        MR.avatars[payload[key]["user"]].mode = payload[key]["state"]["mode"];
+      } 
+      else { 
+       // never seen, create
+       //ALEX: AVATARS WHO ARE ALSO IN BROWSER MODE GO HERE...
+        //console.log("previously unseen user avatar");
         // let avatarCube = createCubeVertices();
         // MR.avatars[payload[key]["user"]] = new Avatar(avatarCube, payload[key]["user"]);
       }
     }
-  // }
+  //}
 });
 
 /*
@@ -157,9 +173,7 @@ MR.syncClient.registerEventHandler("calibration", (json) => {
 });
 
 
-
-
-function pollAvatarData(){
+function syncAvatarData(){
   if (MR.VRIsActive()) {
      let frameData = MR.frameData();
       if (frameData != null) {
@@ -195,6 +209,7 @@ function pollAvatarData(){
         type: "avatar",
         user: MR.playerid,
         state: {
+          mode: MR.UserType.vr,
           pos: headsetPos,
           rot: headsetRot,
           controllers :{
@@ -233,7 +248,6 @@ function pollAvatarData(){
 
 
       try {
-        console.log(avatar_message);
          MR.syncClient.send(avatar_message);
       } catch(err) {
          console.log(err);
@@ -243,5 +257,18 @@ function pollAvatarData(){
     }
 
      
-  } 
+  } else {
+    let avatar_message = {
+        type: "avatar",
+        user: MR.playerid,
+        state: {
+          mode: MR.UserType.browser,
+        }
+    }
+     try {
+         MR.syncClient.send(avatar_message);
+      } catch(err) {
+         console.log(err);
+      }
+  }
 }

@@ -127,36 +127,16 @@ window.Input.KEY_W = 87
 window.Input.KEY_D = 68;
 window.Input.KEY_S = 83;
 
-// TODO VR controls (?)
-window.Input.OCQ_SOMETHING = 0;
 
-window.Input.OCQ_input_ = {};
-Input.OCQ_input_.controllerStatePrev = [];
-Input.OCQ_input_.controllerStateCurr = [];
-Input.OCQ_input_.controllerStateLeft = {};
-Input.OCQ_input_.controllerStateRight = {};
-
-Input.gamePadEventQueue = new Queue();
-
-
-window.Input.initControllerEvents = function() {
-	window.addEventListener('gamepadconnected', function(e) {
-		console.log('Gamepad ' + e.gamepad.index + ' disconnected.');
-	});
-
-	window.addEventListener('gamepaddisconnected', function(e) {
-		console.log('Gamepad ' + e.gamepad.index + ' disconnected.');
-	});
-	// TODO
-}
-
-window.Input.updateControllerState = function() {
-	// TODO
-
-	// for all prev set to curr
-
-	// iterate through events queue
-	// update curr (object of states of buttons/bla?)
+Input.updateControllerState = () => {
+    if (MR.VRIsActive()) {
+        MR.headset = MR.frameData();
+        let left_is_0 = MR.controllers[0].id.indexOf('Left') > 0;
+        if (MR.controllers) {
+            MR.leftController  = MR.controllers[left_is_0 ? 0 : 1];
+            MR.rightController = MR.controllers[left_is_0 ? 1 : 0];
+        }
+    }
 }
 
 

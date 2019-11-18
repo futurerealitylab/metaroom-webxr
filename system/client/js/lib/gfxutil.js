@@ -718,9 +718,9 @@ window.GFX = (function() {
     _util.glAttachResourceTracking = glAttachResourceTracking;
 
     function glFreeResources(GL) {
-
         GL.disable(GL.CULL_FACE);
         GL.disable(GL.DEPTH_TEST);
+        GL.depthMask(true);
         GL.disable(GL.BLEND);
 
         //console.log("-unbinding texture units ...");

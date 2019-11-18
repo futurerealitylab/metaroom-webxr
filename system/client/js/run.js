@@ -129,19 +129,6 @@ default: {
 
                 MREditor.detectFeatures();
 
-                // MR.server.subs.subscribeOneShot("Echo", () => {
-                //   let callbacks = MR.wrangler.menu.instaniateServerDependentMenuArray;
-                //   let callbackCount = callbacks.length;
-                //   for (let i = 0; i < callbackCount; i += 1) {
-                //     callbacks[i]();
-                //   }
-                // });
-                // try {
-                //   MR.server.echo("Server is active");
-                // } catch (err) {
-                //   console.error(err);
-                // }
-
                 wrangler.isTransitioning = false;
 
                 let sourceFiles = document.getElementsByClassName("worlds");
@@ -169,7 +156,7 @@ default: {
                         setPath(worldInfo.localPath);
                         wrangler.isTransitioning = true;
                         MR.wrangler.beginSetup(worldInfo.world.default()).catch(err => {
-                                console.trace();
+                                //console.trace();
                                 console.error(err);
                                 MR.wrangler.doWorldTransition({direction : 1, broadcast : true});
                         }).then(() => { wrangler.isTransitioning = false;               
@@ -206,38 +193,41 @@ default: {
                 }
 
                 MR.initWorldsScroll();
+                MR.initPlayerViewSelectionScroll();
+
+                MR.syncClient.connect(window.IP, window.PORT_SYNC);
 
                 window.COUNT = 0;
 
                 
                 wrangler.defineWorldTransitionProcedure(function(args) {
-                    console.trace();
+                    //console.trace();
                     let ok = false;
                     COUNT += 1;
-                    console.log(COUNT, args);
+                    //console.log(COUNT, args);
                     // try to transition to the next world
                     while (!ok) {
                         if (args.direction) {
-                            console.log(COUNT, "has direction");
+                            //console.log(COUNT, "has direction");
                             MR.worldIdx = (MR.worldIdx + args.direction) % MR.worlds.length;
                             if (MR.worldIdx < 0) {
                                 MR.worldIdx = MR.worlds.length - 1;
                             }
                         } else if (args.key !== null) {
-                            console.log(COUNT, "key exists", args.key, "worldidx", MR.worldIdx);
+                            //console.log(COUNT, "key exists", args.key, "worldidx", MR.worldIdx);
                             if (args.key == MR.worldIdx) {
                                 ok = true;
                                 continue;
                             }
                             MR.worldIdx = parseInt(args.key);
-                            console.log(COUNT, "WORLDIDX",  MR.worldIdx);
+                            //console.log(COUNT, "WORLDIDX",  MR.worldIdx);
                         }
 
 
                         wrangler.isTransitioning = true;
 
-                        console.log(COUNT, "transitioning to world: [" + MR.worldIdx + "]");
-                        console.log(COUNT, "broadcast", args.broadcast, "direction: ", args.direction, "key", args.key);
+                        //console.log(COUNT, "transitioning to world: [" + MR.worldIdx + "]");
+                        //console.log(COUNT, "broadcast", args.broadcast, "direction: ", args.direction, "key", args.key);
 
                         CanvasUtil.setOnResizeEventHandler(null);
                         CanvasUtil.resize(MR.getCanvas(), 
@@ -251,7 +241,7 @@ default: {
                         ScreenCursor.clearTargetEvents();
                         Input.deregisterKeyHandlers();
 
-                        console.log(COUNT, "SWITCH");
+                        //console.log(COUNT, "SWITCH");
 
                         try {
                             // call the main function of the selected world
@@ -273,8 +263,8 @@ default: {
                             }).then(() => {
                                 wrangler.isTransitioning = false;
 
-                                console.log("now we should do deferred actions");
-                                console.log("ready");
+                                //console.log("now we should do deferred actions");
+                                //console.log("ready");
 
                                 for (let d = 0; d < deferredActions.length; d += 1) {
                                     deferredActions[d]();
@@ -303,7 +293,7 @@ default: {
 
 
                     if (args.broadcast && MR.server.sock.readyState == WebSocket.OPEN) {
-                        console.log(COUNT, "broadcasting");
+                        //console.log(COUNT, "broadcasting");
                         try {
                             MR.server.sock.send(JSON.stringify({
                                 "MR_Message" : "Load_World", "key" : MR.worldIdx, "content" : "TODO", "count" : COUNT})
@@ -319,16 +309,16 @@ default: {
                             return;
                         }
 
-                        console.log("loading world", args);
+                        //console.log("loading world", args);
                         if (wrangler.isTransitioning) {
-                            console.log("is deferring transition");
+                            //console.log("is deferring transition");
                             deferredActions = [];
                             deferredActions.push(() => { 
                                 MR.wrangler.doWorldTransition({direction : null, key : args.key, broadcast : false});
                             });
                             return;
                         }
-                        console.log("not deferring transition");
+                        //console.log("not deferring transition");
                         MR.wrangler.doWorldTransition({direction : null, key : args.key, broadcast : false});
                 });
 

@@ -9,6 +9,8 @@ class Avatar {
         this.rotate = [0,0,0,0];
         this.leftController = leftController;
         this.rightController = rightController;
+        //TODO: Do we really want this to be the default?
+        this.mode = MR.UserType.browser; 
     }
 }
 

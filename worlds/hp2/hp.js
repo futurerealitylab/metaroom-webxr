@@ -244,23 +244,29 @@ async function onReload(state) {
     // and you'd like to update your older objects based on those changes
     // or if you'd like to use some new functions you defined in other modules,
     // for example
-    return MR.dynamicImport(getPath("matrix.js")).then((myModule) => {
-        matrixModule = myModule;
-        Mat          = matrixModule.Matrix;
-    }).then(() => {
-        MR.dynamicImport(getPath("geometry.js")).then((myModule) => {
-            geometryModule  = myModule;
-            cubeVertexData  = geometryModule.cubeVertexData;
-            cubeIndexData   = geometryModule.cubeIndexData;
-            cubeVertexCount = geometryModule.cubeVertexCount;
-            cubeIndexCount  = geometryModule.cubeIndexCount;
-        }).then(() => {
-          MR.dynamicImport(getPath("simple_movement_controller.js")).then((myModule) => {
-            moveControllerModule = myModule;
-            MovementController   = myModule.SimpleMovementController;
-          })
-        });
-    });
+    //console.log("onReload start");
+    let myModule = null;
+    myModule = await MR.dynamicImport(getPath("matrix.js"));
+    matrixModule = myModule;
+    Mat          = matrixModule.Matrix;
+    //console.log("matrix.js");
+        
+    myModule = await MR.dynamicImport(getPath("geometry.js"))
+    geometryModule  = myModule;
+    cubeVertexData  = geometryModule.cubeVertexData;
+    cubeIndexData   = geometryModule.cubeIndexData;
+    cubeVertexCount = geometryModule.cubeVertexCount;
+    cubeIndexCount  = geometryModule.cubeIndexCount;
+    //console.log("geometry.js");
+
+    myModule = await MR.dynamicImport(getPath("simple_movement_controller.js"))
+    
+    moveControllerModule = myModule;
+    MovementController   = myModule.SimpleMovementController;
+    //console.log("simple_movement_controller.js");
+
+    //window.RELOAD_PENDING = false;
+    //console.log("onReload end");
 }
 
 // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
@@ -269,9 +275,6 @@ async function setup(state) {
     CanvasUtil.resize(MR.getCanvas(), 1280, 720);
     
     hotReloadFile(getPath("hp.js"));
-
-
-    MR.wrangler.initMultiViewpointSystem();
 
     // load modules
     matrixModule = await import(getPath("matrix.js"));
@@ -361,8 +364,8 @@ async function setup(state) {
         console.log("user left:", info.uid);
         // delete the user record
         delete state.world.remoteUserInfo[info.uid];
-        if (MR.multiViewpointSystem().activeViewID == info.uid) {
-            MR.multiViewpointSystem().activeViewID = -1;
+        if (MR.viewpointController.playerid == info.uid) {
+            MR.viewpointController.playerid = MR.playerid;
         }
     });
 
@@ -1052,6 +1055,8 @@ function onStartFrame(t, state) {
     // cache time values for ease-of-use
     const time = state.time;
     const deltaTime = state.deltaTime;
+
+    
     ////////////////////////////////////////////
 
     // this is logic for the falling cube that you can pick-up
@@ -1164,10 +1169,10 @@ function calculateSelfOrPeerViewMatrix(M, viewMat, state) {
     const world          = state.world;
     const userCam        = world.userCam;
     const remoteUserInfo = world.remoteUserInfo;
-    const activeViewID   = MR.multiViewpointSystem().activeViewID;
+    const activeplayerid   = MR.viewpointController.playerid;
 
     // calculate the view matrix from your perspective
-    if (activeViewID == -1) {
+    if (activeplayerid == -1) {
         Mat.rotateX(viewMat,
             userCam.rotateX
         );
@@ -1182,7 +1187,7 @@ function calculateSelfOrPeerViewMatrix(M, viewMat, state) {
     // calculate the view matrix from another user's perspective
     } else {
         
-        const userInfo = remoteUserInfo[activeViewID];
+        const userInfo = remoteUserInfo[activeplayerid];
     
         if (!userInfo.isVR) {
             Mat.rotateX(viewMat,
@@ -1417,6 +1422,10 @@ function onEndFrame(t, state) {
         }));        
     }
 }
+function onExit() {
+    console.log("WEE, goodbye!");
+
+}
 
 export default function main() {
     const def = {
@@ -1427,7 +1436,8 @@ export default function main() {
         onStartFrame : onStartFrame,
         onEndFrame   : onEndFrame,
         onDraw       : onDraw,
-        onReload     : onReload
+        onReload     : onReload,
+        onExit       : onExit
     };
 
     return def;
