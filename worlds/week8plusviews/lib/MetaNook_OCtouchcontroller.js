@@ -36,5 +36,15 @@ export function ControllerHandler(controller, m) {
       let v = m.value();
       return [v[12],v[13],v[14]];
    }
+   this.center = () => {
+      const m = this.m;
+      let P = this.position();
+      m.identity();
+      m.translate(P[0], P[1], P[2]);
+      m.rotateQ(this.orientation());
+      m.translate(0,.02,-.005);
+      let v = m.value();
+      return [v[12],v[13],v[14]];
+   }
    let wasDown = false;
 }
