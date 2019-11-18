@@ -1,7 +1,8 @@
 'use strict';
 
-
-
+MR.syncClient.registerEventHandler("platform", (json) => {
+  
+});
 
 MR.syncClient.registerEventHandler("initialize", (json) => {
 
@@ -51,7 +52,7 @@ MR.syncClient.registerEventHandler("tick", (json) => {
 });
 
 MR.syncClient.registerEventHandler("avatar", (json) => { 
-  if (MR.VRIsActive()) {
+  //if (MR.VRIsActive()) {
     const payload = json["data"];
     //console.log(json);
     //console.log(payload);
@@ -70,7 +71,7 @@ MR.syncClient.registerEventHandler("avatar", (json) => {
         // MR.avatars[payload[key]["user"]] = new Avatar(avatarCube, payload[key]["user"]);
       }
     }
-  }
+  // }
 });
 
 /*

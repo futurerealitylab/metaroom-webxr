@@ -248,6 +248,9 @@ MR.input = {
 };
 
 
+MR.UserType = {"browser":1, "vr":2, "spectator":3};
+Object.freeze(MR.UserType)
+
 //TODO: We should do this more cleanly.
 MR.VRIsActive = () => {
                 return false;
@@ -257,6 +260,9 @@ MR.syncClient = new Client();
 MR.syncClient.connect(window.IP_SYNC, window.PORT_SYNC);
 MR.avatars = {};
 MR.playerid = -1;
+MR.playertype = UserType.browser;
+
+;
 
 window.onbeforeunload = function() {
     websocket.onclose = function () {}; // disable onclose handler first
