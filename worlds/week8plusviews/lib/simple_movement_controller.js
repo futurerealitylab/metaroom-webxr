@@ -20,6 +20,8 @@ export class BasicFirstPerson {
 
         this.rotateX = 0;
         this.rotateY = 0;
+
+        this.scale = 1.0;
     }
 
     updateWithCursor(deltaTime, friction, left_, right_, up_, down_, vertical_, xRes, yRes, cx, cy) {
@@ -139,6 +141,50 @@ export class BasicFirstPerson {
             );
         }
     }
+
+    rotationX() {
+        return this.rotateX;
+    }
+    rotationY() {
+        return this.angle - this.rotateY;
+    }
+
+    translationX() {
+        return -this.position[0];
+    }
+    translationY() {
+        return -this.position[1];
+    }
+    translationZ() {
+        return -this.position[2];
+    }
+    translationAtDim(i) {
+        return -this.position[i];
+    }
+
+    calcViewMatrixUsingDefaultMatrixStack(m) {
+        let mat = null;
+        m.save();
+        {
+            m.identity();
+            m.rotateX(
+                this.rotationX(),
+            );
+            m.rotateY(
+                this.rotationY(),
+            );
+            m.translate( 
+                this.translationX(),
+                this.translationY(),
+                this.translationZ()
+            );
+            mat = m.value();     
+        }
+        m.restore();
+
+        return mat;
+    }
+
 
     reset() {
         this.position[0] = this.startPosition[0];

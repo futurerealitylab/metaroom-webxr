@@ -129,19 +129,6 @@ default: {
 
                 MREditor.detectFeatures();
 
-                // MR.server.subs.subscribeOneShot("Echo", () => {
-                //   let callbacks = MR.wrangler.menu.instaniateServerDependentMenuArray;
-                //   let callbackCount = callbacks.length;
-                //   for (let i = 0; i < callbackCount; i += 1) {
-                //     callbacks[i]();
-                //   }
-                // });
-                // try {
-                //   MR.server.echo("Server is active");
-                // } catch (err) {
-                //   console.error(err);
-                // }
-
                 wrangler.isTransitioning = false;
 
                 let sourceFiles = document.getElementsByClassName("worlds");
@@ -206,6 +193,9 @@ default: {
                 }
 
                 MR.initWorldsScroll();
+                MR.initPlayerViewSelectionScroll();
+
+                MR.syncClient.connect(window.IP, window.PORT_SYNC);
 
                 window.COUNT = 0;
 

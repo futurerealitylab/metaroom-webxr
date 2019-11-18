@@ -184,26 +184,6 @@ window.VRCanvasWrangler = (function() {
             conf.onAnimationFrameWindow = options.onAnimationFrameWindow || conf.onAnimationFrameWindow;
         }
 
-        initMultiViewpointSystem() {
-            this.viewpointInfo = {};
-            this.viewpointInfo.splitscreen = true;
-            this.viewpointInfo.activeViewID = -1;
-
-            MR.multiViewpointSystem = () => {
-                return this.viewpointInfo;
-            }
-        }
-
-
-
-        enableMultiViewpointSplitscreen(opt) {
-            this.viewpointInfo.splitscreen = opt;
-        }
-
-        setHostViewpoint(id) {
-            // TODO
-        }
-
         async configure(options) {
             if (this.config.onExit) {
                 this.config.onExit(this.customState);
@@ -357,58 +337,108 @@ window.VRCanvasWrangler = (function() {
                     () => { return MR.wrangler.doWorldTransition({direction : +1, broadcast : true}); }
                     );
 
+                // let inputBox = document.createElement("input");
+                // inputBox.setAttribute('id', 'user-view-selection');
+                // inputBox.setAttribute('value', -1);
+                // inputBox.setAttribute('type', 'number');
+                // inputBox.classList.add('user-view-selection');
+                // this.userSelection = inputBox;
 
-                MR.switchView = (uid) => {
-                    if (uid == -1) {
-                        MR.multiViewpointSystem().activeViewID = -1;
-                        return -1;
+                // this.userSelectionEnabled = 0;
+                // this.userSelection.style.display = "none";
+                // const userSelectionDisplayOpt = ["none", ""];
+                // this.userSelection.addEventListener("keyup", (event) => {
+                //     if (event.key == "Enter") {
+                //         try {
+                //             MR.viewpointController.switchView(parseInt(inputBox.value));
+                //         } catch (e) {
+                //             console.error(e);
+                //         }
+                //         this.menu.enableDisableUserSelection();
+                //     }
+                // });
+                // this.menu.enableDisableUserSelection = () => {
+                //     this.userSelectionEnabled = 1 - this.userSelectionEnabled; 
+                //     this.userSelection.style.display = 
+                //     userSelectionDisplayOpt[this.userSelectionEnabled];
+                //     inputBox.value = MR.viewpointController.playerid;
+                //     if (this.userSelectionEnabled) {
+                //         inputBox.focus();
+                //         inputBox.select();
+                //     }
+                // }
+
+///////////////////////////////////////////////////////////////////////////
+                this.playerViewScroll = createVerticalMenuElement();
+
+                MR.initPlayerViewSelectionScroll = () => {
+                    window.CLICKMENUPLAYERS = (id) => {
+                        const el = document.getElementById(id);
+                        el.classList = "active";
+                        MR.wrangler.menu.enableDisablePlayersScroll();     
+
+                        window.DISABLEMENUFORPLAYERSEXCEPT(id);   
                     }
-                    console.log(MR.wrangler.customState.world.remoteUserInfo);
-                    if (!MR.wrangler.customState.world.remoteUserInfo[uid]) {
-                        console.warn("UID does not exist");
-                        return -2;
-                    }
-                    MR.multiViewpointSystem().activeViewID = uid;
-                    return uid;
-                }
-
-                let inputBox = document.createElement("input");
-                inputBox.setAttribute('id', 'user-view-selection');
-                inputBox.setAttribute('value', -1);
-                inputBox.setAttribute('type', 'number');
-                inputBox.classList.add('user-view-selection');
-                this.userSelection = inputBox;
-
-                this.userSelectionEnabled = 0;
-                this.userSelection.style.display = "none";
-                const userSelectionDisplayOpt = ["none", ""];
-                this.userSelection.addEventListener("keyup", (event) => {
-                    if (event.key == "Enter") {
-                        try {
-                            MR.switchView(parseInt(inputBox.value));
-                        } catch (e) {
-                            console.error(e);
+                    window.DISABLEMENUFORPLAYERSEXCEPT = (id) => {
+                        const playersMenuItems = this.playerViewScroll.getElementsByTagName("div");
+                        id = parseInt(id);
+                        for (let i = 0; i < id; i += 1) {
+                            playersMenuItems[i].classList.remove("active");
                         }
-                        this.menu.enableDisableUserSelection();
+
+                        const len = playersMenuItems.length;
+                        for (let i = id + 1; i < len; i += 1) {
+                            playersMenuItems[i].classList.remove("active");
+                        }
+                        playersMenuItems[id].classList.add("active");
+
+                        const playerid = playersMenuItems[id].getAttribute("value");
+                        MR.viewpointController.switchView(playerid);
+                        MR.updatePlayersMenu();
                     }
-                });
-                this.menu.enableDisableUserSelection = () => {
-                    this.userSelectionEnabled = 1 - this.userSelectionEnabled; 
-                    this.userSelection.style.display = 
-                    userSelectionDisplayOpt[this.userSelectionEnabled];
-                    inputBox.value = MR.multiViewpointSystem().activeViewID;
-                    if (this.userSelectionEnabled) {
-                        inputBox.focus();
-                        inputBox.select();
+                    function addPlayerMenuEntry(contentArr, i, id) {
+                        contentArr.push(
+                            "<div id="
+                        );
+                        contentArr.push(i);
+                        contentArr.push(" value=");
+                        contentArr.push(id);
+                        contentArr.push(' onclick="window.CLICKMENUPLAYERS(this.id)">');
+                        contentArr.push('       ');
+                        contentArr.push(id);
+                        contentArr.push("</div>\n");                        
                     }
+                    MR.updatePlayersMenu = () => {
+                        const players = MR.avatars;
+                        const contentArr = [];
+
+                        let i = 0;
+                        for (let id in players) {
+                            addPlayerMenuEntry(contentArr, i, id);
+                            i += 1;
+                        }
+
+                        this.playerViewScroll.innerHTML = contentArr.join('');
+                    };
+                };
+
+                this.playerViewScrollEnabled = 0;
+                this.playerViewScroll.style.display = "none";
+                const playerViewScrollDisplayOpt = ["none", ""];
+
+                this.menu.enableDisablePlayersScroll = () => {
+                    this.playerViewScrollEnabled = 1 - this.playerViewScrollEnabled; 
+                    this.playerViewScroll.style.display = 
+                    playerViewScrollDisplayOpt[this.playerViewScrollEnabled]; 
                 }
-                this.menu.menus.observe = new MenuItem(
+//////////////////////////////////////////////////////////////////////////////////
+                this.menu.menus.playerViewSelection = new MenuItem(
                     this.menu.el,
                     'ge_menu',
-                    'Peer Mode',
-                    this.menu.enableDisableUserSelection
+                    'User View',
+                    this.menu.enableDisablePlayersScroll
                 );
-                this.menu.menus.observe.el.appendChild(inputBox);
+                this.menu.menus.playerViewSelection.el.appendChild(this.playerViewScroll);
 
                 }
 

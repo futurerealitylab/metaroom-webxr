@@ -1,46 +1,12 @@
 "use strict"
-////////////////////////////// MATRIX SUPPORT
 
-let cos = t => Math.cos(t);
-let sin = t => Math.sin(t);
-let identity = ()       => [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
-let rotateX = t         => [1,0,0,0, 0,cos(t),sin(t),0, 0,-sin(t),cos(t),0, 0,0,0,1];
-let rotateY = t         => [cos(t),0,-sin(t),0, 0,1,0,0, sin(t),0,cos(t),0, 0,0,0,1];
-let rotateZ = t         => [cos(t),sin(t),0,0, -sin(t),cos(t),0,0, 0,0,1,0, 0,0,0,1];
-let scale = (x,y,z)     => [x,0,0,0, 0,y,0,0, 0,0,z,0, 0,0,0,1];
-let translate = (x,y,z) => [1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1];
-let multiply = (a, b)   => {
-   let c = [];
-   for (let n = 0 ; n < 16 ; n++)
-      c.push( a[n&3     ] * b[    n&12] +
-              a[n&3 |  4] * b[1 | n&12] +
-              a[n&3 |  8] * b[2 | n&12] +
-              a[n&3 | 12] * b[3 | n&12] );
-   return c;
-}
-
-let Matrix = function() {
-   let topIndex = 0,
-       stack = [ identity() ],
-       getVal = () => stack[topIndex],
-       setVal = m => stack[topIndex] = m;
-
-   this.identity  = ()      => setVal(identity());
-   this.restore   = ()      => --topIndex;
-   this.rotateX   = t       => setVal(multiply(getVal(), rotateX(t)));
-   this.rotateY   = t       => setVal(multiply(getVal(), rotateY(t)));
-   this.rotateZ   = t       => setVal(multiply(getVal(), rotateZ(t)));
-   this.save      = ()      => stack[++topIndex] = stack[topIndex-1].slice();
-   this.scale     = (x,y,z) => setVal(multiply(getVal(), scale(x,y,z)));
-   this.translate = (x,y,z) => setVal(multiply(getVal(), translate(x,y,z)));
-   this.value     = ()      => getVal();
-}
-
-////////////////////////////// SUPPORT FOR CREATING 3D SHAPES
+let cubeVertices  = null;
+let m             = null;
+let noise         = null;
+let gfx           = null;
 
 const VERTEX_SIZE = 8;
-
-let cubeVertices = createCubeVertices();
+const FRICTION    = 0.002;
 
 ////////////////////////////// SCENE SPECIFIC CODE
 
@@ -53,8 +19,7 @@ async function setup(state) {
     ]);
 
     let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
-        { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true },
-        { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
+        { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true }, 
     ]);
     if (! libSources)
         throw new Error("Could not load shader library");
@@ -94,11 +59,11 @@ async function setup(state) {
                 state.uTexIndexLoc = gl.getUniformLocation(program, 'uTexIndex');
                 state.uTimeLoc     = gl.getUniformLocation(program, 'uTime');
                 state.uViewLoc     = gl.getUniformLocation(program, 'uView');
-		state.uTexLoc = [];
-		for (let n = 0 ; n < 8 ; n++) {
-		   state.uTexLoc[n] = gl.getUniformLocation(program, 'uTex' + n);
-                   gl.uniform1i(state.uTexLoc[n], n);
-		}
+                state.uTexLoc = [];
+                for (let n = 0 ; n < 8 ; n++) {
+                   state.uTexLoc[n] = gl.getUniformLocation(program, 'uTex' + n);
+                               gl.uniform1i(state.uTexLoc[n], n);
+                }
             } 
         },
         {
@@ -114,8 +79,6 @@ async function setup(state) {
     );
     if (! shaderSource)
         throw new Error("Could not load shader");
-
-    state.cursor = ScreenCursor.trackCursor(MR.getCanvas());
 
     state.buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, state.buffer);
@@ -147,38 +110,124 @@ async function setup(state) {
 
     state.bgColor = [0.529, 0.808, 0.922, 1.0];
 
+    // (New): /////////////////////////////////////////
+    // initialize keyboard events
+    Input.initKeyEvents();
+
+    // load modules (assuming these won't be reloaded for now for simplicity)
+    state.gfx = await MR.dynamicImport(getPath("lib/graphics.js"));
+    gfx = state.gfx;
+    // module containing default camera/movement controllers
+    state.MovementController = await MR.dynamicImport(
+        getPath("lib/simple_movement_controller.js")
+    );
+
+    // week 9 K.P. VR controller object type, takes a controller + matrix
+    state.OCTouchControllerHandler = await MR.dynamicImport(
+        getPath("lib/MetaNook_OCtouchcontroller.js")
+    ).ControllerHandler;
+
+    // create a matrix stack
+    state.m = new state.gfx.Matrix();
+    m       = state.m;
+
+    // generate cube vertices (other shapes in the library available in week9)
+    state.cubeVertices = state.gfx.createCubeVertices();
+    cubeVertices       = state.cubeVertices;
+
+    state.noise = new ImprovedNoise();
+    noise       = state.noise;
+
+    // everything related to input in this sub-object
+    state.input = {
+        cursor     : ScreenCursor.trackCursor(MR.getCanvas()),
+        turnAngle  : 0,
+        cursorPrev : [0, 0, 0]
+    }
+    // create an instance of the default 
+    // keyboard + mouse first-person controller
+    state.userCam = new state.MovementController.BasicFirstPerson({
+        startPosition  : [0.0, 0.0, 0.0],
+        acceleration   : 100.0,
+        maxSpeed       : 7
+    });
+    /////////////////////////////////////////
 }
 
-let noise = new ImprovedNoise();
-let m = new Matrix();
-let turnAngle = 0, cursorPrev = [0,0,0];
+async function onReload(state) {
+    // upon reload, these globals are wiped, 
+    // so the references must be copied
+    // from state
+    gfx          = state.gfx;
+    m            = state.m;
+    cubeVertices = state.cubeVertices;
+    noise        = state.noise;
+}
 
+const USE_OLD_MOUSE_CONTROLS = false;
 function onStartFrame(t, state) {
-    if (! state.tStart)
+    // (New): ///////////////////////////////
+    // More time updates here to support the desktop cam,
+    // update time and delta time
+    let tStartMS = t;
+    if (!state.tStart) {
         state.tStart = t;
-    state.time = (t - state.tStart) / 1000;
+        state.timeMS = t;
+    }
+
+    tStartMS = state.tStart;
+
+    const timeNow = (t - tStartMS);
+
+    // update time delta between frames (ms and s)
+    state.deltaTimeMS = timeNow - state.timeMS;
+    state.deltaTime   = state.deltaTimeMS / 1000.0;
+    // update elapsed time (ms and s)
+    state.timeMS = timeNow;
+    state.time   = state.timeMS / 1000.0;
+
+    const time      = state.time;
+    const deltaTime = state.deltaTime;
+    //////////////////////////////////////////////
+
+    const input  = state.input;
+    const cursor = input.cursor;
+
+    // update keyboard controls
+    Input.updateKeyState();
+    // update left/right controller (based on KP hw 9)
+    Input.updateControllerState();
 
     let cursorValue = () => {
-       let p = state.cursor.position(), canvas = MR.getCanvas();
+       let p = cursor.position(), canvas = MR.getCanvas();
        return [ p[0] / canvas.clientWidth * 2 - 1, 1 - p[1] / canvas.clientHeight * 2, p[2] ];
     }
     
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.clearColor(state.bgColor[0], state.bgColor[1], state.bgColor[2], state.bgColor[3]);
 
+    if (USE_OLD_MOUSE_CONTROLS) {
+        let cursorXYZ = cursorValue();
+        if (cursorXYZ[2] && input.cursorPrev[2]) {
+            input.turnAngle += 2 * (cursorXYZ[0] - input.cursorPrev[0]);
+        }
+        input.cursorPrev = cursorXYZ;
 
-    let cursorXYZ = cursorValue();
-    if (cursorXYZ[2] && cursorPrev[2])
-        turnAngle += 2 * (cursorXYZ[0] - cursorPrev[0]);
-    cursorPrev = cursorXYZ;
+        gl.uniform3fv(state.uCursorLoc, cursorXYZ);
+    } else {
 
-    gl.uniform3fv(state.uCursorLoc     , cursorXYZ);
-    gl.uniform1f (state.uTimeLoc       , state.time);
+        // (New): update the desktop camera
+        state.userCam.speed = 2;
+        state.userCam.updateUsingDefaults(
+            deltaTime, FRICTION, 
+            Input, cursor, MR.getCanvas()
+        );
+    }
+
+    gl.uniform1f (state.uTimeLoc, state.time);
 
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
-
-
 }
 
 function drawAvatar(id, pos, rot, scale, state) {
@@ -199,6 +248,78 @@ m.save();
 m.restore();
 }
 
+// (New): in onDraw there's a similar logic loop,
+// so the logic in this basicDrawUsers can be taken for
+// the extra cases
+function drawUsers(m, state, drawOwnAvatarCallback, drawRemoteAvatarCallback) {
+    const avatars = MR.avatars;
+    drawOwnAvatarCallback    = drawOwnAvatarCallback    || function() {};
+    drawRemoteAvatarCallback = drawRemoteAvatarCallback || function() {};
+
+    // draw remote users
+    for (let id in MR.avatars) {
+        const user = MR.avatars[id];
+
+        // draw self
+        if (MR.playerid == avatars.playerid) {
+            m.save();
+            {
+
+                // TODO use local information for drawing?
+                if (MR.VRIsActive()) {
+
+                } else {
+                    // draw whatever you'd like on desktop
+                }
+
+                // param drawCallback takes a matrix and state and draws
+                // the avatar however specified (e.g. pass a version of the drawAvatar
+                // callback for the simple test)
+                drawOwnAvatarCallback(m, state);
+            
+            }
+            m.restore();
+
+            continue;
+        }
+
+        // draw someone else
+        m.save();
+        {
+            m.identity();
+
+            // if desktop, render with the client-specific object
+            // (in this example, the first-person camera position)
+            const modeType = user.modeType;
+            switch (modeType) {
+            case "VR": {
+                // TODO reuse drawAvatar params here?
+                //m.translate(world.localWorldPosition);
+                //m.rotateQ(world.localWorldOrientation);
+                break;
+            }
+            // if VR, render self
+            default: {
+                /*
+                TODO
+                m.translate(userCam.position);
+
+                m.rotateX(-userCam.rotateX);
+                m.rotateY(-userCam.angle + userCam.rotateY);
+                */
+                break;       
+            }
+            }
+
+            // param drawCallback takes a matrix and state and draws
+            // the avatar however specified (e.g. pass a version of the drawAvatar
+            // callback for the simple test)
+            drawRemoteAvatarCallback(m, state);
+        }
+        m.restore();           
+    }
+}
+
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
     gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
     gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
@@ -211,8 +332,134 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
        gl.drawArrays(type, 0, vertices.length / VERTEX_SIZE);
     }
 
+    const input = state.input;
+
     m.identity();
-    m.rotateY(turnAngle);
+    m.rotateY(input.turnAngle);
+
+    // (New): temporarily (to show it's working) 
+    // when in non-VR mode,
+    // always calculate the view matrix based on the user cam
+    if (!MR.VRIsActive()) {
+        // (New): this logic will probably be placed in 
+        // one of the default functions from before
+        const userCam = state.userCam;
+        // you'd need to modify this function 
+        // to use a different matrix library implementation
+        gl.uniformMatrix4fv(state.uViewLoc, false, 
+            userCam.calcViewMatrixUsingDefaultMatrixStack(m)
+        );
+    }
+
+    // (New): show a remote viewpoint
+    if (MR.viewpointController.shouldShowAlternativeView()) {
+        // TODO calculate matrix of remote user
+        // This is copied from part of the example draw users
+        // function from before... maybe could be part of the same thing
+        const user = MR.avatars[MR.viewpointController.playerid];
+
+        // TODO move to function
+        if (user) {
+            m.save();
+            {
+                m.identity();
+
+                // if desktop, render with the client-specific object
+                // (in this example, the first-person camera position)
+                const modeType = user.modeType;
+                switch (modeType) {
+                case "VR": {
+                    // TODO reuse drawAvatar params here?
+                    //m.translate(world.localWorldPosition);
+                    //m.rotateQ(world.localWorldOrientation);
+                    break;
+                }
+                default: {
+                    /*
+                    TODO
+                    m.translate(userCam.position);
+
+                    m.rotateX(-userCam.rotateX);
+                    m.rotateY(-userCam.angle + userCam.rotateY);
+                    */
+                    break;       
+                }
+                }
+
+                // TODO use the calculated view matrix for the remote user
+                // This is how I previously did it:
+                /*
+                function calculateSelfOrPeerViewMatrix(M, viewMat, state) {
+                    const world          = state.world;
+                    const userCam        = world.userCam;
+                    const remoteUserInfo = world.remoteUserInfo;
+                    const activeplayerid   = MR.viewpointController.playerid;
+
+                    // calculate the view matrix from your perspective -- non VR so it's
+                    // using the fly camera again
+                    if (activeplayerid == -1) {
+                        Mat.rotateX(viewMat,
+                            userCam.rotateX
+                        );
+                        Mat.rotateY(viewMat,
+                            userCam.angle - userCam.rotateY
+                        );
+                        Mat.translate(viewMat, 
+                            -userCam.position[0],
+                            -userCam.position[1],
+                            -userCam.position[2]
+                        );
+                    // calculate the view matrix from another user's perspective
+                    } else {
+                        
+                        const userInfo = remoteUserInfo[activeplayerid];
+                    
+                        if (!userInfo.isVR) {
+                            Mat.rotateX(viewMat,
+                                userInfo.rotateX
+                            );
+                            Mat.rotateY(viewMat,
+                                userInfo.angle - userInfo.rotateY
+                            );
+                            Mat.translate(viewMat, 
+                                -userInfo.pos[0],
+                                -userInfo.pos[1],
+                                -userInfo.pos[2]
+                            ); 
+                        } else {
+                            // WebVR uses quaternions for orientation
+
+                            Mat.identity(fromQuatMat);
+
+                            const quat = userInfo.angle;
+                            fromQuat(fromQuatMat, quat);
+
+                            Mat.inverse(fromQuatMat, fromQuatMat);
+
+                            Mat.multiply(
+                                viewMat,
+                                fromQuatMat,
+                                viewMat
+                            );
+
+                            Mat.translate(viewMat, 
+                                -userInfo.pos[0],
+                                -userInfo.pos[1],
+                                -userInfo.pos[2]
+                            );
+                        }
+
+                    }
+
+                    return viewMat;
+                }
+                const altViewMatrix = calculateSelfOrPeerViewMatrix(m, state)
+                */
+                // gl.uniformMatrix4fv(state.uViewLoc, false, altViewMatrix);
+            }
+            m.restore();
+        }
+    }
 
     m.save();
        m.translate(0,-2,0);
@@ -224,7 +471,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     for (let x = -3 ; x <= 3 ; x += 2) {
        m.save();
           let y = Math.max(Math.abs(x),Math.abs(z)) / 3 - 1 +
-	          noise.noise(x, 0, 100 * z + state.time / 2) / 5;
+            noise.noise(x, 0, 100 * z + state.time / 2) / 5;
           m.translate(x, y, z);
           m.scale(.3,.3,.3);
           drawShape([1,1,1], gl.TRIANGLES, cubeVertices, 0);
@@ -243,8 +490,8 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
           //   console.log(id);
           //   console.log("not defined");
           // }
-
-          if(MR.playerid == MR.avatars[id].playerid){
+          // if self
+          if(MR.playerid == MR.avatars[id].playerid) {
 
             let headsetPos = frameData.pose.position;
             let headsetRot = frameData.pose.orientation;
@@ -254,6 +501,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             //console.log("user");
             //console.log(headsetPos);
             //console.log(headsetRot);
+
             drawAvatar(id, headsetPos, headsetRot, .1, state);
             drawAvatar(id, rcontroller.pose.position, rcontroller.pose.orientation, 0.05, state);
             drawAvatar(id, lcontroller.pose.position, lcontroller.pose.orientation, 0.05, state);
@@ -265,6 +513,8 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             //   m.scale(.1,.1,.1);
             //   drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
             // m.restore();
+
+          // if not self
           } else {
             let headsetPos = MR.avatars[id].translate;
             let headsetRot = MR.avatars[id].rotate;
@@ -405,11 +655,12 @@ function onEndFrame(t, state) {
 
 export default function main() {
     const def = {
-        name         : 'week8',
+        name         : 'week8 views',
         setup        : setup,
         onStartFrame : onStartFrame,
         onEndFrame   : onEndFrame,
         onDraw       : onDraw,
+        onReload     : onReload,
     };
 
     return def;
