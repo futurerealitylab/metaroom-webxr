@@ -22,9 +22,9 @@ class Client
     }
 
     registerEventHandler(eventName, callback) {
-        if (eventName in this.callbacks) {
-            return false;
-        }
+        // if (eventName in this.callbacks) {
+        //     return false;
+        // }
 
         this.callbacks[eventName] = callback;
         return true;
@@ -93,7 +93,7 @@ class Client
                     if (json["type"] in this.callbacks) {
                         this.callbacks[json["type"]](json);
                     } else {
-                        console.log("message of type %s is not supported yet", json["type"]);
+                        console.warn("message of type %s is not supported yet", json["type"]);
                     }
                     
                     // switch(json["type"]) {

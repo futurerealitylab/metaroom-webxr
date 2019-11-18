@@ -213,6 +213,8 @@ async function setup(state) {
     };
 
     state.calibrationCount = 0;
+
+    Input.initKeyEvents();
 }
 
 
@@ -234,6 +236,9 @@ function onStartFrame(t, state) {
     const input  = state.input;
     const editor = state.editor;
     const m      = state.m;
+
+    Input.updateKeyState();
+    Input.updateControllerState();
 
     if (MR.VRIsActive()) {
         if (!input.LC) input.LC = new MNController.ControllerHandler(MR.leftController, state.m);
