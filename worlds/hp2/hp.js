@@ -276,9 +276,6 @@ async function setup(state) {
     
     hotReloadFile(getPath("hp.js"));
 
-
-    MR.wrangler.initMultiViewpointSystem();
-
     // load modules
     matrixModule = await import(getPath("matrix.js"));
     Mat          = matrixModule.Matrix;
@@ -367,8 +364,8 @@ async function setup(state) {
         console.log("user left:", info.uid);
         // delete the user record
         delete state.world.remoteUserInfo[info.uid];
-        if (MR.multiViewpointSystem().activeViewID == info.uid) {
-            MR.multiViewpointSystem().activeViewID = -1;
+        if (MR.viewpointController.playerid == info.uid) {
+            MR.viewpointController.playerid = MR.playerid;
         }
     });
 
@@ -1172,10 +1169,10 @@ function calculateSelfOrPeerViewMatrix(M, viewMat, state) {
     const world          = state.world;
     const userCam        = world.userCam;
     const remoteUserInfo = world.remoteUserInfo;
-    const activeViewID   = MR.multiViewpointSystem().activeViewID;
+    const activeplayerid   = MR.viewpointController.playerid;
 
     // calculate the view matrix from your perspective
-    if (activeViewID == -1) {
+    if (activeplayerid == -1) {
         Mat.rotateX(viewMat,
             userCam.rotateX
         );
@@ -1190,7 +1187,7 @@ function calculateSelfOrPeerViewMatrix(M, viewMat, state) {
     // calculate the view matrix from another user's perspective
     } else {
         
-        const userInfo = remoteUserInfo[activeViewID];
+        const userInfo = remoteUserInfo[activeplayerid];
     
         if (!userInfo.isVR) {
             Mat.rotateX(viewMat,

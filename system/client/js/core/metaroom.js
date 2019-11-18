@@ -256,7 +256,7 @@ MR.VRIsActive = () => {
             }
 
 MR.syncClient = new Client();
-MR.syncClient.connect(window.IP_SYNC, window.PORT_SYNC);
+// MR.syncClient.connect(window.IP_SYNC, window.PORT_SYNC);
 MR.avatars = {};
 MR.playerid = -1;
 
@@ -265,9 +265,6 @@ window.onbeforeunload = function() {
     websocket.close();
 };
 
-/*
-//Alex: Client to synchronize.
-MR.syncClient = new Client();
-MR.syncClient.connect("192.168.1.103", window.PORT_SYNC);
-MR.avatars = {};*/
 
+
+MR.viewpointController = new ViewpointController();

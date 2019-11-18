@@ -22,9 +22,9 @@ class Client
     }
 
     registerEventHandler(eventName, callback) {
-        if (eventName in this.callbacks) {
-            return false;
-        }
+        // if (eventName in this.callbacks) {
+        //     return false;
+        // }
 
         this.callbacks[eventName] = callback;
         return true;
@@ -93,7 +93,7 @@ class Client
                     if (json["type"] in this.callbacks) {
                         this.callbacks[json["type"]](json);
                     } else {
-                        console.log("message of type %s is not supported yet", json["type"]);
+                        console.warn("message of type %s is not supported yet", json["type"]);
                     }
                     
                     // switch(json["type"]) {
@@ -126,7 +126,7 @@ class Client
                     // }
                 } catch(err) {
                     // console.log("bad json:", json);
-                    console.log(err);
+                    console.error(err);
                 }
                 //console.log(JSON.parse(ev));
             };
@@ -176,7 +176,7 @@ class Client
             this.ws.onerror = (e) => {
                 switch (e.code) {
                     case 'ECONNREFUSED':
-                        console.log(e);
+                        console.error(e);
                         // reconnect(e);
                         this.ws.close();
                         break;
@@ -187,7 +187,7 @@ class Client
             };
         
         } catch (err) {
-            console.log("Couldn't load websocket", err);
+            console.error("Couldn't load websocket", err);
         }
     }
 };

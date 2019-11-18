@@ -41,11 +41,15 @@ MR.syncClient.registerEventHandler("join", (json) => {
   }
   
   console.log(MR.avatars);
+
+  MR.updatePlayersMenu();
 });
 
 MR.syncClient.registerEventHandler("leave", (json) => {
   console.log(json);
   delete MR.avatars[json["user"]];
+
+  MR.updatePlayersMenu();
 });
 
 MR.syncClient.registerEventHandler("tick", (json) => {
@@ -53,7 +57,6 @@ MR.syncClient.registerEventHandler("tick", (json) => {
 });
 
 MR.syncClient.registerEventHandler("avatar", (json) => { 
-  if (MR.VRIsActive()) {
     const payload = json["data"];
     //console.log(json);
     //console.log(payload);
@@ -72,7 +75,6 @@ MR.syncClient.registerEventHandler("avatar", (json) => {
         // MR.avatars[payload[key]["user"]] = new Avatar(avatarCube, payload[key]["user"]);
       }
     }
-  }
 });
 
 /*
@@ -158,8 +160,9 @@ MR.syncClient.registerEventHandler("calibration", (json) => {
 });
 
 
-
-function pollAvatarData(){
+const MODE_TYPE_GENERIC = 0;
+const MODE_TYPE_VR      = 1;
+function syncAvatarData(){
   if (MR.VRIsActive()) {
      let frameData = MR.frameData();
       if (frameData != null) {
@@ -194,6 +197,7 @@ function pollAvatarData(){
       let avatar_message = {
         type: "avatar",
         user: MR.playerid,
+        modeType : MODE_TYPE_VR,
         state: {
           pos: headsetPos,
           rot: headsetRot,
@@ -243,5 +247,7 @@ function pollAvatarData(){
     }
 
      
-  } 
+  } else {
+    // TODO do something else with modeType : MODE_TYPE_GENERIC,
+  }
 }
