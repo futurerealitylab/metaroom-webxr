@@ -261,8 +261,8 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             //   drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
             // m.restore();
           } else if(MR.avatars[id].mode == MR.UserType.vr) {
-            let headsetPos = MR.avatars[id].translate;
-            let headsetRot = MR.avatars[id].rotate;
+            let headsetPos = MR.avatars[id].position;
+            let headsetRot = MR.avatars[id].orientation;
             if (typeof headsetPos == 'undefined') {
               console.log(id);
               console.log("not defined");
@@ -277,8 +277,8 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             //console.log(headsetPos);
             //console.log(headsetRot);
             drawAvatar(id, headsetPos, headsetRot, .1, state);
-            drawAvatar(id, rcontroller.translate, rcontroller.rotate, 0.05, state);
-            drawAvatar(id, lcontroller.translate, lcontroller.rotate, 0.05, state);
+            drawAvatar(id, rcontroller.position, rcontroller.orientation, 0.05, state);
+            drawAvatar(id, lcontroller.position, lcontroller.orientation, 0.05, state);
           }
         
         }

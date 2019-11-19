@@ -1,5 +1,4 @@
 "use strict"
-
 /*
    Things you might want to try:
       object modify: move, rotate, scale, clone, delete, color, proportions
@@ -14,6 +13,31 @@ Note that I measured everything in inches, and then converted to units of meters
 (which is what VR requires) by multiplying by 0.0254.
 
 --------------------------------------------------------------------------------*/
+function drawAvatar(avatar, pos, rot, scale, state) {
+  let drawShape = (color, type, vertices, texture) => {
+    gl.uniform3fv(state.uColorLoc, color);
+    gl.uniformMatrix4fv(state.uModelLoc, false, state.m.value());
+    // gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( vertices ), gl.STATIC_DRAW);
+    gl.drawArrays(type, 0, vertices.length / VERTEX_SIZE);
+ }
+ state.m.save();
+ state.m.identity();
+ state.m.translate(pos[0],pos[1],pos[2]);
+ state.m.rotateX(rot[0]);
+ state.m.rotateY(rot[1]);
+ state.m.rotateZ(rot[2]);
+ state.m.scale(scale,scale,scale);
+  drawShape([1,1,1], gl.TRIANGLES, avatar.headset.vertices, 1);
+ state.m.restore();
+}
+
+let fromQuaternion = q => {
+   var x = q[0], y = q[1], z = q[2], w = q[3];
+   return [ 1 - 2 * (y * y + z * z),     2 * (z * w + x * y),     2 * (x * z - y * w), 0,
+                2 * (y * x - z * w), 1 - 2 * (z * z + x * x),     2 * (x * w + y * z), 0,
+                2 * (y * w + z * x),     2 * (z * y - x * w), 1 - 2 * (x * x + y * y), 0,  0,0,0,1 ];
+}
 
 ////////////////////////////// SCENE SPECIFIC CODE
 
@@ -38,15 +62,11 @@ let noise = null;
 let VERTEX_SIZE = 8;
 
 // (New Info): temp save modules as global "namespaces" upon loads
-let MNcontroller;
 let gfx;
 
 // (New Info):
 // handle reloading of imports (called in setup() and in onReload())
 async function initCommon(state) {
-    MNcontroller = await MR.dynamicImport(
-        getPath('lib/MetaNook_OCtouchcontroller.js')
-    );
     // (New Info): use the previously loaded module saved in state, use in global scope
     // TODO automatic re-setting of loaded libraries to reduce boilerplate?
     gfx = state.gfx;
@@ -241,8 +261,8 @@ function onStartFrame(t, state) {
     Input.updateControllerState();
 
     if (MR.VRIsActive()) {
-        if (!input.LC) input.LC = new MNController.ControllerHandler(MR.leftController, state.m);
-        if (!input.RC) input.RC = new MNController.ControllerHandler(MR.rightController, state.m);
+        if (!input.LC) input.LC = new ControllerHandler(MR.leftController, state.m);
+        if (!input.RC) input.RC = new ControllerHandler(MR.rightController, state.m);
 
         if (! state.calibrate) {
             m.identity();
@@ -582,10 +602,48 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         drawTable(1);
     m.restore();
 
+    console.log(MR.avatars);
+    for (let id in MR.avatars) {
+
+          if(MR.playerid == MR.avatars[id].playerid && MR.avatars[id].mode == MR.UserType.vr){
+            console.log("print user");
+            let frameData = MR.frameData();
+            if (frameData != null) {
+              let headsetPos = frameData.pose.position;
+              let headsetRot = frameData.pose.orientation;
+
+              const avatar = MR.avatars[id];
+              const rcontroller = MR.controllers[0];
+              const lcontroller = MR.controllers[1];
+              
+              drawAvatar(avatar, headsetPos, headsetRot, .1, state);
+              drawAvatar(avatar, rcontroller.pose.position, rcontroller.pose.orientation, 0.05, state);
+              drawAvatar(avatar, lcontroller.pose.position, lcontroller.pose.orientation, 0.05, state);
+            }
+         
+          } else if(MR.avatars[id].mode == MR.UserType.vr) {
+            console.log("print other user");
+            let headsetPos = MR.avatars[id].headset.position;
+            let headsetRot = MR.avatars[id].headset.orientation;
+            if (typeof headsetPos == 'undefined') {
+              console.log(id);
+              console.log("not defined");
+            }
+            
+            const avatar = MR.avatars[id];
+            const rcontroller = MR.avatars[id].rightController;
+            const lcontroller = MR.avatars[id].leftController;
+          
+            drawAvatar(avatar, headsetPos, headsetRot, .1, state);
+            drawAvatar(avatar, rcontroller.position, rcontroller.orientation, 0.05, state);
+            drawAvatar(avatar, lcontroller.position, lcontroller.orientation, 0.05, state);
+          }
+        
+        }
 }
 
 function onEndFrame(t, state) {
-
+    syncAvatarData();
     /*-----------------------------------------------------------------
 
     The below two lines are necessary for making the controller handler

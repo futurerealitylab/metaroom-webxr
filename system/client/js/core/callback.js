@@ -14,13 +14,14 @@ MR.syncClient.registerEventHandler("initialize", (json) => {
   const id = json["id"];
 
   let avatarCube = createCubeVertices();
+  let headset = new Headset(avatarCube);
   let leftController = new Controller(avatarCube);
   let rightController = new Controller(avatarCube);
-  let playerAvatar = new Avatar(avatarCube, id, leftController, rightController);
+  let playerAvatar = new Avatar(headset, id, leftController, rightController);
 
   for (let key in json["avatars"]) {
     const avid =  json["avatars"][key]["user"];
-    let avatar = new Avatar(avatarCube, avid, leftController, rightController);
+    let avatar = new Avatar(headset, avid, leftController, rightController);
     MR.avatars[avid] = avatar;
   }
 
@@ -38,9 +39,10 @@ MR.syncClient.registerEventHandler("join", (json) => {
 
   } else {
     let avatarCube = createCubeVertices();
+    let headset = new Headset(avatarCube);
     let leftController = new Controller(avatarCube);
     let rightController = new Controller(avatarCube);
-    let avatar = new Avatar(avatarCube, id, leftController, rightController);
+    let avatar = new Avatar(headset, id, leftController, rightController);
     MR.avatars[id] = avatar;
   }
   
@@ -69,14 +71,13 @@ MR.syncClient.registerEventHandler("avatar", (json) => {
       //TODO: We should not be handling visible avatars like this.
       //TODO: This is just a temporary bandaid. 
       if (payload[key]["user"] in MR.avatars && payload[key]["state"]["mode"] == MR.UserType.vr) {
-
-        MR.avatars[payload[key]["user"]].translate = payload[key]["state"]["pos"];
-        MR.avatars[payload[key]["user"]].rotate = payload[key]["state"]["rot"];
+        MR.avatars[payload[key]["user"]].headset.position = payload[key]["state"]["pos"];
+        MR.avatars[payload[key]["user"]].headset.orientation = payload[key]["state"]["rot"];
         //console.log(payload[key]["state"]);
-        MR.avatars[payload[key]["user"]].leftController.translate = payload[key]["state"].controllers.left.pos;
-        MR.avatars[payload[key]["user"]].leftController.rotate =  payload[key]["state"].controllers.left.rot;
-        MR.avatars[payload[key]["user"]].rightController.translate = payload[key]["state"].controllers.right.pos;
-        MR.avatars[payload[key]["user"]].rightController.rotate = payload[key]["state"].controllers.right.rot;
+        MR.avatars[payload[key]["user"]].leftController.position = payload[key]["state"].controllers.left.pos;
+        MR.avatars[payload[key]["user"]].leftController.orientation =  payload[key]["state"].controllers.left.rot;
+        MR.avatars[payload[key]["user"]].rightController.position = payload[key]["state"].controllers.right.pos;
+        MR.avatars[payload[key]["user"]].rightController.orientation = payload[key]["state"].controllers.right.rot;
         MR.avatars[payload[key]["user"]].mode = payload[key]["state"]["mode"];
       } 
       else { 
@@ -248,6 +249,7 @@ function syncAvatarData(){
 
 
       try {
+         //console.log(avatar_message);
          MR.syncClient.send(avatar_message);
       } catch(err) {
          console.log(err);
@@ -266,6 +268,7 @@ function syncAvatarData(){
         }
     }
      try {
+        //console.log(avatar_message);
          MR.syncClient.send(avatar_message);
       } catch(err) {
          console.log(err);
