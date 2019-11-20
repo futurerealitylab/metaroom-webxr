@@ -208,6 +208,23 @@ async function setup(state) {
     state.calibrationCount = 0;
 
     Input.initKeyEvents();
+
+
+     this.audioContext = new SpatialAudioContext([
+      'https://raw.githubusercontent.com/bmahlbrand/wav/master/internet7-16.wav',
+      'https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav',
+      'assets/audio/Blop-Mark_DiAngelo-79054334.wav'
+    ]);
+
+    // TODO: stupid hack for testing, since user must interact before context is unsuspended, figure out something clean
+    document.querySelector('body').addEventListener('click', () => {
+      this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', [0,0,0], [0,0,0], [0,0,0], [0,0,0]);
+      
+      this.audioContext.resume().then(() => {
+        console.log('Playback resumed successfully');
+      });
+      
+    });
 }
 
 
@@ -503,7 +520,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         m.restore();
     }
 
-    
+
 
     let drawSyncController = (pos, rot, color) => {
         let P = pos;
@@ -649,9 +666,9 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             const rcontroller = MR.avatars[id].rightController;
             const lcontroller = MR.avatars[id].leftController;
           
-            console.log("VR position and orientation:")
-            console.log(headsetPos);
-            console.log(headsetRot);
+            //console.log("VR position and orientation:")
+            //console.log(headsetPos);
+            //console.log(headsetRot);
             drawAvatar(avatar, headsetPos, headsetRot, .1, state);
             drawSyncController(rcontroller.position, rcontroller.orientation, [1,0,0]);
             drawSyncController(lcontroller.position, lcontroller.orientation, [0,1,1]);
@@ -662,6 +679,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
 function onEndFrame(t, state) {
     syncAvatarData();
+    this.audioContext.resume();
     /*-----------------------------------------------------------------
 
     The below two lines are necessary for making the controller handler
@@ -672,6 +690,19 @@ function onEndFrame(t, state) {
     const input  = state.input;
     if (input.LC) input.LC.onEndFrame();
     if (input.RC) input.RC.onEndFrame();
+
+
+    let frameData = MR.frameData();
+    if (frameData != null) {
+        let headsetPos = frameData.pose.position;
+        let headsetRot = frameData.pose.orientation;
+           /*Button stuff that we might move somewhere else*/
+        if((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())){
+          this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.LC.position(), [0,0,0], headsetPos, headsetRot);
+          this.audioContext.resume().then(() => {
+            console.log('Playback resumed successfully')});
+      }
+    }
 }
 
 export default function main() {
