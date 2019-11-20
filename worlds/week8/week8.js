@@ -297,6 +297,8 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
           }
         
         }
+      }
+    }
 }
 
 function onEndFrame(t, state) {
