@@ -147,6 +147,22 @@ async function setup(state) {
 
     state.bgColor = [0.529, 0.808, 0.922, 1.0];
 
+    this.audioContext = new SpatialAudioContext([
+      'https://raw.githubusercontent.com/bmahlbrand/wav/master/internet7-16.wav',
+      'https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav',
+      'assets/audio/Blop-Mark_DiAngelo-79054334.wav'
+    ]);
+
+    // TODO: stupid hack for testing, since user must interact before context is unsuspended, figure out something clean
+    document.querySelector('body').addEventListener('click', () => {
+      this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 0});
+      
+      this.audioContext.resume().then(() => {
+        console.log('Playback resumed successfully');
+      });
+      
+    });
+
 }
 
 let noise = new ImprovedNoise();
@@ -231,10 +247,9 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
        m.restore();
     }
 
-    //Cube that represents avatar.
-    // uncomment three following three lines once testing off headset is done
-     
-  
+     if (MR.VRIsActive()) {
+      let frameData = MR.frameData();
+      if (frameData != null) {
         for (let id in MR.avatars) {
 
           if(MR.playerid == MR.avatars[id].playerid && MR.avatars[id].mode == MR.UserType.vr){
@@ -300,6 +315,8 @@ function onEndFrame(t, state) {
      }
   };
 
+  // this.audioContext.playFileAt()
+  this.audioContext.resume();
   // // Lock
   // //Sample message:
   // const response = {
@@ -362,4 +379,3 @@ export default function main() {
 
     return def;
 }
-

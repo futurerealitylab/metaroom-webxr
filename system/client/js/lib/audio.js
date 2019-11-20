@@ -28,7 +28,7 @@ class SpatialAudioContext {
 
         this.initGain();
         this.initReverb('assets/audio/IRsample.wav');
-
+        this.initPanner();
         this.pausedAt = 0;
         this.startedAt = 0;
         this.playing = false;
@@ -46,17 +46,28 @@ class SpatialAudioContext {
         return this.context.resume();
     };
 
-    playFileAt(url, sound_position, head_position, offset = 0.0, time = 0.0) {
+    playFileAt(url, sound_position, sound_orientation, head_position, head_orientation, offset = 0.0, time = 0.0) {
 
-        // listener.positionX.value = head_position.x;
-        // listener.positionY.value = head_position.y;
-        // listener.positionZ.value = head_position.z;
+        if (!(url in this.cache)) {
+            console.log("invalid url, not currently loaded");
+        }
+
+        let listener = this.context.listener;
+
+        listener.setOrientation(head_orientation.x, head_orientation.y, head_orientation.z , 0, 1, 0);
+
+        listener.positionX.value = head_position.x;
+        listener.positionY.value = head_position.y;
+        listener.positionZ.value = head_position.z;
 
         const source = this.context.createBufferSource();
         source.buffer = this.cache[url];
 
+        this.panner.setPosition(sound_position.x, sound_position.y, sound_position.z);
+        this.panner.setOrientation(sound_orientation.x, sound_orientation.y, sound_orientation.z);
+
         source
-            // .connect(this.panner)
+            .connect(this.panner)
             // .connect(this.reverbNode)
             // .connect()
             .connect(this.gainNode)

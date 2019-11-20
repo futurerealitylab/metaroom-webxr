@@ -57,15 +57,15 @@ class Client
             //ws.on('ping', this.heartbeat);
 
             let reconnectTimeout = null;
-            let t = 0;
-        
+            this.t = 0;
+
             // function reconnect
 
             this.ws.onopen = () => {
 
                 this.heartbeat();
                 // reset t, clean up later
-                t = 0;
+                this.t = 0;
                 console.log('websocket is connected ...');
                 if (this.ws.readyState == WebSocket.OPEN) {
                     // TODO:
@@ -76,12 +76,12 @@ class Client
                 }
                 // ws.send('connected');
             };
-        
+
             this.ws.onmessage = (ev) => {
                 try {
                     //console.log(ev);
                     let json = JSON.parse(ev.data);
-        
+
                     // json = JSON.parse(ev.toString());
                     // console.log(json);
                     // TODO:
@@ -95,7 +95,7 @@ class Client
                     } else {
                         console.warn("message of type %s is not supported yet", json["type"]);
                     }
-                    
+
                     // switch(json["type"]) {
                     //     case "join":
                     //         console.log(json);
@@ -130,13 +130,13 @@ class Client
                 }
                 //console.log(JSON.parse(ev));
             };
-        
+
             //const payload = {'translation': [0.0, 1.0, 0.0], 'orientation': [0.0, 0.0, 0.0, 1.0]};
             //const payload = {'type': 'object', 'uid': 1};
             // const payload = {'type': 'restart', 'uid': 1};
-        
+
             // const interval = setInterval(() => ws.send(JSON.stringify(payload)), args.interval);
-        
+
             this.ws.onclose = (event) => {
                 switch (event.code) {
                     // CLOSE_NORMAL
@@ -153,7 +153,7 @@ class Client
                         /*
                         reconnectTimeout = setTimeout(() => {
                             try {
-                                // t = this.backoff(t);
+                                // this.backoff(this.t);
                                 this.connect(ip, port);
                                 clearTimeout(reconnectTimeout);
                             } catch(err) {
@@ -163,7 +163,7 @@ class Client
                                 // reconnectTimeout = setTimeout(reconnect, t);
                             }
                             
-                        }, t);
+                        }, this.t);
                         */
                         break;
                         // */
@@ -172,7 +172,7 @@ class Client
                 // clearInterval(interval);
                 clearTimeout(this.pingTimeout);
             };
-        
+
             this.ws.onerror = (e) => {
                 switch (e.code) {
                     case 'ECONNREFUSED':
@@ -185,17 +185,9 @@ class Client
                         break;
                 }
             };
-        
+
         } catch (err) {
             console.error("Couldn't load websocket", err);
         }
     }
 };
-
-
-//client = new Client();
-//client.connect("10.19.35.28", 11235);
-
-
-
-//connect();
