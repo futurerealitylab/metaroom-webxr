@@ -13,35 +13,7 @@ Note that I measured everything in inches, and then converted to units of meters
 (which is what VR requires) by multiplying by 0.0254.
 
 --------------------------------------------------------------------------------*/
-function drawAvatar(avatar, pos, rot, scale, state) {
-  let drawShape = (color, type, vertices, texture) => {
-    gl.uniform3fv(state.uColorLoc, color);
-    gl.uniformMatrix4fv(state.uModelLoc, false, state.m.value());
-    // gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( vertices ), gl.STATIC_DRAW);
-    gl.drawArrays(type, 0, vertices.length / VERTEX_SIZE);
- }
- state.m.save();
- state.m.identity();
- state.m.translate(pos[0],pos[1],pos[2]);
- state.m.rotateX(rot[0]);
- state.m.rotateY(rot[1]);
- state.m.rotateZ(rot[2]);
- state.m.scale(scale,scale,scale);
-  drawShape([1,1,1], gl.TRIANGLES, avatar.headset.vertices, 1);
- state.m.restore();
-}
 
-let fromQuaternion = q => {
-   var x = q[0], y = q[1], z = q[2], w = q[3];
-   return [ 1 - 2 * (y * y + z * z),     2 * (z * w + x * y),     2 * (x * z - y * w), 0,
-                2 * (y * x - z * w), 1 - 2 * (z * z + x * x),     2 * (x * w + y * z), 0,
-                2 * (y * w + z * x),     2 * (z * y - x * w), 1 - 2 * (x * x + y * y), 0,  0,0,0,1 ];
-}
-
-////////////////////////////// SCENE SPECIFIC CODE
-
-// TODO move to separate file ///////////////////
 const inchesToMeters = inches => inches * 0.0254;
 const metersToInches = meters => meters / 0.0254;
 
@@ -54,7 +26,8 @@ const TABLE_HEIGHT     = inchesToMeters( 29);
 const TABLE_WIDTH      = inchesToMeters( 60);
 const TABLE_THICKNESS  = inchesToMeters( 11/8);
 const LEG_THICKNESS    = inchesToMeters(  2.5);
-/////////////////////////////////////////////////
+
+////////////////////////////// SCENE SPECIFIC CODE
 
 let noise = null;
 
@@ -502,6 +475,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     let drawController = (C, color) => {
         let P = C.position();
         m.save();
+        m.identity();
             m.translate(P[0], P[1], P[2]);
             m.rotateQ(C.orientation());
             m.translate(0,.02,-.005);
@@ -529,23 +503,42 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         m.restore();
     }
 
+    
+
+    let drawSyncController = (pos, rot, color) => {
+        let P = pos;
+        m.save();
+        m.identity();
+            m.translate(P[0], P[1], P[2]);
+            m.rotateQ(rot);
+            m.translate(0,.02,-.005);
+            m.rotateX(.75);
+            m.save();
+                m.translate(0,0,-.0095).scale(.004,.004,.003);
+            m.restore();
+            m.save();
+                m.translate(0,0,-.01).scale(.04,.04,.13);
+                drawShape(torus1, [0,0,0]);
+            m.restore();
+            m.save();
+                m.translate(0,-.0135,-.008).scale(.04,.0235,.0015);
+                drawShape(cylinder, [0,0,0]);
+            m.restore();
+            m.save();
+                m.translate(0,-.01,.03).scale(.012,.02,.037);
+                drawShape(cylinder, [0,0,0]);
+            m.restore();
+            m.save();
+                m.translate(0,-.01,.067).scale(.012,.02,.023);
+                drawShape(sphere, [0,0,0]);
+            m.restore();
+        m.restore();
+    }
+
+
     m.identity();
 
-    /*-----------------------------------------------------------------
-
-    Notice that the actual drawing for my application is done in the
-    onDraw() function, whereas the controller logic is done in the
-    onStartFrame() function. Whatever your application, it is
-    important to make this separation.
-
-    -----------------------------------------------------------------*/
-
-    if (input.LC) {
-       drawController(input.LC, [1,0,0]);
-       drawController(input.RC, [0,1,1]);
-       if (editor.enableModeler && input.RC.isDown())
-          showMenu(input.RC.position());
-    }
+  
 
     /*-----------------------------------------------------------------
 
@@ -601,12 +594,25 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         m.translate((TABLE_DEPTH - HALL_WIDTH) / 2, 0, 0);
         drawTable(1);
     m.restore();
+ /*-----------------------------------------------------------------
+    Notice that the actual drawing for my application is done in the
+    onDraw() function, whereas the controller logic is done in the
+    onStartFrame() function. Whatever your application, it is
+    important to make this separation.
+  -----------------------------------------------------------------*/    
+    if (input.LC) {
+                 
+        if (editor.enableModeler && input.RC.isDown())
+            showMenu(input.RC.position());
+    }
 
-    console.log(MR.avatars);
+      /*-----------------------------------------------------------------
+        Here is where we draw avatars and controllers.
+      -----------------------------------------------------------------*/
+
     for (let id in MR.avatars) {
 
           if(MR.playerid == MR.avatars[id].playerid && MR.avatars[id].mode == MR.UserType.vr){
-            console.log("print user");
             let frameData = MR.frameData();
             if (frameData != null) {
               let headsetPos = frameData.pose.position;
@@ -617,14 +623,23 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
               const lcontroller = MR.controllers[1];
               
               drawAvatar(avatar, headsetPos, headsetRot, .1, state);
-              drawAvatar(avatar, rcontroller.pose.position, rcontroller.pose.orientation, 0.05, state);
-              drawAvatar(avatar, lcontroller.pose.position, lcontroller.pose.orientation, 0.05, state);
+              drawController(input.LC, [1,0,0]);
+              drawController(input.RC, [0,1,1]);
+              //drawAvatar(avatar, rcontroller.pose.position, rcontroller.pose.orientation, 0.05, state);
+              //drawAvatar(avatar, lcontroller.pose.position, lcontroller.pose.orientation, 0.05, state);
+             
+
             }
          
           } else if(MR.avatars[id].mode == MR.UserType.vr) {
-            console.log("print other user");
+
             let headsetPos = MR.avatars[id].headset.position;
             let headsetRot = MR.avatars[id].headset.orientation;
+            
+            if(headsetPos == null || headsetRot == null){
+                continue;
+            }
+
             if (typeof headsetPos == 'undefined') {
               console.log(id);
               console.log("not defined");
@@ -634,9 +649,12 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             const rcontroller = MR.avatars[id].rightController;
             const lcontroller = MR.avatars[id].leftController;
           
+            console.log("VR position and orientation:")
+            console.log(headsetPos);
+            console.log(headsetRot);
             drawAvatar(avatar, headsetPos, headsetRot, .1, state);
-            drawAvatar(avatar, rcontroller.position, rcontroller.orientation, 0.05, state);
-            drawAvatar(avatar, lcontroller.position, lcontroller.orientation, 0.05, state);
+            drawSyncController(rcontroller.position, rcontroller.orientation, [1,0,0]);
+            drawSyncController(lcontroller.position, lcontroller.orientation, [0,1,1]);
           }
         
         }
@@ -677,5 +695,32 @@ export default function main() {
         onExit       : onExit
     };
     return def;
+}
+
+
+
+//////////////DEBUG TOOLS
+function drawAvatar(avatar, pos, rot, scale, state) {
+  let drawShape = (color, type, vertices, texture) => {
+    gl.uniform3fv(state.uColorLoc, color);
+    gl.uniformMatrix4fv(state.uModelLoc, false, state.m.value());
+    // gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( vertices ), gl.STATIC_DRAW);
+    gl.drawArrays(type, 0, vertices.length / VERTEX_SIZE);
+ }
+ state.m.save();
+ state.m.identity();
+ state.m.translate(pos[0],pos[1],pos[2]);
+ state.m.rotateQ(rot);
+ state.m.scale(scale,scale,scale);
+ drawShape([1,1,1], gl.TRIANGLES, avatar.headset.vertices, 1);
+ state.m.restore();
+}
+
+let fromQuaternion = q => {
+   var x = q[0], y = q[1], z = q[2], w = q[3];
+   return [ 1 - 2 * (y * y + z * z),     2 * (z * w + x * y),     2 * (x * z - y * w), 0,
+                2 * (y * x - z * w), 1 - 2 * (z * z + x * x),     2 * (x * w + y * z), 0,
+                2 * (y * w + z * x),     2 * (z * y - x * w), 1 - 2 * (x * x + y * y), 0,  0,0,0,1 ];
 }
 

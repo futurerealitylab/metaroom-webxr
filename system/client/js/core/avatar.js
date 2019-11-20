@@ -25,14 +25,35 @@ class Controller {
     this.vertices = verts;
     this.position = [0,0,0];
     this.orientation = [0,0,0,0];
+    this.analog = new Button();
+    this.trigger = new Button();
+    this.side = new Button();
+    this.x = new Button();
+    this.y = new Button();
   }  
 }
 
+class Button {
+     //buttons have a 'pressed' variable that is a boolean.
+        /*A quick mapping of the buttons:
+          0: analog stick
+          1: trigger
+          2: side trigger
+          3: x button
+          4: y button
+          5: home button
+        */
+    constructor(){
+        this.pressed = false;
+    }
+}
+
 //ALEX: We might want to restructure this, but for now I feel
-//like this is the best class this fits in.
+//like this is the best file this fits in.
 
 function ControllerHandler(controller, m) {
-   this.m = m; 
+   this.m = m;
+   this.controller = controller;
    this.isDown      = () => controller.buttons[1].pressed;
    this.onEndFrame  = () => wasDown = this.isDown();
    this.orientation = () => controller.pose.orientation;
