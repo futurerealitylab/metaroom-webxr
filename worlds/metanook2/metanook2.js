@@ -525,7 +525,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 }
 
 function onEndFrame(t, state) {
-
+  //syncAvatarData();
     /*-----------------------------------------------------------------
 
     The below two lines are necessary for making the controller handler

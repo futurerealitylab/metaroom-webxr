@@ -147,6 +147,22 @@ async function setup(state) {
 
     state.bgColor = [0.529, 0.808, 0.922, 1.0];
 
+    this.audioContext = new SpatialAudioContext([
+      'https://raw.githubusercontent.com/bmahlbrand/wav/master/internet7-16.wav',
+      'https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav',
+      'assets/audio/Blop-Mark_DiAngelo-79054334.wav'
+    ]);
+
+    // TODO: stupid hack for testing, since user must interact before context is unsuspended, figure out something clean
+    document.querySelector('body').addEventListener('click', () => {
+      this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 0});
+      
+      this.audioContext.resume().then(() => {
+        console.log('Playback resumed successfully');
+      });
+      
+    });
+
 }
 
 let noise = new ImprovedNoise();
@@ -231,32 +247,26 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
        m.restore();
     }
 
-    //Cube that represents avatar.
-    // uncomment three following three lines once testing off headset is done
      if (MR.VRIsActive()) {
       let frameData = MR.frameData();
       if (frameData != null) {
         for (let id in MR.avatars) {
 
-          // if (!headsetPos) {
-            
-          //   console.log(id);
-          //   console.log("not defined");
-          // }
+          if(MR.playerid == MR.avatars[id].playerid && MR.avatars[id].mode == MR.UserType.vr){
+            let frameData = MR.frameData();
+            if (frameData != null) {
+              let headsetPos = frameData.pose.position;
+              let headsetRot = frameData.pose.orientation;
 
-          if(MR.playerid == MR.avatars[id].playerid){
-
-            let headsetPos = frameData.pose.position;
-            let headsetRot = frameData.pose.orientation;
-
-            const rcontroller = MR.controllers[0];
-            const lcontroller = MR.controllers[1];
-            //console.log("user");
-            //console.log(headsetPos);
-            //console.log(headsetRot);
-            drawAvatar(id, headsetPos, headsetRot, .1, state);
-            drawAvatar(id, rcontroller.pose.position, rcontroller.pose.orientation, 0.05, state);
-            drawAvatar(id, lcontroller.pose.position, lcontroller.pose.orientation, 0.05, state);
+              const rcontroller = MR.controllers[0];
+              const lcontroller = MR.controllers[1];
+              //console.log("user");
+              //console.log(headsetPos);
+              //console.log(headsetRot);
+              drawAvatar(id, headsetPos, headsetRot, .1, state);
+              drawAvatar(id, rcontroller.pose.position, rcontroller.pose.orientation, 0.05, state);
+              drawAvatar(id, lcontroller.pose.position, lcontroller.pose.orientation, 0.05, state);
+            }
             // m.save();
             //   m.translate(headsetPos[0],headsetPos[1],headsetPos[2]);
             //   m.rotateX(headsetRot[0]);
@@ -265,9 +275,9 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             //   m.scale(.1,.1,.1);
             //   drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
             // m.restore();
-          } else {
-            let headsetPos = MR.avatars[id].translate;
-            let headsetRot = MR.avatars[id].rotate;
+          } else if(MR.avatars[id].mode == MR.UserType.vr) {
+            let headsetPos = MR.avatars[id].position;
+            let headsetRot = MR.avatars[id].orientation;
             if (typeof headsetPos == 'undefined') {
               console.log(id);
               console.log("not defined");
@@ -282,58 +292,13 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             //console.log(headsetPos);
             //console.log(headsetRot);
             drawAvatar(id, headsetPos, headsetRot, .1, state);
-            drawAvatar(id, rcontroller.translate, rcontroller.rotate, 0.05, state);
-            drawAvatar(id, lcontroller.translate, lcontroller.rotate, 0.05, state);
+            drawAvatar(id, rcontroller.position, rcontroller.orientation, 0.05, state);
+            drawAvatar(id, lcontroller.position, lcontroller.orientation, 0.05, state);
           }
         
         }
-
+      }
     }
-  } 
-  // else {
-  //   for (let id in MR.avatars) {
-  //     let headsetPos = MR.avatars[id].translate;
-  //     let headsetRot = MR.avatars[id].rotate;
-  //     if (!headsetPos) {
-        
-  //       console.log(id);
-  //       console.log("not defined");
-  //     }
-  //     if(MR.playerid == MR.avatars[id].playerid){
-
-  //       // let headsetPos = frameData.pose.position;
-  //       // let headsetRot = frameData.pose.orientation;
-  //       //console.log("user");
-  //       //console.log(headsetPos);
-  //       //console.log(headsetRot);
-  //       m.save();
-  //         m.translate(headsetPos[0],headsetPos[1],headsetPos[2]);
-  //         m.rotateX(headsetRot[0]);
-  //         m.rotateY(headsetRot[1]);
-  //         m.rotateZ(headsetRot[2]);
-  //         m.scale(.3,.3,.3);
-  //         drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
-  //       m.restore();
-  //     }
-  //     else{
-        
-  //       //console.log("other user");
-  //       // console.log(headsetPos);
-  //       // console.log(headsetRot);
-
-  //       m.save();
-  //         m.translate(headsetPos[0],headsetPos[1],headsetPos[2]);
-  //         m.rotateX(headsetRot[0]);
-  //         m.rotateY(headsetRot[1]);
-  //         m.rotateZ(headsetRot[2]);
-  //         m.scale(.3,.3,.3);
-  //         drawShape([1,1,1], gl.TRIANGLES, MR.avatars[id].vertices, 1);
-  //       m.restore();
-  //     }
-    
-  //   }
-  // }
-
 }
 
 function onEndFrame(t, state) {
@@ -351,7 +316,9 @@ function onEndFrame(t, state) {
      rot: [0,0,0],
      }
   };
-  
+
+  // this.audioContext.playFileAt()
+  this.audioContext.resume();
   // // Lock
   // //Sample message:
   // const response = {
@@ -414,4 +381,3 @@ export default function main() {
 
     return def;
 }
-
