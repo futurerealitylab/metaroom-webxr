@@ -2,12 +2,27 @@ class Lock {
     constructor() {
 
     }
+    // const response = {
+    //   type: "lock",
+    //   uid: 0,
+    //   lockid: 0
+    // };
 
-    requestLock() {
+    request() {
         return true;
     }
 
-    onLock() {
-        
+    // const response = {
+    //   type: "release",
+    //   uid: 0,
+    //   lockid: 0
+    // };
+
+    release() {
+
     }
-}
+
+    onLock() {
+
+    }
+};
