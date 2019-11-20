@@ -190,4 +190,8 @@ class Client
             console.error("Couldn't load websocket", err);
         }
     }
+
+    createLock() {
+        return new Lock();
+    }
 };
