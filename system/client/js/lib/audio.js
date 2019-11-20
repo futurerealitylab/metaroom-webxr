@@ -54,17 +54,17 @@ class SpatialAudioContext {
 
         let listener = this.context.listener;
 
-        listener.setOrientation(head_orientation.x, head_orientation.y, head_orientation.z , 0, 1, 0);
+        listener.setOrientation(head_orientation[0], head_orientation[1], head_orientation[2], 0, 1, 0);
 
-        listener.positionX.value = head_position.x;
-        listener.positionY.value = head_position.y;
-        listener.positionZ.value = head_position.z;
+        listener.positionX.value = head_position[0];
+        listener.positionY.value = head_position[1];
+        listener.positionZ.value = head_position[2];
 
         const source = this.context.createBufferSource();
         source.buffer = this.cache[url];
 
-        this.panner.setPosition(sound_position.x, sound_position.y, sound_position.z);
-        this.panner.setOrientation(sound_orientation.x, sound_orientation.y, sound_orientation.z);
+        this.panner.setPosition(sound_position[0], sound_position[1], sound_position[2]);
+        this.panner.setOrientation(sound_orientation[0], sound_orientation[1], sound_orientation[2]);
 
         source
             .connect(this.panner)
