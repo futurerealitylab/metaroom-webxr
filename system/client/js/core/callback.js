@@ -35,14 +35,16 @@ MR.syncClient.registerEventHandler("join", (json) => {
     console.log(json);
     const id = json["id"];
 
-  } else {
-    let avatarCube = createCubeVertices();
-    let headset = new Headset(avatarCube);
-    let leftController = new Controller(avatarCube);
-    let rightController = new Controller(avatarCube);
-    let avatar = new Avatar(headset, id, leftController, rightController);
-    MR.avatars[id] = avatar;
-  }
+    if (id in MR.avatars) {
+  
+    } else {
+      let avatarCube = createCubeVertices();
+      let headset = new Headset(avatarCube);
+      let leftController = new Controller(avatarCube);
+      let rightController = new Controller(avatarCube);
+      let avatar = new Avatar(headset, id, leftController, rightController);
+      MR.avatars[id] = avatar;
+    }
   
   console.log(MR.avatars);
 
