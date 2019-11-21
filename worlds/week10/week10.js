@@ -701,6 +701,10 @@ function onEndFrame(t, state) {
           this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.LC.position(), [0,0,0], headsetPos, headsetRot);
           this.audioContext.resume().then(() => {
             console.log('Playback resumed successfully')});
+          ///////////////
+          //ALEX: Look through all objects and run this -> checkIntersection(point, verts)
+          //////////////
+
       }
     }
 }
@@ -730,7 +734,7 @@ export default function main() {
 
 
 
-//////////////DEBUG TOOLS
+//////////////EXTRA TOOLS
 function drawAvatar(avatar, pos, rot, scale, state) {
   let drawShape = (color, type, vertices, texture) => {
     gl.uniform3fv(state.uColorLoc, color);
@@ -754,4 +758,43 @@ let fromQuaternion = q => {
                 2 * (y * x - z * w), 1 - 2 * (z * z + x * x),     2 * (x * w + y * z), 0,
                 2 * (y * w + z * x),     2 * (z * y - x * w), 1 - 2 * (x * x + y * y), 0,  0,0,0,1 ];
 }
+
+function checkIntersection(point, verts) {
+  let bb = calcBoundingBox(verts);
+  let min = bb[0];
+  let max = bb[1];
+  if(point[0] > min[0] && point[0] < max[0] && 
+    point[1] > min[1] && point[1] < max[1] &&
+    point[2] > min[2] && point[2] < max[2]) return true;
+
+  return false;
+}
+
+function calcBoundingBox(verts){
+    let min = [Number.MAX_VALUE,Number.MAX_VALUE,Number.MAX_VALUE];
+    let max = [Number.MIN_VALUE,Number.MIN_VALUE,Number.MIN_VALUE];
+    
+    for(let i = 0; i < verts.length; i++){
+        if(verts[0] < min[0]) min[0] = verts[0];
+        if(verts[1] < min[1]) min[1] = verts[1];
+        if(verts[2] < min[2]) min[2] = verts[2];
+
+        if(verts[0] > max[0]) max[0] = verts[0];
+        if(verts[1] > max[1]) max[1] = verts[1];
+        if(verts[2] > max[2]) max[2] = verts[2];
+    }
+
+    return [min,max];
+}
+
+//TODO, for now it's just a dictionary, should we create a wrapper class?
+//True and false denotes grabbability.
+let sceneObjs = 
+{
+    //vertsobj : true
+    //vertsobj2 : false
+};
+
+
+
 
