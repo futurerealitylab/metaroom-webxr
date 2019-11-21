@@ -2,7 +2,7 @@
 // TODO: finish automatic reconnection
 // TODO: max retries + timeout
 
-class Client 
+class Client
 {
 
     constructor(heartbeat = 30000) {
