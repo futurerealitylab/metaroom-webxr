@@ -696,7 +696,8 @@ function onEndFrame(t, state) {
     if (frameData != null) {
         let headsetPos = frameData.pose.position;
         let headsetRot = frameData.pose.orientation;
-           /*Button stuff that we might move somewhere else*/
+           /*ALEX: Button stuff that we might move somewhere else*/
+           /*ALEX: Right now we are only checking for LC, we need to also check for RC*/
         if((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())){
           this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.LC.position(), [0,0,0], headsetPos, headsetRot);
           this.audioContext.resume().then(() => {
@@ -704,6 +705,14 @@ function onEndFrame(t, state) {
           ///////////////
           //ALEX: Look through all objects and run this -> checkIntersection(point, verts)
           //////////////
+          for(key in sceneObjs){
+            //ALEX: Check if grabbable.
+            if(sceneObjs[key] == true){
+                checkIntersection(input.LC.tip(), key);
+
+                //TODO: Request lock.
+            }
+          }
 
       }
     }
