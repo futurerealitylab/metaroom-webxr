@@ -174,26 +174,26 @@ MR.syncClient.registerEventHandler("calibration", (json) => {
 });
 
 
-function syncAvatarData(){
+function pollAvatarData(){
   if (MR.VRIsActive()) {
-     let frameData = MR.frameData();
+     const frameData = MR.frameData();
       if (frameData != null) {
         //User Headset
-        let headsetPos = frameData.pose.position;
-        let headsetRot = frameData.pose.orientation;
-        let headsetTimestamp = frameData.timestamp;
+        const headsetPos = frameData.pose.position;
+        const headsetRot = frameData.pose.orientation;
+        const headsetTimestamp = frameData.timestamp;
 
-        if(MR.controllers[0] != null && MR.controllers[1] != null){
+        if (MR.controllers[0] != null && MR.controllers[1] != null){
                 //Controllers
-            let controllerRight = MR.controllers[0];
-            let controllerRightPos = controllerRight.pose.position;
-            let controllerRightRot = controllerRight.pose.orientation;
-            let controllerRightButtons = controllerRight.buttons;
+            const controllerRight = MR.controllers[0];
+            const controllerRightPos = controllerRight.pose.position;
+            const controllerRightRot = controllerRight.pose.orientation;
+            const controllerRightButtons = controllerRight.buttons;
 
-            let controllerLeft = MR.controllers[1];
-            let controllerLeftPos = controllerLeft.pose.position;
-            let controllerLeftRot = controllerLeft.pose.orientation;
-            let controllerLeftButtons = controllerLeft.buttons;
+            const controllerLeft = MR.controllers[1];
+            const controllerLeftPos = controllerLeft.pose.position;
+            const controllerLeftRot = controllerLeft.pose.orientation;
+            const controllerLeftButtons = controllerLeft.buttons;
 
             //buttons have a 'pressed' variable that is a boolean.
             /*A quick mapping of the buttons:
@@ -204,7 +204,7 @@ function syncAvatarData(){
                 4: y button
                 5: home button
             */
-            let avatar_message = {
+            const avatar_message = {
             type: "avatar",
             user: MR.playerid,
             state: {

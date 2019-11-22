@@ -679,7 +679,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 }
 
 function onEndFrame(t, state) {
-    syncAvatarData();
+    pollAvatarData();
     this.audioContext.resume();
     /*-----------------------------------------------------------------
 
