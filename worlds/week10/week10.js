@@ -4,6 +4,16 @@
       object modify: move, rotate, scale, clone, delete, color, proportions
 */
 
+let multiply = (a, b)   => {
+    let c = [];
+    for (let n = 0 ; n < 16 ; n++)
+       c.push( a[n&3     ] * b[    n&12] +
+               a[n&3 |  4] * b[1 | n&12] +
+               a[n&3 |  8] * b[2 | n&12] +
+               a[n&3 | 12] * b[3 | n&12] );
+    return c;
+ }
+
 /*--------------------------------------------------------------------------------
 
 The proportions below just happen to match the dimensions of my physical space
@@ -250,6 +260,12 @@ function onStartFrame(t, state) {
     Input.updateKeyState();
     Input.updateControllerState();
 
+    if (! state.avatarMatrixForward) {
+        m.identity();
+        state.avatarMatrixForward = m.value();
+        state.avatarMatrixInverse = m.value();
+    }
+
     if (MR.VRIsActive()) {
         if (!input.LC) input.LC = new ControllerHandler(MR.leftController, state.m);
         if (!input.RC) input.RC = new ControllerHandler(MR.rightController, state.m);
@@ -336,6 +352,7 @@ function onStartFrame(t, state) {
         const sep = metersToInches(TABLE_DEPTH - 2 * RING_RADIUS);
 
         if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
+            console.log('attempting calibration');
             if (state.calibrationCount === undefined)
                 state.calibrationCount = 0;
             if (++state.calibrationCount == 30) {
@@ -348,7 +365,9 @@ function onStartFrame(t, state) {
                     state.avatarMatrixInverse = m.value();
                 m.restore();
                 state.calibrationCount = 0;
+                console.log('calibrated!');
             }
+            
         }
     }
 }
@@ -386,6 +405,8 @@ function Obj(shape) {
 };
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
+    viewMat = multiply(viewMat, state.avatarMatrixInverse);
+
     gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
     gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
 
@@ -492,7 +513,12 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
     let drawController = (C, color) => {
         let P = C.position();
+        
         m.save();
+           m.multiply(state.avatarMatrixForward);
+           m.translate(P[0], P[1], P[2]);
+           m.rotateQ(C.orientation());
+        
         m.identity();
             m.translate(P[0], P[1], P[2]);
             m.rotateQ(C.orientation());

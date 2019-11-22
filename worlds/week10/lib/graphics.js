@@ -10,6 +10,13 @@ export let rotateY = t         => [cos(t),0,-sin(t),0, 0,1,0,0, sin(t),0,cos(t),
 export let rotateZ = t         => [cos(t),sin(t),0,0, -sin(t),cos(t),0,0, 0,0,1,0, 0,0,0,1];
 export let scale = (x,y,z)     => [x,0,0,0, 0,y,0,0, 0,0,z,0, 0,0,0,1];
 export let translate = (x,y,z) => [1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1];
+export let transform = (m,v)   => {
+   let x = v[0], y = v[1], z = v[2], w = (v[3] === undefined ? 1 : v[3]);
+   return [m[ 0] * x + m[ 4] * y + m[ 8] * z + m[12] * w,
+           m[ 1] * x + m[ 5] * y + m[ 9] * z + m[13] * w,
+           m[ 2] * x + m[ 6] * y + m[10] * z + m[14] * w,
+           m[ 3] * x + m[ 7] * y + m[11] * z + m[15] * w];
+}
 export let multiply = (a, b)   => {
    let c = [];
    for (let n = 0 ; n < 16 ; n++)
