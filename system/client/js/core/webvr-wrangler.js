@@ -594,7 +594,7 @@ window.VRCanvasWrangler = (function() {
                             shiftDown__ = true;
                             mouseMoveHandler__({clientX : clientX, clientY : clientY});
                         } else if (event.key == 'Alt') {
-                            altDown = true;
+                            // altDown = true;
 
                             event.preventDefault();
                         }
