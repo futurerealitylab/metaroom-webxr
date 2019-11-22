@@ -594,8 +594,9 @@ window.VRCanvasWrangler = (function() {
                             shiftDown__ = true;
                             mouseMoveHandler__({clientX : clientX, clientY : clientY});
                         } else if (event.key == 'Alt') {
-                            // altDown = true;
-
+                            if (window.navigator.userAgent.indexOf("Mac") != -1)
+                                altDown = true;
+ 
                             event.preventDefault();
                         }
                     });
