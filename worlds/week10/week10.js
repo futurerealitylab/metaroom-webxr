@@ -317,34 +317,35 @@ function onStartFrame(t, state) {
             editor.isNewObj = false;
     }
 
-    if (input.LC) {
-        const LP = input.LC.center();
-        const RP = input.RC.center();
+    if (state.LC) {
+        const LP = state.LC.center();
+        const RP = state.RC.center();
         const D  = [LP[0] - RP[0], LP[1] - RP[1], LP[2] - RP[2]];
-        const d  = metersToInches(
-            Math.sqrt(D[0] * D[0] + D[1] * D[1] + D[2] * D[2])
-        );
+        const d = metersToInches(Math.sqrt(D[0] * D[0] + D[1] * D[1] + D[2] * D[2]));
         const getX = C => {
             m.save();
                 m.identity();
                 m.rotateQ(fromQuaternion(C.orientation()));
                 m.rotateX(.75);
-                let x = (m.value())[1];
+                const x = (m.value())[1];
             m.restore();
             return x;
         }
-        const lx = getX(input.LC);
-        const rx = getX(input.RC);
+        const lx = getX(state.LC);
+        const rx = getX(state.RC);
         const sep = metersToInches(TABLE_DEPTH - 2 * RING_RADIUS);
-        const THRESH = .03;
-        if (d >= sep - 1 && d <= sep + 1 &&
-            Math.abs(lx) < THRESH && Math.abs(rx) < THRESH) {
+
+        if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
+            if (state.calibrationCount === undefined)
+                state.calibrationCount = 0;
             if (++state.calibrationCount == 30) {
                 m.save();
                     m.identity();
                     m.translate((LP[0] + RP[0])/2, (LP[1] + RP[1])/2, (LP[2] + RP[2])/2);
-                    m.rotateY(Math.atan2(D[0], D[2]));
-                    state.calibrate = m.value();
+                    m.rotateY(Math.atan2(D[0], D[2]) + Math.PI/2);
+                    m.translate(-2.35,1.00,-.72);
+                    state.avatarMatrixForward = inverse(m.value());
+                    state.avatarMatrixInverse = m.value();
                 m.restore();
                 state.calibrationCount = 0;
             }
