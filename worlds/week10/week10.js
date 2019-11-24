@@ -227,14 +227,14 @@ async function setup(state) {
     ]);
 
     // TODO: stupid hack for testing, since user must interact before context is unsuspended, figure out something clean
-    document.querySelector('body').addEventListener('click', () => {
-      this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', [0,0,0], [0,0,0], [0,0,0], [0,0,0]);
+    // document.querySelector('body').addEventListener('click', () => {
+    //   this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', [0,0,0], [0,0,0], [0,0,0], [0,0,0]);
       
-      this.audioContext.resume().then(() => {
-        console.log('Playback resumed successfully');
-      });
+    //   this.audioContext.resume().then(() => {
+        // console.log('Playback resumed successfully');
+    //   });
       
-    });
+    // });
 }
 
 
@@ -726,8 +726,7 @@ function onEndFrame(t, state) {
            /*Button stuff that we might move somewhere else*/
         if((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())){
           this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.LC.position(), [0,0,0], headsetPos, headsetRot);
-          this.audioContext.resume().then(() => {
-            console.log('Playback resumed successfully')});
+        
       }
     }
 }

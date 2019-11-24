@@ -93,9 +93,10 @@ class SpatialAudioContext {
         source.start(this.context.currentTime + time, offset);
 
         let timer = setTimeout(() => {
-            console.log('playback finished');
             this.playing = false;
         }, source.buffer.duration * 1000);
+
+        this.playing = true;
 
     };
 
