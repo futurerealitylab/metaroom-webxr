@@ -152,7 +152,7 @@ class SpatialAudioContext {
             // equalpower or HRTF
             panningModel: 'HRTF',
             // linear, inverse, exponential
-            distanceModel: "exponential",
+            distanceModel: "linear",
             positionX: 0.0,
             positionY: 0.0,
             positionZ: 0.0,

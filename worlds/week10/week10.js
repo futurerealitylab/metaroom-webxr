@@ -724,10 +724,13 @@ function onEndFrame(t, state) {
         let headsetPos = frameData.pose.position;
         let headsetRot = frameData.pose.orientation;
            /*Button stuff that we might move somewhere else*/
-        if((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())){
+        if (input.LC && input.LC.isDown()) {
           this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.LC.position(), [0,0,0], headsetPos, headsetRot);
-        
-      }
+        }
+
+        if (input.RC && input.RC.isDown()) {
+            this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.RC.position(), [0,0,0], headsetPos, headsetRot);
+        }
     }
 }
 
