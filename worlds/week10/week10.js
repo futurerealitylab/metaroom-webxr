@@ -219,22 +219,13 @@ async function setup(state) {
 
     Input.initKeyEvents();
 
-
-     this.audioContext = new SpatialAudioContext([
+    // load files into a spatial audio context for playback later
+    this.audioContext = new SpatialAudioContext([
       'https://raw.githubusercontent.com/bmahlbrand/wav/master/internet7-16.wav',
       'https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav',
       'assets/audio/Blop-Mark_DiAngelo-79054334.wav'
     ]);
 
-    // TODO: stupid hack for testing, since user must interact before context is unsuspended, figure out something clean
-    // document.querySelector('body').addEventListener('click', () => {
-    //   this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', [0,0,0], [0,0,0], [0,0,0], [0,0,0]);
-      
-    //   this.audioContext.resume().then(() => {
-        // console.log('Playback resumed successfully');
-    //   });
-      
-    // });
 }
 
 
