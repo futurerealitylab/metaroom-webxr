@@ -623,9 +623,32 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             showMenu(input.RC.position());
     }
 
-      /*-----------------------------------------------------------------
+    /*-----------------------------------------------------------------
+        Drawing Example Grabbable Object
+    -----------------------------------------------------------------*/
+
+     if (input.LC && input.LC.isDown()) {
+                 
+      for(let key in sceneObjs){
+        //ALEX: Check if grabbable.
+        if(sceneObjs[key] == true){
+           let isGrabbed = checkIntersection(input.LC.tip(), key);
+            //TODO: Request lock.
+            if(isGrabbed == true){
+                m.save();
+                m.translate(input.LC.tip()[0],input.LC.tip()[1],input.LC.tip()[2],);
+                drawShape([1,1,0], gl.TRIANGLES, key, 1)
+                m.restore();
+            }
+
+        }
+      } 
+    }   
+
+
+    /*-----------------------------------------------------------------
         Here is where we draw avatars and controllers.
-      -----------------------------------------------------------------*/
+    -----------------------------------------------------------------*/
 
     for (let id in MR.avatars) {
 
@@ -702,17 +725,6 @@ function onEndFrame(t, state) {
           this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.LC.position(), [0,0,0], headsetPos, headsetRot);
           this.audioContext.resume().then(() => {
             console.log('Playback resumed successfully')});
-          ///////////////
-          //ALEX: Look through all objects and run this -> checkIntersection(point, verts)
-          //////////////
-          for(key in sceneObjs){
-            //ALEX: Check if grabbable.
-            if(sceneObjs[key] == true){
-                checkIntersection(input.LC.tip(), key);
-
-                //TODO: Request lock.
-            }
-          }
 
       }
     }
@@ -798,10 +810,14 @@ function calcBoundingBox(verts){
 
 //TODO, for now it's just a dictionary, should we create a wrapper class?
 //True and false denotes grabbability.
+
+let grabbableCube = createCubeVertices();
+
 let sceneObjs = 
 {
     //vertsobj : true
     //vertsobj2 : false
+    grabbableCube:true
 };
 
 
