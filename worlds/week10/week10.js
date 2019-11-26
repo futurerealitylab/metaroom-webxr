@@ -228,8 +228,6 @@ async function setup(state) {
 
     // load files into a spatial audio context for playback later
     this.audioContext = new SpatialAudioContext([
-      'https://raw.githubusercontent.com/bmahlbrand/wav/master/internet7-16.wav',
-      'https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav',
       'assets/audio/Blop-Mark_DiAngelo-79054334.wav'
     ]);
 
