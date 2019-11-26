@@ -787,38 +787,24 @@ export default function main() {
 
 //////////////DEBUG TOOLS
 function drawAvatar(avatar, pos, rot, scale, state) {
-//   let drawShape = (color, type, vertices, texture) => {
-//       gl.uniform3fv(state.uColorLoc, color);
-//       gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
-//       // gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
-//       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( vertices ), gl.STATIC_DRAW);
-//       gl.drawArrays(type, 0, vertices.length / VERTEX_SIZE);
-//    }
-let prev_shape = null;
-let drawShape = (shape, color, texture, textureScale) => {
-   gl.uniform4fv(state.uColorLoc, color.length == 4 ? color : color.concat([1]));
-   gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
-   gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
-   gl.uniform1f(state.uTexScale, textureScale === undefined ? 1 : textureScale);
-   if (shape != prev_shape)
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
-   gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
-   prev_shape = shape;
-}
+
+   let prev_shape = null;
+   let drawShape = (shape, color, texture, textureScale) => {
+      gl.uniform4fv(state.uColorLoc, color.length == 4 ? color : color.concat([1]));
+      gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
+      gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
+      gl.uniform1f(state.uTexScale, textureScale === undefined ? 1 : textureScale);
+      if (shape != prev_shape)
+         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
+      gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+      prev_shape = shape;
+   }
+   
    m.save();
       m.identity();
       m.translate(pos[0],pos[1],pos[2] - .75);
       m.rotateQ(rot);
       m.scale(scale,scale,scale);
       drawShape(avatar.headset.vertices, [1,1,1], 0);
-      // drawShape([1,1,1], gl.TRIANGLES, avatar.headset.vertices, 1);
    m.restore();
 }
-
-let fromQuaternion = q => {
-   var x = q[0], y = q[1], z = q[2], w = q[3];
-   return [ 1 - 2 * (y * y + z * z),     2 * (z * w + x * y),     2 * (x * z - y * w), 0,
-                2 * (y * x - z * w), 1 - 2 * (z * z + x * x),     2 * (x * w + y * z), 0,
-                2 * (y * w + z * x),     2 * (z * y - x * w), 1 - 2 * (x * x + y * y), 0,  0,0,0,1 ];
-}
-
