@@ -90,10 +90,10 @@ MR.syncClient.registerEventHandler("avatar", (json) => {
 
 /*
 // expected format of message
-        const response = {
-                "type": "lock",
-                "uid": key,
-                "success": boolean
+const response = {
+    "type": "lock",
+    "uid": key,
+    "success": boolean
 };
 
  */
@@ -109,11 +109,11 @@ MR.syncClient.registerEventHandler("lock", (json) => {
 
 /*
 // expected format of message
-        const response = {
-                "type": "release",
-                "uid": key,
-                "success": boolean
-        };
+const response = {
+        "type": "release",
+        "uid": key,
+        "success": boolean
+};
 
  */
 
@@ -129,21 +129,21 @@ MR.syncClient.registerEventHandler("release", (json) => {
 /*
 //on success:
 
-        const response = {
-                "type": "object",
-                "uid": key,
-                "state": json,
-                "lockid": lockid,
-                "success": true
-        };
+const response = {
+    "type": "object",
+    "uid": key,
+    "state": json,
+    "lockid": lockid,
+    "success": true
+};
 
 //on failure:
 
-        const response = {
-                "type": "object",
-                "uid": key,
-                "success": false
-        };
+const response = {
+    "type": "object",
+    "uid": key,
+    "success": false
+};
  */
 
 MR.syncClient.registerEventHandler("object", (json) => {
@@ -253,7 +253,6 @@ function pollAvatarData() {
             }
 
         }
-
 
     } else {
         let avatar_message = {
