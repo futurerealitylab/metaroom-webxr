@@ -1,6 +1,5 @@
 'use strict';
 
-
 MR.syncClient.registerEventHandler("platform", (json) => {
   
 });
@@ -13,10 +12,9 @@ MR.syncClient.registerEventHandler("initialize", (json) => {
 
     const id = json["id"];
 
-  let avatarCube = createCubeVertices();
-  let headset = new Headset(avatarCube);
-  let leftController = new Controller(avatarCube);
-  let rightController = new Controller(avatarCube);
+  let headset = new Headset(CG.cylinder);
+  let leftController = new Controller(CG.cube);
+  let rightController = new Controller(CG.cube);
   let playerAvatar = new Avatar(headset, id, leftController, rightController);
 
   for (let key in json["avatars"]) {
@@ -38,10 +36,9 @@ MR.syncClient.registerEventHandler("join", (json) => {
     if (id in MR.avatars) {
   
     } else {
-      let avatarCube = createCubeVertices();
-      let headset = new Headset(avatarCube);
-      let leftController = new Controller(avatarCube);
-      let rightController = new Controller(avatarCube);
+      let headset = new Headset(CG.cylinder);
+      let leftController = new Controller(CG.cube);
+      let rightController = new Controller(CG.cube);
       let avatar = new Avatar(headset, id, leftController, rightController);
       MR.avatars[id] = avatar;
     }
@@ -174,26 +171,26 @@ MR.syncClient.registerEventHandler("calibration", (json) => {
 });
 
 
-function syncAvatarData(){
+function pollAvatarData(){
   if (MR.VRIsActive()) {
-     let frameData = MR.frameData();
+     const frameData = MR.frameData();
       if (frameData != null) {
         //User Headset
-        let headsetPos = frameData.pose.position;
-        let headsetRot = frameData.pose.orientation;
-        let headsetTimestamp = frameData.timestamp;
+        const headsetPos = frameData.pose.position;
+        const headsetRot = frameData.pose.orientation;
+        const headsetTimestamp = frameData.timestamp;
 
-        if(MR.controllers[0] != null && MR.controllers[1] != null){
+        if (MR.controllers[0] != null && MR.controllers[1] != null){
                 //Controllers
-            let controllerRight = MR.controllers[0];
-            let controllerRightPos = controllerRight.pose.position;
-            let controllerRightRot = controllerRight.pose.orientation;
-            let controllerRightButtons = controllerRight.buttons;
+            const controllerRight = MR.controllers[0];
+            const controllerRightPos = controllerRight.pose.position;
+            const controllerRightRot = controllerRight.pose.orientation;
+            const controllerRightButtons = controllerRight.buttons;
 
-            let controllerLeft = MR.controllers[1];
-            let controllerLeftPos = controllerLeft.pose.position;
-            let controllerLeftRot = controllerLeft.pose.orientation;
-            let controllerLeftButtons = controllerLeft.buttons;
+            const controllerLeft = MR.controllers[1];
+            const controllerLeftPos = controllerLeft.pose.position;
+            const controllerLeftRot = controllerLeft.pose.orientation;
+            const controllerLeftButtons = controllerLeft.buttons;
 
             //buttons have a 'pressed' variable that is a boolean.
             /*A quick mapping of the buttons:
@@ -204,16 +201,16 @@ function syncAvatarData(){
                 4: y button
                 5: home button
             */
-            let avatar_message = {
+            const avatar_message = {
             type: "avatar",
             user: MR.playerid,
             state: {
                 mode: MR.UserType.vr,
-                pos: headsetPos,
+                pos:  CG.matrixTransform(MR.avatarMatrixInverse, headsetPos),
                 rot: headsetRot,
                 controllers :{
                     left:{
-                        pos: [controllerLeftPos[0],controllerLeftPos[1], controllerLeftPos[2]],
+                        pos: CG.matrixTransform(MR.avatarMatrixInverse, [controllerLeftPos[0],controllerLeftPos[1], controllerLeftPos[2]]),
                         rot: [controllerLeftRot[0],controllerLeftRot[1], controllerLeftRot[2], controllerLeftRot[3]],
                         analog: controllerLeftButtons[0].pressed,
                         trigger: controllerLeftButtons[1].pressed,
@@ -226,7 +223,7 @@ function syncAvatarData(){
 
                     },
                     right:{
-                        pos: [controllerRightPos[0],controllerRightPos[1], controllerRightPos[2]],
+                        pos: CG.matrixTransform(MR.avatarMatrixInverse, [controllerRightPos[0],controllerRightPos[1], controllerRightPos[2]]),
                         rot: [controllerRightRot[0],controllerRightRot[1], controllerRightRot[2], controllerRightRot[3]],
                         analog: controllerRightButtons[0].pressed,
                         trigger: controllerRightButtons[1].pressed,

@@ -4,6 +4,16 @@
       object modify: move, rotate, scale, clone, delete, color, proportions
 */
 
+let multiply = (a, b)   => {
+    let c = [];
+    for (let n = 0 ; n < 16 ; n++)
+       c.push( a[n&3     ] * b[    n&12] +
+               a[n&3 |  4] * b[1 | n&12] +
+               a[n&3 |  8] * b[2 | n&12] +
+               a[n&3 | 12] * b[3 | n&12] );
+    return c;
+ }
+
 /*--------------------------------------------------------------------------------
 
 The proportions below just happen to match the dimensions of my physical space
@@ -27,24 +37,31 @@ const TABLE_WIDTH      = inchesToMeters( 60);
 const TABLE_THICKNESS  = inchesToMeters( 11/8);
 const LEG_THICKNESS    = inchesToMeters(  2.5);
 
+let enableModeler = true;
+
+let lathe = CG.createMeshVertices(10, 16, CG.uvToLathe,
+             [ CG.bezierToCubic([-1.0,-1.0,-0.7,-0.3,-0.1 , 0.1, 0.3 , 0.7 , 1.0 ,1.0]),
+               CG.bezierToCubic([ 0.0, 0.5, 0.8, 1.1, 1.25, 1.4, 1.45, 1.55, 1.7 ,0.0]) ]);
+// let lathe = CG.cube;
 ////////////////////////////// SCENE SPECIFIC CODE
 
-let noise = null;
+let noise = new ImprovedNoise();
+let m = new Matrix();
 
 // (New Info): constants can be reloaded without worry
-let VERTEX_SIZE = 8;
+// let VERTEX_SIZE = 8;
 
 // (New Info): temp save modules as global "namespaces" upon loads
-let gfx;
+// let gfx;
 
 // (New Info):
 // handle reloading of imports (called in setup() and in onReload())
 async function initCommon(state) {
     // (New Info): use the previously loaded module saved in state, use in global scope
     // TODO automatic re-setting of loaded libraries to reduce boilerplate?
-    gfx = state.gfx;
-    state.m = new gfx.Matrix();
-    noise = state.noise;
+    // gfx = state.gfx;
+    // state.m = new CG.Matrix();
+    // noise = state.noise;
 }
 
 // (New Info):
@@ -76,7 +93,7 @@ async function setup(state) {
     // in onReload, just like the other import done in initCommon
     // the gfx module is saved to state so I can recover it
     // after a reload
-    state.gfx = await MR.dynamicImport(getPath('lib/graphics.js'));
+    // state.gfx = await MR.dynamicImport(getPath('lib/graphics.js'));
     state.noise = new ImprovedNoise();
     await initCommon(state);
 
@@ -93,16 +110,18 @@ async function setup(state) {
     }
 
     const images = await imgutil.loadImagesPromise([
-       getPath("textures/wood.png"),
-       getPath("textures/tiles.jpg"),
-    ]);
+        getPath("textures/wood.png"),
+        getPath("textures/tiles.jpg"),
+        getPath("textures/stones.gif"),
+        getPath("textures/stones_bump.gif"),
+     ]);
 
     let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
         { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true },
+        { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
     ]);
     if (! libSources)
         throw new Error("Could not load shader library");
-
 
     function onNeedsCompilationDefault(args, libMap, userData) {
         const stages = [args.vertex, args.fragment];
@@ -166,6 +185,8 @@ async function setup(state) {
     if (! shaderSource)
         throw new Error("Could not load shader");
 
+    state.cursor = ScreenCursor.trackCursor(MR.getCanvas());
+
 
     state.buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, state.buffer);
@@ -180,9 +201,14 @@ async function setup(state) {
     gl.enableVertexAttribArray(aNor);
     gl.vertexAttribPointer(aNor, 3, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 3);
 
+    let aTan = gl.getAttribLocation(state.program, 'aTan');
+    gl.enableVertexAttribArray(aTan);
+    gl.vertexAttribPointer(aTan, 3, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 6);
+
     let aUV  = gl.getAttribLocation(state.program, 'aUV');
     gl.enableVertexAttribArray(aUV);
-    gl.vertexAttribPointer(aUV , 2, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 6);
+    gl.vertexAttribPointer(aUV , 2, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 9);
+
 
     for (let i = 0 ; i < images.length ; i++) {
         gl.activeTexture (gl.TEXTURE0 + i);
@@ -198,33 +224,24 @@ async function setup(state) {
     // (New Info): editor state in a sub-object that can be cached
     // for convenience
     // e.g. const editor = state.editor; 
-    state.editor = {
-        menuShape : [gfx.cube, gfx.sphere, gfx.cylinder, gfx.torus],
-        objs : [],
-        menuChoice : -1,
-        enableModeler : false
-    };
+    // state.editor = {
+    //     menuShape : [gfx.cube, gfx.sphere, gfx.cylinder, gfx.torus],
+    //     objs : [],
+    //     menuChoice : -1,
+    //     enableModeler : false
+    // };
 
     state.calibrationCount = 0;
 
     Input.initKeyEvents();
 
-
-     this.audioContext = new SpatialAudioContext([
+    // load files into a spatial audio context for playback later
+    this.audioContext = new SpatialAudioContext([
       'https://raw.githubusercontent.com/bmahlbrand/wav/master/internet7-16.wav',
       'https://raw.githubusercontent.com/bmahlbrand/wav/master/SuzVega-16.wav',
       'assets/audio/Blop-Mark_DiAngelo-79054334.wav'
     ]);
 
-    // TODO: stupid hack for testing, since user must interact before context is unsuspended, figure out something clean
-    document.querySelector('body').addEventListener('click', () => {
-      this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', [0,0,0], [0,0,0], [0,0,0], [0,0,0]);
-      
-      this.audioContext.resume().then(() => {
-        console.log('Playback resumed successfully');
-      });
-      
-    });
 }
 
 
@@ -245,14 +262,20 @@ function onStartFrame(t, state) {
 
     const input  = state.input;
     const editor = state.editor;
-    const m      = state.m;
+    // const m      = state.m;
 
     Input.updateKeyState();
     Input.updateControllerState();
 
+    if (! state.avatarMatrixForward) {
+        // MR.avatarMatrixForward is because i need accesss to this in callback.js, temp hack
+        MR.avatarMatrixForward = state.avatarMatrixForward = CG.matrixIdentity();
+        MR.avatarMatrixInverse = state.avatarMatrixInverse = CG.matrixIdentity();
+    } 
+
     if (MR.VRIsActive()) {
-        if (!input.LC) input.LC = new ControllerHandler(MR.leftController, state.m);
-        if (!input.RC) input.RC = new ControllerHandler(MR.rightController, state.m);
+        if (!input.LC) input.LC = new ControllerHandler(MR.leftController, m);
+        if (!input.RC) input.RC = new ControllerHandler(MR.rightController, m);
 
         if (! state.calibrate) {
             m.identity();
@@ -268,18 +291,23 @@ function onStartFrame(t, state) {
 
     // THIS CURSOR CODE IS ONLY RELEVANT WHEN USING THE BROWSER MOUSE, NOT WHEN IN VR MODE.
 
-    let cursorValue = () => {
-       let p = input.cursor.position(), canvas = MR.getCanvas();
-       return [ p[0] / canvas.clientWidth * 2 - 1, 1 - p[1] / canvas.clientHeight * 2, p[2] ];
-    }
 
-    const cursorXYZ = cursorValue();
-    let cursorPrev  = input.cursorPrev;
-    if (cursorXYZ[2] && cursorPrev[2]) {
-        input.turnAngle -= Math.PI/2 * (cursorXYZ[0] - cursorPrev[0]);
-        input.tiltAngle += Math.PI/2 * (cursorXYZ[1] - cursorPrev[1]);
-    }
-    input.cursorPrev = cursorXYZ;
+    let cursorValue = () => {
+        let p = state.cursor.position(), canvas = MR.getCanvas();
+        return [ p[0] / canvas.clientWidth * 2 - 1, 1 - p[1] / canvas.clientHeight * 2, p[2] ];
+     }
+      let cursorXYZ = cursorValue();
+
+      if (state.cursorPrev === undefined)
+        state.cursorPrev = [0,0,0];
+      if (state.turnAngle === undefined)
+        state.turnAngle = state.tiltAngle = 0;
+     if (cursorXYZ[2] && state.cursorPrev[2]) {
+
+        state.turnAngle -= Math.PI/2 * (cursorXYZ[0] - state.cursorPrev[0]);
+        state.tiltAngle += Math.PI/2 * (cursorXYZ[1] - state.cursorPrev[1]);
+     }
+     state.cursorPrev = cursorXYZ;
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -300,60 +328,62 @@ function onStartFrame(t, state) {
     objects. There are lots of possibilities.
 
     -----------------------------------------------------------------*/
-    if (editor.enableModeler && input.LC) {
+    if (enableModeler && input.LC) {
         if (input.RC.isDown()) {
-	        editor.menuChoice = findInMenu(input.RC.position(), input.LC.tip());
-	        if (editor.menuChoice >= 0 && input.LC.press()) {
-	            editor.isNewObj = true;
-	            editor.objs.push(new Obj(editor.menuShape[editor.menuChoice]));
+	        menuChoice = findInMenu(input.RC.position(), input.LC.tip());
+	        if (menuChoice >= 0 && input.LC.press()) {
+	            state.isNewObj = true;
+	            objs.push(new Obj(menuShape[menuChoice]));
 	        }
         }
-        if (editor.isNewObj) {
-            let obj = editor.objs[editor.objs.length - 1];
+        if (state.isNewObj) {
+            let obj = objs[objs.length - 1];
 	        obj.position    = input.LC.tip().slice();
 	        obj.orientation = input.LC.orientation().slice();
         }
         if (input.LC.release())
-            editor.isNewObj = false;
+            state.isNewObj = false;
     }
 
     if (input.LC) {
-        const LP = input.LC.center();
-        const RP = input.RC.center();
-        const D  = [LP[0] - RP[0], LP[1] - RP[1], LP[2] - RP[2]];
-        const d  = metersToInches(
-            Math.sqrt(D[0] * D[0] + D[1] * D[1] + D[2] * D[2])
-        );
-        const getX = C => {
-            m.save();
-                m.identity();
-                m.rotateQ(fromQuaternion(C.orientation()));
-                m.rotateX(.75);
-                let x = (m.value())[1];
-            m.restore();
-            return x;
+        let LP = input.LC.center();
+        let RP = input.RC.center();
+        let D  = CG.subtract(LP, RP);
+        let d  = metersToInches(CG.norm(D));
+        let getX = C => {
+           m.save();
+              m.identity();
+              m.rotateQ(CG.matrixFromQuaternion(C.orientation()));
+              m.rotateX(.75);
+              let x = (m.value())[1];
+           m.restore();
+           return x;
         }
-        const lx = getX(input.LC);
-        const rx = getX(input.RC);
-        const sep = metersToInches(TABLE_DEPTH - 2 * RING_RADIUS);
-        const THRESH = .03;
-        if (d >= sep - 1 && d <= sep + 1 &&
-            Math.abs(lx) < THRESH && Math.abs(rx) < THRESH) {
-            if (++state.calibrationCount == 30) {
-                m.save();
-                    m.identity();
-                    m.translate((LP[0] + RP[0])/2, (LP[1] + RP[1])/2, (LP[2] + RP[2])/2);
-                    m.rotateY(Math.atan2(D[0], D[2]));
-                    state.calibrate = m.value();
-                m.restore();
-                state.calibrationCount = 0;
-            }
+        let lx = getX(input.LC);
+        let rx = getX(input.RC);
+        let sep = metersToInches(TABLE_DEPTH - 2 * RING_RADIUS);
+        if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
+           if (state.calibrationCount === undefined)
+              state.calibrationCount = 0;
+           if (++state.calibrationCount == 30) {
+              m.save();
+                 m.identity();
+                 m.translate(CG.mix(LP, RP, .5));
+                 m.rotateY(Math.atan2(D[0], D[2]) + Math.PI/2);
+                 m.translate(-2.35,1.00,-.72);
+                 state.avatarMatrixForward = CG.matrixInverse(m.value());
+                 state.avatarMatrixInverse = m.value();
+              m.restore();
+              state.calibrationCount = 0;
+           }
         }
     }
 }
 
 let menuX = [-.2,-.1,-.2,-.1];
 let menuY = [ .1, .1,  0,  0];
+let menuShape = [ CG.cube, CG.sphere, CG.cylinder, CG.torus ];
+let menuChoice = -1;
 
 /*-----------------------------------------------------------------
 
@@ -384,19 +414,23 @@ function Obj(shape) {
    this.shape = shape;
 };
 
+let objs = [];
+
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
+
+    viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
     gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
     gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
 
-    let prevShape = null;
+    let prev_shape = null;
 
-    // (New Info): cache some of the objects for convenience
-    const m          = state.m;
-    const cube       = gfx.cube;
-    const sphere     = gfx.sphere;
-    const cylinder   = gfx.cylinder;
-    const torus      = gfx.torus;
-    const torus1     = gfx.torus1;
+    // // (New Info): cache some of the objects for convenience
+    // const m          = state.m;
+    // const cube       = gfx.cube;
+    // const sphere     = gfx.sphere;
+    // const cylinder   = gfx.cylinder;
+    // const torus      = gfx.torus;
+    // const torus1     = gfx.torus1;
 
     const editor = state.editor;
     const input  = state.input;
@@ -414,17 +448,15 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     -----------------------------------------------------------------*/
 
     let drawShape = (shape, color, texture, textureScale) => {
-       gl.uniform3fv(state.uColorLoc, color);
-       gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
-       gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
-       gl.uniform1f(state.uTexScale, textureScale === undefined ? 1 : textureScale);
-       if (shape != prevShape)
-          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
-       // (New Info): shape == cube may have unexpected results when reloading - need to verify
-       // This is the main reason I decided not to reload the graphics file - this comparison might fail
-       gl.drawArrays(shape == cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
-       prevShape = shape;
-    }
+        gl.uniform4fv(state.uColorLoc, color.length == 4 ? color : color.concat([1]));
+        gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
+        gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
+        gl.uniform1f(state.uTexScale, textureScale === undefined ? 1 : textureScale);
+        if (shape != prev_shape)
+           gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
+        gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+        prev_shape = shape;
+     }
 
     /*-----------------------------------------------------------------
 
@@ -436,19 +468,20 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     -----------------------------------------------------------------*/
 
     let showMenu = p => {
-       let x = p[0], y = p[1], z = p[2];
-       for (let n = 0 ; n < 4 ; n++) {
-          m.save();
-	     m.translate(x + menuX[n], y + menuY[n], z);
-	     m.scale(.03, .03, .03);
-	     drawShape(editor.menuShape[n], n == editor.menuChoice ? [1,.5,.5] : [1,1,1]);
-          m.restore();
-       }
-    }
+        let x = p[0], y = p[1], z = p[2];
+        for (let n = 0 ; n < 4 ; n++) {
+           m.save();
+              m.multiply(state.avatarMatrixForward);
+              m.translate(x + menuX[n], y + menuY[n], z);
+              m.scale(.03, .03, .03);
+              drawShape(menuShape[n], n == menuChoice ? [1,.5,.5] : [1,1,1]);
+           m.restore();
+        }
+     }
 
     /*-----------------------------------------------------------------
 
-    drawTabbe() just happens to model the physical size and shape of the
+    drawTable() just happens to model the physical size and shape of the
     tables in my lab (measured in meters). If you want to model physical
     furniture, you will probably want to do something different.
 
@@ -456,24 +489,24 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
     let drawTable = id => {
         m.save();
-            m.translate(0, TABLE_HEIGHT - TABLE_THICKNESS/2, 0);
-            m.scale(TABLE_DEPTH/2, TABLE_THICKNESS/2, TABLE_WIDTH/2);
-            drawShape(cube, [1,1,1], 0);
+           m.translate(0, TABLE_HEIGHT - TABLE_THICKNESS/2, 0);
+           m.scale(TABLE_DEPTH/2, TABLE_THICKNESS/2, TABLE_WIDTH/2);
+           drawShape(CG.cube, [1,1,1], 0);
         m.restore();
         m.save();
-            let h  = (TABLE_HEIGHT - TABLE_THICKNESS) / 2;
-            let dx = (TABLE_DEPTH  - LEG_THICKNESS  ) / 2;
-            let dz = (TABLE_WIDTH  - LEG_THICKNESS  ) / 2;
-            for (let x = -dx ; x <= dx ; x += 2 * dx)
-            for (let z = -dz ; z <= dz ; z += 2 * dz) {
-                m.save();
-                    m.translate(x, h, z);
-                    m.scale(LEG_THICKNESS/2, h, LEG_THICKNESS/2);
-                    drawShape(cube, [.5,.5,.5]);
-                m.restore();
-            }
+           let h  = (TABLE_HEIGHT - TABLE_THICKNESS) / 2;
+           let dx = (TABLE_DEPTH  - LEG_THICKNESS  ) / 2;
+           let dz = (TABLE_WIDTH  - LEG_THICKNESS  ) / 2;
+           for (let x = -dx ; x <= dx ; x += 2 * dx)
+           for (let z = -dz ; z <= dz ; z += 2 * dz) {
+              m.save();
+                 m.translate(x, h, z);
+                 m.scale(LEG_THICKNESS/2, h, LEG_THICKNESS/2);
+                 drawShape(CG.cube, [.5,.5,.5]);
+              m.restore();
+           }
         m.restore();
-    }
+     }
 
     /*-----------------------------------------------------------------
 
@@ -489,37 +522,38 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
     -----------------------------------------------------------------*/
 
-    let drawController = (C, color) => {
+    let drawController = (C, hand) => {
         let P = C.position();
         m.save();
-        m.identity();
-            m.translate(P[0], P[1], P[2]);
-            m.rotateQ(C.orientation());
-            m.translate(0,.02,-.005);
-            m.rotateX(.75);
-            m.save();
-                m.translate(0,0,-.0095).scale(.004,.004,.003);
-                drawShape(sphere, C.isDown() ? [10,0,0] : [.5,0,0]);
-            m.restore();
-            m.save();
-                m.translate(0,0,-.01).scale(.04,.04,.13);
-                drawShape(torus1, [0,0,0]);
-            m.restore();
-            m.save();
-                m.translate(0,-.0135,-.008).scale(.04,.0235,.0015);
-                drawShape(cylinder, [0,0,0]);
-            m.restore();
-            m.save();
-                m.translate(0,-.01,.03).scale(.012,.02,.037);
-                drawShape(cylinder, [0,0,0]);
-            m.restore();
-            m.save();
-                m.translate(0,-.01,.067).scale(.012,.02,.023);
-                drawShape(sphere, [0,0,0]);
-            m.restore();
+           m.multiply(state.avatarMatrixForward);
+           m.translate(P);
+           m.rotateQ(C.orientation());
+           m.translate(0,.02,-.005);
+           m.rotateX(.75);
+           m.save();
+              m.translate(0,0,-.0095).scale(.004,.004,.003);
+              drawShape(CG.sphere, C.isDown() ? [10,0,0] : [.5,0,0]);
+           m.restore();
+           m.save();
+              m.translate(0,0,-.01).scale(.04,.04,.13);
+              drawShape(CG.torus, [0,0,0]);
+           m.restore();
+           m.save();
+              m.translate(0,-.0135,-.008).scale(.04,.0235,.0015);
+              drawShape(CG.cylinder, [0,0,0]);
+           m.restore();
+           m.save();
+              m.translate(0,-.01,.03).scale(.012,.02,.037);
+              drawShape(CG.cylinder, [0,0,0]);
+           m.restore();
+           m.save();
+              m.translate(0,-.01,.067).scale(.012,.02,.023);
+              drawShape(CG.sphere, [0,0,0]);
+           m.restore();
         m.restore();
-    }
-
+     }
+ 
+     m.identity();
 
 
     let drawSyncController = (pos, rot, color) => {
@@ -535,19 +569,19 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             m.restore();
             m.save();
                 m.translate(0,0,-.01).scale(.04,.04,.13);
-                drawShape(torus1, [0,0,0]);
+                drawShape(CG.torus, [0,0,0]);
             m.restore();
             m.save();
                 m.translate(0,-.0135,-.008).scale(.04,.0235,.0015);
-                drawShape(cylinder, [0,0,0]);
+                drawShape(CG.cylinder, [0,0,0]);
             m.restore();
             m.save();
                 m.translate(0,-.01,.03).scale(.012,.02,.037);
-                drawShape(cylinder, [0,0,0]);
+                drawShape(CG.cylinder, [0,0,0]);
             m.restore();
             m.save();
                 m.translate(0,-.01,.067).scale(.012,.02,.023);
-                drawShape(sphere, [0,0,0]);
+                drawShape(CG.sphere, [0,0,0]);
             m.restore();
         m.restore();
     }
@@ -555,7 +589,13 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
     m.identity();
 
-  
+    if (input.LC) {
+        drawController(input.LC, 0);
+        drawController(input.RC, 1);
+        if (enableModeler && input.RC.isDown())
+           showMenu(input.RC.position());
+    }
+
 
     /*-----------------------------------------------------------------
 
@@ -566,27 +606,29 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     need to go into onStartFrame(), not here.
 
     -----------------------------------------------------------------*/
-    const objs = editor.objs;
-    const objCount = objs.length;
-    for (let n = 0 ; n < objCount; n++) {
-        const obj = objs[n], P = obj.position;
+
+    for (let n = 0 ; n < objs.length ; n++) {
+        let obj = objs[n], P = obj.position;
         m.save();
-            m.translate(P[0], P[1], P[2]);
-            m.rotateQ(obj.orientation);
-            m.scale(.03,.03,.03);
-	        drawShape(obj.shape, [1,1,1]);
+           m.multiply(state.avatarMatrixForward);
+           m.translate(P);
+           m.rotateQ(obj.orientation);
+           m.scale(.03,.03,.03);
+           drawShape(obj.shape, [1,1,1]);
         m.restore();
-    }
+     }
 
-    if (state.calibrate) {
-        m.set(state.calibrate);
-        m.rotateY(Math.PI/2);
-        m.translate(-2.35,1.00,-.72);
-    }
+     m.translate(0, -EYE_HEIGHT, 0);
+     m.rotateX(state.tiltAngle);
+     m.rotateY(state.turnAngle);
+    //  console.log(state.tiltAngle);
+    // if (state.calibrate) {
+    //     m.set(state.calibrate);
+    //     m.rotateY(Math.PI/2);
+    //     m.translate(-2.35,1.00,-.72);
+    // }
 
-    m.translate(0, -EYE_HEIGHT, 0);
-    m.rotateX(input.tiltAngle);
-    m.rotateY(input.turnAngle);
+
 
     /*-----------------------------------------------------------------
 
@@ -597,32 +639,62 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     -----------------------------------------------------------------*/
 
     m.save();
-        m.translate(0, HALL_WIDTH/2, 0);
-        m.scale(-HALL_WIDTH/2, -HALL_WIDTH/2, -HALL_LENGTH/2);
-        drawShape(cube, [1,1,1], 1, 2);
+       m.translate(0, HALL_WIDTH/2, 0);
+       m.scale(-HALL_WIDTH/2, -HALL_WIDTH/2, -HALL_LENGTH/2);
+       drawShape(CG.cube, [1,1,1], 1,4, 2,4);
     m.restore();
 
     m.save();
-        m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, 0);
-        drawTable(0);
+       m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, 0);
+       drawTable(0);
     m.restore();
 
     m.save();
-        m.translate((TABLE_DEPTH - HALL_WIDTH) / 2, 0, 0);
-        drawTable(1);
+       m.translate((TABLE_DEPTH - HALL_WIDTH) / 2, 0, 0);
+       drawTable(1);
     m.restore();
- /*-----------------------------------------------------------------
-    Notice that the actual drawing for my application is done in the
-    onDraw() function, whereas the controller logic is done in the
-    onStartFrame() function. Whatever your application, it is
-    important to make this separation.
-  -----------------------------------------------------------------*/    
-    if (input.LC) {
-                 
-        if (editor.enableModeler && input.RC.isDown())
-            showMenu(input.RC.position());
-    }
 
+    m.save();
+       m.translate(0, 2 * TABLE_HEIGHT, (TABLE_DEPTH - HALL_WIDTH) / 2);
+       //m.aimZ([Math.cos(state.time),Math.sin(state.time),0]);
+       m.scale(.06,.06,.6);
+       //drawShape(lathe, [1,.2,0]);
+    m.restore();
+
+    let A = [0,0,0];
+    let B = [1+.4*Math.sin(2 * state.time),.4*Math.cos(2 * state.time),0];
+    let C = CG.ik(.7,.7,B,[0,-1,-2]);  
+
+    m.save();
+       m.translate(-.5, 2.5 * TABLE_HEIGHT, (TABLE_DEPTH - HALL_WIDTH) / 2);
+       //m.rotateY(state.time);
+/*
+       m.save();
+          m.translate(A).scale(.07);
+          drawShape(CG.sphere, [1,1,1]);
+       m.restore();
+
+       m.save();
+          m.translate(B).scale(.07);
+          drawShape(CG.sphere, [1,1,1]);
+       m.restore();
+
+       m.save();
+          m.translate(C).scale(.07);
+          drawShape(CG.sphere, [1,1,1]);
+       m.restore();
+*/
+       m.save();
+          m.translate(CG.mix(A,C,.5)).aimZ(CG.subtract(A,C)).scale(.05,.05,.37);
+          drawShape(lathe, [0,.2,1]);
+       m.restore();
+
+       m.save();
+          m.translate(CG.mix(C,B,.5)).aimZ(CG.subtract(C,B)).scale(.03,.03,.37);
+          drawShape(lathe, [0,.2,1]);
+       m.restore();
+
+    m.restore();
       /*-----------------------------------------------------------------
         Here is where we draw avatars and controllers.
       -----------------------------------------------------------------*/
@@ -639,7 +711,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
               const rcontroller = MR.controllers[0];
               const lcontroller = MR.controllers[1];
               
-              drawAvatar(avatar, headsetPos, headsetRot, .1, state);
+              drawAvatar(avatar, headsetPos, headsetRot, .03, state);
               drawController(input.LC, [1,0,0]);
               drawController(input.RC, [0,1,1]);
               //drawAvatar(avatar, rcontroller.pose.position, rcontroller.pose.orientation, 0.05, state);
@@ -678,8 +750,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 }
 
 function onEndFrame(t, state) {
-    syncAvatarData();
-    this.audioContext.resume();
+    pollAvatarData();
     /*-----------------------------------------------------------------
 
     The below two lines are necessary for making the controller handler
@@ -697,11 +768,13 @@ function onEndFrame(t, state) {
         let headsetPos = frameData.pose.position;
         let headsetRot = frameData.pose.orientation;
            /*Button stuff that we might move somewhere else*/
-        if((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())){
+        if (input.LC && input.LC.isDown()) {
           this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.LC.position(), [0,0,0], headsetPos, headsetRot);
-          this.audioContext.resume().then(() => {
-            console.log('Playback resumed successfully')});
-      }
+        }
+
+        if (input.RC && input.RC.isDown()) {
+            this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.RC.position(), [0,0,0], headsetPos, headsetRot);
+        }
     }
 }
 
@@ -732,20 +805,32 @@ export default function main() {
 
 //////////////DEBUG TOOLS
 function drawAvatar(avatar, pos, rot, scale, state) {
-  let drawShape = (color, type, vertices, texture) => {
-    gl.uniform3fv(state.uColorLoc, color);
-    gl.uniformMatrix4fv(state.uModelLoc, false, state.m.value());
-    // gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( vertices ), gl.STATIC_DRAW);
-    gl.drawArrays(type, 0, vertices.length / VERTEX_SIZE);
- }
- state.m.save();
- state.m.identity();
- state.m.translate(pos[0],pos[1],pos[2]);
- state.m.rotateQ(rot);
- state.m.scale(scale,scale,scale);
- drawShape([1,1,1], gl.TRIANGLES, avatar.headset.vertices, 1);
- state.m.restore();
+//   let drawShape = (color, type, vertices, texture) => {
+//       gl.uniform3fv(state.uColorLoc, color);
+//       gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
+//       // gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
+//       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( vertices ), gl.STATIC_DRAW);
+//       gl.drawArrays(type, 0, vertices.length / VERTEX_SIZE);
+//    }
+let prev_shape = null;
+let drawShape = (shape, color, texture, textureScale) => {
+   gl.uniform4fv(state.uColorLoc, color.length == 4 ? color : color.concat([1]));
+   gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
+   gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
+   gl.uniform1f(state.uTexScale, textureScale === undefined ? 1 : textureScale);
+   if (shape != prev_shape)
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
+   gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+   prev_shape = shape;
+}
+   m.save();
+      m.identity();
+      m.translate(pos[0],pos[1],pos[2] - .75);
+      m.rotateQ(rot);
+      m.scale(scale,scale,scale);
+      drawShape(avatar.headset.vertices, [1,1,1], 0);
+      // drawShape([1,1,1], gl.TRIANGLES, avatar.headset.vertices, 1);
+   m.restore();
 }
 
 let fromQuaternion = q => {
