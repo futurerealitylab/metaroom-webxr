@@ -99,6 +99,7 @@ async function setup(state) {
         RC : null
     }
 
+    // I propose adding a dictionary mapping texture strings to locations, so that drawShapes becomes clearer
     const images = await imgutil.loadImagesPromise([
         getPath("textures/wood.png"),
         getPath("textures/tiles.jpg"),
@@ -782,8 +783,6 @@ export default function main() {
     };
     return def;
 }
-
-
 
 //////////////DEBUG TOOLS
 function drawAvatar(avatar, pos, rot, scale, state) {
