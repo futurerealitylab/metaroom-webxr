@@ -602,14 +602,6 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
      m.translate(0, -EYE_HEIGHT, 0);
      m.rotateX(state.tiltAngle);
      m.rotateY(state.turnAngle);
-    //  console.log(state.tiltAngle);
-    // if (state.calibrate) {
-    //     m.set(state.calibrate);
-    //     m.rotateY(Math.PI/2);
-    //     m.translate(-2.35,1.00,-.72);
-    // }
-
-
 
     /*-----------------------------------------------------------------
 
