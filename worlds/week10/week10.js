@@ -781,9 +781,9 @@ let fromQuaternion = q => {
 }
 
 function checkIntersection(point, verts) {
-  let bb = calcBoundingBox(verts);
-  let min = bb[0];
-  let max = bb[1];
+  const bb = calcBoundingBox(verts);
+  const min = bb[0];
+  const max = bb[1];
   if(point[0] > min[0] && point[0] < max[0] && 
     point[1] > min[1] && point[1] < max[1] &&
     point[2] > min[2] && point[2] < max[2]) return true;
@@ -791,21 +791,21 @@ function checkIntersection(point, verts) {
   return false;
 }
 
-function calcBoundingBox(verts){
-    let min = [Number.MAX_VALUE,Number.MAX_VALUE,Number.MAX_VALUE];
-    let max = [Number.MIN_VALUE,Number.MIN_VALUE,Number.MIN_VALUE];
+function calcBoundingBox(verts) {
+   const min = [Number.MAX_VALUE,Number.MAX_VALUE,Number.MAX_VALUE];
+   const max = [Number.MIN_VALUE,Number.MIN_VALUE,Number.MIN_VALUE];
     
-    for(let i = 0; i < verts.length; i++){
-        if(verts[0] < min[0]) min[0] = verts[0];
-        if(verts[1] < min[1]) min[1] = verts[1];
-        if(verts[2] < min[2]) min[2] = verts[2];
+   for(const i = 0; i < verts.length; i++){
+      if(verts[0] < min[0]) min[0] = verts[0];
+      if(verts[1] < min[1]) min[1] = verts[1];
+      if(verts[2] < min[2]) min[2] = verts[2];
 
-        if(verts[0] > max[0]) max[0] = verts[0];
-        if(verts[1] > max[1]) max[1] = verts[1];
-        if(verts[2] > max[2]) max[2] = verts[2];
-    }
+      if(verts[0] > max[0]) max[0] = verts[0];
+      if(verts[1] > max[1]) max[1] = verts[1];
+      if(verts[2] > max[2]) max[2] = verts[2];
+   }
 
-    return [min,max];
+   return [min, max];
 }
 
 //TODO, for now it's just a dictionary, should we create a wrapper class?
@@ -819,7 +819,3 @@ let sceneObjs =
     //vertsobj2 : false
     grabbableCube:true
 };
-
-
-
-
