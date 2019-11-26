@@ -414,14 +414,6 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
     let prev_shape = null;
 
-    // // (New Info): cache some of the objects for convenience
-    // const m          = state.m;
-    // const cube       = gfx.cube;
-    // const sphere     = gfx.sphere;
-    // const cylinder   = gfx.cylinder;
-    // const torus      = gfx.torus;
-    // const torus1     = gfx.torus1;
-
     const editor = state.editor;
     const input  = state.input;
 
