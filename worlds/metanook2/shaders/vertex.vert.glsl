@@ -4,11 +4,14 @@ precision highp float;
 // input vertex
 in  vec3 aPos;
 in  vec3 aNor;
+in  vec3 aTan;
 in  vec2 aUV;
 
 // interpolated vertex
 out vec3 vPos;
 out vec3 vNor;
+out vec3 vTan;
+out vec3 vBin;
 out vec2 vUV;
 
 // interpolated cursor
@@ -30,5 +33,7 @@ void main(void) {
     vXY = pos.xy / pos.z;
     vPos = aPos;
     vNor = (vec4(aNor, 0.) * inverse(uModel)).xyz;
+    vTan = (vec4(aTan, 0.) * inverse(uModel)).xyz;
+    vBin = cross(vNor, vTan);
     vUV = aUV * vec2(1.,-1.) + vec2(0.,1.);
 }

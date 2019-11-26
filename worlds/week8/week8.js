@@ -38,7 +38,7 @@ let Matrix = function() {
 
 ////////////////////////////// SUPPORT FOR CREATING 3D SHAPES
 
-const VERTEX_SIZE = 8;
+// const VERTEX_SIZE = 8;
 
 let cubeVertices = createCubeVertices();
 
@@ -303,7 +303,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
 function onEndFrame(t, state) {
   //synchronize objects
-  syncAvatarData();
+  pollAvatarData();
 
   //Objects
   //Sample message:

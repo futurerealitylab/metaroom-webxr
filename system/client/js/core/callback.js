@@ -1,13 +1,5 @@
 'use strict';
 
-const transform = (m,v)   => {
-  const x = v[0], y = v[1], z = v[2], w = (v[3] === undefined ? 1 : v[3]);
-  return [m[ 0] * x + m[ 4] * y + m[ 8] * z + m[12] * w,
-          m[ 1] * x + m[ 5] * y + m[ 9] * z + m[13] * w,
-          m[ 2] * x + m[ 6] * y + m[10] * z + m[14] * w,
-          m[ 3] * x + m[ 7] * y + m[11] * z + m[15] * w];
-}
-
 MR.syncClient.registerEventHandler("platform", (json) => {
   
 });
@@ -20,10 +12,9 @@ MR.syncClient.registerEventHandler("initialize", (json) => {
 
     const id = json["id"];
 
-  let avatarCube = createCubeVertices();
-  let headset = new Headset(avatarCube);
-  let leftController = new Controller(avatarCube);
-  let rightController = new Controller(avatarCube);
+  let headset = new Headset(CG.cylinder);
+  let leftController = new Controller(CG.cube);
+  let rightController = new Controller(CG.cube);
   let playerAvatar = new Avatar(headset, id, leftController, rightController);
 
   for (let key in json["avatars"]) {
@@ -45,10 +36,9 @@ MR.syncClient.registerEventHandler("join", (json) => {
     if (id in MR.avatars) {
   
     } else {
-      let avatarCube = createCubeVertices();
-      let headset = new Headset(avatarCube);
-      let leftController = new Controller(avatarCube);
-      let rightController = new Controller(avatarCube);
+      let headset = new Headset(CG.cylinder);
+      let leftController = new Controller(CG.cube);
+      let rightController = new Controller(CG.cube);
       let avatar = new Avatar(headset, id, leftController, rightController);
       MR.avatars[id] = avatar;
     }
@@ -216,11 +206,11 @@ function pollAvatarData(){
             user: MR.playerid,
             state: {
                 mode: MR.UserType.vr,
-                pos:  transform(MR.avatarMatrixForward, headsetPos),
+                pos:  CG.matrixTransform(MR.avatarMatrixInverse, headsetPos),
                 rot: headsetRot,
                 controllers :{
                     left:{
-                        pos: transform(MR.avatarMatrixForward, [controllerLeftPos[0],controllerLeftPos[1], controllerLeftPos[2]]),
+                        pos: CG.matrixTransform(MR.avatarMatrixInverse, [controllerLeftPos[0],controllerLeftPos[1], controllerLeftPos[2]]),
                         rot: [controllerLeftRot[0],controllerLeftRot[1], controllerLeftRot[2], controllerLeftRot[3]],
                         analog: controllerLeftButtons[0].pressed,
                         trigger: controllerLeftButtons[1].pressed,
@@ -233,7 +223,7 @@ function pollAvatarData(){
 
                     },
                     right:{
-                        pos: transform(MR.avatarMatrixForward, [controllerRightPos[0],controllerRightPos[1], controllerRightPos[2]]),
+                        pos: CG.matrixTransform(MR.avatarMatrixInverse, [controllerRightPos[0],controllerRightPos[1], controllerRightPos[2]]),
                         rot: [controllerRightRot[0],controllerRightRot[1], controllerRightRot[2], controllerRightRot[3]],
                         analog: controllerRightButtons[0].pressed,
                         trigger: controllerRightButtons[1].pressed,
