@@ -4,16 +4,6 @@
       object modify: move, rotate, scale, clone, delete, color, proportions
 */
 
-let multiply = (a, b)   => {
-    let c = [];
-    for (let n = 0 ; n < 16 ; n++)
-       c.push( a[n&3     ] * b[    n&12] +
-               a[n&3 |  4] * b[1 | n&12] +
-               a[n&3 |  8] * b[2 | n&12] +
-               a[n&3 | 12] * b[3 | n&12] );
-    return c;
- }
-
 /*--------------------------------------------------------------------------------
 
 The proportions below just happen to match the dimensions of my physical space
