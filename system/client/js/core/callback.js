@@ -1,7 +1,7 @@
 'use strict';
 
 MR.syncClient.registerEventHandler("platform", (json) => {
-  
+
 });
 
 MR.syncClient.registerEventHandler("initialize", (json) => {
@@ -12,16 +12,16 @@ MR.syncClient.registerEventHandler("initialize", (json) => {
 
     const id = json["id"];
 
-  let headset = new Headset(CG.cylinder);
-  let leftController = new Controller(CG.cube);
-  let rightController = new Controller(CG.cube);
-  let playerAvatar = new Avatar(headset, id, leftController, rightController);
+    let headset = new Headset(CG.cylinder);
+    let leftController = new Controller(CG.cube);
+    let rightController = new Controller(CG.cube);
+    let playerAvatar = new Avatar(headset, id, leftController, rightController);
 
-  for (let key in json["avatars"]) {
-    const avid =  json["avatars"][key]["user"];
-    let avatar = new Avatar(headset, avid, leftController, rightController);
-    MR.avatars[avid] = avatar;
-  }
+    for (let key in json["avatars"]) {
+        const avid = json["avatars"][key]["user"];
+        let avatar = new Avatar(headset, avid, leftController, rightController);
+        MR.avatars[avid] = avatar;
+    }
 
     // MR.avatars[id] = playerAvatar;
     MR.playerid = id;
@@ -34,66 +34,66 @@ MR.syncClient.registerEventHandler("join", (json) => {
     const id = json["id"];
 
     if (id in MR.avatars) {
-  
-    } else {
-      let headset = new Headset(CG.cylinder);
-      let leftController = new Controller(CG.cube);
-      let rightController = new Controller(CG.cube);
-      let avatar = new Avatar(headset, id, leftController, rightController);
-      MR.avatars[id] = avatar;
-    }
-  
-  console.log(MR.avatars);
 
-  MR.updatePlayersMenu();
+    } else {
+        let headset = new Headset(CG.cylinder);
+        let leftController = new Controller(CG.cube);
+        let rightController = new Controller(CG.cube);
+        let avatar = new Avatar(headset, id, leftController, rightController);
+        MR.avatars[id] = avatar;
+    }
+
+    console.log(MR.avatars);
+
+    MR.updatePlayersMenu();
 });
 
 MR.syncClient.registerEventHandler("leave", (json) => {
-  console.log(json);
-  delete MR.avatars[json["user"]];
+    console.log(json);
+    delete MR.avatars[json["user"]];
 
-  MR.updatePlayersMenu();
+    MR.updatePlayersMenu();
 });
 
 MR.syncClient.registerEventHandler("tick", (json) => {
     // console.log("world tick: ", json);
 });
 
-MR.syncClient.registerEventHandler("avatar", (json) => { 
-  //if (MR.VRIsActive()) {
+MR.syncClient.registerEventHandler("avatar", (json) => {
+    //if (MR.VRIsActive()) {
     const payload = json["data"];
     //console.log(json);
     //console.log(payload);
-    for(let key in payload) {
-      //TODO: We should not be handling visible avatars like this.
-      //TODO: This is just a temporary bandaid. 
-      if (payload[key]["user"] in MR.avatars && payload[key]["state"]["mode"] == MR.UserType.vr) {
-        MR.avatars[payload[key]["user"]].headset.position = payload[key]["state"]["pos"];
-        MR.avatars[payload[key]["user"]].headset.orientation = payload[key]["state"]["rot"];
-        //console.log(payload[key]["state"]);
-        MR.avatars[payload[key]["user"]].leftController.position = payload[key]["state"].controllers.left.pos;
-        MR.avatars[payload[key]["user"]].leftController.orientation =  payload[key]["state"].controllers.left.rot;
-        MR.avatars[payload[key]["user"]].rightController.position = payload[key]["state"].controllers.right.pos;
-        MR.avatars[payload[key]["user"]].rightController.orientation = payload[key]["state"].controllers.right.rot;
-        MR.avatars[payload[key]["user"]].mode = payload[key]["state"]["mode"];
-      } 
-      else { 
-       // never seen, create
-       //ALEX: AVATARS WHO ARE ALSO IN BROWSER MODE GO HERE...
-        //console.log("previously unseen user avatar");
-        // let avatarCube = createCubeVertices();
-        // MR.avatars[payload[key]["user"]] = new Avatar(avatarCube, payload[key]["user"]);
-      }
+    for (let key in payload) {
+        //TODO: We should not be handling visible avatars like this.
+        //TODO: This is just a temporary bandaid.
+        if (payload[key]["user"] in MR.avatars && payload[key]["state"]["mode"] == MR.UserType.vr) {
+            MR.avatars[payload[key]["user"]].headset.position = payload[key]["state"]["pos"];
+            MR.avatars[payload[key]["user"]].headset.orientation = payload[key]["state"]["rot"];
+            //console.log(payload[key]["state"]);
+            MR.avatars[payload[key]["user"]].leftController.position = payload[key]["state"].controllers.left.pos;
+            MR.avatars[payload[key]["user"]].leftController.orientation = payload[key]["state"].controllers.left.rot;
+            MR.avatars[payload[key]["user"]].rightController.position = payload[key]["state"].controllers.right.pos;
+            MR.avatars[payload[key]["user"]].rightController.orientation = payload[key]["state"].controllers.right.rot;
+            MR.avatars[payload[key]["user"]].mode = payload[key]["state"]["mode"];
+        }
+        else {
+            // never seen, create
+            //ALEX: AVATARS WHO ARE ALSO IN BROWSER MODE GO HERE...
+            //console.log("previously unseen user avatar");
+            // let avatarCube = createCubeVertices();
+            // MR.avatars[payload[key]["user"]] = new Avatar(avatarCube, payload[key]["user"]);
+        }
     }
-  //}
+    //}
 });
 
 /*
 // expected format of message
-    const response = {
-        "type": "lock",
-        "uid": key,
-        "success": boolean
+        const response = {
+                "type": "lock",
+                "uid": key,
+                "success": boolean
 };
 
  */
@@ -109,11 +109,11 @@ MR.syncClient.registerEventHandler("lock", (json) => {
 
 /*
 // expected format of message
-    const response = {
-        "type": "release",
-        "uid": key,
-        "success": boolean
-    };
+        const response = {
+                "type": "release",
+                "uid": key,
+                "success": boolean
+        };
 
  */
 
@@ -129,21 +129,21 @@ MR.syncClient.registerEventHandler("release", (json) => {
 /*
 //on success:
 
-    const response = {
-        "type": "object",
-        "uid": key,
-        "state": json,
-        "lockid": lockid,
-        "success": true
-    };
+        const response = {
+                "type": "object",
+                "uid": key,
+                "state": json,
+                "lockid": lockid,
+                "success": true
+        };
 
 //on failure:
 
-    const response = {
-        "type": "object",
-        "uid": key,
-        "success": false
-    };
+        const response = {
+                "type": "object",
+                "uid": key,
+                "success": false
+        };
  */
 
 MR.syncClient.registerEventHandler("object", (json) => {
@@ -152,13 +152,13 @@ MR.syncClient.registerEventHandler("object", (json) => {
 });
 
 // on success
-    // const response = {
-    //   "type": "calibrate",
-    //   "x": ret.x,
-    //   "z": ret.z,
-    //   "theta": ret.theta,
-    //   "success": true
-    // };
+// const response = {
+//   "type": "calibrate",
+//   "x": ret.x,
+//   "z": ret.z,
+//   "theta": ret.theta,
+//   "success": true
+// };
 
 // on failure:
 //   const response = {
@@ -171,103 +171,103 @@ MR.syncClient.registerEventHandler("calibration", (json) => {
 });
 
 
-function pollAvatarData(){
-  if (MR.VRIsActive()) {
-     const frameData = MR.frameData();
-      if (frameData != null) {
-        //User Headset
-        const headsetPos = frameData.pose.position;
-        const headsetRot = frameData.pose.orientation;
-        const headsetTimestamp = frameData.timestamp;
+function pollAvatarData() {
+    if (MR.VRIsActive()) {
+        const frameData = MR.frameData();
+        if (frameData != null) {
+            //User Headset
+            const headsetPos = frameData.pose.position;
+            const headsetRot = frameData.pose.orientation;
+            const headsetTimestamp = frameData.timestamp;
 
-        if (MR.controllers[0] != null && MR.controllers[1] != null){
+            if (MR.controllers[0] != null && MR.controllers[1] != null) {
                 //Controllers
-            const controllerRight = MR.controllers[0];
-            const controllerRightPos = controllerRight.pose.position;
-            const controllerRightRot = controllerRight.pose.orientation;
-            const controllerRightButtons = controllerRight.buttons;
+                const controllerRight = MR.controllers[0];
+                const controllerRightPos = controllerRight.pose.position;
+                const controllerRightRot = controllerRight.pose.orientation;
+                const controllerRightButtons = controllerRight.buttons;
 
-            const controllerLeft = MR.controllers[1];
-            const controllerLeftPos = controllerLeft.pose.position;
-            const controllerLeftRot = controllerLeft.pose.orientation;
-            const controllerLeftButtons = controllerLeft.buttons;
+                const controllerLeft = MR.controllers[1];
+                const controllerLeftPos = controllerLeft.pose.position;
+                const controllerLeftRot = controllerLeft.pose.orientation;
+                const controllerLeftButtons = controllerLeft.buttons;
 
-            //buttons have a 'pressed' variable that is a boolean.
-            /*A quick mapping of the buttons:
-                0: analog stick
-                1: trigger
-                2: side trigger
-                3: x button
-                4: y button
-                5: home button
-            */
-            const avatar_message = {
+                //buttons have a 'pressed' variable that is a boolean.
+                /*A quick mapping of the buttons:
+                        0: analog stick
+                        1: trigger
+                        2: side trigger
+                        3: x button
+                        4: y button
+                        5: home button
+                */
+                const avatar_message = {
+                    type: "avatar",
+                    user: MR.playerid,
+                    state: {
+                        mode: MR.UserType.vr,
+                        pos: CG.matrixTransform(MR.avatarMatrixInverse, headsetPos),
+                        rot: headsetRot,
+                        controllers: {
+                            left: {
+                                pos: CG.matrixTransform(MR.avatarMatrixInverse, [controllerLeftPos[0], controllerLeftPos[1], controllerLeftPos[2]]),
+                                rot: [controllerLeftRot[0], controllerLeftRot[1], controllerLeftRot[2], controllerLeftRot[3]],
+                                analog: controllerLeftButtons[0].pressed,
+                                trigger: controllerLeftButtons[1].pressed,
+                                sideTrigger: controllerLeftButtons[2].pressed,
+                                x: controllerLeftButtons[3].pressed,
+                                y: controllerLeftButtons[4].pressed,
+                                home: controllerLeftButtons[5].pressed,
+                                analogx: controllerLeft.axes[0],
+                                analogy: controllerLeft.axes[1]
+
+                            },
+                            right: {
+                                pos: CG.matrixTransform(MR.avatarMatrixInverse, [controllerRightPos[0], controllerRightPos[1], controllerRightPos[2]]),
+                                rot: [controllerRightRot[0], controllerRightRot[1], controllerRightRot[2], controllerRightRot[3]],
+                                analog: controllerRightButtons[0].pressed,
+                                trigger: controllerRightButtons[1].pressed,
+                                sideTrigger: controllerRightButtons[2].pressed,
+                                x: controllerRightButtons[3].pressed,
+                                y: controllerRightButtons[4].pressed,
+                                home: controllerRightButtons[5].pressed,
+                                analogx: controllerRight.axes[0],
+                                analogy: controllerRight.axes[1],
+                            }
+                        }
+                    }
+                }
+
+                if (MR.playerid == -1) {
+                    return;
+                }
+
+
+
+                try {
+                    //console.log(avatar_message);
+                    MR.syncClient.send(avatar_message);
+                } catch (err) {
+                    console.log(err);
+                }
+            }
+
+        }
+
+
+    } else {
+        let avatar_message = {
             type: "avatar",
             user: MR.playerid,
             state: {
-                mode: MR.UserType.vr,
-                pos:  CG.matrixTransform(MR.avatarMatrixInverse, headsetPos),
-                rot: headsetRot,
-                controllers :{
-                    left:{
-                        pos: CG.matrixTransform(MR.avatarMatrixInverse, [controllerLeftPos[0],controllerLeftPos[1], controllerLeftPos[2]]),
-                        rot: [controllerLeftRot[0],controllerLeftRot[1], controllerLeftRot[2], controllerLeftRot[3]],
-                        analog: controllerLeftButtons[0].pressed,
-                        trigger: controllerLeftButtons[1].pressed,
-                        sideTrigger: controllerLeftButtons[2].pressed,
-                        x: controllerLeftButtons[3].pressed,
-                        y: controllerLeftButtons[4].pressed,
-                        home: controllerLeftButtons[5].pressed,
-                        analogx: controllerLeft.axes[0],
-                        analogy: controllerLeft.axes[1]
-
-                    },
-                    right:{
-                        pos: CG.matrixTransform(MR.avatarMatrixInverse, [controllerRightPos[0],controllerRightPos[1], controllerRightPos[2]]),
-                        rot: [controllerRightRot[0],controllerRightRot[1], controllerRightRot[2], controllerRightRot[3]],
-                        analog: controllerRightButtons[0].pressed,
-                        trigger: controllerRightButtons[1].pressed,
-                        sideTrigger: controllerRightButtons[2].pressed,
-                        x: controllerRightButtons[3].pressed,
-                        y: controllerRightButtons[4].pressed,
-                        home: controllerRightButtons[5].pressed,
-                        analogx: controllerRight.axes[0],
-                        analogy: controllerRight.axes[1],
-                    }
-                }
+                mode: MR.UserType.browser,
             }
         }
-
-      if (MR.playerid == -1) {
-          return;
-      }
-
-
-
-      try {
-         //console.log(avatar_message);
-         MR.syncClient.send(avatar_message);
-      } catch(err) {
-         console.log(err);
-      }
-    }
-
-    }
-
-     
-  } else {
-    let avatar_message = {
-        type: "avatar",
-        user: MR.playerid,
-        state: {
-          mode: MR.UserType.browser,
+        try {
+            //console.log(avatar_message);
+            MR.syncClient.send(avatar_message);
+        } catch (err) {
+            console.log(err);
         }
     }
-     try {
-        //console.log(avatar_message);
-         MR.syncClient.send(avatar_message);
-      } catch(err) {
-         console.log(err);
-      }
-  }
 }
