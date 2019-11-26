@@ -35,8 +35,57 @@ let lathe = CG.createMeshVertices(10, 16, CG.uvToLathe,
 // let lathe = CG.cube;
 ////////////////////////////// SCENE SPECIFIC CODE
 
+const WOOD = 0,
+      TILES = 1,
+      NOISY_BUMP = 2;
+
 let noise = new ImprovedNoise();
 let m = new Matrix();
+/*--------------------------------------------------------------------------------
+
+I wrote the following to create an abstraction on top of the left and right
+controllers, so that in the onStartFrame() function we can detect press()
+and release() events when the user depresses and releases the trigger.
+
+The field detecting the trigger being pressed is buttons[1].pressed.
+You can detect pressing of the other buttons by replacing the index 1
+by indices 0 through 5.
+
+You might want to try more advanced things with the controllers.
+As we discussed in class, there are many more fields in the Gamepad object,
+such as linear and angular velocity and acceleration. Using the browser
+based debugging tool, you can do something like console.log(leftController)
+to see what the options are.
+
+--------------------------------------------------------------------------------*/
+
+function ControllerHandler(controller) {
+   this.isDown      = () => controller.buttons[1].pressed;
+   this.onEndFrame  = () => wasDown = this.isDown();
+   this.orientation = () => controller.pose.orientation;
+   this.position    = () => controller.pose.position;
+   this.press       = () => ! wasDown && this.isDown();
+   this.release     = () => wasDown && ! this.isDown();
+   this.tip         = () => {
+      let P = this.position();          // THIS CODE JUST MOVES
+      m.identity();                     // THE "HOT SPOT" OF THE
+      m.translate(P);                   // CONTROLLER TOWARD ITS
+      m.rotateQ(this.orientation());    // FAR TIP (FURTHER AWAY
+      m.translate(0,0,-.03);            // FROM THE USER'S HAND).
+      let v = m.value();
+      return [v[12],v[13],v[14]];
+   }
+   this.center = () => {
+      let P = this.position();
+      m.identity();
+      m.translate(P);
+      m.rotateQ(this.orientation());
+      m.translate(0,.02,-.005);
+      let v = m.value();
+      return [v[12],v[13],v[14]];
+   }
+   let wasDown = false;
+}
 
 // (New Info): constants can be reloaded without worry
 // let VERTEX_SIZE = 8;
@@ -103,8 +152,7 @@ async function setup(state) {
     const images = await imgutil.loadImagesPromise([
         getPath("textures/wood.png"),
         getPath("textures/tiles.jpg"),
-        getPath("textures/stones.gif"),
-        getPath("textures/stones_bump.gif"),
+        getPath("textures/noisy_bump.jpg")
      ]);
 
     let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
@@ -280,23 +328,37 @@ function onStartFrame(t, state) {
 
     // THIS CURSOR CODE IS ONLY RELEVANT WHEN USING THE BROWSER MOUSE, NOT WHEN IN VR MODE.
 
+    // THIS CURSOR CODE IS ONLY RELEVANT WHEN USING THE BROWSER MOUSE, NOT WHEN IN VR MODE.
 
     let cursorValue = () => {
-        let p = state.cursor.position(), canvas = MR.getCanvas();
-        return [ p[0] / canvas.clientWidth * 2 - 1, 1 - p[1] / canvas.clientHeight * 2, p[2] ];
-     }
-      let cursorXYZ = cursorValue();
+      let p = state.cursor.position(), canvas = MR.getCanvas();
+      return [ p[0] / canvas.clientWidth * 2 - 1, 1 - p[1] / canvas.clientHeight * 2, p[2] ];
+   }
+   let cursorXYZ = cursorValue();
+   if (state.cursorPrev === undefined)
+      state.cursorPrev = [0,0,0];
+   if (state.turnAngle === undefined)
+      state.turnAngle = state.tiltAngle = 0;
+   if (cursorXYZ[2] && state.cursorPrev[2]) {
+      state.turnAngle -= Math.PI/2 * (cursorXYZ[0] - state.cursorPrev[0]);
+      state.tiltAngle += Math.PI/2 * (cursorXYZ[1] - state.cursorPrev[1]);
+   }
+   state.cursorPrev = cursorXYZ;
 
-      if (state.cursorPrev === undefined)
-        state.cursorPrev = [0,0,0];
-      if (state.turnAngle === undefined)
-        state.turnAngle = state.tiltAngle = 0;
-     if (cursorXYZ[2] && state.cursorPrev[2]) {
+   if (state.position === undefined)
+      state.position = [0,0,0];
+   let fx = -.01 * Math.sin(state.turnAngle),
+       fz =  .01 * Math.cos(state.turnAngle);
+   if (Input.keyIsDown(Input.KEY_UP)) {
+      state.position[0] += fx;
+      state.position[2] += fz;
+   }
+   if (Input.keyIsDown(Input.KEY_DOWN)) {
+      state.position[0] -= fx;
+      state.position[2] -= fz;
+   }
 
-        state.turnAngle -= Math.PI/2 * (cursorXYZ[0] - state.cursorPrev[0]);
-        state.tiltAngle += Math.PI/2 * (cursorXYZ[1] - state.cursorPrev[1]);
-     }
-     state.cursorPrev = cursorXYZ;
+   // SET UNIFORMS AND GRAPHICAL STATE BEFORE DRAWING.
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -413,7 +475,6 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
     let prev_shape = null;
 
-    const editor = state.editor;
     const input  = state.input;
 
     /*-----------------------------------------------------------------
@@ -502,80 +563,78 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     and so forth.
 
     -----------------------------------------------------------------*/
-
+    
     let drawController = (C, hand) => {
-        let P = C.position();
-        m.save();
-           m.multiply(state.avatarMatrixForward);
-           m.translate(P);
-           m.rotateQ(C.orientation());
-           m.translate(0,.02,-.005);
-           m.rotateX(.75);
-           m.save();
-              m.translate(0,0,-.0095).scale(.004,.004,.003);
-              drawShape(CG.sphere, C.isDown() ? [10,0,0] : [.5,0,0]);
-           m.restore();
-           m.save();
-              m.translate(0,0,-.01).scale(.04,.04,.13);
-              drawShape(CG.torus, [0,0,0]);
-           m.restore();
-           m.save();
-              m.translate(0,-.0135,-.008).scale(.04,.0235,.0015);
-              drawShape(CG.cylinder, [0,0,0]);
-           m.restore();
-           m.save();
-              m.translate(0,-.01,.03).scale(.012,.02,.037);
-              drawShape(CG.cylinder, [0,0,0]);
-           m.restore();
-           m.save();
-              m.translate(0,-.01,.067).scale(.012,.02,.023);
-              drawShape(CG.sphere, [0,0,0]);
-           m.restore();
-        m.restore();
-     }
- 
-     m.identity();
+      let P = C.position();
+      m.save();
+         m.multiply(state.avatarMatrixForward);
+         m.translate(P[0],P[1],P[2]);
+         m.rotateQ(C.orientation());
+         m.translate(0,.02,-.005);
+         m.rotateX(.75);
+         m.save();
+            m.translate(0,0,-.0095).scale(.004,.004,.003);
+            drawShape(CG.sphere, C.isDown() ? [10,0,0] : [.5,0,0]);
+         m.restore();
+         m.save();
+            m.translate(0,0,-.01).scale(.04,.04,.13);
+            drawShape(CG.torus1, [0,0,0]);
+         m.restore();
+         m.save();
+            m.translate(0,-.0135,-.008).scale(.04,.0235,.0015);
+            drawShape(CG.cylinder, [0,0,0]);
+         m.restore();
+         m.save();
+            m.translate(0,-.01,.03).scale(.012,.02,.037);
+            drawShape(CG.cylinder, [0,0,0]);
+         m.restore();
+         m.save();
+            m.translate(0,-.01,.067).scale(.012,.02,.023);
+            drawShape(CG.sphere, [0,0,0]);
+         m.restore();
+      m.restore();
+   }
 
+   m.identity();
 
-    let drawSyncController = (pos, rot, color) => {
-        let P = pos;
-        m.save();
-        m.identity();
-            m.translate(P[0], P[1], P[2]);
-            m.rotateQ(rot);
-            m.translate(0,.02,-.005);
-            m.rotateX(.75);
-            m.save();
-                m.translate(0,0,-.0095).scale(.004,.004,.003);
-            m.restore();
-            m.save();
-                m.translate(0,0,-.01).scale(.04,.04,.13);
-                drawShape(CG.torus, [0,0,0]);
-            m.restore();
-            m.save();
-                m.translate(0,-.0135,-.008).scale(.04,.0235,.0015);
-                drawShape(CG.cylinder, [0,0,0]);
-            m.restore();
-            m.save();
-                m.translate(0,-.01,.03).scale(.012,.02,.037);
-                drawShape(CG.cylinder, [0,0,0]);
-            m.restore();
-            m.save();
-                m.translate(0,-.01,.067).scale(.012,.02,.023);
-                drawShape(CG.sphere, [0,0,0]);
-            m.restore();
-        m.restore();
-    }
+   let drawSyncController = (pos, rot, color) => {
+      let P = pos;
+      m.save();
+      m.identity();
+         m.translate(P[0], P[1], P[2]);
+         m.rotateQ(rot);
+         m.translate(0,.02,-.005);
+         m.rotateX(.75);
+         m.save();
+               m.translate(0,0,-.0095).scale(.004,.004,.003);
+         m.restore();
+         m.save();
+               m.translate(0,0,-.01).scale(.04,.04,.13);
+               drawShape(CG.torus, [0,0,0]);
+         m.restore();
+         m.save();
+               m.translate(0,-.0135,-.008).scale(.04,.0235,.0015);
+               drawShape(CG.cylinder, [0,0,0]);
+         m.restore();
+         m.save();
+               m.translate(0,-.01,.03).scale(.012,.02,.037);
+               drawShape(CG.cylinder, [0,0,0]);
+         m.restore();
+         m.save();
+               m.translate(0,-.01,.067).scale(.012,.02,.023);
+               drawShape(CG.sphere, [0,0,0]);
+         m.restore();
+      m.restore();
+   }
 
+   m.identity();
 
-    m.identity();
-
-    if (input.LC) {
-        drawController(input.LC, 0);
-        drawController(input.RC, 1);
-        if (enableModeler && input.RC.isDown())
-           showMenu(input.RC.position());
-    }
+   if (input.LC) {
+      drawController(input.LC, 0);
+      drawController(input.RC, 1);
+      if (enableModeler && input.RC.isDown())
+         showMenu(input.RC.position());
+   }
 
 
     /*-----------------------------------------------------------------
@@ -588,21 +647,23 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
     -----------------------------------------------------------------*/
 
-    for (let n = 0 ; n < objs.length ; n++) {
-        let obj = objs[n], P = obj.position;
-        m.save();
-           m.multiply(state.avatarMatrixForward);
-           m.translate(P);
-           m.rotateQ(obj.orientation);
-           m.scale(.03,.03,.03);
-           drawShape(obj.shape, [1,1,1]);
-        m.restore();
-     }
+   for (let n = 0 ; n < objs.length ; n++) {
+      let obj = objs[n], P = obj.position;
+      m.save();
+         m.multiply(state.avatarMatrixForward);
+         m.translate(P[0], P[1], P[2]);
+         m.rotateQ(obj.orientation);
+         m.scale(.03,.03,.03);
+         drawShape(obj.shape, [1,1,1]);
+      m.restore();
+   }
 
-     m.translate(0, -EYE_HEIGHT, 0);
-     m.rotateX(state.tiltAngle);
-     m.rotateY(state.turnAngle);
-
+   m.translate(0, -EYE_HEIGHT, 0);
+   m.rotateX(state.tiltAngle);
+   m.rotateY(state.turnAngle);
+   let P = state.position;
+   m.translate(P[0],P[1],P[2]);
+ 
     /*-----------------------------------------------------------------
 
     Notice that I make the room itself as an inside-out cube, by
@@ -627,99 +688,107 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
        drawTable(1);
     m.restore();
 
-    m.save();
-       m.translate(0, 2 * TABLE_HEIGHT, (TABLE_DEPTH - HALL_WIDTH) / 2);
-       //m.aimZ([Math.cos(state.time),Math.sin(state.time),0]);
-       m.scale(.06,.06,.6);
-       //drawShape(lathe, [1,.2,0]);
-    m.restore();
+   // DRAW TEST SHAPE
 
-    let A = [0,0,0];
-    let B = [1+.4*Math.sin(2 * state.time),.4*Math.cos(2 * state.time),0];
-    let C = CG.ik(.7,.7,B,[0,-1,-2]);  
+   m.save();
+      m.translate(0, 2 * TABLE_HEIGHT, (TABLE_DEPTH - HALL_WIDTH) / 2);
+      //m.aimZ([Math.cos(state.time),Math.sin(state.time),0]);
+      m.rotateY(state.time);
+      m.scale(.06,.06,.6);
+      //drawShape(lathe, [1,.2,0]);
+      m.restore();
 
-    m.save();
-       m.translate(-.5, 2.5 * TABLE_HEIGHT, (TABLE_DEPTH - HALL_WIDTH) / 2);
-       //m.rotateY(state.time);
-/*
-       m.save();
-          m.translate(A).scale(.07);
-          drawShape(CG.sphere, [1,1,1]);
-       m.restore();
+      let A = [0,0,0];
+      let B = [1+.4*Math.sin(2 * state.time),.4*Math.cos(2 * state.time),0];
+      let C = CG.ik(.7,.7,B,[0,-1,-2]);
 
-       m.save();
-          m.translate(B).scale(.07);
-          drawShape(CG.sphere, [1,1,1]);
-       m.restore();
+      m.save();
+      m.translate(-.5, 2.5 * TABLE_HEIGHT, (TABLE_DEPTH - HALL_WIDTH) / 2);
+      //m.rotateY(state.time);
+      /*
+      m.save();
+         m.translate(A[0],A[1],A[2]).scale(.07);
+         drawShape(CG.sphere, [1,1,1]);
+      m.restore();
 
-       m.save();
-          m.translate(C).scale(.07);
-          drawShape(CG.sphere, [1,1,1]);
-       m.restore();
-*/
-       m.save();
-          m.translate(CG.mix(A,C,.5)).aimZ(CG.subtract(A,C)).scale(.05,.05,.37);
-          drawShape(lathe, [0,.2,1]);
-       m.restore();
+      m.save();
+         m.translate(B[0],B[1],B[2]).scale(.07);
+         drawShape(CG.sphere, [1,1,1]);
+      m.restore();
 
-       m.save();
-          m.translate(CG.mix(C,B,.5)).aimZ(CG.subtract(C,B)).scale(.03,.03,.37);
-          drawShape(lathe, [0,.2,1]);
-       m.restore();
+      m.save();
+         m.translate(C[0],C[1],C[2]).scale(.07);
+         drawShape(CG.sphere, [1,1,1]);
+      m.restore();
+      */
+      let skinColor = [1,.5,.3], D;
+      m.save();
+         D = CG.mix(A,C,.5);
+         m.translate(D[0],D[1],D[2]);
+         m.aimZ(CG.subtract(A,C));
+         m.scale(.05,.05,.37);
+         drawShape(lathe, skinColor, -1,1, 2,1);
+      m.restore();
 
-    m.restore();
+      m.save();
+         D = CG.mix(C,B,.5);
+         m.translate(D[0],D[1],D[2]).aimZ(CG.subtract(C,B)).scale(.03,.03,.37);
+         drawShape(lathe, skinColor, -1,1, 2,1);
+      m.restore();
+
+   m.restore();
       /*-----------------------------------------------------------------
         Here is where we draw avatars and controllers.
       -----------------------------------------------------------------*/
 
-    for (let id in MR.avatars) {
+   for (let id in MR.avatars) {
 
-          if(MR.playerid == MR.avatars[id].playerid && MR.avatars[id].mode == MR.UserType.vr){
-            let frameData = MR.frameData();
-            if (frameData != null) {
-              let headsetPos = frameData.pose.position;
-              let headsetRot = frameData.pose.orientation;
+      if(MR.playerid == MR.avatars[id].playerid && MR.avatars[id].mode == MR.UserType.vr) {
+         let frameData = MR.frameData();
+         if (frameData != null) {
+            let headsetPos = frameData.pose.position;
+            let headsetRot = frameData.pose.orientation;
 
-              const avatar = MR.avatars[id];
-              const rcontroller = MR.controllers[0];
-              const lcontroller = MR.controllers[1];
-              
-              drawAvatar(avatar, headsetPos, headsetRot, .03, state);
-              drawController(input.LC, [1,0,0]);
-              drawController(input.RC, [0,1,1]);
-              //drawAvatar(avatar, rcontroller.pose.position, rcontroller.pose.orientation, 0.05, state);
-              //drawAvatar(avatar, lcontroller.pose.position, lcontroller.pose.orientation, 0.05, state);
-             
+            const avatar = MR.avatars[id];
+            const rcontroller = MR.controllers[0];
+            const lcontroller = MR.controllers[1];
+            
+            drawAvatar(avatar, headsetPos, headsetRot, .03, state);
+            
+            drawController(input.LC, 0);
+            drawController(input.RC, 1);
+            //drawAvatar(avatar, rcontroller.pose.position, rcontroller.pose.orientation, 0.05, state);
+            //drawAvatar(avatar, lcontroller.pose.position, lcontroller.pose.orientation, 0.05, state);
+            
 
-            }
+         }
          
-          } else if(MR.avatars[id].mode == MR.UserType.vr) {
-
+         } else if(MR.avatars[id].mode == MR.UserType.vr) {
             let headsetPos = MR.avatars[id].headset.position;
             let headsetRot = MR.avatars[id].headset.orientation;
             
             if(headsetPos == null || headsetRot == null){
-                continue;
+                  continue;
             }
 
             if (typeof headsetPos == 'undefined') {
-              console.log(id);
-              console.log("not defined");
+               console.log(id);
+               console.log("not defined");
             }
             
             const avatar = MR.avatars[id];
             const rcontroller = MR.avatars[id].rightController;
             const lcontroller = MR.avatars[id].leftController;
-          
+            
             //console.log("VR position and orientation:")
             //console.log(headsetPos);
             //console.log(headsetRot);
             drawAvatar(avatar, headsetPos, headsetRot, .1, state);
             drawSyncController(rcontroller.position, rcontroller.orientation, [1,0,0]);
             drawSyncController(lcontroller.position, lcontroller.orientation, [0,1,1]);
-          }
+         }
         
-        }
+   }
 }
 
 function onEndFrame(t, state) {
@@ -742,11 +811,11 @@ function onEndFrame(t, state) {
         let headsetRot = frameData.pose.orientation;
            /*Button stuff that we might move somewhere else*/
         if (input.LC && input.LC.isDown()) {
-          this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.LC.position(), [0,0,0], headsetPos, headsetRot);
+         //  this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.LC.position(), [0,0,0], headsetPos, headsetRot);
         }
 
         if (input.RC && input.RC.isDown()) {
-            this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.RC.position(), [0,0,0], headsetPos, headsetRot);
+            // this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.RC.position(), [0,0,0], headsetPos, headsetRot);
         }
     }
 }
