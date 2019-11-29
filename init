@@ -8,3 +8,4 @@ cd ../..
 cd webxr-server
 npm install
 cd ..
+npm install -g pm2
