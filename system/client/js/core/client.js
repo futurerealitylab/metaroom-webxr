@@ -163,7 +163,8 @@ class Client
             console.error("Couldn't load websocket", err);
         }
     }
-
+    // TODO:
+    // register event for lock and release, that return true or false from onlock in Lock class
     createLock(uid) {
         this.locks[uid] = new Lock();
         return this.locks[uid];
