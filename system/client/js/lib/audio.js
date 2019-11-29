@@ -42,7 +42,7 @@ class SpatialAudioContext {
     };
 
     resume() {
-        this.playing = true;
+        // this.playing = true;
         return this.context.resume();
     };
 
@@ -50,7 +50,24 @@ class SpatialAudioContext {
 
         if (!(url in this.cache)) {
             console.log("invalid url, not currently loaded");
+            return;
         }
+
+        if (this.playing) {
+            console.log("already playing");
+            return;
+        }
+
+        // if (this.context.state === 'running') {
+            // 
+            // return;
+        // }
+// 
+        // if (this.context.state === 'suspended') {
+        //     this.resume().then(() => {
+        //         console.log('Playback resumed successfully');
+        //     });
+        // }
 
         let listener = this.context.listener;
 
@@ -74,6 +91,12 @@ class SpatialAudioContext {
             .connect(this.context.destination);
 
         source.start(this.context.currentTime + time, offset);
+
+        let timer = setTimeout(() => {
+            this.playing = false;
+        }, source.buffer.duration * 1000);
+
+        this.playing = true;
 
     };
 
@@ -129,7 +152,7 @@ class SpatialAudioContext {
             // equalpower or HRTF
             panningModel: 'HRTF',
             // linear, inverse, exponential
-            distanceModel: "exponential",
+            distanceModel: "linear",
             positionX: 0.0,
             positionY: 0.0,
             positionZ: 0.0,

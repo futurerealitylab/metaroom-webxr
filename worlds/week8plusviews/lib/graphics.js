@@ -62,7 +62,7 @@ export let Matrix = function() {
 
 ////////////////////////////// SUPPORT FOR CREATING 3D SHAPES
 
-export const VERTEX_SIZE = 8;
+// export const VERTEX_SIZE = 8;
 
 export let createCubeVertices = () => {
    let V = [], P = [ -1,-1, 1, 0,0, 1, 0,0,   1, 1, 1, 0,0, 1, 1,1,  -1, 1, 1, 0,1, 1, 0,1,
