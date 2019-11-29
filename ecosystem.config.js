@@ -1,36 +1,36 @@
 module.exports = {
   apps : [{
     name: 'Front End',
-    script: 'app.js',
+    script: 'system/server/main.js',
 
     // Options reference: https://pm2.keymetrics.io/docs/usage/application-declaration/
     // args: 'one two',
     instances: 1,
     autorestart: true,
     watch: false,
-    max_memory_restart: '1G',
-    env: {
-      NODE_ENV: 'development'
-    },
-    env_production: {
-      NODE_ENV: 'production'
-    }
+    // max_memory_restart: '1G',
+    // env: {
+    //   NODE_ENV: 'development'
+    // },
+    // env_production: {
+    //   NODE_ENV: 'production'
+    // }
   },
   {
     name: 'Object Sync Server',
-    script: 'npm',
+    script: 'node',
     // Options reference: https://pm2.keymetrics.io/docs/usage/application-declaration/
-    args: 'start',
+    args: 'webxr-server/server.js',
     instances: 1,
     autorestart: true,
     watch: true,
-    max_memory_restart: '1G',
-    env: {
-      NODE_ENV: 'development'
-    },
-    env_production: {
-      NODE_ENV: 'production'
-    }
+    // max_memory_restart: '1G',
+    // env: {
+    //   NODE_ENV: 'development'
+    // },
+    // env_production: {
+    //   NODE_ENV: 'production'
+    // }
   }],
 
   // deploy : {
