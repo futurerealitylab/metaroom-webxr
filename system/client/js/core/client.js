@@ -7,6 +7,7 @@ class Client
 
     constructor(heartbeat = 30000) {
         this.callbacks = {};
+        this.locks = {};
         this.heartbeatTick = heartbeat;
         this.ws = null;
     }
@@ -96,34 +97,6 @@ class Client
                         console.warn("message of type %s is not supported yet", json["type"]);
                     }
 
-                    // switch(json["type"]) {
-                    //     case "join":
-                    //         console.log(json);
-                    //         this.callbacks["join"](json);
-                    //         break;
-                    //     case "initi":
-                    //     case "leave":
-                    //         console.log(json);
-                    //         break;
-                    //     case "tick":
-                    //         //console.log(json);
-                    //         break;
-                    //     case "lock":
-                    //         console.log(json);
-                    //         break;
-                    //     case "release":
-                    //         console.log(json);
-                    //         break;
-                    //     case "activate":
-                    //         console.log(json);
-                    //         break;
-                    //     case "deactivate":
-                    //         console.log(json);
-                    //         break;
-                    //     case "clear":
-                    //         console.log("delete lief");
-                    //         break;
-                    // }
                 } catch(err) {
                     // console.log("bad json:", json);
                     console.error(err);
@@ -191,7 +164,8 @@ class Client
         }
     }
 
-    createLock() {
-        return new Lock();
+    createLock(uid) {
+        this.locks[uid] = new Lock();
+        return this.locks[uid];
     }
 };
