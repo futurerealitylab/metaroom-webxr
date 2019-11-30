@@ -9,3 +9,4 @@ popd system
 pushd webxr-server
 npm install
 popd webxr-server
+npm install -g pm2
