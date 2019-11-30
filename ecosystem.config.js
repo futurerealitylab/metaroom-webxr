@@ -9,12 +9,14 @@ module.exports = {
     autorestart: true,
     watch: true,
     // max_memory_restart: '1G',
-    // env: {
-    //   NODE_ENV: 'development'
-    // },
-    // env_production: {
-    //   NODE_ENV: 'production'
-    // }
+    env: {
+      NODE_ENV: 'development',
+      PORT: 3000
+    },
+    env_production: {
+      NODE_ENV: 'production',
+      PORT: 3000
+    }
   },
   {
     name: 'Object Sync Server',
@@ -25,12 +27,14 @@ module.exports = {
     autorestart: true,
     watch: true,
     // max_memory_restart: '1G',
-    // env: {
-    //   NODE_ENV: 'development'
-    // },
-    // env_production: {
-    //   NODE_ENV: 'production'
-    // }
+    env: {
+      NODE_ENV: 'development',
+      PORT: 11235
+    },
+    env_production: {
+      NODE_ENV: 'production',
+      PORT: 11235
+    }
   }],
 
   // deploy : {
