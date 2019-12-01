@@ -282,10 +282,23 @@ async function setup(state) {
     ]);
 
     //test object
-    objs.push(grabbableCube);
+    MR.objs.push(grabbableCube);
     grabbableCube.position    = [0,0,-0.5].slice();
     grabbableCube.orientation = [1,0,0,1].slice();
     grabbableCube.uid = 0;
+    const response = 
+        {
+        type: "spawn",
+        uid: grabbableCube.uid,
+        state: {
+            position: grabbableCube.position,
+            orientation: grabbableCube.orientation,
+        },
+        lockid: '',
+        };
+    MR.syncClient.send(response);    
+
+
 
 }
 
@@ -392,11 +405,11 @@ function onStartFrame(t, state) {
 	        menuChoice = findInMenu(input.RC.position(), input.LC.tip());
 	        if (menuChoice >= 0 && input.LC.press()) {
 	            state.isNewObj = true;
-	            objs.push(new Obj(menuShape[menuChoice]));
+	            MR.objs.push(new Obj(menuShape[menuChoice]));
 	        }
         }
         if (state.isNewObj) {
-            let obj = objs[objs.length - 1];
+            let obj = MR.objs[MR.objs.length - 1];
 	        obj.position    = input.LC.tip().slice();
 	        obj.orientation = input.LC.orientation().slice();
         }
@@ -445,20 +458,20 @@ function onStartFrame(t, state) {
 
      if (input.LC && input.LC.isDown()) {
                  
-      for(let i = 0; i < objs.length; i++){
+      for(let i = 0; i < MR.objs.length; i++){
         //ALEX: Check if grabbable.
-           let isGrabbed = checkIntersection(input.LC.position(), objs[i].shape);
-           requestLock(objs[i].uid);
+           let isGrabbed = checkIntersection(input.LC.position(), MR.objs[i].shape);
+           //requestLock(MR.objs[i].uid);
             if(isGrabbed == true){
-                objs[i].position = input.LC.position();
+                MR.objs[i].position = input.LC.position();
                  const response = 
                 {
                     type: "object",
-                    uid: objs[i].uid,
+                    uid: MR.objs[i].uid,
                     state: {
-                        position: objs[i].position;
-                        orientation: obs[i].orientation;
-                    }
+                        position: MR.objs[i].position,
+                        orientation: MR.objs[i].orientation,
+                    },
                     lockid: MR.playerid,
 
                 };
@@ -504,7 +517,7 @@ function Obj(shape) {
    this.shape = shape;
 };
 
-let objs = [];
+//let objs = [];
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
@@ -685,8 +698,8 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     need to go into onStartFrame(), not here.
 
     -----------------------------------------------------------------*/
-   for (let n = 0 ; n < objs.length ; n++) {
-      let obj = objs[n], P = obj.position;
+   for (let n = 0 ; n < MR.objs.length ; n++) {
+      let obj = MR.objs[n], P = obj.position;
       m.save();
          m.multiply(state.avatarMatrixForward);
          m.translate(P[0], P[1], P[2]);
