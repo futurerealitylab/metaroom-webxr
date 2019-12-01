@@ -41,6 +41,8 @@ const WOOD = 0,
 
 let noise = new ImprovedNoise();
 let m = new Matrix();
+
+let grabbableCube = new Obj(CG.torus);
 /*--------------------------------------------------------------------------------
 
 I wrote the following to create an abstraction on top of the left and right
@@ -279,6 +281,25 @@ async function setup(state) {
       'assets/audio/Blop-Mark_DiAngelo-79054334.wav'
     ]);
 
+    //test object
+    MR.objs.push(grabbableCube);
+    grabbableCube.position    = [0,0,-0.5].slice();
+    grabbableCube.orientation = [1,0,0,1].slice();
+    grabbableCube.uid = 0;
+    const response = 
+        {
+        type: "spawn",
+        uid: grabbableCube.uid,
+        state: {
+            position: grabbableCube.position,
+            orientation: grabbableCube.orientation,
+        },
+        lockid: '',
+        };
+    MR.syncClient.send(response);    
+
+
+
 }
 
 
@@ -384,11 +405,11 @@ function onStartFrame(t, state) {
 	        menuChoice = findInMenu(input.RC.position(), input.LC.tip());
 	        if (menuChoice >= 0 && input.LC.press()) {
 	            state.isNewObj = true;
-	            objs.push(new Obj(menuShape[menuChoice]));
+	            MR.objs.push(new Obj(menuShape[menuChoice]));
 	        }
         }
         if (state.isNewObj) {
-            let obj = objs[objs.length - 1];
+            let obj = MR.objs[MR.objs.length - 1];
 	        obj.position    = input.LC.tip().slice();
 	        obj.orientation = input.LC.orientation().slice();
         }
@@ -429,6 +450,37 @@ function onStartFrame(t, state) {
            }
         }
     }
+
+    /*-----------------------------------------------------------------
+    /*-----------------------------------------------------------------
+       Translating Grabbable Object: We can replace sceneObjs with objs[].
+    -----------------------------------------------------------------*/
+
+     if (input.LC && input.LC.isDown()) {
+                 
+      for(let i = 0; i < MR.objs.length; i++){
+        //ALEX: Check if grabbable.
+           let isGrabbed = checkIntersection(input.LC.position(), MR.objs[i].shape);
+           //requestLock(MR.objs[i].uid);
+            if(isGrabbed == true){
+                MR.objs[i].position = input.LC.position();
+                 const response = 
+                {
+                    type: "object",
+                    uid: MR.objs[i].uid,
+                    state: {
+                        position: MR.objs[i].position,
+                        orientation: MR.objs[i].orientation,
+                    },
+                    lockid: MR.playerid,
+
+                };
+                MR.syncClient.send(response);
+            }
+
+        
+      } 
+    }   
 }
 
 let menuX = [-.2,-.1,-.2,-.1];
@@ -465,7 +517,7 @@ function Obj(shape) {
    this.shape = shape;
 };
 
-let objs = [];
+//let objs = [];
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
@@ -646,9 +698,8 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     need to go into onStartFrame(), not here.
 
     -----------------------------------------------------------------*/
-
-   for (let n = 0 ; n < objs.length ; n++) {
-      let obj = objs[n], P = obj.position;
+   for (let n = 0 ; n < MR.objs.length ; n++) {
+      let obj = MR.objs[n], P = obj.position;
       m.save();
          m.multiply(state.avatarMatrixForward);
          m.translate(P[0], P[1], P[2]);
@@ -737,9 +788,12 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
       m.restore();
 
    m.restore();
-      /*-----------------------------------------------------------------
+
+
+
+    /*-----------------------------------------------------------------
         Here is where we draw avatars and controllers.
-      -----------------------------------------------------------------*/
+    -----------------------------------------------------------------*/
 
    for (let id in MR.avatars) {
 
@@ -817,6 +871,14 @@ function onEndFrame(t, state) {
         if (input.RC && input.RC.isDown()) {
             // this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.RC.position(), [0,0,0], headsetPos, headsetRot);
         }
+           /*ALEX: Button stuff that we might move somewhere else*/
+           /*ALEX: Right now we are only checking for LC, we need to also check for RC*/
+        if((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())){
+          this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.LC.position(), [0,0,0], headsetPos, headsetRot);
+          this.audioContext.resume().then(() => {
+            console.log('Playback resumed successfully')});
+
+      }
     }
 }
 
@@ -844,6 +906,9 @@ export default function main() {
 }
 
 //////////////DEBUG TOOLS
+
+
+//////////////EXTRA TOOLS
 function drawAvatar(avatar, pos, rot, scale, state) {
 
    let prev_shape = null;
@@ -866,3 +931,39 @@ function drawAvatar(avatar, pos, rot, scale, state) {
       drawShape(avatar.headset.vertices, [1,1,1], 0);
    m.restore();
 }
+
+function checkIntersection(point, verts) {
+  const bb = calcBoundingBox(verts);
+  const min = bb[0];
+  const max = bb[1];
+  console.log("bounding box");
+  console.log(point);
+  console.log(min);
+  console.log(max);
+  console.log("~~~~~~~~~~~~~");
+  if(point[0] > min[0] && point[0] < max[0] && 
+    point[1] > min[1] && point[1] < max[1] &&
+    point[2] > min[2] && point[2] < max[2]) return true;
+
+  return false;
+}
+
+function calcBoundingBox(verts) {
+   const min = [Number.MAX_VALUE,Number.MAX_VALUE,Number.MAX_VALUE];
+   const max = [Number.MIN_VALUE,Number.MIN_VALUE,Number.MIN_VALUE];
+    
+   for(let i = 0; i < verts.length; i+=2){
+
+      if(verts[i] < min[0]) min[0] = verts[i];
+      if(verts[i+1] < min[1]) min[1] = verts[i+1];
+      if(verts[i+2] < min[2]) min[2] = verts[i+2];
+
+      if(verts[i] > max[0]) max[0] = verts[i];
+      if(verts[i+1] > max[1]) max[1] = verts[i+1];
+      if(verts[i+2] > max[2]) max[2] = verts[i+2];
+   }
+
+   return [min, max];
+}
+
+
