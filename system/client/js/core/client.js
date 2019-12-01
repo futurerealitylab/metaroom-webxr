@@ -23,11 +23,26 @@ class Client
     }
 
     registerEventHandler(eventName, callback) {
-        // if (eventName in this.callbacks) {
-        //     return false;
-        // }
+        if (eventName in this.callbacks) {
+            return false;
+        }
 
         this.callbacks[eventName] = callback;
+        return true;
+    }
+
+    // useful for one-time events,
+    // removes the callback after only one use
+    registerEventHandlerOneShot(eventName, callback) {
+        if (eventName in this.callbacks) {
+            return false;
+        }
+
+        this.callbacks[eventName] = (args) => {
+            delete this.callbacks[eventName];
+            return callback(args);
+        }
+
         return true;
     }
 
