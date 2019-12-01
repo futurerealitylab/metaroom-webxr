@@ -1,4 +1,4 @@
-class EventManager {
+class EventBus {
     constructor() {
         this.callbacks = {};
     }
