@@ -296,7 +296,7 @@ async function setup(state) {
         },
         lockid: '',
         };
-    MR.syncClient.send(response);    
+    MR.syncClient.send(response);
 
 
 
@@ -464,7 +464,7 @@ function onStartFrame(t, state) {
            //requestLock(MR.objs[i].uid);
             if(isGrabbed == true){
                 MR.objs[i].position = input.LC.position();
-                 const response = 
+                const response = 
                 {
                     type: "object",
                     uid: MR.objs[i].uid,

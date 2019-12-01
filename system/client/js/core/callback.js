@@ -76,8 +76,7 @@ MR.syncClient.registerEventHandler("avatar", (json) => {
             MR.avatars[payload[key]["user"]].rightController.position = payload[key]["state"].controllers.right.pos;
             MR.avatars[payload[key]["user"]].rightController.orientation = payload[key]["state"].controllers.right.rot;
             MR.avatars[payload[key]["user"]].mode = payload[key]["state"]["mode"];
-        }
-        else {
+        } else {
             // never seen, create
             //ALEX: AVATARS WHO ARE ALSO IN BROWSER MODE GO HERE...
             //console.log("previously unseen user avatar");
@@ -98,13 +97,19 @@ const response = {
 
  */
 
+// TODO:
+// deal with logic and onlock
 MR.syncClient.registerEventHandler("lock", (json) => {
-    console.log("lock: ", json);
-    // is this mine?
-    // success?
-    // failure
-    // not mine
-    // note it?
+
+    const success = json["success"];
+    const key = json["uid"];
+
+    if (success) {
+        console.log("acquire lock success: ", key);
+    } else {
+        console.log("acquire lock failed : ", key);
+    }
+
 });
 
 /*
@@ -117,13 +122,19 @@ const response = {
 
  */
 
+// TODO:
+// deal with logic and onlock
 MR.syncClient.registerEventHandler("release", (json) => {
-    console.log("release: ", json);
-    // is this mine?
-    // success?
-    // failure
-    // not mine
-    // note it?
+
+    const success = json["success"];
+    const key = json["uid"];
+
+    if (success) {
+        console.log("release lock success: ", key);
+    } else {
+        console.log("release lock failed : ", key);
+    }
+
 });
 
 /*
@@ -144,11 +155,36 @@ const response = {
     "uid": key,
     "success": false
 };
- */
+*/
 
+// TODO:
+// update to MR.objs
 MR.syncClient.registerEventHandler("object", (json) => {
-    console.log("object moved: ", json);
-    // update update metadata for next frame's rendering
+
+    const success = json["success"];
+
+    if (success) {
+        console.log("object moved: ", json);
+        // update MR.objs
+    } else {
+        console.log("failed object message", json);
+    }
+
+});
+
+// TODO:
+// add to MR.objs
+MR.syncClient.registerEventHandler("spawn", (json) => {
+
+    const success = json["success"];
+
+    if (success) {
+        console.log("object created ", json);
+        // add to MR.objs
+    } else {
+        console.log("failed spawn message", json);
+    }
+
 });
 
 // on success
@@ -241,8 +277,6 @@ function pollAvatarData() {
                 if (MR.playerid == -1) {
                     return;
                 }
-
-
 
                 try {
                     //console.log(avatar_message);
