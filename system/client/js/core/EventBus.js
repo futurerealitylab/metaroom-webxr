@@ -7,6 +7,7 @@
 // this + networking - linearizability...
 // browser + node compatibility
 // decorators
+// handle underflow for uniqueId in case of long running server
 
 class EventBus {
     constructor() {
