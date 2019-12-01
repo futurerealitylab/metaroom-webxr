@@ -32,6 +32,7 @@ class Client
 
     registerEventHandler(eventName, callback) {
         if (eventName in this.callbacks) {
+            console.warn("event handler already exists for ", eventName);
             return false;
         }
 
@@ -43,6 +44,7 @@ class Client
     // removes the callback after only one use
     registerEventHandlerOneShot(eventName, callback) {
         if (eventName in this.callbacks) {
+            console.warn("event handler already exists for ", eventName);
             return false;
         }
 
