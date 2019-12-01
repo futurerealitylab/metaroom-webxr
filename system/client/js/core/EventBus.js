@@ -48,7 +48,7 @@ class EventBus {
             this.callbacks[channel] = {};
 
         this.callbacks[channel][id] = (args) => {
-            delete this.callbacks[channel][id];
+            this.unsubscribe(channel, id);
             return callback(args);
         };
 
