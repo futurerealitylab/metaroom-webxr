@@ -41,6 +41,8 @@ const WOOD = 0,
 
 let noise = new ImprovedNoise();
 let m = new Matrix();
+
+let grabbableCube = new Obj(CG.torus);
 /*--------------------------------------------------------------------------------
 
 I wrote the following to create an abstraction on top of the left and right
@@ -279,6 +281,12 @@ async function setup(state) {
       'assets/audio/Blop-Mark_DiAngelo-79054334.wav'
     ]);
 
+    //test object
+    objs.push(grabbableCube);
+    grabbableCube.position    = [0,0,-0.5].slice();
+    grabbableCube.orientation = [1,0,0,1].slice();
+    grabbableCube.uid = 0;
+
 }
 
 
@@ -429,6 +437,37 @@ function onStartFrame(t, state) {
            }
         }
     }
+
+    /*-----------------------------------------------------------------
+    /*-----------------------------------------------------------------
+       Translating Grabbable Object: We can replace sceneObjs with objs[].
+    -----------------------------------------------------------------*/
+
+     if (input.LC && input.LC.isDown()) {
+                 
+      for(let i = 0; i < objs.length; i++){
+        //ALEX: Check if grabbable.
+           let isGrabbed = checkIntersection(input.LC.position(), objs[i].shape);
+           requestLock(objs[i].uid);
+            if(isGrabbed == true){
+                objs[i].position = input.LC.position();
+                 const response = 
+                {
+                    type: "object",
+                    uid: objs[i].uid,
+                    state: {
+                        position: objs[i].position;
+                        orientation: obs[i].orientation;
+                    }
+                    lockid: MR.playerid,
+
+                };
+                MR.syncClient.send(response);
+            }
+
+        
+      } 
+    }   
 }
 
 let menuX = [-.2,-.1,-.2,-.1];
@@ -646,7 +685,6 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     need to go into onStartFrame(), not here.
 
     -----------------------------------------------------------------*/
-
    for (let n = 0 ; n < objs.length ; n++) {
       let obj = objs[n], P = obj.position;
       m.save();
@@ -737,28 +775,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
       m.restore();
 
    m.restore();
-      /*-----------------------------------------------------------------
-    /*-----------------------------------------------------------------
-        Drawing Example Grabbable Object
-    -----------------------------------------------------------------*/
 
-     if (input.LC && input.LC.isDown()) {
-                 
-      for(let key in sceneObjs){
-        //ALEX: Check if grabbable.
-        if(sceneObjs[key] == true){
-           let isGrabbed = checkIntersection(input.LC.tip(), key);
-            //TODO: Request lock.
-            if(isGrabbed == true){
-                m.save();
-                m.translate(input.LC.tip()[0],input.LC.tip()[1],input.LC.tip()[2],);
-                drawShape([1,1,0], gl.TRIANGLES, key, 1)
-                m.restore();
-            }
-
-        }
-      } 
-    }   
 
 
     /*-----------------------------------------------------------------
@@ -906,6 +923,11 @@ function checkIntersection(point, verts) {
   const bb = calcBoundingBox(verts);
   const min = bb[0];
   const max = bb[1];
+  console.log("bounding box");
+  console.log(point);
+  console.log(min);
+  console.log(max);
+  console.log("~~~~~~~~~~~~~");
   if(point[0] > min[0] && point[0] < max[0] && 
     point[1] > min[1] && point[1] < max[1] &&
     point[2] > min[2] && point[2] < max[2]) return true;
@@ -917,27 +939,18 @@ function calcBoundingBox(verts) {
    const min = [Number.MAX_VALUE,Number.MAX_VALUE,Number.MAX_VALUE];
    const max = [Number.MIN_VALUE,Number.MIN_VALUE,Number.MIN_VALUE];
     
-   for(const i = 0; i < verts.length; i++){
-      if(verts[0] < min[0]) min[0] = verts[0];
-      if(verts[1] < min[1]) min[1] = verts[1];
-      if(verts[2] < min[2]) min[2] = verts[2];
+   for(let i = 0; i < verts.length; i+=2){
 
-      if(verts[0] > max[0]) max[0] = verts[0];
-      if(verts[1] > max[1]) max[1] = verts[1];
-      if(verts[2] > max[2]) max[2] = verts[2];
+      if(verts[i] < min[0]) min[0] = verts[i];
+      if(verts[i+1] < min[1]) min[1] = verts[i+1];
+      if(verts[i+2] < min[2]) min[2] = verts[i+2];
+
+      if(verts[i] > max[0]) max[0] = verts[i];
+      if(verts[i+1] > max[1]) max[1] = verts[i+1];
+      if(verts[i+2] > max[2]) max[2] = verts[i+2];
    }
 
    return [min, max];
 }
 
-//TODO, for now it's just a dictionary, should we create a wrapper class?
-//True and false denotes grabbability.
 
-let grabbableCube = createCubeVertices();
-
-let sceneObjs = 
-{
-    //vertsobj : true
-    //vertsobj2 : false
-    grabbableCube:true
-};
