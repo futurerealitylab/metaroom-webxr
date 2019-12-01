@@ -1,9 +1,12 @@
 // TODO:
 // multiple subcriptions per event type
 // handle scope with subscription
+// return unsubscribe "token"
 // make this a global, i.e. MR.EventBus
+// convert every event bus in metaroom to use this
 // potential priority levels to enforce ordering: [system | world | user]
 // this + networking - linearizability...
+// browser + node compatibility
 
 class EventBus {
     constructor() {
