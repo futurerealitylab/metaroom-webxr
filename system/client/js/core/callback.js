@@ -1,10 +1,10 @@
 'use strict';
 
-MR.syncClient.registerEventHandler("platform", (json) => {
+MR.syncClient.eventManager.registerEventHandler("platform", (json) => {
 
 });
 
-MR.syncClient.registerEventHandler("initialize", (json) => {
+MR.syncClient.eventManager.registerEventHandler("initialize", (json) => {
 
     if (!MR.avatars) {
         MR.avatars = {};
@@ -29,7 +29,7 @@ MR.syncClient.registerEventHandler("initialize", (json) => {
     console.log(MR.avatars);
 });
 
-MR.syncClient.registerEventHandler("join", (json) => {
+MR.syncClient.eventManager.registerEventHandler("join", (json) => {
     console.log(json);
     const id = json["id"];
 
@@ -48,18 +48,18 @@ MR.syncClient.registerEventHandler("join", (json) => {
     MR.updatePlayersMenu();
 });
 
-MR.syncClient.registerEventHandler("leave", (json) => {
+MR.syncClient.eventManager.registerEventHandler("leave", (json) => {
     console.log(json);
     delete MR.avatars[json["user"]];
 
     MR.updatePlayersMenu();
 });
 
-MR.syncClient.registerEventHandler("tick", (json) => {
+MR.syncClient.eventManager.registerEventHandler("tick", (json) => {
     // console.log("world tick: ", json);
 });
 
-MR.syncClient.registerEventHandler("avatar", (json) => {
+MR.syncClient.eventManager.registerEventHandler("avatar", (json) => {
     //if (MR.VRIsActive()) {
     const payload = json["data"];
     //console.log(json);
@@ -99,7 +99,7 @@ const response = {
 
 // TODO:
 // deal with logic and onlock
-MR.syncClient.registerEventHandler("lock", (json) => {
+MR.syncClient.eventManager.registerEventHandler("lock", (json) => {
 
     const success = json["success"];
     const key = json["uid"];
@@ -124,7 +124,7 @@ const response = {
 
 // TODO:
 // deal with logic and onlock
-MR.syncClient.registerEventHandler("release", (json) => {
+MR.syncClient.eventManager.registerEventHandler("release", (json) => {
 
     const success = json["success"];
     const key = json["uid"];
@@ -159,7 +159,7 @@ const response = {
 
 // TODO:
 // update to MR.objs
-MR.syncClient.registerEventHandler("object", (json) => {
+MR.syncClient.eventManager.registerEventHandler("object", (json) => {
 
     const success = json["success"];
 
@@ -174,7 +174,7 @@ MR.syncClient.registerEventHandler("object", (json) => {
 
 // TODO:
 // add to MR.objs
-MR.syncClient.registerEventHandler("spawn", (json) => {
+MR.syncClient.eventManager.registerEventHandler("spawn", (json) => {
 
     const success = json["success"];
 
@@ -202,7 +202,7 @@ MR.syncClient.registerEventHandler("spawn", (json) => {
 //     "success": false
 // };
 
-MR.syncClient.registerEventHandler("calibration", (json) => {
+MR.syncClient.eventManager.registerEventHandler("calibration", (json) => {
     console.log("world tick: ", json);
 });
 

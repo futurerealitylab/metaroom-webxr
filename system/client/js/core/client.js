@@ -6,7 +6,7 @@ class Client
 {
 
     constructor(heartbeat = 30000) {
-        this.callbacks = {};
+        this.eventManager = new EventManager();
         this.locks = {};
         this.heartbeatTick = heartbeat;
         this.ws = null;
@@ -20,40 +20,6 @@ class Client
         }
 
         return t;
-    }
-
-    clearEventHandlers() {
-        this.callbacks = {};
-    }
-
-    clearEventHandler(eventName) {
-        delete this.callbacks[eventName];
-    }
-
-    registerEventHandler(eventName, callback) {
-        if (eventName in this.callbacks) {
-            console.warn("event handler already exists for ", eventName);
-            return false;
-        }
-
-        this.callbacks[eventName] = callback;
-        return true;
-    }
-
-    // useful for one-time events,
-    // removes the callback after only one use
-    registerEventHandlerOneShot(eventName, callback) {
-        if (eventName in this.callbacks) {
-            console.warn("event handler already exists for ", eventName);
-            return false;
-        }
-
-        this.callbacks[eventName] = (args) => {
-            delete this.callbacks[eventName];
-            return callback(args);
-        }
-
-        return true;
     }
 
     // TODO: verify this is working
@@ -107,26 +73,13 @@ class Client
                 try {
                     //console.log(ev);
                     let json = JSON.parse(ev.data);
-
-                    // json = JSON.parse(ev.toString());
-                    // console.log(json);
-                    // TODO:
-                    // execute registered callback
-                    // if (!(json["type"] in this.callbacks)) {
-                    //     console.log("no handler registered for type [" + json["type"] + "]");
-                    //     return;
-                    // }
-                    if (json["type"] in this.callbacks) {
-                        this.callbacks[json["type"]](json);
-                    } else {
-                        console.warn("message of type %s is not supported yet", json["type"]);
-                    }
-
+                    this.eventManager.fire(json);
                 } catch(err) {
                     // console.log("bad json:", json);
                     console.error(err);
                 }
                 //console.log(JSON.parse(ev));
+
             };
 
             //const payload = {'translation': [0.0, 1.0, 0.0], 'orientation': [0.0, 0.0, 0.0, 1.0]};

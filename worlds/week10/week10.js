@@ -282,6 +282,7 @@ async function setup(state) {
     ]);
 
     //test object
+    MR.objs = [];
     MR.objs.push(grabbableCube);
     grabbableCube.position    = [0,0,-0.5].slice();
     grabbableCube.orientation = [1,0,0,1].slice();
@@ -706,6 +707,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
          m.rotateQ(obj.orientation);
          m.scale(.03,.03,.03);
          drawShape(obj.shape, [1,1,1]);
+         
       m.restore();
    }
 
