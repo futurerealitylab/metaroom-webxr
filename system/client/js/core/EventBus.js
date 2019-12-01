@@ -1,29 +1,34 @@
+// TODO:
+// multiple subcriptions per event type
+// unique subscriber ids to handle above
+
 class EventBus {
     constructor() {
         this.callbacks = {};
     }
 
-    clearEventHandlers() {
+    unsubscribeAll() {
         this.callbacks = {};
     }
 
-    clearEventHandler(eventName) {
+    unsubscribe(eventName) {
         delete this.callbacks[eventName];
     }
 
-    registerEventHandler(eventName, callback) {
+    subscribe(eventName, callback) {
         if (eventName in this.callbacks) {
             console.warn("event handler already exists for ", eventName);
             return false;
         }
 
         this.callbacks[eventName] = callback;
+
         return true;
     }
 
     // useful for one-time events,
     // removes the callback after only one use
-    registerEventHandlerOneShot(eventName, callback) {
+    subscribeOneShot(eventName, callback) {
         if (eventName in this.callbacks) {
             console.warn("event handler already exists for ", eventName);
             return false;
@@ -37,7 +42,7 @@ class EventBus {
         return true;
     }
 
-    fire(event) {
+    publish(event) {
         // execute registered callback
         // if (!(event["type"] in this.callbacks)) {
         //     console.log("no handler registered for type [" + event["type"] + "]");

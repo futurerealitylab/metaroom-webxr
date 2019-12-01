@@ -73,7 +73,7 @@ class Client
                 try {
                     //console.log(ev);
                     let json = JSON.parse(ev.data);
-                    this.eventBus.fire(json);
+                    this.eventBus.publish(json);
                 } catch(err) {
                     // console.log("bad json:", json);
                     console.error(err);
