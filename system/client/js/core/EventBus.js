@@ -6,6 +6,7 @@
 // potential priority levels to enforce ordering: [system | world | user]
 // this + networking - linearizability...
 // browser + node compatibility
+// decorators
 
 class EventBus {
     constructor() {
