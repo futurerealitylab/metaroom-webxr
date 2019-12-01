@@ -6,7 +6,7 @@ class Client
 {
 
     constructor(heartbeat = 30000) {
-        this.callbacks = {};
+        this.eventBus = new EventBus();
         this.locks = {};
         this.heartbeatTick = heartbeat;
         this.ws = null;
@@ -20,15 +20,6 @@ class Client
         }
 
         return t;
-    }
-
-    registerEventHandler(eventName, callback) {
-        // if (eventName in this.callbacks) {
-        //     return false;
-        // }
-
-        this.callbacks[eventName] = callback;
-        return true;
     }
 
     // TODO: verify this is working
@@ -82,26 +73,13 @@ class Client
                 try {
                     //console.log(ev);
                     let json = JSON.parse(ev.data);
-
-                    // json = JSON.parse(ev.toString());
-                    // console.log(json);
-                    // TODO:
-                    // execute registered callback
-                    // if (!(json["type"] in this.callbacks)) {
-                    //     console.log("no handler registered for type [" + json["type"] + "]");
-                    //     return;
-                    // }
-                    if (json["type"] in this.callbacks) {
-                        this.callbacks[json["type"]](json);
-                    } else {
-                        console.warn("message of type %s is not supported yet", json["type"]);
-                    }
-
+                    this.eventBus.publish(json["type"], json);
                 } catch(err) {
                     // console.log("bad json:", json);
                     console.error(err);
                 }
                 //console.log(JSON.parse(ev));
+
             };
 
             //const payload = {'translation': [0.0, 1.0, 0.0], 'orientation': [0.0, 0.0, 0.0, 1.0]};

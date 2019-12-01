@@ -282,6 +282,7 @@ async function setup(state) {
     ]);
 
     //test object
+    MR.objs = [];
     MR.objs.push(grabbableCube);
     grabbableCube.position    = [0,0,-0.5].slice();
     grabbableCube.orientation = [1,0,0,1].slice();
@@ -296,7 +297,7 @@ async function setup(state) {
         },
         lockid: '',
         };
-    MR.syncClient.send(response);    
+    MR.syncClient.send(response);
 
 
 
@@ -464,7 +465,7 @@ function onStartFrame(t, state) {
            //requestLock(MR.objs[i].uid);
             if(isGrabbed == true){
                 MR.objs[i].position = input.LC.position();
-                 const response = 
+                const response = 
                 {
                     type: "object",
                     uid: MR.objs[i].uid,
@@ -706,6 +707,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
          m.rotateQ(obj.orientation);
          m.scale(.03,.03,.03);
          drawShape(obj.shape, [1,1,1]);
+         
       m.restore();
    }
 
@@ -865,20 +867,12 @@ function onEndFrame(t, state) {
         let headsetRot = frameData.pose.orientation;
            /*Button stuff that we might move somewhere else*/
         if (input.LC && input.LC.isDown()) {
-         //  this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.LC.position(), [0,0,0], headsetPos, headsetRot);
+          this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.LC.position(), [0,0,0], headsetPos, headsetRot);
         }
 
         if (input.RC && input.RC.isDown()) {
-            // this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.RC.position(), [0,0,0], headsetPos, headsetRot);
+            this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.RC.position(), [0,0,0], headsetPos, headsetRot);
         }
-           /*ALEX: Button stuff that we might move somewhere else*/
-           /*ALEX: Right now we are only checking for LC, we need to also check for RC*/
-        if((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())){
-          this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.LC.position(), [0,0,0], headsetPos, headsetRot);
-          this.audioContext.resume().then(() => {
-            console.log('Playback resumed successfully')});
-
-      }
     }
 }
 
