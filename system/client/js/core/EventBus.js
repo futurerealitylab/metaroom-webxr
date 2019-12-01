@@ -19,31 +19,31 @@ class EventBus {
         this.callbacks = {};
     }
 
-    unsubscribe(eventName) {
-        delete this.callbacks[eventName];
+    unsubscribe(channel) {
+        delete this.callbacks[channel];
     }
 
-    subscribe(eventName, callback) {
-        if (eventName in this.callbacks) {
-            console.warn("event handler already exists for ", eventName);
+    subscribe(channel, callback) {
+        if (channel in this.callbacks) {
+            console.warn("event handler already exists for ", channel);
             return false;
         }
 
-        this.callbacks[eventName] = callback;
+        this.callbacks[channel] = callback;
 
         return true;
     }
 
     // useful for one-time events,
     // removes the callback after only one use
-    subscribeOneShot(eventName, callback) {
-        if (eventName in this.callbacks) {
-            console.warn("event handler already exists for ", eventName);
+    subscribeOneShot(channel, callback) {
+        if (channel in this.callbacks) {
+            console.warn("event handler already exists for ", channel);
             return false;
         }
 
-        this.callbacks[eventName] = (args) => {
-            delete this.callbacks[eventName];
+        this.callbacks[channel] = (args) => {
+            delete this.callbacks[channel];
             return callback(args);
         }
 
