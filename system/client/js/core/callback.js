@@ -149,6 +149,10 @@ const response = {
 MR.syncClient.registerEventHandler("object", (json) => {
     console.log("object moved: ", json);
     // update update metadata for next frame's rendering
+    let current = MR.objs[json["uid"]];
+    console.log(json);
+    current.position = [json["state"]["position"][0], json["state"]["position"][1], json["state"]["position"][2]];
+    //current.orientation = MR.objs[json["state"]["orientation"]];
 });
 
 // on success
