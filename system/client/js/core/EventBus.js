@@ -1,5 +1,4 @@
 // TODO:
-// multiple subcriptions per event type
 // handle scope with subscription
 // return unsubscribe "token"
 // make this a global, i.e. MR.EventBus
@@ -22,47 +21,46 @@ class EventBus {
         this.callbacks = {};
     }
 
-    unsubscribe(channel) {
-        delete this.callbacks[channel];
+    unsubscribe(channel, id) {
+        delete this.callbacks[channel][id];
+        if (Object.keys(this.callbacks[channel]).length === 0) {
+            delete this.callbacks[channel];
+        }
     }
 
     subscribe(channel, callback) {
-        if (channel in this.callbacks) {
-            console.warn("event handler already exists for ", channel);
-            return false;
-        }
+        const id = this.uniqueId();
 
-        this.callbacks[channel] = callback;
+        if (!this.callbacks[channel])
+            this.callbacks[channel] = {};
 
-        return true;
+        this.callbacks[channel][id] = callback;
+
+        return id;
     }
 
     // useful for one-time events,
     // removes the callback after only one use
     subscribeOneShot(channel, callback) {
-        if (channel in this.callbacks) {
-            console.warn("event handler already exists for ", channel);
-            return false;
-        }
+        const id = this.uniqueId();
 
-        this.callbacks[channel] = (args) => {
-            delete this.callbacks[channel];
+        if (!this.callbacks[channel])
+            this.callbacks[channel] = {};
+
+        this.callbacks[channel][id] = (args) => {
+            delete this.callbacks[channel][id];
             return callback(args);
-        }
+        };
 
-        return true;
+        return id;
+
     }
 
-    publish(type, event) {
-        // execute registered callback
-        // if (!(type in this.callbacks)) {
-        //     console.log("no handler registered for type [" + type + "]");
-        //     return;
-        // }
-        if (type in this.callbacks) {
-            this.callbacks[type](event);
+    publish(channel, event) {
+        if (channel in this.callbacks && Object.keys(this.callbacks[channel]).length > 0) {
+            Object.keys(this.callbacks[channel]).forEach(key => this.callbacks[channel][key](event));
         } else {
-            console.warn("message of type %s is not supported yet", type);
+            console.warn("message of type %s is not supported yet", channel);
         }
     }
 };
