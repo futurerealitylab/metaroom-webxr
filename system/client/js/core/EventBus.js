@@ -1,10 +1,18 @@
 // TODO:
 // multiple subcriptions per event type
-// unique subscriber ids to handle above
+// handle scope with subscription
+// make this a global, i.e. MR.EventBus
+// potential priority levels to enforce ordering: [system | world | user]
+// this + networking - linearizability...
 
 class EventBus {
     constructor() {
         this.callbacks = {};
+        this.currentId = 0;
+    }
+
+    uniqueId() {
+        return this.currentId++;
     }
 
     unsubscribeAll() {
@@ -42,16 +50,16 @@ class EventBus {
         return true;
     }
 
-    publish(event) {
+    publish(type, event) {
         // execute registered callback
-        // if (!(event["type"] in this.callbacks)) {
-        //     console.log("no handler registered for type [" + event["type"] + "]");
+        // if (!(type in this.callbacks)) {
+        //     console.log("no handler registered for type [" + type + "]");
         //     return;
         // }
-        if (event["type"] in this.callbacks) {
-            this.callbacks[event["type"]](event);
+        if (type in this.callbacks) {
+            this.callbacks[type](event);
         } else {
-            console.warn("message of type %s is not supported yet", event["type"]);
+            console.warn("message of type %s is not supported yet", type);
         }
     }
 };
