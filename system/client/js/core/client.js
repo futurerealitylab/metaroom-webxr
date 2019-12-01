@@ -22,6 +22,14 @@ class Client
         return t;
     }
 
+    clearEventHandlers() {
+        this.callbacks = {};
+    }
+
+    clearEventHandler(eventName) {
+        delete this.callbacks[eventName];
+    }
+
     registerEventHandler(eventName, callback) {
         if (eventName in this.callbacks) {
             return false;
