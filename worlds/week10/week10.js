@@ -75,6 +75,11 @@ to see what the options are.
 
 --------------------------------------------------------------------------------*/
 
+function HeadsetHandler(headset) {
+   this.orientation = () => headset.pose.orientation;
+   this.position    = () => headset.pose.position;
+}
+
 function ControllerHandler(controller) {
    this.isDown      = () => controller.buttons[1].pressed;
    this.onEndFrame  = () => wasDown = this.isDown();
@@ -328,8 +333,9 @@ function onStartFrame(t, state) {
     } 
 
     if (MR.VRIsActive()) {
-        if (!input.LC) input.LC = new ControllerHandler(MR.leftController, m);
-        if (!input.RC) input.RC = new ControllerHandler(MR.rightController, m);
+        if (!input.HS) input.HS = new HeadsetHandler(MR.headset);
+        if (!input.RC) input.RC = new ControllerHandler(MR.rightController);
+        if (!input.RC) input.RC = new ControllerHandler(MR.rightController);
 
         if (! state.calibrate) {
             m.identity();
@@ -345,9 +351,7 @@ function onStartFrame(t, state) {
 
     // THIS CURSOR CODE IS ONLY RELEVANT WHEN USING THE BROWSER MOUSE, NOT WHEN IN VR MODE.
 
-    // THIS CURSOR CODE IS ONLY RELEVANT WHEN USING THE BROWSER MOUSE, NOT WHEN IN VR MODE.
-
-    let cursorValue = () => {
+   let cursorValue = () => {
       let p = state.cursor.position(), canvas = MR.getCanvas();
       return [ p[0] / canvas.clientWidth * 2 - 1, 1 - p[1] / canvas.clientHeight * 2, p[2] ];
    }
@@ -492,17 +496,18 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
    m.translate(P[0],P[1],P[2]);
 
    m.save();
-      myDraw(t, projMat, viewMat, state, eyeIdx, true);
+      myDraw(t, projMat, viewMat, state, eyeIdx, false);
    m.restore();
 
    m.save();
-      m.translate(HALL_WIDTH/2 - TABLE_DEPTH/2, -TABLE_HEIGHT*1.14, TABLE_WIDTH/4.1);
-      m.scale(.1);
-      myDraw(t, projMat, viewMat, state, eyeIdx, false);
+      m.translate(HALL_WIDTH/2 - TABLE_DEPTH/2, -TABLE_HEIGHT*1.048, TABLE_WIDTH/6.7);
+      m.rotateY(Math.PI);
+      m.scale(.1392);
+      myDraw(t, projMat, viewMat, state, eyeIdx, true);
    m.restore();
 }
 
-function myDraw(t, projMat, viewMat, state, eyeIdx, showRoom) {
+function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
     viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
     gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
     gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
@@ -615,6 +620,27 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, showRoom) {
 
     -----------------------------------------------------------------*/
     
+    let drawHeadset = HS => {
+       let P = HS.position();
+       m.save();
+          m.multiply(state.avatarMatrixForward);
+          m.translate(P[0],P[1],P[2]);
+          m.rotateQ(HS.orientation());
+	  m.scale(.1);
+	  m.save();
+	     m.scale(1,1.5,1);
+	     drawShape(CG.sphere, [0,0,0]);
+	  m.restore();
+	  for (let s = -1 ; s <= 1 ; s += 2) {
+	     m.save();
+	        m.translate(s*.4,.2,-.8);
+	        m.scale(.4,.4,.1);
+	        drawShape(CG.sphere, [10,10,10]);
+	     m.restore();
+	  }
+       m.restore();
+    }
+
     let drawController = (C, hand) => {
       let P = C.position();
       m.save();
@@ -677,6 +703,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, showRoom) {
    }
 
    if (input.LC) {
+      drawHeadset(input.HS);
       drawController(input.LC, 0);
       drawController(input.RC, 1);
       if (enableModeler && input.RC.isDown())
@@ -715,13 +742,12 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, showRoom) {
 
     -----------------------------------------------------------------*/
 
-    if (showRoom) {
        m.save();
-	  m.translate(0, HALL_WIDTH/2, 0);
-          m.scale(-HALL_WIDTH/2, -HALL_WIDTH/2, -HALL_LENGTH/2);
+          let dy = isMiniature ? 0 : HALL_WIDTH/2;
+	  m.translate(0, dy, 0);
+          m.scale(-HALL_WIDTH/2, -dy, -HALL_LENGTH/2);
           drawShape(CG.cube, [1,1,1], 1,4, 2,4);
        m.restore();
-    }
 
     m.save();
        m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, 0);
