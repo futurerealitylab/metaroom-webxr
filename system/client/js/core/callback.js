@@ -76,8 +76,7 @@ MR.syncClient.registerEventHandler("avatar", (json) => {
             MR.avatars[payload[key]["user"]].rightController.position = payload[key]["state"].controllers.right.pos;
             MR.avatars[payload[key]["user"]].rightController.orientation = payload[key]["state"].controllers.right.rot;
             MR.avatars[payload[key]["user"]].mode = payload[key]["state"]["mode"];
-        }
-        else {
+        } else {
             // never seen, create
             //ALEX: AVATARS WHO ARE ALSO IN BROWSER MODE GO HERE...
             //console.log("previously unseen user avatar");

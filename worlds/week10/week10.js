@@ -57,6 +57,7 @@ const WOOD = 0,
 
 let noise = new ImprovedNoise();
 let m = new Matrix();
+let prevAvatars = MR.avatars;
 /*--------------------------------------------------------------------------------
 
 I wrote the following to create an abstraction on top of the left and right
@@ -787,7 +788,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, showRoom) {
       /*-----------------------------------------------------------------
         Here is where we draw avatars and controllers.
       -----------------------------------------------------------------*/
-
+   prevAvatars = MR.avatars;
+   // console.log(MR.avatars);
    for (let id in MR.avatars) {
 
       if(MR.playerid == MR.avatars[id].playerid && MR.avatars[id].mode == MR.UserType.vr) {
@@ -813,9 +815,18 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, showRoom) {
          } else if(MR.avatars[id].mode == MR.UserType.vr) {
             let headsetPos = MR.avatars[id].headset.position;
             let headsetRot = MR.avatars[id].headset.orientation;
-            
+            let delta = CG.abs(CG.subtract(headsetPos, prevAvatars[id].headset.position));
+            // let delta = CG.abs(CG.subtract(headsetRot, prevAvatars[id].headset.orientation));
+            const eps = .001;
+            // console.log(delta);
+            if (delta[0] > eps || delta[1] > eps || delta[2] > eps) {
+               console.log(headsetPos);
+               console.log(prevAvatars[id].headset.position);
+
+            }
+         
             if(headsetPos == null || headsetRot == null){
-                  continue;
+               continue;
             }
 
             if (typeof headsetPos == 'undefined') {
