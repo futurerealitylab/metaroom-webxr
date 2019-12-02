@@ -335,7 +335,7 @@ function onStartFrame(t, state) {
 
     if (MR.VRIsActive()) {
         if (!input.HS) input.HS = new HeadsetHandler(MR.headset);
-        if (!input.RC) input.RC = new ControllerHandler(MR.rightController);
+        if (!input.LC) input.LC = new ControllerHandler(MR.leftController);
         if (!input.RC) input.RC = new ControllerHandler(MR.rightController);
 
         if (! state.calibrate) {
@@ -621,12 +621,14 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
     -----------------------------------------------------------------*/
     
-    let drawHeadset = HS => {
-       let P = HS.position();
+    let drawHeadset = (position, orientation) => {
+      //  let P = HS.position();'
+      let P = position;
+
        m.save();
           m.multiply(state.avatarMatrixForward);
           m.translate(P[0],P[1],P[2]);
-          m.rotateQ(HS.orientation());
+          m.rotateQ(orientation);
 	  m.scale(.1);
 	  m.save();
 	     m.scale(1,1.5,1);
@@ -704,7 +706,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    }
 
    if (input.LC) {
-      drawHeadset(input.HS);
+      drawHeadset(input.HS.position(), input.HS.orientation());
       drawController(input.LC, 0);
       drawController(input.RC, 1);
       if (enableModeler && input.RC.isDown())
@@ -839,8 +841,12 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          }
          
          } else if(MR.avatars[id].mode == MR.UserType.vr) {
+            // let hs = new HeadsetHandler(MR.avatars[id].headset);
             let headsetPos = MR.avatars[id].headset.position;
             let headsetRot = MR.avatars[id].headset.orientation;
+            // let headsetPos = hs.position();
+            // let headsetRot = hs.orientation();
+
             let delta = CG.abs(CG.subtract(headsetPos, prevAvatars[id].headset.position));
             // let delta = CG.abs(CG.subtract(headsetRot, prevAvatars[id].headset.orientation));
             const eps = .001;
@@ -873,8 +879,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             let hpos = headsetPos.slice();
             hpos[1] += EYE_HEIGHT;
 
-            drawAvatar(avatar, hpos, headsetRot, .1, state);
-
+            // drawAvatar(avatar, hpos, headsetRot, .1, state);
+            drawHeadset(hpos, headsetRot);
             let lpos = lcontroller.position.slice();
             lpos[1] += EYE_HEIGHT;
             let rpos = rcontroller.position.slice();
