@@ -788,7 +788,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, showRoom) {
       /*-----------------------------------------------------------------
         Here is where we draw avatars and controllers.
       -----------------------------------------------------------------*/
-   prevAvatars = MR.avatars;
+   
    // console.log(MR.avatars);
    for (let id in MR.avatars) {
 
@@ -819,6 +819,12 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, showRoom) {
             // let delta = CG.abs(CG.subtract(headsetRot, prevAvatars[id].headset.orientation));
             const eps = .001;
             // console.log(delta);
+
+            console.log(headsetPos[1]);
+            if (headsetPos[1] > 5.0) {
+               MR.avatars[id] = prevAvatars[id];
+            }
+
             if (delta[0] > eps || delta[1] > eps || delta[2] > eps) {
                console.log(headsetPos);
                console.log(prevAvatars[id].headset.position);
@@ -856,6 +862,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, showRoom) {
          }
         
    }
+   prevAvatars = MR.avatars;
 }
 
 function onEndFrame(t, state) {
