@@ -281,28 +281,36 @@ async function setup(state) {
       'assets/audio/Blop-Mark_DiAngelo-79054334.wav'
     ]);
 
-    //test object
+
     MR.objs = [];
+
+    /*Example Object
+
     MR.objs.push(grabbableCube);
     grabbableCube.position    = [0,0,-0.5].slice();
     grabbableCube.orientation = [1,0,0,1].slice();
     grabbableCube.uid = 0;
+    grabbableCube.lock = new Lock();
+    sendSpawnMessage(grabbableCube);
+
+    */
+}
+
+
+function sendSpawnMessage(object){
+       /*Example Spawn Message*/
     const response = 
         {
         type: "spawn",
-        uid: grabbableCube.uid,
+        uid: object.uid,
         state: {
-            position: grabbableCube.position,
-            orientation: grabbableCube.orientation,
+            position: object.position,
+            orientation: object.orientation,
         },
         lockid: '',
         };
     MR.syncClient.send(response);
-
-
-
 }
-
 
 function onStartFrame(t, state) {
 
@@ -406,13 +414,17 @@ function onStartFrame(t, state) {
 	        menuChoice = findInMenu(input.RC.position(), input.LC.tip());
 	        if (menuChoice >= 0 && input.LC.press()) {
 	            state.isNewObj = true;
-	            MR.objs.push(new Obj(menuShape[menuChoice]));
+                let newObject = new Obj(menuShape[menuChoice]);
+	            MR.objs.push(newObject);
+                sendSpawnMessage(newObject);
 	        }
         }
         if (state.isNewObj) {
             let obj = MR.objs[MR.objs.length - 1];
 	        obj.position    = input.LC.tip().slice();
 	        obj.orientation = input.LC.orientation().slice();
+            //Create lock object for each new obj.
+            obj.lock = new Lock();
         }
         if (input.LC.release())
             state.isNewObj = false;
@@ -454,34 +466,9 @@ function onStartFrame(t, state) {
 
     /*-----------------------------------------------------------------
     /*-----------------------------------------------------------------
-       Translating Grabbable Object: We can replace sceneObjs with objs[].
+       Translating Grabbable Object.
     -----------------------------------------------------------------*/
-
-     if (input.LC && input.LC.isDown()) {
-                 
-      for(let i = 0; i < MR.objs.length; i++){
-        //ALEX: Check if grabbable.
-           let isGrabbed = checkIntersection(input.LC.position(), MR.objs[i].shape);
-           //requestLock(MR.objs[i].uid);
-            if(isGrabbed == true){
-                MR.objs[i].position = input.LC.position();
-                const response = 
-                {
-                    type: "object",
-                    uid: MR.objs[i].uid,
-                    state: {
-                        position: MR.objs[i].position,
-                        orientation: MR.objs[i].orientation,
-                    },
-                    lockid: MR.playerid,
-
-                };
-                MR.syncClient.send(response);
-            }
-
-        
-      } 
-    }   
+    pollGrab();
 }
 
 let menuX = [-.2,-.1,-.2,-.1];
@@ -899,8 +886,6 @@ export default function main() {
     return def;
 }
 
-//////////////DEBUG TOOLS
-
 
 //////////////EXTRA TOOLS
 function drawAvatar(avatar, pos, rot, scale, state) {
@@ -960,4 +945,75 @@ function calcBoundingBox(verts) {
    return [min, max];
 }
 
+function pollGrab(){
+     if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {  
+
+      let controller = input.LC.isDown()? input.LC: input.RC;
+      for(let i = 0; i < MR.objs.length; i++){
+        //ALEX: Check if grabbable.
+           let isGrabbed = checkIntersection(controller.position(), MR.objs[i].shape);
+           //requestLock(MR.objs[i].uid);
+            if(isGrabbed == true){
+                MR.objs[i].position = controller.position();
+                const response = 
+                {
+                    type: "object",
+                    uid: MR.objs[i].uid,
+                    state: {
+                        position: MR.objs[i].position,
+                        orientation: MR.objs[i].orientation,
+                    },
+                    lockid: MR.playerid,
+
+                };
+                MR.syncClient.send(response);
+            }
+
+        
+      } 
+    }   
+}
+
+function pollGrabWithLock(){
+ if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {  
+
+      let controller = input.LC.isDown()? input.LC: input.RC;
+      for(let i = 0; i < MR.objs.length; i++){
+        //ALEX: Check if grabbable.
+           let isGrabbed = checkIntersection(controller.position(), MR.objs[i].shape);
+           //requestLock(MR.objs[i].uid);
+            if(isGrabbed == true){
+                if(MR.objs[i].lock.locked){
+                    MR.objs[i].position = controller.position();
+                    const response = 
+                    {
+                        type: "object",
+                        uid: MR.objs[i].uid,
+                        state: {
+                            position: MR.objs[i].position,
+                            orientation: MR.objs[i].orientation,
+                        },
+                        lockid: MR.playerid,
+
+                    };
+                    MR.syncClient.send(response);
+                }
+                else{
+                    MR.objs[i].lock.request(MR.objs[i].uid);
+                }
+               
+            }
+
+        
+      } 
+    }    
+}
+
+function releaseLocks(){
+    if ((input.LC && !input.LC.isDown()) && (input.RC && !input.RC.isDown())){
+        for(let i = 0; i < MR.objs.length; i++){
+
+        }
+    } 
+}
 
