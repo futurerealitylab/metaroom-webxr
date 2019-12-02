@@ -1,7 +1,23 @@
 "use strict"
+
+
 /*
-   Things you might want to try:
-      object modify: move, rotate, scale, clone, delete, color, proportions
+   To do:
+        Toon outline DONE
+	Noize -- need to create volumetric example
+	EdgedCube
+        Create head for insect avatar
+        Dollhouse
+        Full insect avatar
+        Import Connor movement
+        Correct orientation for modeler popup menu
+        Transparency
+        Other options for shading (eg: specular power, metal)
+        Fog/mist
+        Tubes along paths
+        Tree, mushroom, flower, leaf, grass
+        Things to try in modeler:
+           object modify: move, rotate, scale, clone, delete, color, proportions
 */
 
 /*--------------------------------------------------------------------------------
@@ -202,6 +218,7 @@ async function setup(state) {
                 state.uTexScale    = gl.getUniformLocation(program, 'uTexScale');
                 state.uTexIndexLoc = gl.getUniformLocation(program, 'uTexIndex');
                 state.uTimeLoc     = gl.getUniformLocation(program, 'uTime');
+                state.uToonLoc     = gl.getUniformLocation(program, 'uToon');
                 state.uViewLoc     = gl.getUniformLocation(program, 'uView');
 		        state.uTexLoc = [];
         		for (let n = 0 ; n < 8 ; n++) {
@@ -468,7 +485,24 @@ function Obj(shape) {
 let objs = [];
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
+   m.identity();
+   m.rotateX(state.tiltAngle);
+   m.rotateY(state.turnAngle);
+   let P = state.position;
+   m.translate(P[0],P[1],P[2]);
 
+   m.save();
+      myDraw(t, projMat, viewMat, state, eyeIdx, true);
+   m.restore();
+
+   m.save();
+      m.translate(HALL_WIDTH/2 - TABLE_DEPTH/2, -TABLE_HEIGHT*1.14, TABLE_WIDTH/4.1);
+      m.scale(.1);
+      myDraw(t, projMat, viewMat, state, eyeIdx, false);
+   m.restore();
+}
+
+function myDraw(t, projMat, viewMat, state, eyeIdx, showRoom) {
     viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
     gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
     gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
@@ -496,9 +530,26 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         gl.uniform1f(state.uTexScale, textureScale === undefined ? 1 : textureScale);
         if (shape != prev_shape)
            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
+        if (state.isToon) {
+           gl.uniform1f (state.uToonLoc, .3 * CG.norm(m.value().slice(0,3)));
+	   gl.cullFace(gl.FRONT);
+           gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+	   gl.cullFace(gl.BACK);
+           gl.uniform1f (state.uToonLoc, 0);
+	}
         gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
         prev_shape = shape;
-     }
+    }
+
+    let drawAvatar = (avatar, pos, rot, scale, state) => {
+        m.save();
+           m.identity();
+           m.translate(pos[0],pos[1],pos[2] - .75);
+           m.rotateQ(rot);
+           m.scale(scale,scale,scale);
+           drawShape(avatar.headset.vertices, [1,1,1], 0);
+        m.restore();
+    }
 
     /*-----------------------------------------------------------------
 
@@ -595,8 +646,6 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
       m.restore();
    }
 
-   m.identity();
-
    let drawSyncController = (pos, rot, color) => {
       let P = pos;
       m.save();
@@ -626,8 +675,6 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
          m.restore();
       m.restore();
    }
-
-   m.identity();
 
    if (input.LC) {
       drawController(input.LC, 0);
@@ -659,10 +706,6 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
    }
 
    m.translate(0, -EYE_HEIGHT, 0);
-   m.rotateX(state.tiltAngle);
-   m.rotateY(state.turnAngle);
-   let P = state.position;
-   m.translate(P[0],P[1],P[2]);
  
     /*-----------------------------------------------------------------
 
@@ -672,11 +715,13 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
     -----------------------------------------------------------------*/
 
-    m.save();
-       m.translate(0, HALL_WIDTH/2, 0);
-       m.scale(-HALL_WIDTH/2, -HALL_WIDTH/2, -HALL_LENGTH/2);
-       drawShape(CG.cube, [1,1,1], 1,4, 2,4);
-    m.restore();
+    if (showRoom) {
+       m.save();
+	  m.translate(0, HALL_WIDTH/2, 0);
+          m.scale(-HALL_WIDTH/2, -HALL_WIDTH/2, -HALL_LENGTH/2);
+          drawShape(CG.cube, [1,1,1], 1,4, 2,4);
+       m.restore();
+    }
 
     m.save();
        m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, 0);
@@ -721,6 +766,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
          drawShape(CG.sphere, [1,1,1]);
       m.restore();
       */
+      state.isToon = true;
       let skinColor = [1,.5,.3], D;
       m.save();
          D = CG.mix(A,C,.5);
@@ -735,6 +781,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
          m.translate(D[0],D[1],D[2]).aimZ(CG.subtract(C,B)).scale(.03,.03,.37);
          drawShape(lathe, skinColor, -1,1, 2,1);
       m.restore();
+      state.isToon = false;
 
    m.restore();
       /*-----------------------------------------------------------------
@@ -844,6 +891,7 @@ export default function main() {
 }
 
 //////////////DEBUG TOOLS
+/*
 function drawAvatar(avatar, pos, rot, scale, state) {
 
    let prev_shape = null;
@@ -866,3 +914,4 @@ function drawAvatar(avatar, pos, rot, scale, state) {
       drawShape(avatar.headset.vertices, [1,1,1], 0);
    m.restore();
 }
+*/
