@@ -846,16 +846,16 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             const eps = .001;
             // console.log(delta);
 
-            console.log(headsetPos[1]);
-            if (headsetPos[1] > 5.0) {
-               MR.avatars[id] = prevAvatars[id];
-            }
+            // console.log(headsetPos[1]);
+            // if (headsetPos[1] > 2.5) {
+            //    MR.avatars[id] = prevAvatars[id];
+            // }
 
-            if (delta[0] > eps || delta[1] > eps || delta[2] > eps) {
-               console.log(headsetPos);
-               console.log(prevAvatars[id].headset.position);
+            // if (delta[0] > eps || delta[1] > eps || delta[2] > eps) {
+            //    console.log(headsetPos);
+            //    console.log(prevAvatars[id].headset.position);
 
-            }
+            // }
          
             if(headsetPos == null || headsetRot == null){
                continue;
@@ -870,17 +870,14 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             const rcontroller = MR.avatars[id].rightController;
             const lcontroller = MR.avatars[id].leftController;
             
-            // console.log(rcontroller);
-            // console.log(lcontroller);
-            //console.log("VR position and orientation:")
-            //console.log(headsetPos);
-            //console.log(headsetRot);
-            headsetPos[1] += EYE_HEIGHT;
-            drawAvatar(avatar, headsetPos, headsetRot, .1, state);
+            let hpos = headsetPos.slice();
+            hpos[1] += EYE_HEIGHT;
 
-            let lpos = lcontroller.position;
+            drawAvatar(avatar, hpos, headsetRot, .1, state);
+
+            let lpos = lcontroller.position.slice();
             lpos[1] += EYE_HEIGHT;
-            let rpos = rcontroller.position;
+            let rpos = rcontroller.position.slice();
             rpos[1] += EYE_HEIGHT;
 
             drawSyncController(rpos, rcontroller.orientation, [1,0,0]);
