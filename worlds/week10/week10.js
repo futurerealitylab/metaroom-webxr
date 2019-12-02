@@ -468,7 +468,7 @@ function onStartFrame(t, state) {
     /*-----------------------------------------------------------------
        Translating Grabbable Object.
     -----------------------------------------------------------------*/
-    pollGrab();
+    pollGrab(state.input);
 }
 
 let menuX = [-.2,-.1,-.2,-.1];
@@ -945,7 +945,7 @@ function calcBoundingBox(verts) {
    return [min, max];
 }
 
-function pollGrab(){
+function pollGrab(input){
      if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {  
 
       let controller = input.LC.isDown()? input.LC: input.RC;

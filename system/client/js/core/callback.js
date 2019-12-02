@@ -185,6 +185,7 @@ MR.syncClient.eventBus.subscribe("spawn", (json) => {
         console.log("failed spawn message", json);
     }
 
+});
 
 MR.syncClient.registerEventHandler("object", (json) => {
     console.log("object moved: ", json);
