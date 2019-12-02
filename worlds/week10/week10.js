@@ -649,7 +649,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, showRoom) {
    let drawSyncController = (pos, rot, color) => {
       let P = pos;
       m.save();
-      m.identity();
+      // m.identity();
          m.translate(P[0], P[1], P[2]);
          m.rotateQ(rot);
          m.translate(0,.02,-.005);
@@ -827,12 +827,21 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, showRoom) {
             const rcontroller = MR.avatars[id].rightController;
             const lcontroller = MR.avatars[id].leftController;
             
+            // console.log(rcontroller);
+            // console.log(lcontroller);
             //console.log("VR position and orientation:")
             //console.log(headsetPos);
             //console.log(headsetRot);
+            headsetPos[1] += EYE_HEIGHT;
             drawAvatar(avatar, headsetPos, headsetRot, .1, state);
-            drawSyncController(rcontroller.position, rcontroller.orientation, [1,0,0]);
-            drawSyncController(lcontroller.position, lcontroller.orientation, [0,1,1]);
+
+            let lpos = lcontroller.position;
+            lpos[1] += EYE_HEIGHT;
+            let rpos = rcontroller.position;
+            rpos[1] += EYE_HEIGHT;
+
+            drawSyncController(rpos, rcontroller.orientation, [1,0,0]);
+            drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
          }
         
    }
