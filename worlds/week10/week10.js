@@ -543,8 +543,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, showRoom) {
 
     let drawAvatar = (avatar, pos, rot, scale, state) => {
         m.save();
-           m.identity();
-           m.translate(pos[0],pos[1],pos[2] - .75);
+         //   m.identity();
+           m.translate(pos[0],pos[1],pos[2]);
            m.rotateQ(rot);
            m.scale(scale,scale,scale);
            drawShape(avatar.headset.vertices, [1,1,1], 0);

@@ -176,6 +176,13 @@ function pollAvatarData() {
         const frameData = MR.frameData();
         if (frameData != null) {
             //User Headset
+            // const leftInverseView = CG.matrixInverse(frameData.leftViewMatrix);
+            // const rightInverseView = CG.matrixInverse(frameData.rightViewMatrix);
+            
+            // const leftHeadsetPos = CG.matrixTransform(leftInverseView, frameData.pose.position);
+            // const rightHeadsetPos = CG.matrixTransform(rightInverseView, frameData.pose.position);
+            // const headsetPos = CG.mix(leftHeadsetPos, rightHeadsetPos);
+            // console.log(headsetPos);
             const headsetPos = frameData.pose.position;
             const headsetRot = frameData.pose.orientation;
             const headsetTimestamp = frameData.timestamp;
