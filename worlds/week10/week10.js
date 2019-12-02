@@ -57,6 +57,7 @@ const WOOD = 0,
 
 let noise = new ImprovedNoise();
 let m = new Matrix();
+let prevAvatars = MR.avatars;
 /*--------------------------------------------------------------------------------
 
 I wrote the following to create an abstraction on top of the left and right
@@ -548,8 +549,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
     let drawAvatar = (avatar, pos, rot, scale, state) => {
         m.save();
-           m.identity();
-           m.translate(pos[0],pos[1],pos[2] - .75);
+         //   m.identity();
+           m.translate(pos[0],pos[1],pos[2]);
            m.rotateQ(rot);
            m.scale(scale,scale,scale);
            drawShape(avatar.headset.vertices, [1,1,1], 0);
@@ -675,7 +676,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    let drawSyncController = (pos, rot, color) => {
       let P = pos;
       m.save();
-      m.identity();
+      // m.identity();
          m.translate(P[0], P[1], P[2]);
          m.rotateQ(rot);
          m.translate(0,.02,-.005);
@@ -813,7 +814,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       /*-----------------------------------------------------------------
         Here is where we draw avatars and controllers.
       -----------------------------------------------------------------*/
-
+   
+   // console.log(MR.avatars);
    for (let id in MR.avatars) {
 
       if(MR.playerid == MR.avatars[id].playerid && MR.avatars[id].mode == MR.UserType.vr) {
@@ -839,9 +841,24 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          } else if(MR.avatars[id].mode == MR.UserType.vr) {
             let headsetPos = MR.avatars[id].headset.position;
             let headsetRot = MR.avatars[id].headset.orientation;
-            
+            let delta = CG.abs(CG.subtract(headsetPos, prevAvatars[id].headset.position));
+            // let delta = CG.abs(CG.subtract(headsetRot, prevAvatars[id].headset.orientation));
+            const eps = .001;
+            // console.log(delta);
+
+            console.log(headsetPos[1]);
+            if (headsetPos[1] > 5.0) {
+               MR.avatars[id] = prevAvatars[id];
+            }
+
+            if (delta[0] > eps || delta[1] > eps || delta[2] > eps) {
+               console.log(headsetPos);
+               console.log(prevAvatars[id].headset.position);
+
+            }
+         
             if(headsetPos == null || headsetRot == null){
-                  continue;
+               continue;
             }
 
             if (typeof headsetPos == 'undefined') {
@@ -853,15 +870,25 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             const rcontroller = MR.avatars[id].rightController;
             const lcontroller = MR.avatars[id].leftController;
             
+            // console.log(rcontroller);
+            // console.log(lcontroller);
             //console.log("VR position and orientation:")
             //console.log(headsetPos);
             //console.log(headsetRot);
+            headsetPos[1] += EYE_HEIGHT;
             drawAvatar(avatar, headsetPos, headsetRot, .1, state);
-            drawSyncController(rcontroller.position, rcontroller.orientation, [1,0,0]);
-            drawSyncController(lcontroller.position, lcontroller.orientation, [0,1,1]);
+
+            let lpos = lcontroller.position;
+            lpos[1] += EYE_HEIGHT;
+            let rpos = rcontroller.position;
+            rpos[1] += EYE_HEIGHT;
+
+            drawSyncController(rpos, rcontroller.orientation, [1,0,0]);
+            drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
          }
         
    }
+   prevAvatars = MR.avatars;
 }
 
 function onEndFrame(t, state) {

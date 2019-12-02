@@ -76,8 +76,7 @@ MR.syncClient.registerEventHandler("avatar", (json) => {
             MR.avatars[payload[key]["user"]].rightController.position = payload[key]["state"].controllers.right.pos;
             MR.avatars[payload[key]["user"]].rightController.orientation = payload[key]["state"].controllers.right.rot;
             MR.avatars[payload[key]["user"]].mode = payload[key]["state"]["mode"];
-        }
-        else {
+        } else {
             // never seen, create
             //ALEX: AVATARS WHO ARE ALSO IN BROWSER MODE GO HERE...
             //console.log("previously unseen user avatar");
@@ -176,6 +175,13 @@ function pollAvatarData() {
         const frameData = MR.frameData();
         if (frameData != null) {
             //User Headset
+            // const leftInverseView = CG.matrixInverse(frameData.leftViewMatrix);
+            // const rightInverseView = CG.matrixInverse(frameData.rightViewMatrix);
+            
+            // const leftHeadsetPos = CG.matrixTransform(leftInverseView, frameData.pose.position);
+            // const rightHeadsetPos = CG.matrixTransform(rightInverseView, frameData.pose.position);
+            // const headsetPos = CG.mix(leftHeadsetPos, rightHeadsetPos);
+            // console.log(headsetPos);
             const headsetPos = frameData.pose.position;
             const headsetRot = frameData.pose.orientation;
             const headsetTimestamp = frameData.timestamp;
