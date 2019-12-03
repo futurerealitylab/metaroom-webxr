@@ -279,11 +279,11 @@ async function setup(state) {
 
     // load files into a spatial audio context for playback later
     this.audioContext1 = new SpatialAudioContext([
-      'assets/audio/Blop-Mark_DiAngelo-79054334.wav'
+      'assets/audio/blop.wav'
     ]);
 
     this.audioContext2 = new SpatialAudioContext([
-      'assets/audio/StarWars3.wav'
+      'assets/audio/peacock.wav'
     ]);
 }
 
@@ -904,13 +904,16 @@ function onEndFrame(t, state) {
    if (frameData != null) {
       let headsetPos = frameData.pose.position;
       let headsetRot = frameData.pose.orientation;
-      
+
+      this.audioContext1.updateListener(headsetPos, headsetRot);
+      this.audioContext2.updateListener(headsetPos, headsetRot);
+   
       if (input.LC && input.LC.isDown()) {
-         this.audioContext1.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.LC.position(), [0,0,0], headsetPos, headsetRot);
+         this.audioContext1.playFileAt('assets/audio/blop.wav', input.LC.position());
       }
 
       if (input.RC && input.RC.isDown()) {
-         this.audioContext2.playFileAt('assets/audio/StarWars3.wav', input.RC.position(), [0,0,0], headsetPos, headsetRot);
+         this.audioContext2.playFileAt('assets/audio/peacock.wav', input.RC.position());
       }
    }
 }
