@@ -947,6 +947,7 @@ function calcBoundingBox(verts) {
    return [min, max];
 }
 
+
 function pollGrab(state){
      if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {  
 

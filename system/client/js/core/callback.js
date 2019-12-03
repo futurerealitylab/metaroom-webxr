@@ -188,6 +188,7 @@ MR.syncClient.eventBus.subscribe("spawn", (json) => {
     }
   });
 
+});
 
 MR.syncClient.eventBus.subscribe("object", (json) => {
     const success = json["success"];
