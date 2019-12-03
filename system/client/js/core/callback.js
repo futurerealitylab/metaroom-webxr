@@ -106,6 +106,7 @@ MR.syncClient.eventBus.subscribe("lock", (json) => {
 
     if (success) {
         console.log("acquire lock success: ", key);
+        MR.objs[key].lock.locked = true;
     } else {
         console.log("acquire lock failed : ", key);
     }
@@ -159,6 +160,7 @@ const response = {
 
 // TODO:
 // update to MR.objs
+/*
 MR.syncClient.eventBus.subscribe("object", (json) => {
 
     const success = json["success"];
@@ -170,7 +172,7 @@ MR.syncClient.eventBus.subscribe("object", (json) => {
         console.log("failed object message", json);
     }
 
-});
+});*/
 
 // TODO:
 // add to MR.objs
@@ -184,15 +186,22 @@ MR.syncClient.eventBus.subscribe("spawn", (json) => {
     } else {
         console.log("failed spawn message", json);
     }
+  });
 
 
-MR.syncClient.registerEventHandler("object", (json) => {
-    console.log("object moved: ", json);
-    // update update metadata for next frame's rendering
-    let current = MR.objs[json["uid"]];
-    console.log(json);
-    current.position = [json["state"]["position"][0], json["state"]["position"][1], json["state"]["position"][2]];
+MR.syncClient.eventBus.subscribe("object", (json) => {
+    const success = json["success"];
+     if (success) {
+      console.log("object moved: ", json);
+      // update update metadata for next frame's rendering
+      let current = MR.objs[json["uid"]];
+      console.log(json);
+      current.position = [json["state"]["position"][0], json["state"]["position"][1], json["state"]["position"][2]];
     //current.orientation = MR.objs[json["state"]["orientation"]];
+    }
+    else{
+      console.log("failed object message", json);
+    }
 });
 
 // on success
@@ -215,8 +224,10 @@ MR.syncClient.eventBus.subscribe("calibration", (json) => {
 });
 
 
-function pollAvatarData() {
-    if (MR.VRIsActive()) {
+function pollAvatarData() 
+{
+    if (MR.VRIsActive()) 
+    {
         const frameData = MR.frameData();
         if (frameData != null) {
             //User Headset

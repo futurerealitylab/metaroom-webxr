@@ -4,6 +4,7 @@ class Lock {
     }
 
     request(uid) {
+        console.log("send lock");
         const response = 
         {
             type: "lock",

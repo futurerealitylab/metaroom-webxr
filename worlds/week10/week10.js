@@ -284,16 +284,16 @@ async function setup(state) {
 
     MR.objs = [];
 
-    /*Example Object
+    /*Example Object*/
 
     MR.objs.push(grabbableCube);
     grabbableCube.position    = [0,0,-0.5].slice();
     grabbableCube.orientation = [1,0,0,1].slice();
     grabbableCube.uid = 0;
-    grabbableCube.lock = new Lock();
     sendSpawnMessage(grabbableCube);
+    grabbableCube.lock = new Lock();
 
-    */
+    
 }
 
 
@@ -303,11 +303,11 @@ function sendSpawnMessage(object){
         {
         type: "spawn",
         uid: object.uid,
+        lockid: -1,
         state: {
             position: object.position,
             orientation: object.orientation,
-        },
-        lockid: '',
+        }
         };
     MR.syncClient.send(response);
 }
@@ -468,7 +468,9 @@ function onStartFrame(t, state) {
     /*-----------------------------------------------------------------
        Translating Grabbable Object.
     -----------------------------------------------------------------*/
-    pollGrab();
+    //pollGrab();
+    releaseLocks(state);
+    pollGrabWithLock(state);
 }
 
 let menuX = [-.2,-.1,-.2,-.1];
@@ -945,7 +947,7 @@ function calcBoundingBox(verts) {
    return [min, max];
 }
 
-function pollGrab(){
+function pollGrab(state){
      if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {  
 
       let controller = input.LC.isDown()? input.LC: input.RC;
@@ -974,7 +976,8 @@ function pollGrab(){
     }   
 }
 
-function pollGrabWithLock(){
+function pollGrabWithLock(state){
+ let input = state.input;
  if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {  
 
       let controller = input.LC.isDown()? input.LC: input.RC;
@@ -1009,10 +1012,14 @@ function pollGrabWithLock(){
     }    
 }
 
-function releaseLocks(){
+function releaseLocks(state){
+    let input = state.input;
     if ((input.LC && !input.LC.isDown()) && (input.RC && !input.RC.isDown())){
         for(let i = 0; i < MR.objs.length; i++){
-
+            if(MR.objs[i].lock.locked == true){
+                MR.objs[i].lock.locked = false;
+                MR.objs[i].lock.release(MR.objs[i].uid);
+            }
         }
     } 
 }
