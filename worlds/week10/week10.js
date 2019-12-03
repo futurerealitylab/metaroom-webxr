@@ -1,32 +1,5 @@
 "use strict"
 
-/*
-   For graphics class:
-        Toon outline DONE
-        Dollhouse rendering DONE
-	Incorporate two localized sound sources.
-	Interaction logic that makes use of two participants.
-   For Garden Party and SIGGRAPH:
-        Create head for insect avatar
-        Full insect avatar
-        Import Connor movement
-        Tubes along paths
-        Tree, mushroom, flower, leaf, grass
-   Other things to do:
-	Noize -- need to create volumetric example
-	EdgedCube
-        Correct orientation for modeler popup menu
-        Transparency
-        Other options for shading (eg: specular power, metal)
-        Fog/mist
-        Things to try in modeler:
-           basic: move, rotate, scale, clone, delete
-	   physics: gravity, align, snap-to-fit
-	   advanced properties: color, material, texture, bumpiness, etch a pattern
-	   advanced creation: draw/modify tube/ribbon, lathe, stencil slab, melt/fuse
-	   advanced movement: blended jointed objects, animated characters
-*/
-
 /*--------------------------------------------------------------------------------
 
 The proportions below just happen to match the dimensions of my physical space
@@ -305,10 +278,13 @@ async function setup(state) {
     Input.initKeyEvents();
 
     // load files into a spatial audio context for playback later
-    this.audioContext = new SpatialAudioContext([
-      'assets/audio/Blop-Mark_DiAngelo-79054334.wav'
+    this.audioContext1 = new SpatialAudioContext([
+      'assets/audio/blop.wav'
     ]);
 
+    this.audioContext2 = new SpatialAudioContext([
+      'assets/audio/peacock.wav'
+    ]);
 }
 
 
@@ -911,7 +887,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 }
 
 function onEndFrame(t, state) {
-    pollAvatarData();
+   pollAvatarData();
     /*-----------------------------------------------------------------
 
     The below two lines are necessary for making the controller handler
@@ -919,24 +895,31 @@ function onEndFrame(t, state) {
     actions.
 
     -----------------------------------------------------------------*/
-    const input  = state.input;
-    if (input.LC) input.LC.onEndFrame();
-    if (input.RC) input.RC.onEndFrame();
+   const input  = state.input;
+
+   let frameData = MR.frameData();
+   if (frameData != null) {
+      let headsetPos = frameData.pose.position;
+      let headsetRot = frameData.pose.orientation;
+
+      this.audioContext1.updateListener(headsetPos, headsetRot);
+      this.audioContext2.updateListener(headsetPos, headsetRot);
+   
+      if (input.LC && input.LC.press()) {
+         this.audioContext1.playFileAt('assets/audio/blop.wav', input.LC.position());
+      }
+
+      if (input.RC && input.RC.press()) {
+         this.audioContext2.playFileAt('assets/audio/peacock.wav', input.RC.position());
+      }
+   }
 
 
-    let frameData = MR.frameData();
-    if (frameData != null) {
-        let headsetPos = frameData.pose.position;
-        let headsetRot = frameData.pose.orientation;
-           /*Button stuff that we might move somewhere else*/
-        if (input.LC && input.LC.isDown()) {
-         //  this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.LC.position(), [0,0,0], headsetPos, headsetRot);
-        }
+   if (input.LC) input.LC.onEndFrame();
+   if (input.RC) input.RC.onEndFrame();
 
-        if (input.RC && input.RC.isDown()) {
-            // this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.RC.position(), [0,0,0], headsetPos, headsetRot);
-        }
-    }
+
+
 }
 
 export default function main() {
