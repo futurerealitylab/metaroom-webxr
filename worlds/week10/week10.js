@@ -896,9 +896,6 @@ function onEndFrame(t, state) {
 
     -----------------------------------------------------------------*/
    const input  = state.input;
-   if (input.LC) input.LC.onEndFrame();
-   if (input.RC) input.RC.onEndFrame();
-
 
    let frameData = MR.frameData();
    if (frameData != null) {
@@ -908,14 +905,21 @@ function onEndFrame(t, state) {
       this.audioContext1.updateListener(headsetPos, headsetRot);
       this.audioContext2.updateListener(headsetPos, headsetRot);
    
-      if (input.LC && input.LC.isDown()) {
+      if (input.LC && input.LC.press()) {
          this.audioContext1.playFileAt('assets/audio/blop.wav', input.LC.position());
       }
 
-      if (input.RC && input.RC.isDown()) {
+      if (input.RC && input.RC.press()) {
          this.audioContext2.playFileAt('assets/audio/peacock.wav', input.RC.position());
       }
    }
+
+
+   if (input.LC) input.LC.onEndFrame();
+   if (input.RC) input.RC.onEndFrame();
+
+
+
 }
 
 export default function main() {
