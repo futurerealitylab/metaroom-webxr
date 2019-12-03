@@ -305,10 +305,6 @@ function onStartFrame(t, state) {
 
     const input  = state.input;
     const editor = state.editor;
-    // const m      = state.m;
-
-    Input.updateKeyState();
-    Input.updateControllerState();
 
     if (! state.avatarMatrixForward) {
         // MR.avatarMatrixForward is because i need accesss to this in callback.js, temp hack
@@ -812,52 +808,16 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    // console.log(MR.avatars);
    for (let id in MR.avatars) {
 
-      if(MR.playerid == MR.avatars[id].playerid && MR.avatars[id].mode == MR.UserType.vr) {
-         let frameData = MR.frameData();
-         if (frameData != null) {
-            let headsetPos = frameData.pose.position;
-            let headsetRot = frameData.pose.orientation;
-
-            const avatar = MR.avatars[id];
-            const rcontroller = MR.controllers[0];
-            const lcontroller = MR.controllers[1];
-            
-            //drawAvatar(avatar, headsetPos, headsetRot, .03, state);
-            
-            //drawController(input.LC, 0);
-            //drawController(input.RC, 1);
-            //drawAvatar(avatar, rcontroller.pose.position, rcontroller.pose.orientation, 0.05, state);
-            //drawAvatar(avatar, lcontroller.pose.position, lcontroller.pose.orientation, 0.05, state);
-            
-
-         }
-         
-         } else if(MR.avatars[id].mode == MR.UserType.vr) {
-            // let hs = new HeadsetHandler(MR.avatars[id].headset);
+      if (MR.playerid == MR.avatars[id].playerid && MR.avatars[id].mode == MR.UserType.vr) {
+         if (MR.avatars[id].mode == MR.UserType.vr) {
             let headsetPos = MR.avatars[id].headset.position;
             let headsetRot = MR.avatars[id].headset.orientation;
-            // let headsetPos = hs.position();
-            // let headsetRot = hs.orientation();
 
             let delta = CG.abs(CG.subtract(headsetPos, prevAvatars[id].headset.position));
-            // let delta = CG.abs(CG.subtract(headsetRot, prevAvatars[id].headset.orientation));
             const eps = .001;
-            // console.log(delta);
 
-            // console.log(headsetPos[1]);
-            // if (headsetPos[1] > 2.5) {
-            //    MR.avatars[id] = prevAvatars[id];
-            // }
-
-            // if (delta[0] > eps || delta[1] > eps || delta[2] > eps) {
-            //    console.log(headsetPos);
-            //    console.log(prevAvatars[id].headset.position);
-
-            // }
-         
-            if(headsetPos == null || headsetRot == null){
+            if(headsetPos == null || headsetRot == null)
                continue;
-            }
 
             if (typeof headsetPos == 'undefined') {
                console.log(id);
@@ -871,7 +831,6 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             let hpos = headsetPos.slice();
             hpos[1] += EYE_HEIGHT;
 
-            // drawAvatar(avatar, hpos, headsetRot, .1, state);
             drawHeadset(hpos, headsetRot);
             let lpos = lcontroller.position.slice();
             lpos[1] += EYE_HEIGHT;
@@ -881,9 +840,9 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             drawSyncController(rpos, rcontroller.orientation, [1,0,0]);
             drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
          }
-        
+      }
+      prevAvatars = MR.avatars;
    }
-   prevAvatars = MR.avatars;
 }
 
 function onEndFrame(t, state) {
@@ -897,29 +856,20 @@ function onEndFrame(t, state) {
     -----------------------------------------------------------------*/
    const input  = state.input;
 
-   let frameData = MR.frameData();
-   if (frameData != null) {
-      let headsetPos = frameData.pose.position;
-      let headsetRot = frameData.pose.orientation;
-
-      this.audioContext1.updateListener(headsetPos, headsetRot);
-      this.audioContext2.updateListener(headsetPos, headsetRot);
+   if (input.HS != null) {
+      this.audioContext1.updateListener(input.HS.position(), input.HS.orientation());
+      this.audioContext2.updateListener(input.HS.position(), input.HS.orientation());
    
-      if (input.LC && input.LC.press()) {
+      if (input.LC && input.LC.press())
          this.audioContext1.playFileAt('assets/audio/blop.wav', input.LC.position());
-      }
 
-      if (input.RC && input.RC.press()) {
+      if (input.RC && input.RC.press())
          this.audioContext2.playFileAt('assets/audio/peacock.wav', input.RC.position());
-      }
    }
 
 
    if (input.LC) input.LC.onEndFrame();
    if (input.RC) input.RC.onEndFrame();
-
-
-
 }
 
 export default function main() {
@@ -945,28 +895,3 @@ export default function main() {
     return def;
 }
 
-//////////////DEBUG TOOLS
-/*
-function drawAvatar(avatar, pos, rot, scale, state) {
-
-   let prev_shape = null;
-   let drawShape = (shape, color, texture, textureScale) => {
-      gl.uniform4fv(state.uColorLoc, color.length == 4 ? color : color.concat([1]));
-      gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
-      gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
-      gl.uniform1f(state.uTexScale, textureScale === undefined ? 1 : textureScale);
-      if (shape != prev_shape)
-         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
-      gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
-      prev_shape = shape;
-   }
-   
-   m.save();
-      m.identity();
-      m.translate(pos[0],pos[1],pos[2] - .75);
-      m.rotateQ(rot);
-      m.scale(scale,scale,scale);
-      drawShape(avatar.headset.vertices, [1,1,1], 0);
-   m.restore();
-}
-*/
