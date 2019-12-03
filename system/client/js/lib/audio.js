@@ -149,7 +149,7 @@ class SpatialAudioContext {
         delete this.reverbCache[url];
     };
 
-    initPanner(innerAngle = 360, outerAngle = 360, outerGain = 0.2, refDistance = 1.0, maxDistance = 10000, rollOff = 1.2) {
+    initPanner(innerAngle = 360, outerAngle = 360, outerGain = 0.2, refDistance = .1, maxDistance = 10000, rollOff = 1.5) {
 
         this.panner = new PannerNode(this.context, {
             // equalpower or HRTF
