@@ -1,23 +1,30 @@
 "use strict"
 
-
 /*
-   To do:
+   For graphics class:
         Toon outline DONE
-	Noize -- need to create volumetric example
-	EdgedCube
+        Dollhouse rendering DONE
+	Incorporate two localized sound sources.
+	Interaction logic that makes use of two participants.
+   For Garden Party and SIGGRAPH:
         Create head for insect avatar
-        Dollhouse
         Full insect avatar
         Import Connor movement
+        Tubes along paths
+        Tree, mushroom, flower, leaf, grass
+   Other things to do:
+	Noize -- need to create volumetric example
+	EdgedCube
         Correct orientation for modeler popup menu
         Transparency
         Other options for shading (eg: specular power, metal)
         Fog/mist
-        Tubes along paths
-        Tree, mushroom, flower, leaf, grass
         Things to try in modeler:
-           object modify: move, rotate, scale, clone, delete, color, proportions
+           basic: move, rotate, scale, clone, delete
+	   physics: gravity, align, snap-to-fit
+	   advanced properties: color, material, texture, bumpiness, etch a pattern
+	   advanced creation: draw/modify tube/ribbon, lathe, stencil slab, melt/fuse
+	   advanced movement: blended jointed objects, animated characters
 */
 
 /*--------------------------------------------------------------------------------
@@ -537,7 +544,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
         if (shape != prev_shape)
            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
         if (state.isToon) {
-           gl.uniform1f (state.uToonLoc, .3 * CG.norm(m.value().slice(0,3)));
+           gl.uniform1f (state.uToonLoc, 2 * CG.norm(m.value().slice(0,3)));
 	   gl.cullFace(gl.FRONT);
            gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
 	   gl.cullFace(gl.BACK);
@@ -688,7 +695,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          m.restore();
          m.save();
                m.translate(0,0,-.01).scale(.04,.04,.13);
-               drawShape(CG.torus, [0,0,0]);
+               drawShape(CG.torus1, [0,0,0]);
          m.restore();
          m.save();
                m.translate(0,-.0135,-.008).scale(.04,.0235,.0015);
@@ -706,11 +713,20 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    }
 
    if (input.LC) {
-      drawHeadset(input.HS.position(), input.HS.orientation());
+      if (isMiniature)
+	 drawHeadset(input.HS.position(), input.HS.orientation());
+      m.save();
+
+      let P = state.position;
+      m.translate(-P[0],-P[1],-P[2]);
+      m.rotateY(-state.turnAngle);
+      m.rotateX(-state.tiltAngle);
+
       drawController(input.LC, 0);
       drawController(input.RC, 1);
       if (enableModeler && input.RC.isDown())
          showMenu(input.RC.position());
+      m.restore();
    }
 
 
@@ -830,10 +846,10 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             const rcontroller = MR.controllers[0];
             const lcontroller = MR.controllers[1];
             
-            drawAvatar(avatar, headsetPos, headsetRot, .03, state);
+            //drawAvatar(avatar, headsetPos, headsetRot, .03, state);
             
-            drawController(input.LC, 0);
-            drawController(input.RC, 1);
+            //drawController(input.LC, 0);
+            //drawController(input.RC, 1);
             //drawAvatar(avatar, rcontroller.pose.position, rcontroller.pose.orientation, 0.05, state);
             //drawAvatar(avatar, lcontroller.pose.position, lcontroller.pose.orientation, 0.05, state);
             
