@@ -853,36 +853,37 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       
       if (MR.avatars[id].mode == MR.UserType.vr) {
          if (MR.playerid == MR.avatars[id].playerid)
-	         continue;
-            let headsetPos = MR.avatars[id].headset.position;
-            let headsetRot = MR.avatars[id].headset.orientation;
+            continue;
 
-            let delta = CG.abs(CG.subtract(headsetPos, prevAvatars[id].headset.position));
-            const eps = .001;
+         let headsetPos = MR.avatars[id].headset.position;
+         let headsetRot = MR.avatars[id].headset.orientation;
 
-            if(headsetPos == null || headsetRot == null)
-               continue;
+         let delta = CG.abs(CG.subtract(headsetPos, prevAvatars[id].headset.position));
+         const eps = .001;
 
-            if (typeof headsetPos == 'undefined') {
-               console.log(id);
-               console.log("not defined");
-            }
-            
-            const avatar = MR.avatars[id];
-            const rcontroller = MR.avatars[id].rightController;
-            const lcontroller = MR.avatars[id].leftController;
-            
-            let hpos = headsetPos.slice();
-            hpos[1] += EYE_HEIGHT;
+         if(headsetPos == null || headsetRot == null)
+            continue;
 
-            drawHeadset(hpos, headsetRot);
-            let lpos = lcontroller.position.slice();
-            lpos[1] += EYE_HEIGHT;
-            let rpos = rcontroller.position.slice();
-            rpos[1] += EYE_HEIGHT;
+         if (typeof headsetPos == 'undefined') {
+            console.log(id);
+            console.log("not defined");
+         }
+         
+         const avatar = MR.avatars[id];
+         const rcontroller = MR.avatars[id].rightController;
+         const lcontroller = MR.avatars[id].leftController;
+         
+         let hpos = headsetPos.slice();
+         hpos[1] += EYE_HEIGHT;
 
-            drawSyncController(rpos, rcontroller.orientation, [1,0,0]);
-            drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
+         drawHeadset(hpos, headsetRot);
+         let lpos = lcontroller.position.slice();
+         lpos[1] += EYE_HEIGHT;
+         let rpos = rcontroller.position.slice();
+         rpos[1] += EYE_HEIGHT;
+
+         drawSyncController(rpos, rcontroller.orientation, [1,0,0]);
+         drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
       }
       prevAvatars = MR.avatars;
    }
