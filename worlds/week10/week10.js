@@ -25,6 +25,7 @@ const LEG_THICKNESS    = inchesToMeters(  2.5);
 
 let enableModeler = true;
 
+/*Example Grabble Object*/
 let grabbableCube = new Obj(CG.torus);
 
 let lathe = CG.createMeshVertices(10, 16, CG.uvToLathe,
@@ -39,7 +40,7 @@ const WOOD = 0,
 
 let noise = new ImprovedNoise();
 let m = new Matrix();
-let prevAvatars = MR.avatars;
+
 /*--------------------------------------------------------------------------------
 
 I wrote the following to create an abstraction on top of the left and right
@@ -100,264 +101,267 @@ function ControllerHandler(controller) {
 // (New Info):
 // handle reloading of imports (called in setup() and in onReload())
 async function initCommon(state) {
-    // (New Info): use the previously loaded module saved in state, use in global scope
-    // TODO automatic re-setting of loaded libraries to reduce boilerplate?
-    // gfx = state.gfx;
-    // state.m = new CG.Matrix();
-    // noise = state.noise;
+   // (New Info): use the previously loaded module saved in state, use in global scope
+   // TODO automatic re-setting of loaded libraries to reduce boilerplate?
+   // gfx = state.gfx;
+   // state.m = new CG.Matrix();
+   // noise = state.noise;
 }
 
 // (New Info):
 async function onReload(state) {
-    // called when this file is reloaded
-    // re-initialize imports, objects, and state here as needed
-    await initCommon(state);
+   // called when this file is reloaded
+   // re-initialize imports, objects, and state here as needed
+   await initCommon(state);
 
-    // Note: you can also do some run-time scripting here.
-    // For example, do some one-time modifications to some objects during
-    // a performance, then remove the code before subsequent reloads
-    // i.e. like coding in the browser console
+   // Note: you can also do some run-time scripting here.
+   // For example, do some one-time modifications to some objects during
+   // a performance, then remove the code before subsequent reloads
+   // i.e. like coding in the browser console
 }
 
 // (New Info):
 async function onExit(state) {
-    // called when world is switched
-    // de-initialize / close scene-specific resources here
-    console.log("Goodbye! =)");
+   // called when world is switched
+   // de-initialize / close scene-specific resources here
+   console.log("Goodbye! =)");
 }
 
 async function setup(state) {
-    hotReloadFile(getPath('week10.js'));
-    // (New Info): Here I am loading the graphics module once
-    // This is for the sake of example:
-    // I'm making the arbitrary decision not to support
-    // reloading for this particular module. Otherwise, you should
-    // do the import in the "initCommon" function that is also called
-    // in onReload, just like the other import done in initCommon
-    // the gfx module is saved to state so I can recover it
-    // after a reload
-    // state.gfx = await MR.dynamicImport(getPath('lib/graphics.js'));
-    state.noise = new ImprovedNoise();
-    await initCommon(state);
+   hotReloadFile(getPath('week10.js'));
+   // (New Info): Here I am loading the graphics module once
+   // This is for the sake of example:
+   // I'm making the arbitrary decision not to support
+   // reloading for this particular module. Otherwise, you should
+   // do the import in the "initCommon" function that is also called
+   // in onReload, just like the other import done in initCommon
+   // the gfx module is saved to state so I can recover it
+   // after a reload
+   // state.gfx = await MR.dynamicImport(getPath('lib/graphics.js'));
+   state.noise = new ImprovedNoise();
+   await initCommon(state);
 
-    // (New Info): input state in a sub-object that can be cached
-    // for convenience
-    // e.g. const input = state.input; 
-    state.input = {
-        turnAngle : 0,
-        tiltAngle : 0,
-        cursor : ScreenCursor.trackCursor(MR.getCanvas()),
-        cursorPrev : [0,0,0],
-        LC : null,
-        RC : null
-    }
+   // (New Info): input state in a sub-object that can be cached
+   // for convenience
+   // e.g. const input = state.input; 
+   state.input = {
+      turnAngle : 0,
+      tiltAngle : 0,
+      cursor : ScreenCursor.trackCursor(MR.getCanvas()),
+      cursorPrev : [0,0,0],
+      LC : null,
+      RC : null
+   }
 
-    // I propose adding a dictionary mapping texture strings to locations, so that drawShapes becomes clearer
-    const images = await imgutil.loadImagesPromise([
-        getPath("textures/wood.png"),
-        getPath("textures/tiles.jpg"),
-        getPath("textures/noisy_bump.jpg")
-     ]);
+   // I propose adding a dictionary mapping texture strings to locations, so that drawShapes becomes clearer
+   const images = await imgutil.loadImagesPromise([
+      getPath("textures/wood.png"),
+      getPath("textures/tiles.jpg"),
+      getPath("textures/noisy_bump.jpg")
+   ]);
 
-    let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
-        { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true },
-        { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
-    ]);
-    if (! libSources)
-        throw new Error("Could not load shader library");
+   let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+      { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true },
+      { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
+   ]);
+   if (! libSources)
+      throw new Error("Could not load shader library");
 
-    function onNeedsCompilationDefault(args, libMap, userData) {
-        const stages = [args.vertex, args.fragment];
-        const output = [args.vertex, args.fragment];
-        const implicitNoiseInclude = true;
-        if (implicitNoiseInclude) {
-            let libCode = MREditor.libMap.get('pnoise');
-            for (let i = 0; i < 2; i++) {
-                const stageCode = stages[i];
-                const hdrEndIdx = stageCode.indexOf(';');
-                const hdr = stageCode.substring(0, hdrEndIdx + 1);
-                output[i] = hdr + '\n#line 2 1\n' + 
-                            '#include<pnoise>\n#line ' + (hdr.split('\n').length + 1) + ' 0' + 
-                            stageCode.substring(hdrEndIdx + 1);
-            }
-        }
-        MREditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
-            output[0],
-            output[1],
-            libMap
-        );
-    }
+   function onNeedsCompilationDefault(args, libMap, userData) {
+      const stages = [args.vertex, args.fragment];
+      const output = [args.vertex, args.fragment];
+      const implicitNoiseInclude = true;
+      if (implicitNoiseInclude) {
+         let libCode = MREditor.libMap.get('pnoise');
+         for (let i = 0; i < 2; i++) {
+               const stageCode = stages[i];
+               const hdrEndIdx = stageCode.indexOf(';');
+               const hdr = stageCode.substring(0, hdrEndIdx + 1);
+               output[i] = hdr + '\n#line 2 1\n' + 
+                           '#include<pnoise>\n#line ' + (hdr.split('\n').length + 1) + ' 0' + 
+                           stageCode.substring(hdrEndIdx + 1);
+         }
+      }
+      MREditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+         output[0],
+         output[1],
+         libMap
+      );
+   }
 
-    // load vertex and fragment shaders from the server, register with the editor
-    let shaderSource = await MREditor.loadAndRegisterShaderForLiveEditing(
-        gl,
-        "mainShader",
-        {   
-            // (New Info): example of how the pre-compilation function callback
-            // could be in the standard library instead if I put the function defintion
-            // elsewhere
-            onNeedsCompilationDefault : onNeedsCompilationDefault,
-            onAfterCompilation : (program) => {
-                gl.useProgram(state.program = program);
-                state.uColorLoc    = gl.getUniformLocation(program, 'uColor');
-                state.uCursorLoc   = gl.getUniformLocation(program, 'uCursor');
-                state.uModelLoc    = gl.getUniformLocation(program, 'uModel');
-                state.uProjLoc     = gl.getUniformLocation(program, 'uProj');
-                state.uTexScale    = gl.getUniformLocation(program, 'uTexScale');
-                state.uTexIndexLoc = gl.getUniformLocation(program, 'uTexIndex');
-                state.uTimeLoc     = gl.getUniformLocation(program, 'uTime');
-                state.uToonLoc     = gl.getUniformLocation(program, 'uToon');
-                state.uViewLoc     = gl.getUniformLocation(program, 'uView');
-                        state.uTexLoc = [];
-                        for (let n = 0 ; n < 8 ; n++) {
-                           state.uTexLoc[n] = gl.getUniformLocation(program, 'uTex' + n);
-                           gl.uniform1i(state.uTexLoc[n], n);
-                        }
-            } 
-        },
-        {
-            paths : {
-                vertex   : "shaders/vertex.vert.glsl",
-                fragment : "shaders/fragment.frag.glsl"
-            },
-            foldDefault : {
-                vertex   : true,
-                fragment : false
-            }
-        }
-    );
-    if (! shaderSource)
-        throw new Error("Could not load shader");
+   // load vertex and fragment shaders from the server, register with the editor
+   let shaderSource = await MREditor.loadAndRegisterShaderForLiveEditing(
+      gl,
+      "mainShader",
+      {   
+         // (New Info): example of how the pre-compilation function callback
+         // could be in the standard library instead if I put the function defintion
+         // elsewhere
+         onNeedsCompilationDefault : onNeedsCompilationDefault,
+         onAfterCompilation : (program) => {
+               gl.useProgram(state.program = program);
+               state.uColorLoc    = gl.getUniformLocation(program, 'uColor');
+               state.uCursorLoc   = gl.getUniformLocation(program, 'uCursor');
+               state.uModelLoc    = gl.getUniformLocation(program, 'uModel');
+               state.uProjLoc     = gl.getUniformLocation(program, 'uProj');
+               state.uTexScale    = gl.getUniformLocation(program, 'uTexScale');
+               state.uTexIndexLoc = gl.getUniformLocation(program, 'uTexIndex');
+               state.uTimeLoc     = gl.getUniformLocation(program, 'uTime');
+               state.uToonLoc     = gl.getUniformLocation(program, 'uToon');
+               state.uViewLoc     = gl.getUniformLocation(program, 'uView');
+                     state.uTexLoc = [];
+                     for (let n = 0 ; n < 8 ; n++) {
+                        state.uTexLoc[n] = gl.getUniformLocation(program, 'uTex' + n);
+                        gl.uniform1i(state.uTexLoc[n], n);
+                     }
+         } 
+      },
+      {
+         paths : {
+               vertex   : "shaders/vertex.vert.glsl",
+               fragment : "shaders/fragment.frag.glsl"
+         },
+         foldDefault : {
+               vertex   : true,
+               fragment : false
+         }
+      }
+   );
+   if (! shaderSource)
+      throw new Error("Could not load shader");
 
-    state.cursor = ScreenCursor.trackCursor(MR.getCanvas());
-
-
-    state.buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, state.buffer);
-
-    let bpe = Float32Array.BYTES_PER_ELEMENT;
-
-    let aPos = gl.getAttribLocation(state.program, 'aPos');
-    gl.enableVertexAttribArray(aPos);
-    gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 0);
-
-    let aNor = gl.getAttribLocation(state.program, 'aNor');
-    gl.enableVertexAttribArray(aNor);
-    gl.vertexAttribPointer(aNor, 3, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 3);
-
-    let aTan = gl.getAttribLocation(state.program, 'aTan');
-    gl.enableVertexAttribArray(aTan);
-    gl.vertexAttribPointer(aTan, 3, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 6);
-
-    let aUV  = gl.getAttribLocation(state.program, 'aUV');
-    gl.enableVertexAttribArray(aUV);
-    gl.vertexAttribPointer(aUV , 2, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 9);
+   state.cursor = ScreenCursor.trackCursor(MR.getCanvas());
 
 
-    for (let i = 0 ; i < images.length ; i++) {
-        gl.activeTexture (gl.TEXTURE0 + i);
-        gl.bindTexture   (gl.TEXTURE_2D, gl.createTexture());
-        gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-        gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-        gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-        gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texImage2D    (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, images[i]);
-        gl.generateMipmap(gl.TEXTURE_2D);
-    }
+   state.buffer = gl.createBuffer();
+   gl.bindBuffer(gl.ARRAY_BUFFER, state.buffer);
 
-    // (New Info): editor state in a sub-object that can be cached
-    // for convenience
-    // e.g. const editor = state.editor; 
-    // state.editor = {
-    //     menuShape : [gfx.cube, gfx.sphere, gfx.cylinder, gfx.torus],
-    //     objs : [],
-    //     menuChoice : -1,
-    //     enableModeler : false
-    // };
+   let bpe = Float32Array.BYTES_PER_ELEMENT;
 
-    state.calibrationCount = 0;
+   let aPos = gl.getAttribLocation(state.program, 'aPos');
+   gl.enableVertexAttribArray(aPos);
+   gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 0);
 
-    Input.initKeyEvents();
+   let aNor = gl.getAttribLocation(state.program, 'aNor');
+   gl.enableVertexAttribArray(aNor);
+   gl.vertexAttribPointer(aNor, 3, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 3);
 
-    // load files into a spatial audio context for playback later
-    this.audioContext1 = new SpatialAudioContext([
-      'assets/audio/blop.wav'
-    ]);
+   let aTan = gl.getAttribLocation(state.program, 'aTan');
+   gl.enableVertexAttribArray(aTan);
+   gl.vertexAttribPointer(aTan, 3, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 6);
 
-    this.audioContext2 = new SpatialAudioContext([
-      'assets/audio/peacock.wav'
-    ]);
+   let aUV  = gl.getAttribLocation(state.program, 'aUV');
+   gl.enableVertexAttribArray(aUV);
+   gl.vertexAttribPointer(aUV , 2, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 9);
 
 
-    /*Example Object*/
-    MR.objs.push(grabbableCube);
-    grabbableCube.position    = [0,0,-0.5].slice();
-    grabbableCube.orientation = [1,0,0,1].slice();
-    grabbableCube.uid = 0;
-    sendSpawnMessage(grabbableCube);
-    grabbableCube.lock = new Lock();
+   for (let i = 0 ; i < images.length ; i++) {
+      gl.activeTexture (gl.TEXTURE0 + i);
+      gl.bindTexture   (gl.TEXTURE_2D, gl.createTexture());
+      gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+      gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+      gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+      gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texImage2D    (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, images[i]);
+      gl.generateMipmap(gl.TEXTURE_2D);
+   }
 
-    
+   // (New Info): editor state in a sub-object that can be cached
+   // for convenience
+   // e.g. const editor = state.editor; 
+   // state.editor = {
+   //     menuShape : [gfx.cube, gfx.sphere, gfx.cylinder, gfx.torus],
+   //     objs : [],
+   //     menuChoice : -1,
+   //     enableModeler : false
+   // };
+
+   state.calibrationCount = 0;
+
+   Input.initKeyEvents();
+
+   // load files into a spatial audio context for playback later - the path will be needed to reference this source later
+   this.audioContext1 = new SpatialAudioContext([
+   'assets/audio/blop.wav'
+   ]);
+
+   this.audioContext2 = new SpatialAudioContext([
+   'assets/audio/peacock.wav'
+   ]);
+
+
+   /* Here we show an example of how to create a grabbable object.
+   First instatiate object using Obj() constructor, and add the following  
+   variables. Then send a spawn message. This will allow the server to keep
+   track of objects that need to be synchronized.*/
+   MR.objs.push(grabbableCube);
+   grabbableCube.position    = [0,0,-0.5].slice();
+   grabbableCube.orientation = [1,0,0,1].slice();
+   grabbableCube.uid = 0;
+   grabbableCube.lock = new Lock();
+   sendSpawnMessage(grabbableCube);
+
 }
 
+/*
+*This is an example of a spawn message we send to the server.
+*/
 
 function sendSpawnMessage(object){
-       /*Example Spawn Message*/
-    const response = 
-        {
-        type: "spawn",
-        uid: object.uid,
-        lockid: -1,
-        state: {
+   const response = 
+      {
+         type: "spawn",
+         uid: object.uid,
+         lockid: -1,
+         state: {
             position: object.position,
             orientation: object.orientation,
-        }
-        };
-    //console.log("Spawn Message:");
-    //console.log(response);
-    MR.syncClient.send(response);
+         }
+      };
+
+   MR.syncClient.send(response);
 }
 
 function onStartFrame(t, state) {
 
-    /*-----------------------------------------------------------------
+   /*-----------------------------------------------------------------
 
-    Whenever the user enters VR Mode, create the left and right
-    controller handlers.
+   Whenever the user enters VR Mode, create the left and right
+   controller handlers.
 
-    Also, for my particular use, I have set up a particular transformation
-    so that the virtual room would match my physical room, putting the
-    resulting matrix into state.calibrate. If you want to do something
-    similar, you would need to do a different calculation based on your
-    particular physical room.
+   Also, for my particular use, I have set up a particular transformation
+   so that the virtual room would match my physical room, putting the
+   resulting matrix into state.calibrate. If you want to do something
+   similar, you would need to do a different calculation based on your
+   particular physical room.
 
-    -----------------------------------------------------------------*/
+   -----------------------------------------------------------------*/
 
-    const input  = state.input;
-    const editor = state.editor;
+   const input  = state.input;
+   const editor = state.editor;
 
-    if (! state.avatarMatrixForward) {
-        // MR.avatarMatrixForward is because i need accesss to this in callback.js, temp hack
-        MR.avatarMatrixForward = state.avatarMatrixForward = CG.matrixIdentity();
-        MR.avatarMatrixInverse = state.avatarMatrixInverse = CG.matrixIdentity();
-    } 
+   if (! state.avatarMatrixForward) {
+      // MR.avatarMatrixForward is because i need accesss to this in callback.js, temp hack
+      MR.avatarMatrixForward = state.avatarMatrixForward = CG.matrixIdentity();
+      MR.avatarMatrixInverse = state.avatarMatrixInverse = CG.matrixIdentity();
+   } 
 
-    if (MR.VRIsActive()) {
-        if (!input.HS) input.HS = new HeadsetHandler(MR.headset);
-        if (!input.LC) input.LC = new ControllerHandler(MR.leftController);
-        if (!input.RC) input.RC = new ControllerHandler(MR.rightController);
+   if (MR.VRIsActive()) {
+      if (!input.HS) input.HS = new HeadsetHandler(MR.headset);
+      if (!input.LC) input.LC = new ControllerHandler(MR.leftController);
+      if (!input.RC) input.RC = new ControllerHandler(MR.rightController);
 
-        if (! state.calibrate) {
-            m.identity();
-            m.rotateY(Math.PI/2);
-            m.translate(-2.01,.04,0);
-            state.calibrate = m.value().slice();
-       }
-    }
+      if (! state.calibrate) {
+         m.identity();
+         m.rotateY(Math.PI/2);
+         m.translate(-2.01,.04,0);
+         state.calibrate = m.value().slice();
+      }
+   }
 
-    if (! state.tStart)
-        state.tStart = t;
-    state.time = (t - state.tStart) / 1000;
+   if (! state.tStart)
+      state.tStart = t;
+   state.time = (t - state.tStart) / 1000;
 
     // THIS CURSOR CODE IS ONLY RELEVANT WHEN USING THE BROWSER MOUSE, NOT WHEN IN VR MODE.
 
@@ -365,6 +369,7 @@ function onStartFrame(t, state) {
       let p = state.cursor.position(), canvas = MR.getCanvas();
       return [ p[0] / canvas.clientWidth * 2 - 1, 1 - p[1] / canvas.clientHeight * 2, p[2] ];
    }
+
    let cursorXYZ = cursorValue();
    if (state.cursorPrev === undefined)
       state.cursorPrev = [0,0,0];
@@ -389,89 +394,94 @@ function onStartFrame(t, state) {
       state.position[2] -= fz;
    }
 
-   // SET UNIFORMS AND GRAPHICAL STATE BEFORE DRAWING.
+// SET UNIFORMS AND GRAPHICAL STATE BEFORE DRAWING.
 
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+   gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
-    gl.uniform3fv(state.uCursorLoc, cursorXYZ);
-    gl.uniform1f (state.uTimeLoc  , state.time);
+   gl.uniform3fv(state.uCursorLoc, cursorXYZ);
+   gl.uniform1f (state.uTimeLoc  , state.time);
 
-    gl.enable(gl.DEPTH_TEST);
-    gl.enable(gl.CULL_FACE);
+   gl.enable(gl.DEPTH_TEST);
+   gl.enable(gl.CULL_FACE);
 
-    /*-----------------------------------------------------------------
+   /*-----------------------------------------------------------------
 
-    Below is the logic for my little toy geometric modeler example.
-    You should do something more or different for your assignment. 
-    Try modifying the size or color or texture of objects. Try
-    deleting objects or adding constraints to make objects align
-    when you bring them together. Try adding controls to animate
-    objects. There are lots of possibilities.
+   Below is the logic for my little toy geometric modeler example.
+   You should do something more or different for your assignment. 
+   Try modifying the size or color or texture of objects. Try
+   deleting objects or adding constraints to make objects align
+   when you bring them together. Try adding controls to animate
+   objects. There are lots of possibilities.
 
-    -----------------------------------------------------------------*/
-    if (enableModeler && input.LC) {
-        if (input.RC.isDown()) {
-	        menuChoice = findInMenu(input.RC.position(), input.LC.tip());
-	        if (menuChoice >= 0 && input.LC.press()) {
-	            state.isNewObj = true;
-                let newObject = new Obj(menuShape[menuChoice]);
-	            MR.objs.push(newObject);
-                sendSpawnMessage(newObject);
-	        }
-        }
-        if (state.isNewObj) {
-            let obj = MR.objs[MR.objs.length - 1];
-	        obj.position    = input.LC.tip().slice();
-	        obj.orientation = input.LC.orientation().slice();
-            //Create lock object for each new obj.
-            obj.lock = new Lock();
-        }
-        if (input.LC.release())
-            state.isNewObj = false;
-    }
+   -----------------------------------------------------------------*/
+   if (enableModeler && input.LC) {
+      if (input.RC.isDown()) {
+         menuChoice = findInMenu(input.RC.position(), input.LC.tip());
+         if (menuChoice >= 0 && input.LC.press()) {
+            state.isNewObj = true;
+               let newObject = new Obj(menuShape[menuChoice]);
+               /*Should you want to support grabbing, refer to the
+               above example in setup()*/ 
+            MR.objs.push(newObject);
+               sendSpawnMessage(newObject);
+         }
+      }
+      if (state.isNewObj) {
+         let obj = MR.objs[MR.objs.length - 1];
+         obj.position    = input.LC.tip().slice();
+         obj.orientation = input.LC.orientation().slice();
+         //Create lock object for each new obj.
+         obj.lock = new Lock();
+      }
+      if (input.LC.release())
+         state.isNewObj = false;
+   }
 
-    if (input.LC) {
-        let LP = input.LC.center();
-        let RP = input.RC.center();
-        let D  = CG.subtract(LP, RP);
-        let d  = metersToInches(CG.norm(D));
-        let getX = C => {
-           m.save();
-              m.identity();
-              m.rotateQ(CG.matrixFromQuaternion(C.orientation()));
-              m.rotateX(.75);
-              let x = (m.value())[1];
-           m.restore();
-           return x;
-        }
-        let lx = getX(input.LC);
-        let rx = getX(input.RC);
-        let sep = metersToInches(TABLE_DEPTH - 2 * RING_RADIUS);
-        if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
-           if (state.calibrationCount === undefined)
-              state.calibrationCount = 0;
-           if (++state.calibrationCount == 30) {
-              m.save();
-                 m.identity();
-                 m.translate(CG.mix(LP, RP, .5));
-                 m.rotateY(Math.atan2(D[0], D[2]) + Math.PI/2);
-                 m.translate(-2.35,1.00,-.72);
-                 state.avatarMatrixForward = CG.matrixInverse(m.value());
-                 state.avatarMatrixInverse = m.value();
-              m.restore();
-              state.calibrationCount = 0;
-           }
-        }
-    }
+   if (input.LC) {
+      let LP = input.LC.center();
+      let RP = input.RC.center();
+      let D  = CG.subtract(LP, RP);
+      let d  = metersToInches(CG.norm(D));
+      let getX = C => {
+         m.save();
+            m.identity();
+            m.rotateQ(CG.matrixFromQuaternion(C.orientation()));
+            m.rotateX(.75);
+            let x = (m.value())[1];
+         m.restore();
+         return x;
+      }
+      let lx = getX(input.LC);
+      let rx = getX(input.RC);
+      let sep = metersToInches(TABLE_DEPTH - 2 * RING_RADIUS);
+      if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
+         if (state.calibrationCount === undefined)
+            state.calibrationCount = 0;
+         if (++state.calibrationCount == 30) {
+            m.save();
+               m.identity();
+               m.translate(CG.mix(LP, RP, .5));
+               m.rotateY(Math.atan2(D[0], D[2]) + Math.PI/2);
+               m.translate(-2.35,1.00,-.72);
+               state.avatarMatrixForward = CG.matrixInverse(m.value());
+               state.avatarMatrixInverse = m.value();
+            m.restore();
+            state.calibrationCount = 0;
+         }
+      }
+   }
 
     /*-----------------------------------------------------------------
     /*-----------------------------------------------------------------
        Translating Grabbable Object.
     -----------------------------------------------------------------*/
-    //pollGrab();
+    /*This function releases stale locks. Stale locks are locks that
+    a user has already lost ownership over by letting go*/
     releaseLocks(state);
-    pollGrabWithLock(state);
+    /*This function checks for intersection and if user has ownership over 
+    object then sends a data stream of position and orientation.*/
+    pollGrab(state);
 }
 
 let menuX = [-.2,-.1,-.2,-.1];
@@ -529,13 +539,13 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 }
 
 function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
-    viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
-    gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
-    gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
+   viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
+   gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
+   gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
 
-    let prev_shape = null;
+   let prev_shape = null;
 
-    const input  = state.input;
+   const input  = state.input;
 
     /*-----------------------------------------------------------------
 
@@ -549,33 +559,33 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
     -----------------------------------------------------------------*/
 
-    let drawShape = (shape, color, texture, textureScale) => {
-        gl.uniform4fv(state.uColorLoc, color.length == 4 ? color : color.concat([1]));
-        gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
-        gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
-        gl.uniform1f(state.uTexScale, textureScale === undefined ? 1 : textureScale);
-        if (shape != prev_shape)
-           gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
-        if (state.isToon) {
-           gl.uniform1f (state.uToonLoc, .3 * CG.norm(m.value().slice(0,3)));
-           gl.cullFace(gl.FRONT);
-           gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
-           gl.cullFace(gl.BACK);
-           gl.uniform1f (state.uToonLoc, 0);
-        }
-        gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
-        prev_shape = shape;
-    }
+   let drawShape = (shape, color, texture, textureScale) => {
+      gl.uniform4fv(state.uColorLoc, color.length == 4 ? color : color.concat([1]));
+      gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
+      gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
+      gl.uniform1f(state.uTexScale, textureScale === undefined ? 1 : textureScale);
+      if (shape != prev_shape)
+         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
+      if (state.isToon) {
+         gl.uniform1f (state.uToonLoc, .3 * CG.norm(m.value().slice(0,3)));
+         gl.cullFace(gl.FRONT);
+         gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+         gl.cullFace(gl.BACK);
+         gl.uniform1f (state.uToonLoc, 0);
+      }
+      gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+      prev_shape = shape;
+   }
 
-    let drawAvatar = (avatar, pos, rot, scale, state) => {
-        m.save();
-         //   m.identity();
-           m.translate(pos[0],pos[1],pos[2]);
-           m.rotateQ(rot);
-           m.scale(scale,scale,scale);
-           drawShape(avatar.headset.vertices, [1,1,1], 0);
-        m.restore();
-    }
+   let drawAvatar = (avatar, pos, rot, scale, state) => {
+      m.save();
+      //   m.identity();
+         m.translate(pos[0],pos[1],pos[2]);
+         m.rotateQ(rot);
+         m.scale(scale,scale,scale);
+         drawShape(avatar.headset.vertices, [1,1,1], 0);
+      m.restore();
+   }
 
     /*-----------------------------------------------------------------
 
@@ -586,17 +596,17 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
     -----------------------------------------------------------------*/
 
-    let showMenu = p => {
-        let x = p[0], y = p[1], z = p[2];
-        for (let n = 0 ; n < 4 ; n++) {
-           m.save();
-              m.multiply(state.avatarMatrixForward);
-              m.translate(x + menuX[n], y + menuY[n], z);
-              m.scale(.03, .03, .03);
-              drawShape(menuShape[n], n == menuChoice ? [1,.5,.5] : [1,1,1]);
-           m.restore();
-        }
-     }
+   let showMenu = p => {
+      let x = p[0], y = p[1], z = p[2];
+      for (let n = 0 ; n < 4 ; n++) {
+         m.save();
+            m.multiply(state.avatarMatrixForward);
+            m.translate(x + menuX[n], y + menuY[n], z);
+            m.scale(.03, .03, .03);
+            drawShape(menuShape[n], n == menuChoice ? [1,.5,.5] : [1,1,1]);
+         m.restore();
+      }
+   }
 
     /*-----------------------------------------------------------------
 
@@ -606,26 +616,26 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
     -----------------------------------------------------------------*/
 
-    let drawTable = id => {
-        m.save();
-           m.translate(0, TABLE_HEIGHT - TABLE_THICKNESS/2, 0);
-           m.scale(TABLE_DEPTH/2, TABLE_THICKNESS/2, TABLE_WIDTH/2);
-           drawShape(CG.cube, [1,1,1], 0);
-        m.restore();
-        m.save();
-           let h  = (TABLE_HEIGHT - TABLE_THICKNESS) / 2;
-           let dx = (TABLE_DEPTH  - LEG_THICKNESS  ) / 2;
-           let dz = (TABLE_WIDTH  - LEG_THICKNESS  ) / 2;
-           for (let x = -dx ; x <= dx ; x += 2 * dx)
-           for (let z = -dz ; z <= dz ; z += 2 * dz) {
-              m.save();
-                 m.translate(x, h, z);
-                 m.scale(LEG_THICKNESS/2, h, LEG_THICKNESS/2);
-                 drawShape(CG.cube, [.5,.5,.5]);
-              m.restore();
-           }
-        m.restore();
-     }
+   let drawTable = id => {
+      m.save();
+         m.translate(0, TABLE_HEIGHT - TABLE_THICKNESS/2, 0);
+         m.scale(TABLE_DEPTH/2, TABLE_THICKNESS/2, TABLE_WIDTH/2);
+         drawShape(CG.cube, [1,1,1], 0);
+      m.restore();
+      m.save();
+         let h  = (TABLE_HEIGHT - TABLE_THICKNESS) / 2;
+         let dx = (TABLE_DEPTH  - LEG_THICKNESS  ) / 2;
+         let dz = (TABLE_WIDTH  - LEG_THICKNESS  ) / 2;
+         for (let x = -dx ; x <= dx ; x += 2 * dx)
+         for (let z = -dz ; z <= dz ; z += 2 * dz) {
+            m.save();
+               m.translate(x, h, z);
+               m.scale(LEG_THICKNESS/2, h, LEG_THICKNESS/2);
+               drawShape(CG.cube, [.5,.5,.5]);
+            m.restore();
+         }
+      m.restore();
+   }
 
     /*-----------------------------------------------------------------
 
@@ -641,30 +651,30 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
     -----------------------------------------------------------------*/
     
-    let drawHeadset = (position, orientation) => {
+   let drawHeadset = (position, orientation) => {
       //  let P = HS.position();'
       let P = position;
 
-       m.save();
-          m.multiply(state.avatarMatrixForward);
-          m.translate(P[0],P[1],P[2]);
-          m.rotateQ(orientation);
-          m.scale(.1);
-          m.save();
-             m.scale(1,1.5,1);
-             drawShape(CG.sphere, [0,0,0]);
-          m.restore();
-          for (let s = -1 ; s <= 1 ; s += 2) {
-             m.save();
-                m.translate(s*.4,.2,-.8);
-                m.scale(.4,.4,.1);
-                drawShape(CG.sphere, [10,10,10]);
-             m.restore();
-          }
-       m.restore();
-    }
+      m.save();
+         m.multiply(state.avatarMatrixForward);
+         m.translate(P[0],P[1],P[2]);
+         m.rotateQ(orientation);
+         m.scale(.1);
+         m.save();
+            m.scale(1,1.5,1);
+            drawShape(CG.sphere, [0,0,0]);
+         m.restore();
+         for (let s = -1 ; s <= 1 ; s += 2) {
+            m.save();
+               m.translate(s*.4,.2,-.8);
+               m.scale(.4,.4,.1);
+               drawShape(CG.sphere, [10,10,10]);
+            m.restore();
+         }
+      m.restore();
+   }
 
-    let drawController = (C, hand) => {
+   let drawController = (C, hand) => {
       let P = C.position();
       m.save();
          m.multiply(state.avatarMatrixForward);
@@ -775,22 +785,22 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
     -----------------------------------------------------------------*/
 
-       m.save();
-          let dy = isMiniature ? 0 : HALL_WIDTH/2;
-          m.translate(0, dy, 0);
-          m.scale(-HALL_WIDTH/2, -dy, -HALL_LENGTH/2);
-          drawShape(CG.cube, [1,1,1], 1,4, 2,4);
-       m.restore();
+   m.save();
+      let dy = isMiniature ? 0 : HALL_WIDTH/2;
+      m.translate(0, dy, 0);
+      m.scale(-HALL_WIDTH/2, -dy, -HALL_LENGTH/2);
+      drawShape(CG.cube, [1,1,1], 1,4, 2,4);
+   m.restore();
 
-    m.save();
-       m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, 0);
-       drawTable(0);
-    m.restore();
+   m.save();
+      m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, 0);
+      drawTable(0);
+   m.restore();
 
-    m.save();
-       m.translate((TABLE_DEPTH - HALL_WIDTH) / 2, 0, 0);
-       drawTable(1);
-    m.restore();
+   m.save();
+      m.translate((TABLE_DEPTH - HALL_WIDTH) / 2, 0, 0);
+      drawTable(1);
+   m.restore();
 
    // DRAW TEST SHAPE
 
@@ -847,18 +857,16 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
         Here is where we draw avatars and controllers.
       -----------------------------------------------------------------*/
    
-   // console.log(MR.avatars);
    for (let id in MR.avatars) {
       
-      if (MR.avatars[id].mode == MR.UserType.vr) {
-         if (MR.playerid == MR.avatars[id].playerid)
+      const avatar = MR.avatars[id];
+
+      if (avatar.mode == MR.UserType.vr) {
+         if (MR.playerid == avatar.playerid)
             continue;
-
-         let headsetPos = MR.avatars[id].headset.position;
-         let headsetRot = MR.avatars[id].headset.orientation;
-
-         let delta = CG.abs(CG.subtract(headsetPos, prevAvatars[id].headset.position));
-         const eps = .001;
+         
+         let headsetPos = avatar.headset.position;
+         let headsetRot = avatar.headset.orientation;
 
          if(headsetPos == null || headsetRot == null)
             continue;
@@ -868,9 +876,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             console.log("not defined");
          }
          
-         const avatar = MR.avatars[id];
-         const rcontroller = MR.avatars[id].rightController;
-         const lcontroller = MR.avatars[id].leftController;
+         const rcontroller = avatar.rightController;
+         const lcontroller = avatar.leftController;
          
          let hpos = headsetPos.slice();
          hpos[1] += EYE_HEIGHT;
@@ -884,7 +891,6 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          drawSyncController(rpos, rcontroller.orientation, [1,0,0]);
          drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
       }
-      prevAvatars = MR.avatars;
    }
 }
 
@@ -900,9 +906,13 @@ function onEndFrame(t, state) {
    const input  = state.input;
 
    if (input.HS != null) {
+      // here is an example of updating each audio context with the most recent headset position - otherwise it will not be spatialized
       this.audioContext1.updateListener(input.HS.position(), input.HS.orientation());
       this.audioContext2.updateListener(input.HS.position(), input.HS.orientation());
    
+      // here you initiate the 360 spatial audio playback from a given position, in this case controller position, this can be anything
+      // i.e. a speaker, or an drum in the room
+      // you must provide the path given, when you construct the audio context
       if (input.LC && input.LC.press())
          this.audioContext1.playFileAt('assets/audio/blop.wav', input.LC.position());
 
@@ -910,76 +920,51 @@ function onEndFrame(t, state) {
          this.audioContext2.playFileAt('assets/audio/peacock.wav', input.RC.position());
    }
 
-
    if (input.LC) input.LC.onEndFrame();
    if (input.RC) input.RC.onEndFrame();
 }
 
 export default function main() {
-    const def = {
-        name         : 'YOUR_NAME_HERE week10',
-        setup        : setup,
-        onStartFrame : onStartFrame,
-        onEndFrame   : onEndFrame,
-        onDraw       : onDraw,
+   const def = {
+      name: 'YOUR_NAME_HERE week10',
+      setup: setup,
+      onStartFrame: onStartFrame,
+      onEndFrame: onEndFrame,
+      onDraw: onDraw,
 
-        // (New Info): New callbacks:
-            
-        // VR-specific drawing callback
-        // e.g. for when the UI must be different 
-        //      in VR than on desktop
-        //      currently setting to the same callback as on desktop
-        onDrawXR     : onDraw, 
-        // call upon reload
-        onReload     : onReload,
-        // call upon world exit
-        onExit       : onExit
-    };
-    return def;
+      // (New Info): New callbacks:
+
+      // VR-specific drawing callback
+      // e.g. for when the UI must be different 
+      //      in VR than on desktop
+      //      currently setting to the same callback as on desktop
+      onDrawXR: onDraw,
+      // call upon reload
+      onReload: onReload,
+      // call upon world exit
+      onExit: onExit
+   };
+
+   return def;
 }
 
 
 //////////////EXTRA TOOLS
-function drawAvatar(avatar, pos, rot, scale, state) {
 
-   let prev_shape = null;
-   let drawShape = (shape, color, texture, textureScale) => {
-      gl.uniform4fv(state.uColorLoc, color.length == 4 ? color : color.concat([1]));
-      gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
-      gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
-      gl.uniform1f(state.uTexScale, textureScale === undefined ? 1 : textureScale);
-      if (shape != prev_shape)
-         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
-      gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
-      prev_shape = shape;
-   }
-   
-   m.save();
-      m.identity();
-      m.translate(pos[0],pos[1],pos[2] - .75);
-      m.rotateQ(rot);
-      m.scale(scale,scale,scale);
-      drawShape(avatar.headset.vertices, [1,1,1], 0);
-   m.restore();
-}
-
+// a better approach for this would be to define a unit sphere and apply the proper transform w.r.t. corresponding grabbable object
 function checkIntersection(point, verts) {
-  const bb = calcBoundingBox(verts);
-  const min = bb[0];
-  const max = bb[1];
-  /*
-  console.log("bounding box");
-  console.log(point);
-  console.log(min);
-  console.log(max);
-  console.log("~~~~~~~~~~~~~");*/
-  if(point[0] > min[0] && point[0] < max[0] && 
-    point[1] > min[1] && point[1] < max[1] &&
-    point[2] > min[2] && point[2] < max[2]) return true;
+   const bb = calcBoundingBox(verts);
+   const min = bb[0];
+   const max = bb[1];
 
-  return false;
+   if (point[0] > min[0] && point[0] < max[0] &&
+      point[1] > min[1] && point[1] < max[1] &&
+      point[2] > min[2] && point[2] < max[2]) return true;
+
+   return false;
 }
 
+// see above
 function calcBoundingBox(verts) {
    const min = [Number.MAX_VALUE,Number.MAX_VALUE,Number.MAX_VALUE];
    const max = [Number.MIN_VALUE,Number.MIN_VALUE,Number.MIN_VALUE];
@@ -998,83 +983,47 @@ function calcBoundingBox(verts) {
    return [min, max];
 }
 
+function pollGrab(state) {
+   let input = state.input;
+   if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {
 
-function pollGrab(state){
-     if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {  
+      let controller = input.LC.isDown() ? input.LC : input.RC;
+      for (let i = 0; i < MR.objs.length; i++) {
+         //ALEX: Check if grabbable.
+         let isGrabbed = checkIntersection(controller.position(), MR.objs[i].shape);
+         //requestLock(MR.objs[i].uid);
+         if (isGrabbed == true) {
+            if (MR.objs[i].lock.locked) {
+               MR.objs[i].position = controller.position();
+               const response =
+               {
+                  type: "object",
+                  uid: MR.objs[i].uid,
+                  state: {
+                     position: MR.objs[i].position,
+                     orientation: MR.objs[i].orientation,
+                  },
+                  lockid: MR.playerid,
 
-      let controller = input.LC.isDown()? input.LC: input.RC;
-      for(let i = 0; i < MR.objs.length; i++){
-        //ALEX: Check if grabbable.
-           let isGrabbed = checkIntersection(controller.position(), MR.objs[i].shape);
-           //requestLock(MR.objs[i].uid);
-            if(isGrabbed == true){
-                MR.objs[i].position = controller.position();
-                const response = 
-                {
-                    type: "object",
-                    uid: MR.objs[i].uid,
-                    state: {
-                        position: MR.objs[i].position,
-                        orientation: MR.objs[i].orientation,
-                    },
-                    lockid: MR.playerid,
+               };
 
-                };
-                MR.syncClient.send(response);
+               MR.syncClient.send(response);
+            } else {
+               MR.objs[i].lock.request(MR.objs[i].uid);
             }
-
-        
-      } 
-    }   
+         }
+      }
+   }
 }
 
-function pollGrabWithLock(state){
- let input = state.input;
- if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {  
-
-      let controller = input.LC.isDown()? input.LC: input.RC;
-      for(let i = 0; i < MR.objs.length; i++){
-        //ALEX: Check if grabbable.
-           let isGrabbed = checkIntersection(controller.position(), MR.objs[i].shape);
-           //requestLock(MR.objs[i].uid);
-            if(isGrabbed == true){
-                if(MR.objs[i].lock.locked){
-                    MR.objs[i].position = controller.position();
-                    const response = 
-                    {
-                        type: "object",
-                        uid: MR.objs[i].uid,
-                        state: {
-                            position: MR.objs[i].position,
-                            orientation: MR.objs[i].orientation,
-                        },
-                        lockid: MR.playerid,
-
-                    };
-                    //console.log("Object Message");
-                    //console.log(response);
-                    MR.syncClient.send(response);
-                }
-                else{
-                    MR.objs[i].lock.request(MR.objs[i].uid);
-                }
-               
-            }
-
-        
-      } 
-    }    
+function releaseLocks(state) {
+   let input = state.input;
+   if ((input.LC && !input.LC.isDown()) && (input.RC && !input.RC.isDown())) {
+      for (let i = 0; i < MR.objs.length; i++) {
+         if (MR.objs[i].lock.locked == true) {
+            MR.objs[i].lock.locked = false;
+            MR.objs[i].lock.release(MR.objs[i].uid);
+         }
+      }
+   }
 }
-
-function releaseLocks(state){
-    let input = state.input;
-    if ((input.LC && !input.LC.isDown()) && (input.RC && !input.RC.isDown())){
-        for(let i = 0; i < MR.objs.length; i++){
-            if(MR.objs[i].lock.locked == true){
-                MR.objs[i].lock.locked = false;
-                MR.objs[i].lock.release(MR.objs[i].uid);
-            }
-        }
-    } 
-}
-
