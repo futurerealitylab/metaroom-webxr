@@ -714,6 +714,8 @@ window.VRCanvasWrangler = (function() {
                 gl.canvas.width / gl.canvas.height,
                 0.01, 1024);
 
+            Input.updateKeyState();
+            Input.updateControllerState();
             this.config.onStartFrame(t, this.customState);
 
             GFX.viewportXOffset = 0;
