@@ -964,6 +964,7 @@ function drawAvatar(avatar, pos, rot, scale, state) {
    m.restore();
 }
 
+// a better approach for this would be to define a unit sphere and apply the proper transform w.r.t. corresponding grabbable object
 function checkIntersection(point, verts) {
   const bb = calcBoundingBox(verts);
   const min = bb[0];
@@ -981,6 +982,7 @@ function checkIntersection(point, verts) {
   return false;
 }
 
+// see above
 function calcBoundingBox(verts) {
    const min = [Number.MAX_VALUE,Number.MAX_VALUE,Number.MAX_VALUE];
    const max = [Number.MIN_VALUE,Number.MIN_VALUE,Number.MIN_VALUE];
