@@ -859,12 +859,14 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    
    for (let id in MR.avatars) {
       
-      if (MR.avatars[id].mode == MR.UserType.vr) {
-         if (MR.playerid == MR.avatars[id].playerid)
-            continue;
+      const avatar = MR.avatars[id];
 
-         let headsetPos = MR.avatars[id].headset.position;
-         let headsetRot = MR.avatars[id].headset.orientation;
+      if (avatar.mode == MR.UserType.vr) {
+         if (MR.playerid == avatar.playerid)
+            continue;
+         
+         let headsetPos = avatar.headset.position;
+         let headsetRot = avatar.headset.orientation;
 
          if(headsetPos == null || headsetRot == null)
             continue;
@@ -874,8 +876,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             console.log("not defined");
          }
          
-         const rcontroller = MR.avatars[id].rightController;
-         const lcontroller = MR.avatars[id].leftController;
+         const rcontroller = avatar.rightController;
+         const lcontroller = avatar.leftController;
          
          let hpos = headsetPos.slice();
          hpos[1] += EYE_HEIGHT;
