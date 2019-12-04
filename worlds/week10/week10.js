@@ -313,8 +313,8 @@ function sendSpawnMessage(object){
             orientation: object.orientation,
         }
         };
-    console.log("Spawn Message:");
-    console.log(response);
+    //console.log("Spawn Message:");
+    //console.log(response);
     MR.syncClient.send(response);
 }
 
@@ -417,7 +417,6 @@ function onStartFrame(t, state) {
 	            state.isNewObj = true;
                 let newObject = new Obj(menuShape[menuChoice]);
 	            MR.objs.push(newObject);
-                console.log("kens object creator :(");
                 sendSpawnMessage(newObject);
 	        }
         }
@@ -1052,8 +1051,8 @@ function pollGrabWithLock(state){
                         lockid: MR.playerid,
 
                     };
-                    console.log("Object Message");
-                    console.log(response);
+                    //console.log("Object Message");
+                    //console.log(response);
                     MR.syncClient.send(response);
                 }
                 else{

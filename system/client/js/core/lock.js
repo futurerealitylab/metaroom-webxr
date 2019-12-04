@@ -11,7 +11,8 @@ class Lock {
             uid: uid,
             lockid: MR.playerid
         };
-
+        //console.log("Lock Message");
+        //console.log(response);
         MR.syncClient.send(response);
         return true;
     }
@@ -23,7 +24,8 @@ class Lock {
             uid: uid,
             lockid: MR.playerid
         };
-
+        //console.log("release Message");
+        //console.log(response);
         MR.syncClient.send(response);
         return true;
     }
