@@ -101,30 +101,30 @@ function ControllerHandler(controller) {
 // (New Info):
 // handle reloading of imports (called in setup() and in onReload())
 async function initCommon(state) {
-    // (New Info): use the previously loaded module saved in state, use in global scope
-    // TODO automatic re-setting of loaded libraries to reduce boilerplate?
-    // gfx = state.gfx;
-    // state.m = new CG.Matrix();
-    // noise = state.noise;
+   // (New Info): use the previously loaded module saved in state, use in global scope
+   // TODO automatic re-setting of loaded libraries to reduce boilerplate?
+   // gfx = state.gfx;
+   // state.m = new CG.Matrix();
+   // noise = state.noise;
 }
 
 // (New Info):
 async function onReload(state) {
-    // called when this file is reloaded
-    // re-initialize imports, objects, and state here as needed
-    await initCommon(state);
+   // called when this file is reloaded
+   // re-initialize imports, objects, and state here as needed
+   await initCommon(state);
 
-    // Note: you can also do some run-time scripting here.
-    // For example, do some one-time modifications to some objects during
-    // a performance, then remove the code before subsequent reloads
-    // i.e. like coding in the browser console
+   // Note: you can also do some run-time scripting here.
+   // For example, do some one-time modifications to some objects during
+   // a performance, then remove the code before subsequent reloads
+   // i.e. like coding in the browser console
 }
 
 // (New Info):
 async function onExit(state) {
-    // called when world is switched
-    // de-initialize / close scene-specific resources here
-    console.log("Goodbye! =)");
+   // called when world is switched
+   // de-initialize / close scene-specific resources here
+   console.log("Goodbye! =)");
 }
 
 async function setup(state) {
