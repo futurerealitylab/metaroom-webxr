@@ -1,8 +1,4 @@
 "use strict"
-/*
-   Things you might want to try:
-      object modify: move, rotate, scale, clone, delete, color, proportions
-*/
 
 /*--------------------------------------------------------------------------------
 
@@ -41,8 +37,7 @@ const WOOD = 0,
 
 let noise = new ImprovedNoise();
 let m = new Matrix();
-
-let grabbableCube = new Obj(CG.torus);
+let prevAvatars = MR.avatars;
 /*--------------------------------------------------------------------------------
 
 I wrote the following to create an abstraction on top of the left and right
@@ -60,6 +55,11 @@ based debugging tool, you can do something like console.log(leftController)
 to see what the options are.
 
 --------------------------------------------------------------------------------*/
+
+function HeadsetHandler(headset) {
+   this.orientation = () => headset.pose.orientation;
+   this.position    = () => headset.pose.position;
+}
 
 function ControllerHandler(controller) {
    this.isDown      = () => controller.buttons[1].pressed;
@@ -204,6 +204,7 @@ async function setup(state) {
                 state.uTexScale    = gl.getUniformLocation(program, 'uTexScale');
                 state.uTexIndexLoc = gl.getUniformLocation(program, 'uTexIndex');
                 state.uTimeLoc     = gl.getUniformLocation(program, 'uTime');
+                state.uToonLoc     = gl.getUniformLocation(program, 'uToon');
                 state.uViewLoc     = gl.getUniformLocation(program, 'uView');
 		        state.uTexLoc = [];
         		for (let n = 0 ; n < 8 ; n++) {
@@ -277,12 +278,14 @@ async function setup(state) {
     Input.initKeyEvents();
 
     // load files into a spatial audio context for playback later
-    this.audioContext = new SpatialAudioContext([
-      'assets/audio/Blop-Mark_DiAngelo-79054334.wav'
+    this.audioContext1 = new SpatialAudioContext([
+      'assets/audio/blop.wav'
     ]);
 
+    this.audioContext2 = new SpatialAudioContext([
+      'assets/audio/peacock.wav'
+    ]);
 
-    MR.objs = [];
 
     /*Example Object*/
 
@@ -329,10 +332,6 @@ function onStartFrame(t, state) {
 
     const input  = state.input;
     const editor = state.editor;
-    // const m      = state.m;
-
-    Input.updateKeyState();
-    Input.updateControllerState();
 
     if (! state.avatarMatrixForward) {
         // MR.avatarMatrixForward is because i need accesss to this in callback.js, temp hack
@@ -341,8 +340,9 @@ function onStartFrame(t, state) {
     } 
 
     if (MR.VRIsActive()) {
-        if (!input.LC) input.LC = new ControllerHandler(MR.leftController, m);
-        if (!input.RC) input.RC = new ControllerHandler(MR.rightController, m);
+        if (!input.HS) input.HS = new HeadsetHandler(MR.headset);
+        if (!input.LC) input.LC = new ControllerHandler(MR.leftController);
+        if (!input.RC) input.RC = new ControllerHandler(MR.rightController);
 
         if (! state.calibrate) {
             m.identity();
@@ -358,9 +358,7 @@ function onStartFrame(t, state) {
 
     // THIS CURSOR CODE IS ONLY RELEVANT WHEN USING THE BROWSER MOUSE, NOT WHEN IN VR MODE.
 
-    // THIS CURSOR CODE IS ONLY RELEVANT WHEN USING THE BROWSER MOUSE, NOT WHEN IN VR MODE.
-
-    let cursorValue = () => {
+   let cursorValue = () => {
       let p = state.cursor.position(), canvas = MR.getCanvas();
       return [ p[0] / canvas.clientWidth * 2 - 1, 1 - p[1] / canvas.clientHeight * 2, p[2] ];
    }
@@ -420,7 +418,7 @@ function onStartFrame(t, state) {
 	        }
         }
         if (state.isNewObj) {
-            let obj = MR.objs[MR.objs.length - 1];
+            let obj = objs[objs.length - 1];
 	        obj.position    = input.LC.tip().slice();
 	        obj.orientation = input.LC.orientation().slice();
             //Create lock object for each new obj.
@@ -507,10 +505,28 @@ function Obj(shape) {
    this.shape = shape;
 };
 
-//let objs = [];
+let objs = [];
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
+   m.identity();
+   m.rotateX(state.tiltAngle);
+   m.rotateY(state.turnAngle);
+   let P = state.position;
+   m.translate(P[0],P[1],P[2]);
 
+   m.save();
+      myDraw(t, projMat, viewMat, state, eyeIdx, false);
+   m.restore();
+
+   m.save();
+      m.translate(HALL_WIDTH/2 - TABLE_DEPTH/2, -TABLE_HEIGHT*1.048, TABLE_WIDTH/6.7);
+      m.rotateY(Math.PI);
+      m.scale(.1392);
+      myDraw(t, projMat, viewMat, state, eyeIdx, true);
+   m.restore();
+}
+
+function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
     viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
     gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
     gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
@@ -538,9 +554,26 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         gl.uniform1f(state.uTexScale, textureScale === undefined ? 1 : textureScale);
         if (shape != prev_shape)
            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
+        if (state.isToon) {
+           gl.uniform1f (state.uToonLoc, 2 * CG.norm(m.value().slice(0,3)));
+	   gl.cullFace(gl.FRONT);
+           gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+	   gl.cullFace(gl.BACK);
+           gl.uniform1f (state.uToonLoc, 0);
+	}
         gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
         prev_shape = shape;
-     }
+    }
+
+    let drawAvatar = (avatar, pos, rot, scale, state) => {
+        m.save();
+         //   m.identity();
+           m.translate(pos[0],pos[1],pos[2]);
+           m.rotateQ(rot);
+           m.scale(scale,scale,scale);
+           drawShape(avatar.headset.vertices, [1,1,1], 0);
+        m.restore();
+    }
 
     /*-----------------------------------------------------------------
 
@@ -606,6 +639,29 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
     -----------------------------------------------------------------*/
     
+    let drawHeadset = (position, orientation) => {
+      //  let P = HS.position();'
+      let P = position;
+
+       m.save();
+          m.multiply(state.avatarMatrixForward);
+          m.translate(P[0],P[1],P[2]);
+          m.rotateQ(orientation);
+	  m.scale(.1);
+	  m.save();
+	     m.scale(1,1.5,1);
+	     drawShape(CG.sphere, [0,0,0]);
+	  m.restore();
+	  for (let s = -1 ; s <= 1 ; s += 2) {
+	     m.save();
+	        m.translate(s*.4,.2,-.8);
+	        m.scale(.4,.4,.1);
+	        drawShape(CG.sphere, [10,10,10]);
+	     m.restore();
+	  }
+       m.restore();
+    }
+
     let drawController = (C, hand) => {
       let P = C.position();
       m.save();
@@ -637,12 +693,10 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
       m.restore();
    }
 
-   m.identity();
-
    let drawSyncController = (pos, rot, color) => {
       let P = pos;
       m.save();
-      m.identity();
+      // m.identity();
          m.translate(P[0], P[1], P[2]);
          m.rotateQ(rot);
          m.translate(0,.02,-.005);
@@ -652,7 +706,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
          m.restore();
          m.save();
                m.translate(0,0,-.01).scale(.04,.04,.13);
-               drawShape(CG.torus, [0,0,0]);
+               drawShape(CG.torus1, [0,0,0]);
          m.restore();
          m.save();
                m.translate(0,-.0135,-.008).scale(.04,.0235,.0015);
@@ -669,13 +723,21 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
       m.restore();
    }
 
-   m.identity();
-
    if (input.LC) {
+      if (isMiniature)
+	 drawHeadset(input.HS.position(), input.HS.orientation());
+      m.save();
+
+      let P = state.position;
+      m.translate(-P[0],-P[1],-P[2]);
+      m.rotateY(-state.turnAngle);
+      m.rotateX(-state.tiltAngle);
+
       drawController(input.LC, 0);
       drawController(input.RC, 1);
       if (enableModeler && input.RC.isDown())
          showMenu(input.RC.position());
+      m.restore();
    }
 
 
@@ -688,8 +750,9 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     need to go into onStartFrame(), not here.
 
     -----------------------------------------------------------------*/
-   for (let n = 0 ; n < MR.objs.length ; n++) {
-      let obj = MR.objs[n], P = obj.position;
+
+   for (let n = 0 ; n < objs.length ; n++) {
+      let obj = objs[n], P = obj.position;
       m.save();
          m.multiply(state.avatarMatrixForward);
          m.translate(P[0], P[1], P[2]);
@@ -701,10 +764,6 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
    }
 
    m.translate(0, -EYE_HEIGHT, 0);
-   m.rotateX(state.tiltAngle);
-   m.rotateY(state.turnAngle);
-   let P = state.position;
-   m.translate(P[0],P[1],P[2]);
  
     /*-----------------------------------------------------------------
 
@@ -714,11 +773,12 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
     -----------------------------------------------------------------*/
 
-    m.save();
-       m.translate(0, HALL_WIDTH/2, 0);
-       m.scale(-HALL_WIDTH/2, -HALL_WIDTH/2, -HALL_LENGTH/2);
-       drawShape(CG.cube, [1,1,1], 1,4, 2,4);
-    m.restore();
+       m.save();
+          let dy = isMiniature ? 0 : HALL_WIDTH/2;
+	  m.translate(0, dy, 0);
+          m.scale(-HALL_WIDTH/2, -dy, -HALL_LENGTH/2);
+          drawShape(CG.cube, [1,1,1], 1,4, 2,4);
+       m.restore();
 
     m.save();
        m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, 0);
@@ -763,6 +823,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
          drawShape(CG.sphere, [1,1,1]);
       m.restore();
       */
+      state.isToon = true;
       let skinColor = [1,.5,.3], D;
       m.save();
          D = CG.mix(A,C,.5);
@@ -777,44 +838,26 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
          m.translate(D[0],D[1],D[2]).aimZ(CG.subtract(C,B)).scale(.03,.03,.37);
          drawShape(lathe, skinColor, -1,1, 2,1);
       m.restore();
+      state.isToon = false;
 
    m.restore();
-
-
-
-    /*-----------------------------------------------------------------
+      /*-----------------------------------------------------------------
         Here is where we draw avatars and controllers.
-    -----------------------------------------------------------------*/
-
+      -----------------------------------------------------------------*/
+   
+   // console.log(MR.avatars);
    for (let id in MR.avatars) {
 
-      if(MR.playerid == MR.avatars[id].playerid && MR.avatars[id].mode == MR.UserType.vr) {
-         let frameData = MR.frameData();
-         if (frameData != null) {
-            let headsetPos = frameData.pose.position;
-            let headsetRot = frameData.pose.orientation;
-
-            const avatar = MR.avatars[id];
-            const rcontroller = MR.controllers[0];
-            const lcontroller = MR.controllers[1];
-            
-            drawAvatar(avatar, headsetPos, headsetRot, .03, state);
-            
-            drawController(input.LC, 0);
-            drawController(input.RC, 1);
-            //drawAvatar(avatar, rcontroller.pose.position, rcontroller.pose.orientation, 0.05, state);
-            //drawAvatar(avatar, lcontroller.pose.position, lcontroller.pose.orientation, 0.05, state);
-            
-
-         }
-         
-         } else if(MR.avatars[id].mode == MR.UserType.vr) {
+      if (MR.playerid == MR.avatars[id].playerid && MR.avatars[id].mode == MR.UserType.vr) {
+         if (MR.avatars[id].mode == MR.UserType.vr) {
             let headsetPos = MR.avatars[id].headset.position;
             let headsetRot = MR.avatars[id].headset.orientation;
-            
-            if(headsetPos == null || headsetRot == null){
-                  continue;
-            }
+
+            let delta = CG.abs(CG.subtract(headsetPos, prevAvatars[id].headset.position));
+            const eps = .001;
+
+            if(headsetPos == null || headsetRot == null)
+               continue;
 
             if (typeof headsetPos == 'undefined') {
                console.log(id);
@@ -825,19 +868,25 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             const rcontroller = MR.avatars[id].rightController;
             const lcontroller = MR.avatars[id].leftController;
             
-            //console.log("VR position and orientation:")
-            //console.log(headsetPos);
-            //console.log(headsetRot);
-            drawAvatar(avatar, headsetPos, headsetRot, .1, state);
-            drawSyncController(rcontroller.position, rcontroller.orientation, [1,0,0]);
-            drawSyncController(lcontroller.position, lcontroller.orientation, [0,1,1]);
+            let hpos = headsetPos.slice();
+            hpos[1] += EYE_HEIGHT;
+
+            drawHeadset(hpos, headsetRot);
+            let lpos = lcontroller.position.slice();
+            lpos[1] += EYE_HEIGHT;
+            let rpos = rcontroller.position.slice();
+            rpos[1] += EYE_HEIGHT;
+
+            drawSyncController(rpos, rcontroller.orientation, [1,0,0]);
+            drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
          }
-        
+      }
+      prevAvatars = MR.avatars;
    }
 }
 
 function onEndFrame(t, state) {
-    pollAvatarData();
+   pollAvatarData();
     /*-----------------------------------------------------------------
 
     The below two lines are necessary for making the controller handler
@@ -845,24 +894,22 @@ function onEndFrame(t, state) {
     actions.
 
     -----------------------------------------------------------------*/
-    const input  = state.input;
-    if (input.LC) input.LC.onEndFrame();
-    if (input.RC) input.RC.onEndFrame();
+   const input  = state.input;
+
+   if (input.HS != null) {
+      this.audioContext1.updateListener(input.HS.position(), input.HS.orientation());
+      this.audioContext2.updateListener(input.HS.position(), input.HS.orientation());
+   
+      if (input.LC && input.LC.press())
+         this.audioContext1.playFileAt('assets/audio/blop.wav', input.LC.position());
+
+      if (input.RC && input.RC.press())
+         this.audioContext2.playFileAt('assets/audio/peacock.wav', input.RC.position());
+   }
 
 
-    let frameData = MR.frameData();
-    if (frameData != null) {
-        let headsetPos = frameData.pose.position;
-        let headsetRot = frameData.pose.orientation;
-           /*Button stuff that we might move somewhere else*/
-        if (input.LC && input.LC.isDown()) {
-          this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.LC.position(), [0,0,0], headsetPos, headsetRot);
-        }
-
-        if (input.RC && input.RC.isDown()) {
-            this.audioContext.playFileAt('assets/audio/Blop-Mark_DiAngelo-79054334.wav', input.RC.position(), [0,0,0], headsetPos, headsetRot);
-        }
-    }
+   if (input.LC) input.LC.onEndFrame();
+   if (input.RC) input.RC.onEndFrame();
 }
 
 export default function main() {

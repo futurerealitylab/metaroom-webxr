@@ -35,6 +35,17 @@ class SpatialAudioContext {
 
     };
 
+    updateListener(head_position, head_orientation) {
+        const rot = CG.matrixFromQuaternion(head_orientation);
+        const forward = CG.matrixTransform(rot, [0, 0, -1]);
+
+        this.context.listener.setOrientation(forward[0], forward[1], forward[2], 0, 1, 0);
+
+        this.context.listener.positionX.value = head_position[0];
+        // this.context.listener.positionY.value = head_position[1];
+        this.context.listener.positionZ.value = head_position[2];
+    }
+
     isPlaying() { return this.playing; };
 
     getDuration(url) {
@@ -46,7 +57,7 @@ class SpatialAudioContext {
         return this.context.resume();
     };
 
-    playFileAt(url, sound_position, sound_orientation, head_position, head_orientation, offset = 0.0, time = 0.0) {
+    playFileAt(url, sound_position, sound_orientation = [0,0,0], offset = 0.0, time = 0.0) {
 
         if (!(url in this.cache)) {
             console.log("invalid url, not currently loaded");
@@ -68,14 +79,6 @@ class SpatialAudioContext {
         //         console.log('Playback resumed successfully');
         //     });
         // }
-
-        let listener = this.context.listener;
-
-        listener.setOrientation(head_orientation[0], head_orientation[1], head_orientation[2], 0, 1, 0);
-
-        listener.positionX.value = head_position[0];
-        listener.positionY.value = head_position[1];
-        listener.positionZ.value = head_position[2];
 
         const source = this.context.createBufferSource();
         source.buffer = this.cache[url];
@@ -146,13 +149,13 @@ class SpatialAudioContext {
         delete this.reverbCache[url];
     };
 
-    initPanner(innerAngle = 360, outerAngle = 360, outerGain = 0.2, refDistance = 1.0, maxDistance = 10000, rollOff = 1.0) {
+    initPanner(innerAngle = 360, outerAngle = 360, outerGain = 0.2, refDistance = .1, maxDistance = 10000, rollOff = 1.5) {
 
         this.panner = new PannerNode(this.context, {
             // equalpower or HRTF
             panningModel: 'HRTF',
             // linear, inverse, exponential
-            distanceModel: "linear",
+            distanceModel: 'exponential',
             positionX: 0.0,
             positionY: 0.0,
             positionZ: 0.0,
