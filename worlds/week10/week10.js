@@ -25,6 +25,8 @@ const LEG_THICKNESS    = inchesToMeters(  2.5);
 
 let enableModeler = true;
 
+let grabbableCube = new Obj(CG.torus);
+
 let lathe = CG.createMeshVertices(10, 16, CG.uvToLathe,
              [ CG.bezierToCubic([-1.0,-1.0,-0.7,-0.3,-0.1 , 0.1, 0.3 , 0.7 , 1.0 ,1.0]),
                CG.bezierToCubic([ 0.0, 0.5, 0.8, 1.1, 1.25, 1.4, 1.45, 1.55, 1.7 ,0.0]) ]);
@@ -38,7 +40,6 @@ const WOOD = 0,
 let noise = new ImprovedNoise();
 let m = new Matrix();
 let prevAvatars = MR.avatars;
-
 /*--------------------------------------------------------------------------------
 
 I wrote the following to create an abstraction on top of the left and right
@@ -289,7 +290,6 @@ async function setup(state) {
 
 
     /*Example Object*/
-
     MR.objs.push(grabbableCube);
     grabbableCube.position    = [0,0,-0.5].slice();
     grabbableCube.orientation = [1,0,0,1].slice();
@@ -313,6 +313,8 @@ function sendSpawnMessage(object){
             orientation: object.orientation,
         }
         };
+    console.log("Spawn Message:");
+    console.log(response);
     MR.syncClient.send(response);
 }
 
@@ -415,11 +417,12 @@ function onStartFrame(t, state) {
 	            state.isNewObj = true;
                 let newObject = new Obj(menuShape[menuChoice]);
 	            MR.objs.push(newObject);
+                console.log("kens object creator :(");
                 sendSpawnMessage(newObject);
 	        }
         }
         if (state.isNewObj) {
-            let obj = objs[objs.length - 1];
+            let obj = MR.objs[MR.objs.length - 1];
 	        obj.position    = input.LC.tip().slice();
 	        obj.orientation = input.LC.orientation().slice();
             //Create lock object for each new obj.
@@ -506,8 +509,6 @@ function Obj(shape) {
    this.shape = shape;
 };
 
-let objs = [];
-let grabbableCube = new Obj(CG.torus);
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
    m.identity();
@@ -753,8 +754,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
     -----------------------------------------------------------------*/
 
-   for (let n = 0 ; n < objs.length ; n++) {
-      let obj = objs[n], P = obj.position;
+   for (let n = 0 ; n < MR.objs.length ; n++) {
+      let obj = MR.objs[n], P = obj.position;
       m.save();
          m.multiply(state.avatarMatrixForward);
          m.translate(P[0], P[1], P[2]);
@@ -856,35 +857,41 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          let headsetPos = MR.avatars[id].headset.position;
          let headsetRot = MR.avatars[id].headset.orientation;
 
-         let delta = CG.abs(CG.subtract(headsetPos, prevAvatars[id].headset.position));
-         const eps = .001;
+      if (MR.playerid == MR.avatars[id].playerid && MR.avatars[id].mode == MR.UserType.vr) {
+         if (MR.avatars[id].mode == MR.UserType.vr) {
+            let headsetPos = MR.avatars[id].headset.position;
+            let headsetRot = MR.avatars[id].headset.orientation;
 
-         if(headsetPos == null || headsetRot == null)
-            continue;
+            let delta = CG.abs(CG.subtract(headsetPos, prevAvatars[id].headset.position));
+            const eps = .001;
 
-         if (typeof headsetPos == 'undefined') {
-            console.log(id);
-            console.log("not defined");
+            if(headsetPos == null || headsetRot == null)
+               continue;
+
+            if (typeof headsetPos == 'undefined') {
+               console.log(id);
+               console.log("not defined");
+            }
+            
+            const avatar = MR.avatars[id];
+            const rcontroller = MR.avatars[id].rightController;
+            const lcontroller = MR.avatars[id].leftController;
+            
+            let hpos = headsetPos.slice();
+            hpos[1] += EYE_HEIGHT;
+
+            drawHeadset(hpos, headsetRot);
+            let lpos = lcontroller.position.slice();
+            lpos[1] += EYE_HEIGHT;
+            let rpos = rcontroller.position.slice();
+            rpos[1] += EYE_HEIGHT;
+
+            drawSyncController(rpos, rcontroller.orientation, [1,0,0]);
+            drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
          }
-         
-         const avatar = MR.avatars[id];
-         const rcontroller = MR.avatars[id].rightController;
-         const lcontroller = MR.avatars[id].leftController;
-         
-         let hpos = headsetPos.slice();
-         hpos[1] += EYE_HEIGHT;
-
-         drawHeadset(hpos, headsetRot);
-         let lpos = lcontroller.position.slice();
-         lpos[1] += EYE_HEIGHT;
-         let rpos = rcontroller.position.slice();
-         rpos[1] += EYE_HEIGHT;
-
-         drawSyncController(rpos, rcontroller.orientation, [1,0,0]);
-         drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
       }
+      prevAvatars = MR.avatars;
    }
-   prevAvatars = MR.avatars;
 }
 
 function onEndFrame(t, state) {
@@ -966,11 +973,12 @@ function checkIntersection(point, verts) {
   const bb = calcBoundingBox(verts);
   const min = bb[0];
   const max = bb[1];
+  /*
   console.log("bounding box");
   console.log(point);
   console.log(min);
   console.log(max);
-  console.log("~~~~~~~~~~~~~");
+  console.log("~~~~~~~~~~~~~");*/
   if(point[0] > min[0] && point[0] < max[0] && 
     point[1] > min[1] && point[1] < max[1] &&
     point[2] > min[2] && point[2] < max[2]) return true;
@@ -1049,6 +1057,8 @@ function pollGrabWithLock(state){
                         lockid: MR.playerid,
 
                     };
+                    console.log("Object Message");
+                    console.log(response);
                     MR.syncClient.send(response);
                 }
                 else{
