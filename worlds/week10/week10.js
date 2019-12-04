@@ -850,15 +850,10 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    
    // console.log(MR.avatars);
    for (let id in MR.avatars) {
+      
       if (MR.avatars[id].mode == MR.UserType.vr) {
          if (MR.playerid == MR.avatars[id].playerid)
-            continue;
-
-         let headsetPos = MR.avatars[id].headset.position;
-         let headsetRot = MR.avatars[id].headset.orientation;
-
-      if (MR.playerid == MR.avatars[id].playerid && MR.avatars[id].mode == MR.UserType.vr) {
-         if (MR.avatars[id].mode == MR.UserType.vr) {
+	         continue;
             let headsetPos = MR.avatars[id].headset.position;
             let headsetRot = MR.avatars[id].headset.orientation;
 
@@ -888,7 +883,6 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
             drawSyncController(rpos, rcontroller.orientation, [1,0,0]);
             drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
-         }
       }
       prevAvatars = MR.avatars;
    }
