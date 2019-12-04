@@ -467,9 +467,8 @@ function onStartFrame(t, state) {
     /*-----------------------------------------------------------------
        Translating Grabbable Object.
     -----------------------------------------------------------------*/
-    //pollGrab();
     releaseLocks(state);
-    pollGrabWithLock(state);
+    pollGrab(state);
 }
 
 let menuX = [-.2,-.1,-.2,-.1];
@@ -1001,37 +1000,7 @@ function calcBoundingBox(verts) {
    return [min, max];
 }
 
-
 function pollGrab(state){
-     if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {  
-
-      let controller = input.LC.isDown()? input.LC: input.RC;
-      for(let i = 0; i < MR.objs.length; i++){
-        //ALEX: Check if grabbable.
-           let isGrabbed = checkIntersection(controller.position(), MR.objs[i].shape);
-           //requestLock(MR.objs[i].uid);
-            if(isGrabbed == true){
-                MR.objs[i].position = controller.position();
-                const response = 
-                {
-                    type: "object",
-                    uid: MR.objs[i].uid,
-                    state: {
-                        position: MR.objs[i].position,
-                        orientation: MR.objs[i].orientation,
-                    },
-                    lockid: MR.playerid,
-
-                };
-                MR.syncClient.send(response);
-            }
-
-        
-      } 
-    }   
-}
-
-function pollGrabWithLock(state){
  let input = state.input;
  if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {  
 
