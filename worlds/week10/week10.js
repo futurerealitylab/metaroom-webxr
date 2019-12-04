@@ -949,28 +949,6 @@ export default function main() {
 
 
 //////////////EXTRA TOOLS
-function drawAvatar(avatar, pos, rot, scale, state) {
-
-   let prev_shape = null;
-   let drawShape = (shape, color, texture, textureScale) => {
-      gl.uniform4fv(state.uColorLoc, color.length == 4 ? color : color.concat([1]));
-      gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
-      gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
-      gl.uniform1f(state.uTexScale, textureScale === undefined ? 1 : textureScale);
-      if (shape != prev_shape)
-         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
-      gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
-      prev_shape = shape;
-   }
-   
-   m.save();
-      m.identity();
-      m.translate(pos[0],pos[1],pos[2] - .75);
-      m.rotateQ(rot);
-      m.scale(scale,scale,scale);
-      drawShape(avatar.headset.vertices, [1,1,1], 0);
-   m.restore();
-}
 
 // a better approach for this would be to define a unit sphere and apply the proper transform w.r.t. corresponding grabbable object
 function checkIntersection(point, verts) {
@@ -1052,4 +1030,3 @@ function releaseLocks(state){
         }
     } 
 }
-
