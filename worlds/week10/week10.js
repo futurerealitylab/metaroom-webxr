@@ -279,7 +279,7 @@ async function setup(state) {
 
     Input.initKeyEvents();
 
-    // load files into a spatial audio context for playback later
+    // load files into a spatial audio context for playback later - the path will be needed to reference this source later
     this.audioContext1 = new SpatialAudioContext([
       'assets/audio/blop.wav'
     ]);
@@ -296,8 +296,6 @@ async function setup(state) {
     grabbableCube.uid = 0;
     sendSpawnMessage(grabbableCube);
     grabbableCube.lock = new Lock();
-
-    
 }
 
 
@@ -900,16 +898,19 @@ function onEndFrame(t, state) {
    const input  = state.input;
 
    if (input.HS != null) {
+      // here is an example of updating each audio context with the most recent headset position - otherwise it will not be spatialized
       this.audioContext1.updateListener(input.HS.position(), input.HS.orientation());
       this.audioContext2.updateListener(input.HS.position(), input.HS.orientation());
    
+      // here you initiate the 360 spatial audio playback from a given position, in this case controller position, this can be anything
+      // i.e. a speaker, or an drum in the room
+      // you must provide the path given, when you construct the audio context
       if (input.LC && input.LC.press())
          this.audioContext1.playFileAt('assets/audio/blop.wav', input.LC.position());
 
       if (input.RC && input.RC.press())
          this.audioContext2.playFileAt('assets/audio/peacock.wav', input.RC.position());
    }
-
 
    if (input.LC) input.LC.onEndFrame();
    if (input.RC) input.RC.onEndFrame();
