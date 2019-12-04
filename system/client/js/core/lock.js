@@ -4,13 +4,15 @@ class Lock {
     }
 
     request(uid) {
+        console.log("send lock");
         const response = 
         {
             type: "lock",
             uid: uid,
-            lockid: MR.playerid 
+            lockid: MR.playerid
         };
-
+        //console.log("Lock Message");
+        //console.log(response);
         MR.syncClient.send(response);
         return true;
     }
@@ -20,9 +22,10 @@ class Lock {
         {
             type: "release",
             uid: uid,
-            lockid: MR.playerid 
+            lockid: MR.playerid
         };
-
+        //console.log("release Message");
+        //console.log(response);
         MR.syncClient.send(response);
         return true;
     }

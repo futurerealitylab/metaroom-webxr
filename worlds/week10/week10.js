@@ -25,6 +25,8 @@ const LEG_THICKNESS    = inchesToMeters(  2.5);
 
 let enableModeler = true;
 
+let grabbableCube = new Obj(CG.torus);
+
 let lathe = CG.createMeshVertices(10, 16, CG.uvToLathe,
              [ CG.bezierToCubic([-1.0,-1.0,-0.7,-0.3,-0.1 , 0.1, 0.3 , 0.7 , 1.0 ,1.0]),
                CG.bezierToCubic([ 0.0, 0.5, 0.8, 1.1, 1.25, 1.4, 1.45, 1.55, 1.7 ,0.0]) ]);
@@ -285,8 +287,36 @@ async function setup(state) {
     this.audioContext2 = new SpatialAudioContext([
       'assets/audio/peacock.wav'
     ]);
+
+
+    /*Example Object*/
+    MR.objs.push(grabbableCube);
+    grabbableCube.position    = [0,0,-0.5].slice();
+    grabbableCube.orientation = [1,0,0,1].slice();
+    grabbableCube.uid = 0;
+    sendSpawnMessage(grabbableCube);
+    grabbableCube.lock = new Lock();
+
+    
 }
 
+
+function sendSpawnMessage(object){
+       /*Example Spawn Message*/
+    const response = 
+        {
+        type: "spawn",
+        uid: object.uid,
+        lockid: -1,
+        state: {
+            position: object.position,
+            orientation: object.orientation,
+        }
+        };
+    //console.log("Spawn Message:");
+    //console.log(response);
+    MR.syncClient.send(response);
+}
 
 function onStartFrame(t, state) {
 
@@ -382,16 +412,20 @@ function onStartFrame(t, state) {
     -----------------------------------------------------------------*/
     if (enableModeler && input.LC) {
         if (input.RC.isDown()) {
-                menuChoice = findInMenu(input.RC.position(), input.LC.tip());
-                if (menuChoice >= 0 && input.LC.press()) {
-                    state.isNewObj = true;
-                    objs.push(new Obj(menuShape[menuChoice]));
-                }
+	        menuChoice = findInMenu(input.RC.position(), input.LC.tip());
+	        if (menuChoice >= 0 && input.LC.press()) {
+	            state.isNewObj = true;
+                let newObject = new Obj(menuShape[menuChoice]);
+	            MR.objs.push(newObject);
+                sendSpawnMessage(newObject);
+	        }
         }
         if (state.isNewObj) {
-            let obj = objs[objs.length - 1];
-                obj.position    = input.LC.tip().slice();
-                obj.orientation = input.LC.orientation().slice();
+            let obj = MR.objs[MR.objs.length - 1];
+	        obj.position    = input.LC.tip().slice();
+	        obj.orientation = input.LC.orientation().slice();
+            //Create lock object for each new obj.
+            obj.lock = new Lock();
         }
         if (input.LC.release())
             state.isNewObj = false;
@@ -430,6 +464,14 @@ function onStartFrame(t, state) {
            }
         }
     }
+
+    /*-----------------------------------------------------------------
+    /*-----------------------------------------------------------------
+       Translating Grabbable Object.
+    -----------------------------------------------------------------*/
+    //pollGrab();
+    releaseLocks(state);
+    pollGrabWithLock(state);
 }
 
 let menuX = [-.2,-.1,-.2,-.1];
@@ -466,7 +508,6 @@ function Obj(shape) {
    this.shape = shape;
 };
 
-let objs = [];
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
    m.identity();
@@ -712,14 +753,15 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
     -----------------------------------------------------------------*/
 
-   for (let n = 0 ; n < objs.length ; n++) {
-      let obj = objs[n], P = obj.position;
+   for (let n = 0 ; n < MR.objs.length ; n++) {
+      let obj = MR.objs[n], P = obj.position;
       m.save();
          m.multiply(state.avatarMatrixForward);
          m.translate(P[0], P[1], P[2]);
          m.rotateQ(obj.orientation);
          m.scale(.03,.03,.03);
          drawShape(obj.shape, [1,1,1]);
+         
       m.restore();
    }
 
@@ -807,6 +849,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    
    // console.log(MR.avatars);
    for (let id in MR.avatars) {
+      
       if (MR.avatars[id].mode == MR.UserType.vr) {
          if (MR.playerid == MR.avatars[id].playerid)
             continue;
@@ -841,8 +884,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          drawSyncController(rpos, rcontroller.orientation, [1,0,0]);
          drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
       }
+      prevAvatars = MR.avatars;
    }
-   prevAvatars = MR.avatars;
 }
 
 function onEndFrame(t, state) {
@@ -893,5 +936,145 @@ export default function main() {
         onExit       : onExit
     };
     return def;
+}
+
+
+//////////////EXTRA TOOLS
+function drawAvatar(avatar, pos, rot, scale, state) {
+
+   let prev_shape = null;
+   let drawShape = (shape, color, texture, textureScale) => {
+      gl.uniform4fv(state.uColorLoc, color.length == 4 ? color : color.concat([1]));
+      gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
+      gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
+      gl.uniform1f(state.uTexScale, textureScale === undefined ? 1 : textureScale);
+      if (shape != prev_shape)
+         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
+      gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+      prev_shape = shape;
+   }
+   
+   m.save();
+      m.identity();
+      m.translate(pos[0],pos[1],pos[2] - .75);
+      m.rotateQ(rot);
+      m.scale(scale,scale,scale);
+      drawShape(avatar.headset.vertices, [1,1,1], 0);
+   m.restore();
+}
+
+function checkIntersection(point, verts) {
+  const bb = calcBoundingBox(verts);
+  const min = bb[0];
+  const max = bb[1];
+  /*
+  console.log("bounding box");
+  console.log(point);
+  console.log(min);
+  console.log(max);
+  console.log("~~~~~~~~~~~~~");*/
+  if(point[0] > min[0] && point[0] < max[0] && 
+    point[1] > min[1] && point[1] < max[1] &&
+    point[2] > min[2] && point[2] < max[2]) return true;
+
+  return false;
+}
+
+function calcBoundingBox(verts) {
+   const min = [Number.MAX_VALUE,Number.MAX_VALUE,Number.MAX_VALUE];
+   const max = [Number.MIN_VALUE,Number.MIN_VALUE,Number.MIN_VALUE];
+    
+   for(let i = 0; i < verts.length; i+=2){
+
+      if(verts[i] < min[0]) min[0] = verts[i];
+      if(verts[i+1] < min[1]) min[1] = verts[i+1];
+      if(verts[i+2] < min[2]) min[2] = verts[i+2];
+
+      if(verts[i] > max[0]) max[0] = verts[i];
+      if(verts[i+1] > max[1]) max[1] = verts[i+1];
+      if(verts[i+2] > max[2]) max[2] = verts[i+2];
+   }
+
+   return [min, max];
+}
+
+
+function pollGrab(state){
+     if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {  
+
+      let controller = input.LC.isDown()? input.LC: input.RC;
+      for(let i = 0; i < MR.objs.length; i++){
+        //ALEX: Check if grabbable.
+           let isGrabbed = checkIntersection(controller.position(), MR.objs[i].shape);
+           //requestLock(MR.objs[i].uid);
+            if(isGrabbed == true){
+                MR.objs[i].position = controller.position();
+                const response = 
+                {
+                    type: "object",
+                    uid: MR.objs[i].uid,
+                    state: {
+                        position: MR.objs[i].position,
+                        orientation: MR.objs[i].orientation,
+                    },
+                    lockid: MR.playerid,
+
+                };
+                MR.syncClient.send(response);
+            }
+
+        
+      } 
+    }   
+}
+
+function pollGrabWithLock(state){
+ let input = state.input;
+ if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {  
+
+      let controller = input.LC.isDown()? input.LC: input.RC;
+      for(let i = 0; i < MR.objs.length; i++){
+        //ALEX: Check if grabbable.
+           let isGrabbed = checkIntersection(controller.position(), MR.objs[i].shape);
+           //requestLock(MR.objs[i].uid);
+            if(isGrabbed == true){
+                if(MR.objs[i].lock.locked){
+                    MR.objs[i].position = controller.position();
+                    const response = 
+                    {
+                        type: "object",
+                        uid: MR.objs[i].uid,
+                        state: {
+                            position: MR.objs[i].position,
+                            orientation: MR.objs[i].orientation,
+                        },
+                        lockid: MR.playerid,
+
+                    };
+                    //console.log("Object Message");
+                    //console.log(response);
+                    MR.syncClient.send(response);
+                }
+                else{
+                    MR.objs[i].lock.request(MR.objs[i].uid);
+                }
+               
+            }
+
+        
+      } 
+    }    
+}
+
+function releaseLocks(state){
+    let input = state.input;
+    if ((input.LC && !input.LC.isDown()) && (input.RC && !input.RC.isDown())){
+        for(let i = 0; i < MR.objs.length; i++){
+            if(MR.objs[i].lock.locked == true){
+                MR.objs[i].lock.locked = false;
+                MR.objs[i].lock.release(MR.objs[i].uid);
+            }
+        }
+    } 
 }
 

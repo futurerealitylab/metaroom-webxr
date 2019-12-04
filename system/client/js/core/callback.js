@@ -1,10 +1,10 @@
 'use strict';
 
-MR.syncClient.registerEventHandler("platform", (json) => {
+MR.syncClient.eventBus.subscribe("platform", (json) => {
 
 });
 
-MR.syncClient.registerEventHandler("initialize", (json) => {
+MR.syncClient.eventBus.subscribe("initialize", (json) => {
 
     if (!MR.avatars) {
         MR.avatars = {};
@@ -29,7 +29,7 @@ MR.syncClient.registerEventHandler("initialize", (json) => {
     console.log(MR.avatars);
 });
 
-MR.syncClient.registerEventHandler("join", (json) => {
+MR.syncClient.eventBus.subscribe("join", (json) => {
     console.log(json);
     const id = json["id"];
 
@@ -48,18 +48,18 @@ MR.syncClient.registerEventHandler("join", (json) => {
     MR.updatePlayersMenu();
 });
 
-MR.syncClient.registerEventHandler("leave", (json) => {
+MR.syncClient.eventBus.subscribe("leave", (json) => {
     console.log(json);
     delete MR.avatars[json["user"]];
 
     MR.updatePlayersMenu();
 });
 
-MR.syncClient.registerEventHandler("tick", (json) => {
+MR.syncClient.eventBus.subscribe("tick", (json) => {
     // console.log("world tick: ", json);
 });
 
-MR.syncClient.registerEventHandler("avatar", (json) => {
+MR.syncClient.eventBus.subscribe("avatar", (json) => {
     //if (MR.VRIsActive()) {
     const payload = json["data"];
     //console.log(json);
@@ -97,13 +97,20 @@ const response = {
 
  */
 
-MR.syncClient.registerEventHandler("lock", (json) => {
-    console.log("lock: ", json);
-    // is this mine?
-    // success?
-    // failure
-    // not mine
-    // note it?
+// TODO:
+// deal with logic and onlock
+MR.syncClient.eventBus.subscribe("lock", (json) => {
+
+    const success = json["success"];
+    const key = json["uid"];
+
+    if (success) {
+        console.log("acquire lock success: ", key);
+        MR.objs[key].lock.locked = true;
+    } else {
+        console.log("acquire lock failed : ", key);
+    }
+
 });
 
 /*
@@ -116,13 +123,19 @@ const response = {
 
  */
 
-MR.syncClient.registerEventHandler("release", (json) => {
-    console.log("release: ", json);
-    // is this mine?
-    // success?
-    // failure
-    // not mine
-    // note it?
+// TODO:
+// deal with logic and onlock
+MR.syncClient.eventBus.subscribe("release", (json) => {
+
+    const success = json["success"];
+    const key = json["uid"];
+
+    if (success) {
+        console.log("release lock success: ", key);
+    } else {
+        console.log("release lock failed : ", key);
+    }
+
 });
 
 /*
@@ -143,11 +156,52 @@ const response = {
     "uid": key,
     "success": false
 };
- */
+*/
 
-MR.syncClient.registerEventHandler("object", (json) => {
-    console.log("object moved: ", json);
-    // update update metadata for next frame's rendering
+// TODO:
+// update to MR.objs
+/*
+MR.syncClient.eventBus.subscribe("object", (json) => {
+
+    const success = json["success"];
+
+    if (success) {
+        console.log("object moved: ", json);
+        // update MR.objs
+    } else {
+        console.log("failed object message", json);
+    }
+
+});*/
+
+// TODO:
+// add to MR.objs
+MR.syncClient.eventBus.subscribe("spawn", (json) => {
+
+    const success = json["success"];
+
+    if (success) {
+        console.log("object created ", json);
+        // add to MR.objs
+    } else {
+        console.log("failed spawn message", json);
+    }
+
+});
+
+MR.syncClient.eventBus.subscribe("object", (json) => {
+    const success = json["success"];
+     if (success) {
+      console.log("object moved: ", json);
+      // update update metadata for next frame's rendering
+      let current = MR.objs[json["uid"]];
+      console.log(json);
+      current.position = [json["state"]["position"][0], json["state"]["position"][1], json["state"]["position"][2]];
+    //current.orientation = MR.objs[json["state"]["orientation"]];
+    }
+    else{
+      console.log("failed object message", json);
+    }
 });
 
 // on success
@@ -165,13 +219,15 @@ MR.syncClient.registerEventHandler("object", (json) => {
 //     "success": false
 // };
 
-MR.syncClient.registerEventHandler("calibration", (json) => {
+MR.syncClient.eventBus.subscribe("calibration", (json) => {
     console.log("world tick: ", json);
 });
 
 
-function pollAvatarData() {
-    if (MR.VRIsActive()) {
+function pollAvatarData() 
+{
+    if (MR.VRIsActive()) 
+    {
         const frameData = MR.frameData();
         if (frameData != null) {
             //User Headset
@@ -247,8 +303,6 @@ function pollAvatarData() {
                 if (MR.playerid == -1) {
                     return;
                 }
-
-
 
                 try {
                     //console.log(avatar_message);
