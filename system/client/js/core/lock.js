@@ -9,7 +9,7 @@ class Lock {
         {
             type: "lock",
             uid: uid,
-            lockid: MR.playerid 
+            lockid: MR.playerid
         };
 
         MR.syncClient.send(response);
@@ -21,7 +21,7 @@ class Lock {
         {
             type: "release",
             uid: uid,
-            lockid: MR.playerid 
+            lockid: MR.playerid
         };
 
         MR.syncClient.send(response);
