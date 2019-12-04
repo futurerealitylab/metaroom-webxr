@@ -25,6 +25,7 @@ const LEG_THICKNESS    = inchesToMeters(  2.5);
 
 let enableModeler = true;
 
+/*Example Grabble Object*/
 let grabbableCube = new Obj(CG.torus);
 
 let lathe = CG.createMeshVertices(10, 16, CG.uvToLathe,
@@ -289,18 +290,26 @@ async function setup(state) {
     ]);
 
 
-    /*Example Object*/
+    /* Here we show an example of how to create a grabbable object.
+    First instatiate object using Obj() constructor, and add the following  
+    variables. Then send a spawn message. This will allow the server to keep
+    track of objects that need to be synchronized.*/
     MR.objs.push(grabbableCube);
     grabbableCube.position    = [0,0,-0.5].slice();
     grabbableCube.orientation = [1,0,0,1].slice();
     grabbableCube.uid = 0;
-    sendSpawnMessage(grabbableCube);
     grabbableCube.lock = new Lock();
+    sendSpawnMessage(grabbableCube);
+
+
+    
 }
 
+/*
+*This is an example of a spawn message we send to the server.
+*/
 
 function sendSpawnMessage(object){
-       /*Example Spawn Message*/
     const response = 
         {
         type: "spawn",
@@ -311,8 +320,6 @@ function sendSpawnMessage(object){
             orientation: object.orientation,
         }
         };
-    //console.log("Spawn Message:");
-    //console.log(response);
     MR.syncClient.send(response);
 }
 
@@ -414,6 +421,8 @@ function onStartFrame(t, state) {
 	        if (menuChoice >= 0 && input.LC.press()) {
 	            state.isNewObj = true;
                 let newObject = new Obj(menuShape[menuChoice]);
+                /*Should you want to support grabbing, refer to the
+                above example in setup()*/ 
 	            MR.objs.push(newObject);
                 sendSpawnMessage(newObject);
 	        }
@@ -467,7 +476,11 @@ function onStartFrame(t, state) {
     /*-----------------------------------------------------------------
        Translating Grabbable Object.
     -----------------------------------------------------------------*/
+    /*This function releases stale locks. Stale locks are locks that
+    a user has already lost ownership over by letting go*/
     releaseLocks(state);
+    /*This function checks for intersection and if user has ownership over 
+    object then sends a data stream of position and orientation.*/
     pollGrab(state);
 }
 
@@ -844,7 +857,6 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
         Here is where we draw avatars and controllers.
       -----------------------------------------------------------------*/
    
-   // console.log(MR.avatars);
    for (let id in MR.avatars) {
       
       if (MR.avatars[id].mode == MR.UserType.vr) {
@@ -968,12 +980,7 @@ function checkIntersection(point, verts) {
   const bb = calcBoundingBox(verts);
   const min = bb[0];
   const max = bb[1];
-  /*
-  console.log("bounding box");
-  console.log(point);
-  console.log(min);
-  console.log(max);
-  console.log("~~~~~~~~~~~~~");*/
+
   if(point[0] > min[0] && point[0] < max[0] && 
     point[1] > min[1] && point[1] < max[1] &&
     point[2] > min[2] && point[2] < max[2]) return true;
@@ -1023,8 +1030,7 @@ function pollGrab(state){
                         lockid: MR.playerid,
 
                     };
-                    //console.log("Object Message");
-                    //console.log(response);
+              
                     MR.syncClient.send(response);
                 }
                 else{
