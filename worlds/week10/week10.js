@@ -206,11 +206,11 @@ async function setup(state) {
                 state.uTimeLoc     = gl.getUniformLocation(program, 'uTime');
                 state.uToonLoc     = gl.getUniformLocation(program, 'uToon');
                 state.uViewLoc     = gl.getUniformLocation(program, 'uView');
-		        state.uTexLoc = [];
-        		for (let n = 0 ; n < 8 ; n++) {
-        		   state.uTexLoc[n] = gl.getUniformLocation(program, 'uTex' + n);
+                        state.uTexLoc = [];
+                        for (let n = 0 ; n < 8 ; n++) {
+                           state.uTexLoc[n] = gl.getUniformLocation(program, 'uTex' + n);
                            gl.uniform1i(state.uTexLoc[n], n);
-        		}
+                        }
             } 
         },
         {
@@ -382,16 +382,16 @@ function onStartFrame(t, state) {
     -----------------------------------------------------------------*/
     if (enableModeler && input.LC) {
         if (input.RC.isDown()) {
-	        menuChoice = findInMenu(input.RC.position(), input.LC.tip());
-	        if (menuChoice >= 0 && input.LC.press()) {
-	            state.isNewObj = true;
-	            objs.push(new Obj(menuShape[menuChoice]));
-	        }
+                menuChoice = findInMenu(input.RC.position(), input.LC.tip());
+                if (menuChoice >= 0 && input.LC.press()) {
+                    state.isNewObj = true;
+                    objs.push(new Obj(menuShape[menuChoice]));
+                }
         }
         if (state.isNewObj) {
             let obj = objs[objs.length - 1];
-	        obj.position    = input.LC.tip().slice();
-	        obj.orientation = input.LC.orientation().slice();
+                obj.position    = input.LC.tip().slice();
+                obj.orientation = input.LC.orientation().slice();
         }
         if (input.LC.release())
             state.isNewObj = false;
@@ -457,7 +457,7 @@ let findInMenu = (mp, p) => {
       let dy = y - menuY[n];
       let dz = z;
       if (dx * dx + dy * dy + dz * dz < .03 * .03)
-	 return n;
+         return n;
    }
    return -1;
 }
@@ -517,11 +517,11 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
         if (state.isToon) {
            gl.uniform1f (state.uToonLoc, .3 * CG.norm(m.value().slice(0,3)));
-	   gl.cullFace(gl.FRONT);
+           gl.cullFace(gl.FRONT);
            gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
-	   gl.cullFace(gl.BACK);
+           gl.cullFace(gl.BACK);
            gl.uniform1f (state.uToonLoc, 0);
-	}
+        }
         gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
         prev_shape = shape;
     }
@@ -608,18 +608,18 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
           m.multiply(state.avatarMatrixForward);
           m.translate(P[0],P[1],P[2]);
           m.rotateQ(orientation);
-	  m.scale(.1);
-	  m.save();
-	     m.scale(1,1.5,1);
-	     drawShape(CG.sphere, [0,0,0]);
-	  m.restore();
-	  for (let s = -1 ; s <= 1 ; s += 2) {
-	     m.save();
-	        m.translate(s*.4,.2,-.8);
-	        m.scale(.4,.4,.1);
-	        drawShape(CG.sphere, [10,10,10]);
-	     m.restore();
-	  }
+          m.scale(.1);
+          m.save();
+             m.scale(1,1.5,1);
+             drawShape(CG.sphere, [0,0,0]);
+          m.restore();
+          for (let s = -1 ; s <= 1 ; s += 2) {
+             m.save();
+                m.translate(s*.4,.2,-.8);
+                m.scale(.4,.4,.1);
+                drawShape(CG.sphere, [10,10,10]);
+             m.restore();
+          }
        m.restore();
     }
 
@@ -686,7 +686,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    if (input.LC) {
       if (isMiniature)
-	 drawHeadset(input.HS.position(), input.HS.orientation());
+         drawHeadset(input.HS.position(), input.HS.orientation());
       m.save();
 
       let P = state.position;
@@ -735,7 +735,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
        m.save();
           let dy = isMiniature ? 0 : HALL_WIDTH/2;
-	  m.translate(0, dy, 0);
+          m.translate(0, dy, 0);
           m.scale(-HALL_WIDTH/2, -dy, -HALL_LENGTH/2);
           drawShape(CG.cube, [1,1,1], 1,4, 2,4);
        m.restore();
@@ -809,7 +809,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    for (let id in MR.avatars) {
       if (MR.avatars[id].mode == MR.UserType.vr) {
          if (MR.playerid == MR.avatars[id].playerid)
-	    continue;
+            continue;
 
          let headsetPos = MR.avatars[id].headset.position;
          let headsetRot = MR.avatars[id].headset.orientation;
