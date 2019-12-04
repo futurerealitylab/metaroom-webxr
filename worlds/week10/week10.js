@@ -38,6 +38,7 @@ const WOOD = 0,
 let noise = new ImprovedNoise();
 let m = new Matrix();
 let prevAvatars = MR.avatars;
+
 /*--------------------------------------------------------------------------------
 
 I wrote the following to create an abstraction on top of the left and right
@@ -506,6 +507,7 @@ function Obj(shape) {
 };
 
 let objs = [];
+let grabbableCube = new Obj(CG.torus);
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
    m.identity();

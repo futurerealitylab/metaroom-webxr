@@ -186,7 +186,6 @@ MR.syncClient.eventBus.subscribe("spawn", (json) => {
     } else {
         console.log("failed spawn message", json);
     }
-  });
 
 });
 
