@@ -40,7 +40,7 @@ const WOOD = 0,
 
 let noise = new ImprovedNoise();
 let m = new Matrix();
-let prevAvatars = MR.avatars;
+
 /*--------------------------------------------------------------------------------
 
 I wrote the following to create an abstraction on top of the left and right
@@ -866,9 +866,6 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          let headsetPos = MR.avatars[id].headset.position;
          let headsetRot = MR.avatars[id].headset.orientation;
 
-         let delta = CG.abs(CG.subtract(headsetPos, prevAvatars[id].headset.position));
-         const eps = .001;
-
          if(headsetPos == null || headsetRot == null)
             continue;
 
@@ -877,7 +874,6 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             console.log("not defined");
          }
          
-         const avatar = MR.avatars[id];
          const rcontroller = MR.avatars[id].rightController;
          const lcontroller = MR.avatars[id].leftController;
          
@@ -893,7 +889,6 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          drawSyncController(rpos, rcontroller.orientation, [1,0,0]);
          drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
       }
-      prevAvatars = MR.avatars;
    }
 }
 
