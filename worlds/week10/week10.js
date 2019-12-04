@@ -516,7 +516,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
         if (shape != prev_shape)
            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
         if (state.isToon) {
-           gl.uniform1f (state.uToonLoc, 2 * CG.norm(m.value().slice(0,3)));
+           gl.uniform1f (state.uToonLoc, .3 * CG.norm(m.value().slice(0,3)));
 	   gl.cullFace(gl.FRONT);
            gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
 	   gl.cullFace(gl.BACK);
@@ -808,6 +808,9 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    // console.log(MR.avatars);
    for (let id in MR.avatars) {
       if (MR.avatars[id].mode == MR.UserType.vr) {
+         if (MR.playerid == MR.avatars[id].playerid)
+	    continue;
+
          let headsetPos = MR.avatars[id].headset.position;
          let headsetRot = MR.avatars[id].headset.orientation;
 
