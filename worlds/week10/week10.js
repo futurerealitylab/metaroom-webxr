@@ -290,22 +290,28 @@ async function setup(state) {
    ]);
 
 
-   /* Here we show an example of how to create a grabbable object.
+   /************************************************************************
+
+   Here we show an example of how to create a grabbable object.
    First instatiate object using Obj() constructor, and add the following  
    variables. Then send a spawn message. This will allow the server to keep
-   track of objects that need to be synchronized.*/
+   track of objects that need to be synchronized.
+
+   ************************************************************************/
+
    MR.objs.push(grabbableCube);
    grabbableCube.position    = [0,0,-0.5].slice();
    grabbableCube.orientation = [1,0,0,1].slice();
    grabbableCube.uid = 0;
    grabbableCube.lock = new Lock();
    sendSpawnMessage(grabbableCube);
-
 }
 
-/*
-*This is an example of a spawn message we send to the server.
-*/
+/************************************************************************
+
+This is an example of a spawn message we send to the server.
+
+************************************************************************/
 
 function sendSpawnMessage(object){
    const response = 
@@ -473,14 +479,21 @@ function onStartFrame(t, state) {
    }
 
     /*-----------------------------------------------------------------
-    /*-----------------------------------------------------------------
-       Translating Grabbable Object.
+
+    This function releases stale locks. Stale locks are locks that
+    a user has already lost ownership over by letting go
+
     -----------------------------------------------------------------*/
-    /*This function releases stale locks. Stale locks are locks that
-    a user has already lost ownership over by letting go*/
+
     releaseLocks(state);
-    /*This function checks for intersection and if user has ownership over 
-    object then sends a data stream of position and orientation.*/
+
+    /*-----------------------------------------------------------------
+
+    This function checks for intersection and if user has ownership over 
+    object then sends a data stream of position and orientation.
+
+    -----------------------------------------------------------------*/
+
     pollGrab(state);
 }
 
@@ -896,23 +909,30 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
 function onEndFrame(t, state) {
    pollAvatarData();
-    /*-----------------------------------------------------------------
 
-    The below two lines are necessary for making the controller handler
-    logic work properly -- in particular, detecting press() and release()
-    actions.
+   /*-----------------------------------------------------------------
 
-    -----------------------------------------------------------------*/
+   The below two lines are necessary for making the controller handler
+   logic work properly -- in particular, detecting press() and release()
+   actions.
+
+   -----------------------------------------------------------------*/
+
    const input  = state.input;
 
    if (input.HS != null) {
-      // here is an example of updating each audio context with the most recent headset position - otherwise it will not be spatialized
+
+      // Here is an example of updating each audio context with the most
+      // recent headset position - otherwise it will not be spatialized
+
       this.audioContext1.updateListener(input.HS.position(), input.HS.orientation());
       this.audioContext2.updateListener(input.HS.position(), input.HS.orientation());
    
-      // here you initiate the 360 spatial audio playback from a given position, in this case controller position, this can be anything
-      // i.e. a speaker, or an drum in the room
-      // you must provide the path given, when you construct the audio context
+      // Here you initiate the 360 spatial audio playback from a given position,
+      // in this case controller position, this can be anything,
+      // i.e. a speaker, or an drum in the room.
+      // You must provide the path given, when you construct the audio context.
+
       if (input.LC && input.LC.press())
          this.audioContext1.playFileAt('assets/audio/blop.wav', input.LC.position());
 
@@ -951,7 +971,9 @@ export default function main() {
 
 //////////////EXTRA TOOLS
 
-// a better approach for this would be to define a unit sphere and apply the proper transform w.r.t. corresponding grabbable object
+// A better approach for this would be to define a unit sphere and
+// apply the proper transform w.r.t. corresponding grabbable object
+
 function checkIntersection(point, verts) {
    const bb = calcBoundingBox(verts);
    const min = bb[0];
@@ -965,6 +987,7 @@ function checkIntersection(point, verts) {
 }
 
 // see above
+
 function calcBoundingBox(verts) {
    const min = [Number.MAX_VALUE,Number.MAX_VALUE,Number.MAX_VALUE];
    const max = [Number.MIN_VALUE,Number.MIN_VALUE,Number.MIN_VALUE];
