@@ -715,7 +715,6 @@ window.VRCanvasWrangler = (function() {
                 0.01, 1024);
 
             Input.updateKeyState();
-            Input.updateControllerState();
             this.config.onStartFrame(t, this.customState);
 
             GFX.viewportXOffset = 0;
@@ -777,9 +776,7 @@ window.VRCanvasWrangler = (function() {
 
             this._animationHandle = vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
 
-            Input.updateKeyState();
             Input.updateControllerState();
-
             this.config.onStartFrame(t, this.customState);
 
             // left eye
