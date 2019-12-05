@@ -21,6 +21,7 @@ uniform float uToon;
 
 uniform int uTexIndex;
 uniform float uTexScale;
+uniform float uBrightness;
 
 uniform sampler2D uTex0;
 uniform sampler2D uTex1;
@@ -85,7 +86,7 @@ void main() {
 
     //color *= .5 + .5 * noize(10. * vPos);
 
-    fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), uColor.a);
+    fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), uColor.a) * uBrightness;
     if (uTexIndex == 0) fragColor *= texture(uTex0, vUV * uTexScale);
     if (uTexIndex == 1) fragColor *= texture(uTex1, vUV * uTexScale);
     if (uTexIndex == 2) fragColor *= texture(uTex2, vUV * uTexScale);
