@@ -927,18 +927,30 @@ function onEndFrame(t, state) {
       /*-----------------------------------------------------------------------------
       If headset doesn't move at all for 30 frames, set scene brightness to zero.
       -----------------------------------------------------------------------------*/
+      {
+         let P = input.HS.position();
+         let Q = input.HS.orientation();
 
-      if (input.previousPosition === undefined)
-         input.previousPosition = input.HS.position();
-      if (input.motionlessCount === undefined)
-         input.motionlessCount = 0;
-      if (CG.norm(CG.subtract(input.HS.position(), input.previousPosition)) < .001)
-         input.motionlessCount++;
-      else
-         input.motionlessCount = 0;
-      input.brightness = input.motionlessCount > 300 ? 0 : 1;
-      input.previousPosition = input.HS.position();
+         if (input.previousP === undefined) {
+            input.previousP = P;
+            input.previousQ = Q;
+	 }
 
+         let diff = 0;
+	 for (let n = 0 ; n < P.length ; n++)
+	    diff += Math.abs(P[n] - input.previousP[n]);
+	 for (let n = 0 ; n < Q.length ; n++)
+	    diff += Math.abs(Q[n] - input.previousQ[n]);
+         input.previousP = P;
+         input.previousQ = Q;
+
+         if (input.motionlessCount === undefined || diff > .003)
+            input.motionlessCount = 0;
+         else
+            input.motionlessCount++;
+
+         input.brightness = input.motionlessCount < 720 ? 1 : 0; // wait 10 seconds
+      }
       /*-----------------------------------------------------------------------------
       Here is an example of updating each audio context with the most
       recent headset position - otherwise it will not be spatialized
