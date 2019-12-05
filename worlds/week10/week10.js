@@ -200,15 +200,16 @@ async function setup(state) {
          onNeedsCompilationDefault : onNeedsCompilationDefault,
          onAfterCompilation : (program) => {
                gl.useProgram(state.program = program);
-               state.uColorLoc    = gl.getUniformLocation(program, 'uColor');
-               state.uCursorLoc   = gl.getUniformLocation(program, 'uCursor');
-               state.uModelLoc    = gl.getUniformLocation(program, 'uModel');
-               state.uProjLoc     = gl.getUniformLocation(program, 'uProj');
-               state.uTexScale    = gl.getUniformLocation(program, 'uTexScale');
-               state.uTexIndexLoc = gl.getUniformLocation(program, 'uTexIndex');
-               state.uTimeLoc     = gl.getUniformLocation(program, 'uTime');
-               state.uToonLoc     = gl.getUniformLocation(program, 'uToon');
-               state.uViewLoc     = gl.getUniformLocation(program, 'uView');
+               state.uBrightnessLoc = gl.getUniformLocation(program, 'uBrightness');
+               state.uColorLoc      = gl.getUniformLocation(program, 'uColor');
+               state.uCursorLoc     = gl.getUniformLocation(program, 'uCursor');
+               state.uModelLoc      = gl.getUniformLocation(program, 'uModel');
+               state.uProjLoc       = gl.getUniformLocation(program, 'uProj');
+               state.uTexScale      = gl.getUniformLocation(program, 'uTexScale');
+               state.uTexIndexLoc   = gl.getUniformLocation(program, 'uTexIndex');
+               state.uTimeLoc       = gl.getUniformLocation(program, 'uTime');
+               state.uToonLoc       = gl.getUniformLocation(program, 'uToon');
+               state.uViewLoc       = gl.getUniformLocation(program, 'uView');
                      state.uTexLoc = [];
                      for (let n = 0 ; n < 8 ; n++) {
                         state.uTexLoc[n] = gl.getUniformLocation(program, 'uTex' + n);
@@ -573,6 +574,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
     -----------------------------------------------------------------*/
 
    let drawShape = (shape, color, texture, textureScale) => {
+      gl.uniform1f(state.uBrightnessLoc, input.brightness === undefined ? 1 : input.brightness);
       gl.uniform4fv(state.uColorLoc, color.length == 4 ? color : color.concat([1]));
       gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
       gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
@@ -920,18 +922,37 @@ function onEndFrame(t, state) {
 
    const input  = state.input;
 
-   if (input.HS != null) {
+   if (input.HS) {
 
-      // Here is an example of updating each audio context with the most
-      // recent headset position - otherwise it will not be spatialized
+      /*-----------------------------------------------------------------------------
+      If headset doesn't move at all for 30 frames, set scene brightness to zero.
+      -----------------------------------------------------------------------------*/
+
+      if (input.previousPosition === undefined)
+         input.previousPosition = input.HS.position();
+      if (input.motionlessCount === undefined)
+         input.motionlessCount = 0;
+      if (CG.norm(CG.subtract(input.HS.position(), input.previousPosition)) < .001)
+         input.motionlessCount++;
+      else
+         input.motionlessCount = 0;
+      input.brightness = input.motionlessCount > 300 ? 0 : 1;
+      input.previousPosition = input.HS.position();
+
+      /*-----------------------------------------------------------------------------
+      Here is an example of updating each audio context with the most
+      recent headset position - otherwise it will not be spatialized
+      -----------------------------------------------------------------------------*/
 
       this.audioContext1.updateListener(input.HS.position(), input.HS.orientation());
       this.audioContext2.updateListener(input.HS.position(), input.HS.orientation());
-   
-      // Here you initiate the 360 spatial audio playback from a given position,
-      // in this case controller position, this can be anything,
-      // i.e. a speaker, or an drum in the room.
-      // You must provide the path given, when you construct the audio context.
+
+      /*-----------------------------------------------------------------------------
+      Here you initiate the 360 spatial audio playback from a given position,
+      in this case controller position  This can be anything, such as a speaker,
+      or an drum in the room.
+      You must provide the file path.
+      -----------------------------------------------------------------------------*/
 
       if (input.LC && input.LC.press())
          this.audioContext1.playFileAt('assets/audio/blop.wav', input.LC.position());
