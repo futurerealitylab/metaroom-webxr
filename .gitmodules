@@ -1,3 +1,4 @@
 [submodule "webxr-server"]
 	path = webxr-server
 	url = https://github.com/futurerealitylab/webxr-server
+	branch = fbavatars
