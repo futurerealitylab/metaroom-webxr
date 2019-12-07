@@ -26,7 +26,7 @@ const LEG_THICKNESS    = inchesToMeters(  2.5);
 let enableModeler = true;
 
 /*Example Grabble Object*/
-let grabbableCube = new Obj(CG.torus);
+// let grabbableCube = new Obj(CG.torus);
 
 let lathe = CG.createMeshVertices(10, 16, CG.uvToLathe,
                  [ CG.bezierToCubic([-1.0,-1.0,-0.7,-0.3,-0.1 , 0.1, 0.3 , 0.7 , 1.0 ,1.0]),
@@ -300,12 +300,12 @@ async function setup(state) {
 
     ************************************************************************/
 
-    MR.objs.push(grabbableCube);
-    grabbableCube.position    = [0,0,-0.5].slice();
-    grabbableCube.orientation = [1,0,0,1].slice();
-    grabbableCube.uid = 0;
-    grabbableCube.lock = new Lock();
-    sendSpawnMessage(grabbableCube);
+    // MR.objs.push(grabbableCube);
+    // grabbableCube.position    = [0,0,-0.5].slice();
+    // grabbableCube.orientation = [1,0,0,1].slice();
+    // grabbableCube.uid = 0;
+    // grabbableCube.lock = new Lock();
+    // sendSpawnMessage(grabbableCube);
 }
 
 /************************************************************************
@@ -868,18 +868,18 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
         state.isToon = false;
 
     m.restore();
-        /*-----------------------------------------------------------------
-          Here is where we draw avatars and controllers.
-        -----------------------------------------------------------------*/
+    /*-----------------------------------------------------------------
+        Here is where we draw avatars and controllers.
+    -----------------------------------------------------------------*/
     
     for (let id in MR.avatars) {
-        
+
         const avatar = MR.avatars[id];
 
         if (avatar.mode == MR.UserType.vr) {
             if (MR.playerid == avatar.playerid)
                 continue;
-            
+
             let headsetPos = avatar.headset.position;
             let headsetRot = avatar.headset.orientation;
 
@@ -890,10 +890,10 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
                 console.log(id);
                 console.log("not defined");
             }
-            
+
             const rcontroller = avatar.rightController;
             const lcontroller = avatar.leftController;
-            
+
             let hpos = headsetPos.slice();
             hpos[1] += EYE_HEIGHT;
 
@@ -934,13 +934,13 @@ function onEndFrame(t, state) {
             if (input.previousP === undefined) {
                 input.previousP = P;
                 input.previousQ = Q;
-     }
+            }
 
             let diff = 0;
-     for (let n = 0 ; n < P.length ; n++)
-         diff += Math.abs(P[n] - input.previousP[n]);
-     for (let n = 0 ; n < Q.length ; n++)
-         diff += Math.abs(Q[n] - input.previousQ[n]);
+            for (let n = 0 ; n < P.length ; n++)
+                diff += Math.abs(P[n] - input.previousP[n]);
+            for (let n = 0 ; n < Q.length ; n++)
+                diff += Math.abs(Q[n] - input.previousQ[n]);
             input.previousP = P;
             input.previousQ = Q;
 
