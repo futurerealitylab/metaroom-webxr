@@ -62,7 +62,7 @@ MR.syncClient.eventBus.subscribe("tick", (json) => {
 MR.syncClient.eventBus.subscribe("avatar", (json) => {
     //if (MR.VRIsActive()) {
     const payload = json["data"];
-    //console.log(json);
+    console.log(json);
     //console.log(payload);
     for (let key in payload) {
         //TODO: We should not be handling visible avatars like this.
@@ -82,6 +82,20 @@ MR.syncClient.eventBus.subscribe("avatar", (json) => {
             //console.log("previously unseen user avatar");
             // let avatarCube = createCubeVertices();
             // MR.avatars[payload[key]["user"]] = new Avatar(avatarCube, payload[key]["user"]);
+        }
+    }
+    //}
+});
+
+MR.syncClient.eventBus.subscribe("optitrack", (json) => {
+    //if (MR.VRIsActive()) {
+    const payload = json["data"];
+    //console.log(json);
+    //console.log(payload);
+    for (let key in payload) {
+        if(key == "rigidbody"){
+            MR.rbs["left"].position = payload[key]["foot"]["left"]["pos"];
+            MR.rbs["right"].position = payload[key]["foot"]["right"]["pos"];
         }
     }
     //}

@@ -71,7 +71,7 @@ class Client
 
             this.ws.onmessage = (ev) => {
                 try {
-                    //console.log(ev);
+                    console.log(ev);
                     let json = JSON.parse(ev.data);
                     this.eventBus.publish(json["type"], json);
                 } catch(err) {

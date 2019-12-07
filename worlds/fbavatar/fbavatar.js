@@ -907,6 +907,13 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
         }
     }
+
+    for (let rb in MR.rbs) {
+
+        const foot = MR.rbs[rb];
+
+        drawSyncController(foot.position, [1,0,0,0], "green");
+    }
 }
 
 function onEndFrame(t, state) {
