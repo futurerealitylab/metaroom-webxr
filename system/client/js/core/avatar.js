@@ -11,6 +11,15 @@ class Avatar {
     }
 }
 
+class RigidBody {
+  constructor(verts) {
+    this.vertices = verts;
+    this.position = [0,0,0];
+    this.orientation = [0,0,0,0];
+    this.mode = MR.UserType.browser; 
+  }  
+}
+
 class Headset {
     constructor(verts) {
         this.vertices = verts;

@@ -909,10 +909,13 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
     }
 
     for (let rb in MR.rbs) {
+        var color = rb == "left" ? [1,0,0]: [0,1,0];
 
-        const foot = MR.rbs[rb];
-
-        drawSyncController(foot.position, [1,0,0,0], "green");
+        m.save();
+            m.translate(MR.rbs[rb].position[0], MR.rbs[rb].position[1], MR.rbs[rb].position[2]);
+            m.scale(0.1,0.1,0.1);
+            drawShape(MR.rbs[rb].vertices, color);
+        m.restore();
     }
 }
 

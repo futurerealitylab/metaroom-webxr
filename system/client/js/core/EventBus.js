@@ -59,7 +59,7 @@ class EventBus {
     }
 
     publish(channel, event) {
-        console.log(channel);
+        //console.log(channel);
         //console.log(event);
         //console.log(this.callbacks)
         if (channel in this.callbacks && Object.keys(this.callbacks[channel]).length > 0) {
