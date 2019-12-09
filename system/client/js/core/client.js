@@ -6,7 +6,6 @@ class Client
 {
 
     constructor(heartbeat = 30000) {
-        this.eventBus = new EventBus();
         this.locks = {};
         this.heartbeatTick = heartbeat;
         this.ws = null;
@@ -73,7 +72,7 @@ class Client
                 try {
                     //console.log(ev);
                     let json = JSON.parse(ev.data);
-                    this.eventBus.publish(json["type"], json);
+                    MR.EventBus.publish(json["type"], json);
                 } catch(err) {
                     // console.log("bad json:", json);
                     console.error(err);

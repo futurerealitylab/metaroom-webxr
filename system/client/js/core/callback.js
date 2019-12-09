@@ -1,10 +1,10 @@
 'use strict';
 
-MR.syncClient.eventBus.subscribe("platform", (json) => {
+MR.EventBus.subscribe("platform", (json) => {
 
 });
 
-MR.syncClient.eventBus.subscribe("initialize", (json) => {
+MR.EventBus.subscribe("initialize", (json) => {
 
     if (!MR.avatars) {
         MR.avatars = {};
@@ -29,7 +29,7 @@ MR.syncClient.eventBus.subscribe("initialize", (json) => {
     console.log(MR.avatars);
 });
 
-MR.syncClient.eventBus.subscribe("join", (json) => {
+MR.EventBus.subscribe("join", (json) => {
     console.log(json);
     const id = json["id"];
 
@@ -48,18 +48,18 @@ MR.syncClient.eventBus.subscribe("join", (json) => {
     MR.updatePlayersMenu();
 });
 
-MR.syncClient.eventBus.subscribe("leave", (json) => {
+MR.EventBus.subscribe("leave", (json) => {
     console.log(json);
     delete MR.avatars[json["user"]];
 
     MR.updatePlayersMenu();
 });
 
-MR.syncClient.eventBus.subscribe("tick", (json) => {
+MR.EventBus.subscribe("tick", (json) => {
     // console.log("world tick: ", json);
 });
 
-MR.syncClient.eventBus.subscribe("avatar", (json) => {
+MR.EventBus.subscribe("avatar", (json) => {
     //if (MR.VRIsActive()) {
     const payload = json["data"];
     //console.log(json);
@@ -99,7 +99,7 @@ const response = {
 
 // TODO:
 // deal with logic and onlock
-MR.syncClient.eventBus.subscribe("lock", (json) => {
+MR.EventBus.subscribe("lock", (json) => {
 
     const success = json["success"];
     const key = json["uid"];
@@ -125,7 +125,7 @@ const response = {
 
 // TODO:
 // deal with logic and onlock
-MR.syncClient.eventBus.subscribe("release", (json) => {
+MR.EventBus.subscribe("release", (json) => {
 
     const success = json["success"];
     const key = json["uid"];
@@ -161,7 +161,7 @@ const response = {
 // TODO:
 // update to MR.objs
 /*
-MR.syncClient.eventBus.subscribe("object", (json) => {
+MR.EventBus.subscribe("object", (json) => {
 
     const success = json["success"];
 
@@ -176,7 +176,7 @@ MR.syncClient.eventBus.subscribe("object", (json) => {
 
 // TODO:
 // add to MR.objs
-MR.syncClient.eventBus.subscribe("spawn", (json) => {
+MR.EventBus.subscribe("spawn", (json) => {
 
     const success = json["success"];
 
@@ -189,7 +189,7 @@ MR.syncClient.eventBus.subscribe("spawn", (json) => {
 
 });
 
-MR.syncClient.eventBus.subscribe("object", (json) => {
+MR.EventBus.subscribe("object", (json) => {
     const success = json["success"];
      if (success) {
       console.log("object moved: ", json);
@@ -219,7 +219,7 @@ MR.syncClient.eventBus.subscribe("object", (json) => {
 //     "success": false
 // };
 
-MR.syncClient.eventBus.subscribe("calibration", (json) => {
+MR.EventBus.subscribe("calibration", (json) => {
     console.log("world tick: ", json);
 });
 

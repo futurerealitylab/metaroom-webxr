@@ -263,6 +263,7 @@ MR.syncClient = new Client();
 MR.avatars = {};
 MR.playerid = -1;
 MR.playerType = MR.UserType.browser;
+MR.EventBus = new EventBus();
 
 MR.objs = [];
 
