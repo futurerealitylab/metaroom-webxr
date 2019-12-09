@@ -87,6 +87,34 @@ MR.syncClient.eventBus.subscribe("avatar", (json) => {
     //}
 });
 
+MR.syncClient.eventBus.subscribe("optitrack", (json) => {
+    //if (MR.VRIsActive()) {
+    const payload = json["data"];
+    //console.log(json);
+    //console.log(payload);
+    for (let key in payload) {
+        if (key == "rigidbody"){
+            if (MR.rbs["left"]){
+                MR.rbs["left"].position = payload[key]["foot"]["left"]["pos"];
+            } else {
+                let leftfoot = new RigidBody(CG.cylinder);
+                leftfoot.position = payload[key]["foot"]["left"]["pos"];
+                leftfoot.orientation = payload[key]["foot"]["left"]["rot"];
+                MR.rbs["left"] = leftfoot;
+            }
+            if (MR.rbs["right"]) {
+                MR.rbs["right"].position = payload[key]["foot"]["right"]["pos"];
+            } else {
+                let rightfoot = new RigidBody(CG.cylinder);
+                rightfoot.position = payload[key]["foot"]["right"]["pos"];
+                rightfoot.orientation = payload[key]["foot"]["right"]["rot"];
+                MR.rbs["right"] = rightfoot;
+            }
+        }
+    }
+    //}
+});
+
 /*
 // expected format of message
 const response = {

@@ -907,6 +907,16 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
         }
     }
+
+    for (let rb in MR.rbs) {
+        const color = rb == "left" ? [1,0,0] : [0,1,0];
+
+        m.save();
+            m.translate(MR.rbs[rb].position[0], MR.rbs[rb].position[1], MR.rbs[rb].position[2]);
+            m.scale(0.1, 0.1, 0.1);
+            drawShape(MR.rbs[rb].vertices, color);
+        m.restore();
+    }
 }
 
 function onEndFrame(t, state) {
