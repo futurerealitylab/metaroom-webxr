@@ -17,6 +17,8 @@ const EYE_HEIGHT       = inchesToMeters( 69);
 const HALL_LENGTH      = inchesToMeters(306);
 const HALL_WIDTH       = inchesToMeters(215);
 const RING_RADIUS      = 0.0425;
+const STOOL_HEIGHT     = inchesToMeters( 18);
+const STOOL_RADIUS     = inchesToMeters( 10);
 const TABLE_DEPTH      = inchesToMeters( 30);
 const TABLE_HEIGHT     = inchesToMeters( 29);
 const TABLE_WIDTH      = inchesToMeters( 60);
@@ -74,7 +76,7 @@ function ControllerHandler(controller) {
    this.tip         = () => {
       let P = this.position();          // THIS CODE JUST MOVES
       m.identity();                     // THE "HOT SPOT" OF THE
-      m.translate(P);                   // CONTROLLER TOWARD ITS
+      m.translate(P[0],P[1],P[2]);      // CONTROLLER TOWARD ITS
       m.rotateQ(this.orientation());    // FAR TIP (FURTHER AWAY
       m.translate(0,0,-.03);            // FROM THE USER'S HAND).
       let v = m.value();
@@ -83,7 +85,7 @@ function ControllerHandler(controller) {
    this.center = () => {
       let P = this.position();
       m.identity();
-      m.translate(P);
+      m.translate(P[0],P[1],P[2]);
       m.rotateQ(this.orientation());
       m.translate(0,.02,-.005);
       let v = m.value();
@@ -392,14 +394,14 @@ function onStartFrame(t, state) {
       state.position = [0,0,0];
    let fx = -.01 * Math.sin(state.turnAngle),
        fz =  .01 * Math.cos(state.turnAngle);
-   if (Input.keyIsDown(Input.KEY_UP)) {
-      state.position[0] += fx;
-      state.position[2] += fz;
-   }
-   if (Input.keyIsDown(Input.KEY_DOWN)) {
-      state.position[0] -= fx;
-      state.position[2] -= fz;
-   }
+   let moveBy = (dx,dz) => {
+      state.position[0] += dx;
+      state.position[2] += dz;
+   };
+   if (Input.keyIsDown(Input.KEY_UP   )) moveBy( fx, fz);
+   if (Input.keyIsDown(Input.KEY_DOWN )) moveBy(-fx,-fz);
+   if (Input.keyIsDown(Input.KEY_LEFT )) moveBy( fz,-fx);
+   if (Input.keyIsDown(Input.KEY_RIGHT)) moveBy(-fz, fx);
 
 // SET UNIFORMS AND GRAPHICAL STATE BEFORE DRAWING.
 
@@ -411,6 +413,9 @@ function onStartFrame(t, state) {
 
    gl.enable(gl.DEPTH_TEST);
    gl.enable(gl.CULL_FACE);
+   gl.enable(gl.BLEND);
+   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
 
    /*-----------------------------------------------------------------
 
@@ -427,11 +432,10 @@ function onStartFrame(t, state) {
          menuChoice = findInMenu(input.RC.position(), input.LC.tip());
          if (menuChoice >= 0 && input.LC.press()) {
             state.isNewObj = true;
-               let newObject = new Obj(menuShape[menuChoice]);
-               /*Should you want to support grabbing, refer to the
-               above example in setup()*/ 
+            let newObject = new Obj(menuShape[menuChoice]);
+            /* Should you want to support grabbing, refer to the above example in setup(). */ 
             MR.objs.push(newObject);
-               sendSpawnMessage(newObject);
+            sendSpawnMessage(newObject);
          }
       }
       if (state.isNewObj) {
@@ -450,6 +454,7 @@ function onStartFrame(t, state) {
       let RP = input.RC.center();
       let D  = CG.subtract(LP, RP);
       let d  = metersToInches(CG.norm(D));
+      console.log(D, d);
       let getX = C => {
          m.save();
             m.identity();
@@ -535,6 +540,7 @@ function Obj(shape) {
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
    m.identity();
+
    m.rotateX(state.tiltAngle);
    m.rotateY(state.turnAngle);
    let P = state.position;
@@ -588,7 +594,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          gl.cullFace(gl.BACK);
          gl.uniform1f (state.uToonLoc, 0);
       }
-      gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+      gl.drawArrays(shape == CG.cube ||
+                    shape == CG.quad ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
       prev_shape = shape;
    }
 
@@ -630,6 +637,15 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
     furniture, you will probably want to do something different.
 
     -----------------------------------------------------------------*/
+
+   let drawStool = id => {
+      m.save();
+         m.translate(0, STOOL_HEIGHT/2, 0);
+         m.rotateX(Math.PI/2);
+         m.scale(STOOL_RADIUS, STOOL_RADIUS, STOOL_HEIGHT/2);
+         drawShape(CG.roundedCylinder, [.2,.2,.2]);
+      m.restore();
+   }
 
    let drawTable = id => {
       m.save();
@@ -750,6 +766,9 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       m.restore();
    }
 
+   if (input.brightness == 0)
+      return;
+
    if (input.LC) {
       if (isMiniature)
          drawHeadset(input.HS.position(), input.HS.orientation());
@@ -817,14 +836,23 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       drawTable(1);
    m.restore();
 
+   m.save();
+      m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, TABLE_WIDTH / 2 + STOOL_RADIUS * 1.5);
+      drawStool(0);
+   m.restore();
+
+   m.save();
+      m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, -TABLE_WIDTH / 2 + STOOL_RADIUS * 1.5);
+      m.rotateY(state.time);
+      m.scale(STOOL_RADIUS);
+   m.restore();
+
    // DRAW TEST SHAPE
 
    m.save();
       m.translate(0, 2 * TABLE_HEIGHT, (TABLE_DEPTH - HALL_WIDTH) / 2);
-      //m.aimZ([Math.cos(state.time),Math.sin(state.time),0]);
       m.rotateY(state.time);
       m.scale(.06,.06,.6);
-      //drawShape(lathe, [1,.2,0]);
       m.restore();
 
       let A = [0,0,0];
@@ -833,22 +861,10 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
       m.save();
       m.translate(-.5, 2.5 * TABLE_HEIGHT, (TABLE_DEPTH - HALL_WIDTH) / 2);
-      //m.rotateY(state.time);
       /*
-      m.save();
-         m.translate(A[0],A[1],A[2]).scale(.07);
-         drawShape(CG.sphere, [1,1,1]);
-      m.restore();
-
-      m.save();
-         m.translate(B[0],B[1],B[2]).scale(.07);
-         drawShape(CG.sphere, [1,1,1]);
-      m.restore();
-
-      m.save();
-         m.translate(C[0],C[1],C[2]).scale(.07);
-         drawShape(CG.sphere, [1,1,1]);
-      m.restore();
+      m.save(); m.translate(A[0],A[1],A[2]).scale(.07); drawShape(CG.sphere, [1,1,1]); m.restore();
+      m.save(); m.translate(B[0],B[1],B[2]).scale(.07); drawShape(CG.sphere, [1,1,1]); m.restore();
+      m.save(); m.translate(C[0],C[1],C[2]).scale(.07); drawShape(CG.sphere, [1,1,1]); m.restore();
       */
       state.isToon = true;
       let skinColor = [1,.5,.3], D;
@@ -907,6 +923,17 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
       }
    }
+/*
+   let nn = 16;
+   for (let n = 0 ; n < nn ; n++) {
+      let alpha = 1 - Math.abs(n - (nn-1)/2) / (nn/2);
+      m.save();
+         m.translate(0,EYE_HEIGHT,-.2 + .01 * n);
+         m.scale(.05);
+         drawShape(CG.quad, [1,1,1,alpha]);
+      m.restore();
+   }
+*/
 }
 
 function onEndFrame(t, state) {
@@ -925,7 +952,7 @@ function onEndFrame(t, state) {
    if (input.HS) {
 
       /*-----------------------------------------------------------------------------
-      If headset doesn't move at all for 30 frames, set scene brightness to zero.
+      If headset doesn't move at all for 10 seconds, set scene brightness to zero.
       -----------------------------------------------------------------------------*/
       {
          let P = input.HS.position();
@@ -934,13 +961,13 @@ function onEndFrame(t, state) {
          if (input.previousP === undefined) {
             input.previousP = P;
             input.previousQ = Q;
-	 }
+         }
 
          let diff = 0;
-	 for (let n = 0 ; n < P.length ; n++)
-	    diff += Math.abs(P[n] - input.previousP[n]);
-	 for (let n = 0 ; n < Q.length ; n++)
-	    diff += Math.abs(Q[n] - input.previousQ[n]);
+         for (let n = 0 ; n < P.length ; n++)
+            diff += Math.abs(P[n] - input.previousP[n]);
+         for (let n = 0 ; n < Q.length ; n++)
+            diff += Math.abs(Q[n] - input.previousQ[n]);
          input.previousP = P;
          input.previousQ = Q;
 

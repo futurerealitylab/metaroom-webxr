@@ -6,6 +6,7 @@ uniform vec3  uCursor; // CURSOR: xy=pos, z=mouse up/down
 uniform float uTime;   // TIME, IN SECONDS
 
 in vec2 vXY;           // POSITION ON IMAGE
+in vec3 vP;
 in vec3 vPos;          // POSITION
 in vec3 vNor;          // NORMAL
 in vec3 vTan;          // TANGENT
@@ -72,7 +73,7 @@ void main() {
     Ldir[0] = normalize(vec3(1.,1.,2.));
     Ldir[1] = normalize(vec3(-1.,-1.,-1.));
     Lrgb[0] = vec3(.6,.6,1.);
-    Lrgb[1] = vec3(.6,.3,.1);
+    Lrgb[1] = vec3(.8,.4,.1);
 
     vec3 normal = normalize(vNor);
 
@@ -84,9 +85,14 @@ void main() {
     color += phong(Ldir[0], Lrgb[0], normal, diffuse, specular, p);
     color += phong(Ldir[1], Lrgb[1], normal, diffuse, specular, p);
 
-    //color *= .5 + .5 * noize(10. * vPos);
+    float alpha = uColor.a;
+    if (alpha < 1.) {
+       vec2 uv = 2. * (vUV - vec2(.5,.5)) / alpha;
+       float t = 1. - dot(uv, uv);
+       alpha = .3 * t * (.5 + .5 * noize(100. * vP));
+    }
 
-    fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), uColor.a) * uBrightness;
+    fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), alpha) * uBrightness;
     if (uTexIndex == 0) fragColor *= texture(uTex0, vUV * uTexScale);
     if (uTexIndex == 1) fragColor *= texture(uTex1, vUV * uTexScale);
     if (uTexIndex == 2) fragColor *= texture(uTex2, vUV * uTexScale);

@@ -8,6 +8,7 @@ in  vec3 aTan;
 in  vec2 aUV;
 
 // interpolated vertex
+out vec3 vP;
 out vec3 vPos;
 out vec3 vNor;
 out vec3 vTan;
@@ -30,6 +31,7 @@ uniform float uToon; // control toon shading
 void main(void) {
     vec4 pos = uProj * uView * uModel * vec4(aPos, 1.);
     vXY = pos.xy / pos.z;
+    vP = pos.xyz;
     vPos = aPos;
     vNor = (vec4(aNor, 0.) * inverse(uModel)).xyz;
     vTan = (vec4(aTan, 0.) * inverse(uModel)).xyz;
