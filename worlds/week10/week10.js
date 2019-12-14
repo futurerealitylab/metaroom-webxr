@@ -74,18 +74,16 @@ function ControllerHandler(controller) {
    this.press       = () => ! wasDown && this.isDown();
    this.release     = () => wasDown && ! this.isDown();
    this.tip         = () => {
-      let P = this.position();          // THIS CODE JUST MOVES
-      m.identity();                     // THE "HOT SPOT" OF THE
-      m.translate(P[0],P[1],P[2]);      // CONTROLLER TOWARD ITS
+      m.identity();                     // MOVE THE "HOT SPOT" OF
+      m.translate(this.position());     // THE CONTROLLER TOWARD
       m.rotateQ(this.orientation());    // FAR TIP (FURTHER AWAY
-      m.translate(0,0,-.03);            // FROM THE USER'S HAND).
+      m.translate(0,.04,-.02);          // FROM THE USER'S HAND).
       let v = m.value();
       return [v[12],v[13],v[14]];
    }
    this.center = () => {
-      let P = this.position();
       m.identity();
-      m.translate(P[0],P[1],P[2]);
+      m.translate(this.position());
       m.rotateQ(this.orientation());
       m.translate(0,.02,-.005);
       let v = m.value();
@@ -283,28 +281,23 @@ async function setup(state) {
 
    Input.initKeyEvents();
 
-   // load files into a spatial audio context for playback later - the path will be needed to reference this source later
-   this.audioContext1 = new SpatialAudioContext([
-   'assets/audio/blop.wav'
-   ]);
+   // Load files into a spatial audio context to be played back later.
+   // The path will be needed to reference this source later.
 
-   this.audioContext2 = new SpatialAudioContext([
-   'assets/audio/peacock.wav'
-   ]);
-
+   this.audioContext1 = new SpatialAudioContext(['assets/audio/blop.wav']);
+   this.audioContext2 = new SpatialAudioContext(['assets/audio/peacock.wav']);
 
    /************************************************************************
 
-   Here we show an example of how to create a grabbable object.
-   First instatiate object using Obj() constructor, and add the following  
-   variables. Then send a spawn message. This will allow the server to keep
-   track of objects that need to be synchronized.
+   Here we show an example of how to create a synchronized grabbable object.
+   After setting initial properties, send a spawn message.
+   This allows the server to keep track of objects that need to be synchronized.
 
    ************************************************************************/
 
    MR.objs.push(grabbableCube);
-   grabbableCube.position    = [0,0,-0.5].slice();
-   grabbableCube.orientation = [1,0,0,1].slice();
+   grabbableCube.position    = [0,-.5,-.5];
+   grabbableCube.orientation = [0,0,0,1];
    grabbableCube.uid = 0;
    grabbableCube.lock = new Lock();
    sendSpawnMessage(grabbableCube);
@@ -316,7 +309,7 @@ This is an example of a spawn message we send to the server.
 
 ************************************************************************/
 
-function sendSpawnMessage(object){
+function sendSpawnMessage(object) {
    const response = 
       {
          type: "spawn",
@@ -327,7 +320,6 @@ function sendSpawnMessage(object){
             orientation: object.orientation,
          }
       };
-
    MR.syncClient.send(response);
 }
 
@@ -350,7 +342,6 @@ function onStartFrame(t, state) {
    const editor = state.editor;
 
    if (! state.avatarMatrixForward) {
-      // MR.avatarMatrixForward is because i need accesss to this in callback.js, temp hack
       MR.avatarMatrixForward = state.avatarMatrixForward = CG.matrixIdentity();
       MR.avatarMatrixInverse = state.avatarMatrixInverse = CG.matrixIdentity();
    } 
@@ -368,11 +359,13 @@ function onStartFrame(t, state) {
       }
    }
 
+// KEEP TRACK OF TIME IN SECONDS SINCE THE CLIENT STARTED.
+
    if (! state.tStart)
       state.tStart = t;
    state.time = (t - state.tStart) / 1000;
 
-    // THIS CURSOR CODE IS ONLY RELEVANT WHEN USING THE BROWSER MOUSE, NOT WHEN IN VR MODE.
+// NOTE: CURSOR AND KEYBOARD INPUT ARE NOT RELEVANT WHEN CLIENT IS A VR HEADSET.
 
    let cursorValue = () => {
       let p = state.cursor.position(), canvas = MR.getCanvas();
@@ -487,7 +480,7 @@ function onStartFrame(t, state) {
     /*-----------------------------------------------------------------
 
     This function releases stale locks. Stale locks are locks that
-    a user has already lost ownership over by letting go
+    a user has already lost ownership over by letting go.
 
     -----------------------------------------------------------------*/
 
@@ -535,20 +528,22 @@ let findInMenu = (mp, p) => {
 
 function Obj(shape) {
    this.shape = shape;
-};
-
+}
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
    m.identity();
 
    m.rotateX(state.tiltAngle);
    m.rotateY(state.turnAngle);
-   let P = state.position;
-   m.translate(P[0],P[1],P[2]);
+   m.translate(state.position);
+
+   // FIRST DRAW THE SCENE FULL SIZE.
 
    m.save();
       myDraw(t, projMat, viewMat, state, eyeIdx, false);
    m.restore();
+
+   // THEN DRAW THE ENTIRE SCENE IN MINIATURE ON THE TOP OF ONE OF THE TABLES.
 
    m.save();
       m.translate(HALL_WIDTH/2 - TABLE_DEPTH/2, -TABLE_HEIGHT*1.048, TABLE_WIDTH/6.7);
@@ -567,17 +562,17 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    const input  = state.input;
 
-    /*-----------------------------------------------------------------
+   /*-----------------------------------------------------------------
 
-    The drawShape() function below is optimized in that it only downloads
-    new vertices to the GPU if the vertices (the "shape" argument) have
-    changed since the previous call.
+   The drawShape() function below is optimized in that it only downloads
+   new vertices to the GPU if the vertices (the "shape" argument) have
+   changed since the previous call.
 
-    Also, currently we only draw gl.TRIANGLES if this is a cube. In all
-    other cases, we draw gl.TRIANGLE_STRIP. You might want to change
-    this if you create other kinds of shapes that are not triangle strips.
+   Also, currently we only draw gl.TRIANGLES if this is a cube. In all
+   other cases, we draw gl.TRIANGLE_STRIP. You might want to change
+   this if you create other kinds of shapes that are not triangle strips.
 
-    -----------------------------------------------------------------*/
+   -----------------------------------------------------------------*/
 
    let drawShape = (shape, color, texture, textureScale) => {
       gl.uniform1f(state.uBrightnessLoc, input.brightness === undefined ? 1 : input.brightness);
@@ -601,8 +596,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    let drawAvatar = (avatar, pos, rot, scale, state) => {
       m.save();
-      //   m.identity();
-         m.translate(pos[0],pos[1],pos[2]);
+         m.translate(pos);
          m.rotateQ(rot);
          m.scale(scale,scale,scale);
          drawShape(avatar.headset.vertices, [1,1,1], 0);
@@ -619,11 +613,10 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
     -----------------------------------------------------------------*/
 
    let showMenu = p => {
-      let x = p[0], y = p[1], z = p[2];
       for (let n = 0 ; n < 4 ; n++) {
          m.save();
             m.multiply(state.avatarMatrixForward);
-            m.translate(x + menuX[n], y + menuY[n], z);
+            m.translate(p[0] + menuX[n], p[1] + menuY[n], p[2]);
             m.scale(.03, .03, .03);
             drawShape(menuShape[n], n == menuChoice ? [1,.5,.5] : [1,1,1]);
          m.restore();
@@ -637,6 +630,21 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
     furniture, you will probably want to do something different.
 
     -----------------------------------------------------------------*/
+
+   let drawCamera = id => {
+      m.save();
+         m.translate(0,0,.1).scale(.1);
+         drawShape(CG.cube, [.5,.5,.5]);
+      m.restore();
+      m.save();
+         m.translate(0,0,-.05).scale(.05);
+         drawShape(CG.cylinder, [.5,.5,.5]);
+      m.restore();
+      m.save();
+         m.translate(0,0,-.1).scale(.04,.04,.001);
+         drawShape(CG.cylinder, [-1,-1,-1]);
+      m.restore();
+   }
 
    let drawStool = id => {
       m.save();
@@ -668,27 +676,10 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       m.restore();
    }
 
-    /*-----------------------------------------------------------------
-
-    The below is just my particular "programmer art" for the size and
-    shape of a controller. Feel free to create a different appearance
-    for the controller. You might also want the controller appearance,
-    as well as the way it animates when you press the trigger or other
-    buttons, to change with different functionality.
-
-    For example, you might want to have one appearance when using it as
-    a selection tool, a resizing tool, a tool for drawing in the air,
-    and so forth.
-
-    -----------------------------------------------------------------*/
-    
    let drawHeadset = (position, orientation) => {
-      //  let P = HS.position();'
-      let P = position;
-
       m.save();
          m.multiply(state.avatarMatrixForward);
-         m.translate(P[0],P[1],P[2]);
+         m.translate(position);
          m.rotateQ(orientation);
          m.scale(.1);
          m.save();
@@ -705,11 +696,24 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       m.restore();
    }
 
+   /*-----------------------------------------------------------------
+
+   The below is just my particular visual design for the size and
+   shape of a controller. Feel free to create a different appearance
+   for the controller. You might also want the controller appearance,
+   as well as the way it animates when you press the trigger or other
+   buttons, to change with different functionality.
+
+   For example, you might want to have different appearances when using
+   a controller as a selection tool, a resizing tool, a tool for drawing
+   in the air, and so forth.
+
+   -----------------------------------------------------------------*/
+    
    let drawController = (C, hand) => {
-      let P = C.position();
       m.save();
          m.multiply(state.avatarMatrixForward);
-         m.translate(P[0],P[1],P[2]);
+         m.translate(C.position());
          m.rotateQ(C.orientation());
          m.translate(0,.02,-.005);
          m.rotateX(.75);
@@ -737,10 +741,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    }
 
    let drawSyncController = (pos, rot, color) => {
-      let P = pos;
       m.save();
-      // m.identity();
-         m.translate(P[0], P[1], P[2]);
+         m.translate(pos);
          m.rotateQ(rot);
          m.translate(0,.02,-.005);
          m.rotateX(.75);
@@ -786,38 +788,36 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       m.restore();
    }
 
+   /*-----------------------------------------------------------------
 
-    /*-----------------------------------------------------------------
+   This is where I draw the objects that have been created.
 
-    This is where I draw the objects that have been created.
+   If I were to make these objects interactive (that is, responsive
+   to the user doing things with the controllers), that logic would
+   need to go into onStartFrame(), not here.
 
-    If I were to make these objects interactive (that is, responsive
-    to the user doing things with the controllers), that logic would
-    need to go into onStartFrame(), not here.
-
-    -----------------------------------------------------------------*/
+   -----------------------------------------------------------------*/
 
    for (let n = 0 ; n < MR.objs.length ; n++) {
-      let obj = MR.objs[n], P = obj.position;
+      let obj = MR.objs[n];
       m.save();
          m.multiply(state.avatarMatrixForward);
-         m.translate(P[0], P[1], P[2]);
+         m.translate(obj.position);
          m.rotateQ(obj.orientation);
          m.scale(.03,.03,.03);
-         drawShape(obj.shape, [1,1,1]);
-         
+         drawShape(obj.shape, n==0 ? [1,.5,.5] : [1,1,1]);
       m.restore();
    }
 
    m.translate(0, -EYE_HEIGHT, 0);
  
-    /*-----------------------------------------------------------------
+   /*-----------------------------------------------------------------
 
-    Notice that I make the room itself as an inside-out cube, by
-    scaling x,y and z by negative amounts. This negative scaling
-    is a useful general trick for creating interiors.
+   Notice that I make the room itself as an inside-out cube, by
+   scaling x,y and z by negative amounts. This negative scaling
+   is a useful general trick for creating interiors.
 
-    -----------------------------------------------------------------*/
+   -----------------------------------------------------------------*/
 
    m.save();
       let dy = isMiniature ? 0 : HALL_WIDTH/2;
@@ -861,52 +861,43 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
       m.save();
       m.translate(-.5, 2.5 * TABLE_HEIGHT, (TABLE_DEPTH - HALL_WIDTH) / 2);
-      /*
-      m.save(); m.translate(A[0],A[1],A[2]).scale(.07); drawShape(CG.sphere, [1,1,1]); m.restore();
-      m.save(); m.translate(B[0],B[1],B[2]).scale(.07); drawShape(CG.sphere, [1,1,1]); m.restore();
-      m.save(); m.translate(C[0],C[1],C[2]).scale(.07); drawShape(CG.sphere, [1,1,1]); m.restore();
-      */
       state.isToon = true;
       let skinColor = [1,.5,.3], D;
+
       m.save();
-         D = CG.mix(A,C,.5);
-         m.translate(D[0],D[1],D[2]);
-         m.aimZ(CG.subtract(A,C));
-         m.scale(.05,.05,.37);
+         m.translate(CG.mix(A,C,.5)).aimZ(CG.subtract(A,C)).scale(.05,.05,.37);
          drawShape(lathe, skinColor, -1,1, 2,1);
       m.restore();
 
       m.save();
-         D = CG.mix(C,B,.5);
-         m.translate(D[0],D[1],D[2]).aimZ(CG.subtract(C,B)).scale(.03,.03,.37);
+         m.translate(CG.mix(C,B,.5)).aimZ(CG.subtract(C,B)).scale(.03,.03,.37);
          drawShape(lathe, skinColor, -1,1, 2,1);
       m.restore();
+
       state.isToon = false;
 
    m.restore();
-      /*-----------------------------------------------------------------
-        Here is where we draw avatars and controllers.
-      -----------------------------------------------------------------*/
+
+   /*-----------------------------------------------------------------
+      Here is where we draw avatars and controllers.
+   -----------------------------------------------------------------*/
    
    for (let id in MR.avatars) {
       
       const avatar = MR.avatars[id];
+      if (MR.playerid == avatar.playerid)
+         continue;
+
+      let headsetPos = avatar.headset.position;
+      let headsetRot = avatar.headset.orientation;
+      if(headsetPos == null || headsetRot == null)
+         continue;
+      if (typeof headsetPos == 'undefined') {
+         console.log(id);
+         console.log("not defined");
+      }
 
       if (avatar.mode == MR.UserType.vr) {
-         if (MR.playerid == avatar.playerid)
-            continue;
-         
-         let headsetPos = avatar.headset.position;
-         let headsetRot = avatar.headset.orientation;
-
-         if(headsetPos == null || headsetRot == null)
-            continue;
-
-         if (typeof headsetPos == 'undefined') {
-            console.log(id);
-            console.log("not defined");
-         }
-         
          const rcontroller = avatar.rightController;
          const lcontroller = avatar.leftController;
          
@@ -922,14 +913,24 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          drawSyncController(rpos, rcontroller.orientation, [1,0,0]);
          drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
       }
+
+      else {
+         m.save();
+	    m.translate(headsetPos);
+	    m.rotateQ(headsetRot);
+	    drawCamera();
+         m.restore();
+      }
    }
+
 /*
+   // THIS IS JUST CODE FOR A PRELIMINARY TEST OF VOLUMETRIC NOISE
+
    let nn = 16;
    for (let n = 0 ; n < nn ; n++) {
       let alpha = 1 - Math.abs(n - (nn-1)/2) / (nn/2);
       m.save();
-         m.translate(0,EYE_HEIGHT,-.2 + .01 * n);
-         m.scale(.05);
+         m.translate(0,EYE_HEIGHT,-.2 + .01 * n).scale(.05);
          drawShape(CG.quad, [1,1,1,alpha]);
       m.restore();
    }
@@ -951,9 +952,8 @@ function onEndFrame(t, state) {
 
    if (input.HS) {
 
-      /*-----------------------------------------------------------------------------
-      If headset doesn't move at all for 10 seconds, set scene brightness to zero.
-      -----------------------------------------------------------------------------*/
+      // If headset doesn't move at all for 10 seconds, set scene brightness to zero.
+
       {
          let P = input.HS.position();
          let Q = input.HS.orientation();
@@ -978,6 +978,7 @@ function onEndFrame(t, state) {
 
          input.brightness = input.motionlessCount < 720 ? 1 : 0; // wait 10 seconds
       }
+
       /*-----------------------------------------------------------------------------
       Here is an example of updating each audio context with the most
       recent headset position - otherwise it will not be spatialized
@@ -988,9 +989,10 @@ function onEndFrame(t, state) {
 
       /*-----------------------------------------------------------------------------
       Here you initiate the 360 spatial audio playback from a given position,
-      in this case controller position  This can be anything, such as a speaker,
-      or an drum in the room.
-      You must provide the file path.
+      in this case controller position. The visual object can be anything,
+      such as an audio speaker or an drum in the room.
+
+      In the current version, you must provide the file path.
       -----------------------------------------------------------------------------*/
 
       if (input.LC && input.LC.press())
@@ -1031,8 +1033,8 @@ export default function main() {
 
 //////////////EXTRA TOOLS
 
-// A better approach for this would be to define a unit sphere and
-// apply the proper transform w.r.t. corresponding grabbable object
+// A better approach for this might be to define a unit sphere and
+// apply the proper transform w.r.t. corresponding grabbable object.
 
 function checkIntersection(point, verts) {
    const bb = calcBoundingBox(verts);
@@ -1040,8 +1042,8 @@ function checkIntersection(point, verts) {
    const max = bb[1];
 
    if (point[0] > min[0] && point[0] < max[0] &&
-      point[1] > min[1] && point[1] < max[1] &&
-      point[2] > min[2] && point[2] < max[2]) return true;
+       point[1] > min[1] && point[1] < max[1] &&
+       point[2] > min[2] && point[2] < max[2]) return true;
 
    return false;
 }
@@ -1054,11 +1056,11 @@ function calcBoundingBox(verts) {
     
    for(let i = 0; i < verts.length; i+=2){
 
-      if(verts[i] < min[0]) min[0] = verts[i];
+      if(verts[i  ] < min[0]) min[0] = verts[i];
       if(verts[i+1] < min[1]) min[1] = verts[i+1];
       if(verts[i+2] < min[2]) min[2] = verts[i+2];
 
-      if(verts[i] > max[0]) max[0] = verts[i];
+      if(verts[i  ] > max[0]) max[0] = verts[i];
       if(verts[i+1] > max[1]) max[1] = verts[i+1];
       if(verts[i+2] > max[2]) max[2] = verts[i+2];
    }
@@ -1073,11 +1075,11 @@ function pollGrab(state) {
       let controller = input.LC.isDown() ? input.LC : input.RC;
       for (let i = 0; i < MR.objs.length; i++) {
          //ALEX: Check if grabbable.
-         let isGrabbed = checkIntersection(controller.position(), MR.objs[i].shape);
+         let isGrabbed = checkIntersection(controller.tip(), MR.objs[i].shape);
          //requestLock(MR.objs[i].uid);
          if (isGrabbed == true) {
             if (MR.objs[i].lock.locked) {
-               MR.objs[i].position = controller.position();
+               MR.objs[i].position = controller.tip();
                const response =
                {
                   type: "object",

@@ -1,0 +1,1 @@
+ifconfig | grep 'broadcast ' | sed 's/.*inet //' | sed 's/ .*//'
