@@ -710,37 +710,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    -----------------------------------------------------------------*/
     
-   let drawController = (C, hand) => {
-      m.save();
-         m.multiply(state.avatarMatrixForward);
-         m.translate(C.position());
-         m.rotateQ(C.orientation());
-         m.translate(0,.02,-.005);
-         m.rotateX(.75);
-         m.save();
-            m.translate(0,0,-.0095).scale(.004,.004,.003);
-            drawShape(CG.sphere, C.isDown() ? [10,0,0] : [.5,0,0]);
-         m.restore();
-         m.save();
-            m.translate(0,0,-.01).scale(.04,.04,.13);
-            drawShape(CG.torus1, [0,0,0]);
-         m.restore();
-         m.save();
-            m.translate(0,-.0135,-.008).scale(.04,.0235,.0015);
-            drawShape(CG.cylinder, [0,0,0]);
-         m.restore();
-         m.save();
-            m.translate(0,-.01,.03).scale(.012,.02,.037);
-            drawShape(CG.cylinder, [0,0,0]);
-         m.restore();
-         m.save();
-            m.translate(0,-.01,.067).scale(.012,.02,.023);
-            drawShape(CG.sphere, [0,0,0]);
-         m.restore();
-      m.restore();
-   }
-
-   let drawSyncController = (pos, rot, color) => {
+   let drawController = (pos, rot, hand, isPressed) => {
       m.save();
          m.translate(pos);
          m.rotateQ(rot);
@@ -748,6 +718,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          m.rotateX(.75);
          m.save();
                m.translate(0,0,-.0095).scale(.004,.004,.003);
+               drawShape(CG.sphere, isPressed ? [10,0,0] : [.5,0,0]);
          m.restore();
          m.save();
                m.translate(0,0,-.01).scale(.04,.04,.13);
@@ -781,8 +752,11 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       m.rotateY(-state.turnAngle);
       m.rotateX(-state.tiltAngle);
 
-      drawController(input.LC, 0);
-      drawController(input.RC, 1);
+      m.save();
+         m.multiply(state.avatarMatrixForward);
+         drawController(input.LC.position(), input.LC.orientation(), 0, input.LC.isDown());
+         drawController(input.RC.position(), input.RC.orientation(), 1, input.RC.isDown());
+      m.restore();
       if (enableModeler && input.RC.isDown())
          showMenu(input.RC.position());
       m.restore();
@@ -903,15 +877,14 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          
          let hpos = headsetPos.slice();
          hpos[1] += EYE_HEIGHT;
-
-         drawHeadset(hpos, headsetRot);
          let lpos = lcontroller.position.slice();
          lpos[1] += EYE_HEIGHT;
          let rpos = rcontroller.position.slice();
          rpos[1] += EYE_HEIGHT;
 
-         drawSyncController(rpos, rcontroller.orientation, [1,0,0]);
-         drawSyncController(lpos, lcontroller.orientation, [0,1,1]);
+         drawHeadset(hpos, headsetRot);
+         drawController(rpos, rcontroller.orientation, 0);
+         drawController(lpos, lcontroller.orientation, 1);
       }
 
       else {
