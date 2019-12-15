@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# use if you want the system to run on startup
+pm2 stop all
+
+pm2 start ecosystem.config.js
+pm2 startup
+pm2 save

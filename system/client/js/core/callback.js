@@ -1,10 +1,10 @@
 'use strict';
 
-MR.syncClient.eventBus.subscribe("platform", (json) => {
+MR.EventBus.subscribe("platform", (json) => {
 
 });
 
-MR.syncClient.eventBus.subscribe("initialize", (json) => {
+MR.EventBus.subscribe("initialize", (json) => {
 
     if (!MR.avatars) {
         MR.avatars = {};
@@ -29,7 +29,7 @@ MR.syncClient.eventBus.subscribe("initialize", (json) => {
     console.log(MR.avatars);
 });
 
-MR.syncClient.eventBus.subscribe("join", (json) => {
+MR.EventBus.subscribe("join", (json) => {
     console.log(json);
     const id = json["id"];
 
@@ -48,18 +48,18 @@ MR.syncClient.eventBus.subscribe("join", (json) => {
     MR.updatePlayersMenu();
 });
 
-MR.syncClient.eventBus.subscribe("leave", (json) => {
+MR.EventBus.subscribe("leave", (json) => {
     console.log(json);
     delete MR.avatars[json["user"]];
 
     MR.updatePlayersMenu();
 });
 
-MR.syncClient.eventBus.subscribe("tick", (json) => {
+MR.EventBus.subscribe("tick", (json) => {
     // console.log("world tick: ", json);
 });
 
-MR.syncClient.eventBus.subscribe("avatar", (json) => {
+MR.EventBus.subscribe("avatar", (json) => {
     //if (MR.VRIsActive()) {
     const payload = json["data"];
     //console.log(json);
@@ -99,7 +99,7 @@ const response = {
 
 // TODO:
 // deal with logic and onlock
-MR.syncClient.eventBus.subscribe("lock", (json) => {
+MR.EventBus.subscribe("lock", (json) => {
 
     const success = json["success"];
     const key = json["uid"];
@@ -125,7 +125,7 @@ const response = {
 
 // TODO:
 // deal with logic and onlock
-MR.syncClient.eventBus.subscribe("release", (json) => {
+MR.EventBus.subscribe("release", (json) => {
 
     const success = json["success"];
     const key = json["uid"];
@@ -161,7 +161,7 @@ const response = {
 // TODO:
 // update to MR.objs
 /*
-MR.syncClient.eventBus.subscribe("object", (json) => {
+MR.EventBus.subscribe("object", (json) => {
 
     const success = json["success"];
 
@@ -176,7 +176,7 @@ MR.syncClient.eventBus.subscribe("object", (json) => {
 
 // TODO:
 // add to MR.objs
-MR.syncClient.eventBus.subscribe("spawn", (json) => {
+MR.EventBus.subscribe("spawn", (json) => {
 
     const success = json["success"];
 
@@ -189,7 +189,7 @@ MR.syncClient.eventBus.subscribe("spawn", (json) => {
 
 });
 
-MR.syncClient.eventBus.subscribe("object", (json) => {
+MR.EventBus.subscribe("object", (json) => {
     const success = json["success"];
      if (success) {
       console.log("object moved: ", json);
@@ -219,114 +219,7 @@ MR.syncClient.eventBus.subscribe("object", (json) => {
 //     "success": false
 // };
 
-MR.syncClient.eventBus.subscribe("calibration", (json) => {
+MR.EventBus.subscribe("calibration", (json) => {
     console.log("world tick: ", json);
 });
 
-
-function pollAvatarData() 
-{
-    if (MR.VRIsActive()) 
-    {
-        const frameData = MR.frameData();
-        if (frameData != null) {
-            //User Headset
-            // const leftInverseView = CG.matrixInverse(frameData.leftViewMatrix);
-            // const rightInverseView = CG.matrixInverse(frameData.rightViewMatrix);
-            
-            // const leftHeadsetPos = CG.matrixTransform(leftInverseView, frameData.pose.position);
-            // const rightHeadsetPos = CG.matrixTransform(rightInverseView, frameData.pose.position);
-            // const headsetPos = CG.mix(leftHeadsetPos, rightHeadsetPos);
-            // console.log(headsetPos);
-            const headsetPos = frameData.pose.position;
-            const headsetRot = frameData.pose.orientation;
-            const headsetTimestamp = frameData.timestamp;
-
-            if (MR.controllers[0] != null && MR.controllers[1] != null) {
-                //Controllers
-                const controllerRight = MR.controllers[0];
-                const controllerRightPos = controllerRight.pose.position;
-                const controllerRightRot = controllerRight.pose.orientation;
-                const controllerRightButtons = controllerRight.buttons;
-
-                const controllerLeft = MR.controllers[1];
-                const controllerLeftPos = controllerLeft.pose.position;
-                const controllerLeftRot = controllerLeft.pose.orientation;
-                const controllerLeftButtons = controllerLeft.buttons;
-
-                //buttons have a 'pressed' variable that is a boolean.
-                /*A quick mapping of the buttons:
-                        0: analog stick
-                        1: trigger
-                        2: side trigger
-                        3: x button
-                        4: y button
-                        5: home button
-                */
-                const avatar_message = {
-                    type: "avatar",
-                    user: MR.playerid,
-                    state: {
-                        mode: MR.UserType.vr,
-                        pos: CG.matrixTransform(MR.avatarMatrixInverse, headsetPos),
-                        rot: headsetRot,
-                        controllers: {
-                            left: {
-                                pos: CG.matrixTransform(MR.avatarMatrixInverse, [controllerLeftPos[0], controllerLeftPos[1], controllerLeftPos[2]]),
-                                rot: [controllerLeftRot[0], controllerLeftRot[1], controllerLeftRot[2], controllerLeftRot[3]],
-                                analog: controllerLeftButtons[0].pressed,
-                                trigger: controllerLeftButtons[1].pressed,
-                                sideTrigger: controllerLeftButtons[2].pressed,
-                                x: controllerLeftButtons[3].pressed,
-                                y: controllerLeftButtons[4].pressed,
-                                home: controllerLeftButtons[5].pressed,
-                                analogx: controllerLeft.axes[0],
-                                analogy: controllerLeft.axes[1]
-
-                            },
-                            right: {
-                                pos: CG.matrixTransform(MR.avatarMatrixInverse, [controllerRightPos[0], controllerRightPos[1], controllerRightPos[2]]),
-                                rot: [controllerRightRot[0], controllerRightRot[1], controllerRightRot[2], controllerRightRot[3]],
-                                analog: controllerRightButtons[0].pressed,
-                                trigger: controllerRightButtons[1].pressed,
-                                sideTrigger: controllerRightButtons[2].pressed,
-                                x: controllerRightButtons[3].pressed,
-                                y: controllerRightButtons[4].pressed,
-                                home: controllerRightButtons[5].pressed,
-                                analogx: controllerRight.axes[0],
-                                analogy: controllerRight.axes[1],
-                            }
-                        }
-                    }
-                }
-
-                if (MR.playerid == -1) {
-                    return;
-                }
-
-                try {
-                    //console.log(avatar_message);
-                    MR.syncClient.send(avatar_message);
-                } catch (err) {
-                    console.log(err);
-                }
-            }
-
-        }
-
-    } else {
-        let avatar_message = {
-            type: "avatar",
-            user: MR.playerid,
-            state: {
-                mode: MR.UserType.browser,
-            }
-        }
-        try {
-            //console.log(avatar_message);
-            MR.syncClient.send(avatar_message);
-        } catch (err) {
-            console.log(err);
-        }
-    }
-}
