@@ -422,7 +422,7 @@ function onStartFrame(t, state) {
    -----------------------------------------------------------------*/
    if (enableModeler && input.LC) {
       if (input.RC.isDown()) {
-         menuChoice = findInMenu(input.RC.position(), input.LC.tip());
+         menuChoice = findInMenu(input.RC.position(), input.RC.orientation(), input.LC.tip());
          if (menuChoice >= 0 && input.LC.press()) {
             state.isNewObj = true;
             let newObject = new Obj(menuShape[menuChoice]);
@@ -447,7 +447,6 @@ function onStartFrame(t, state) {
       let RP = input.RC.center();
       let D  = CG.subtract(LP, RP);
       let d  = metersToInches(CG.norm(D));
-      console.log(D, d);
       let getX = C => {
          m.save();
             m.identity();
@@ -469,8 +468,9 @@ function onStartFrame(t, state) {
                m.translate(CG.mix(LP, RP, .5));
                m.rotateY(Math.atan2(D[0], D[2]) + Math.PI/2);
                m.translate(-2.35,1.00,-.72);
-               state.avatarMatrixForward = CG.matrixInverse(m.value());
                state.avatarMatrixInverse = m.value();
+	       m.invert();
+               state.avatarMatrixForward = m.value();
             m.restore();
             state.calibrationCount = 0;
          }
@@ -512,14 +512,18 @@ p  == the position of the left controller tip.
 
 -----------------------------------------------------------------*/
 
-let findInMenu = (mp, p) => {
-   let x = p[0] - mp[0];
-   let y = p[1] - mp[1];
-   let z = p[2] - mp[2];
+let findInMenu = (mp, mq, p) => {
+   m.save();
+      m.identity();
+      m.translate(mp);
+      m.rotateQ(mq);
+      m.invert();
+      p = m.transform(p);
+   m.restore();
    for (let n = 0 ; n < 4 ; n++) {
-      let dx = x - menuX[n];
-      let dy = y - menuY[n];
-      let dz = z;
+      let dx = p[0] - menuX[n];
+      let dy = p[1] - menuY[n];
+      let dz = p[2];
       if (dx * dx + dy * dy + dz * dz < .03 * .03)
          return n;
    }
@@ -616,7 +620,9 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       for (let n = 0 ; n < 4 ; n++) {
          m.save();
             m.multiply(state.avatarMatrixForward);
-            m.translate(p[0] + menuX[n], p[1] + menuY[n], p[2]);
+            m.translate(p);
+	    m.rotateQ(input.RC.orientation());
+            m.translate(menuX[n], menuY[n], 0);
             m.scale(.03, .03, .03);
             drawShape(menuShape[n], n == menuChoice ? [1,.5,.5] : [1,1,1]);
          m.restore();
@@ -1003,40 +1009,3 @@ export default function main() {
    return def;
 }
 
-
-//////////////EXTRA TOOLS
-
-// A better approach for this might be to define a unit sphere and
-// apply the proper transform w.r.t. corresponding grabbable object.
-
-function checkIntersection(point, verts) {
-   const bb = calcBoundingBox(verts);
-   const min = bb[0];
-   const max = bb[1];
-
-   if (point[0] > min[0] && point[0] < max[0] &&
-       point[1] > min[1] && point[1] < max[1] &&
-       point[2] > min[2] && point[2] < max[2]) return true;
-
-   return false;
-}
-
-// see above
-
-function calcBoundingBox(verts) {
-   const min = [Number.MAX_VALUE,Number.MAX_VALUE,Number.MAX_VALUE];
-   const max = [Number.MIN_VALUE,Number.MIN_VALUE,Number.MIN_VALUE];
-    
-   for(let i = 0; i < verts.length; i+=2){
-
-      if(verts[i  ] < min[0]) min[0] = verts[i];
-      if(verts[i+1] < min[1]) min[1] = verts[i+1];
-      if(verts[i+2] < min[2]) min[2] = verts[i+2];
-
-      if(verts[i  ] > max[0]) max[0] = verts[i];
-      if(verts[i+1] > max[1]) max[1] = verts[i+1];
-      if(verts[i+2] > max[2]) max[2] = verts[i+2];
-   }
-
-   return [min, max];
-}

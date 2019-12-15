@@ -2,29 +2,38 @@ function pollGrab(state) {
     let input = state.input;
     if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {
         let controller = input.LC.isDown() ? input.LC : input.RC;
-        for (let i = 0; i < MR.objs.length; i++) {
-            let isGrabbed = checkIntersection(controller.tip(), MR.objs[i].shape);
-            //requestLock(MR.objs[i].uid);
-            if (isGrabbed == true) {
+        for (let i = 0; i < MR.objs.length; i++)
+            if (checkIntersection(controller.tip(), MR.objs[i].shape))
                 if (MR.objs[i].lock.locked) {
                     MR.objs[i].position = controller.tip();
-                    const response = {
+		    MR.syncClient.send({
                         type: "object",
                         uid: MR.objs[i].uid,
                         state: {
-                        position: MR.objs[i].position,
-                        orientation: MR.objs[i].orientation
+                           position: MR.objs[i].position,
+                           orientation: MR.objs[i].orientation
                         },
                         lockid: MR.playerid
-                    };
-
-                    MR.syncClient.send(response);
-                } else {
-                    MR.objs[i].lock.request(MR.objs[i].uid);
+                    });
                 }
-            }
-        }
+		else
+                    MR.objs[i].lock.request(MR.objs[i].uid);
     }
+}
+
+function checkIntersection(P, verts) {
+    const lo = [ 10000, 10000, 10000 ],
+          hi = [-10000,-10000,-10000 ];
+
+    for (let i = 0 ; i < verts.length ; i += 3)
+        for (let j = 0 ; j < 3 ; j++) {
+           if (verts[i+j] < lo[j]) lo[j] = verts[i+j];
+           if (verts[i+j] > hi[j]) hi[j] = verts[i+j];
+        }
+
+    return P[0] > lo[0] && P[0] < hi[0] &&
+           P[1] > lo[1] && P[1] < hi[1] &&
+           P[2] > lo[2] && P[2] < hi[2] ;
 }
 
 function releaseLocks(state) {
