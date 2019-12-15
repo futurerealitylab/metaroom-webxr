@@ -13,3 +13,5 @@
 * * If you want to bring the server logs back on-line to check them after hitting control-c, type:
 ```$pm2 logs all```
 
+* * If you want the server to run on system startup (tested on Unix based OS) type:
+```$./persist```
