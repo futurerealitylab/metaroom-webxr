@@ -1,3 +1,2 @@
 #!/bin/bash
-sed <index.txt s/IPADDR/`ipaddr`/ >index.html
 pm2 start ecosystem.config.js && pm2 logs
