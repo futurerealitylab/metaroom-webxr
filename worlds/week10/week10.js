@@ -816,33 +816,43 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       drawTable(1);
    m.restore();
 
+   /*-----------------------------------------------------------------
+
+   The stool below corresponds to the exact size and height of a round
+   stool that we have placed in the physical space. This allows people who
+   work in the space to sit down. We will likely be adding more physical
+   stools, in which case we will add corresponding virtual ones to match.
+
+   -----------------------------------------------------------------*/
+
    m.save();
       m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, TABLE_WIDTH / 2 + STOOL_RADIUS * 1.5);
       drawStool(0);
    m.restore();
 
+   /*-----------------------------------------------------------------
+
+   Below is an example of two-link inverse kinematics, such as we might
+   use to connect a shoulder to a wrist for an animated character, via
+   an elbow joint whose position is calculated via two-link IK.
+
+   The "lathe" object that defines the shape of each limb is a surface
+   of revolution, which is defined up at the top of this source file.
+
+   We are also enabling toon shading, based on a tutorial I read by
+   Josh Marinacci. Most of the work of the toon shading is done in
+   the vertex and fragment shaders.
+
+   -----------------------------------------------------------------*/
+
+   let A = [0,0,0];
+   let B = [1+.4*Math.sin(2 * state.time),.4*Math.cos(2 * state.time),0];
+   let C = CG.ik(.7,.7,B,[0,-1,-2]);
+
    m.save();
-      m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, -TABLE_WIDTH / 2 + STOOL_RADIUS * 1.5);
-      m.rotateY(state.time);
-      m.scale(STOOL_RADIUS);
-   m.restore();
-
-   // DRAW TEST SHAPE
-
-   m.save();
-      m.translate(0, 2 * TABLE_HEIGHT, (TABLE_DEPTH - HALL_WIDTH) / 2);
-      m.rotateY(state.time);
-      m.scale(.06,.06,.6);
-      m.restore();
-
-      let A = [0,0,0];
-      let B = [1+.4*Math.sin(2 * state.time),.4*Math.cos(2 * state.time),0];
-      let C = CG.ik(.7,.7,B,[0,-1,-2]);
-
-      m.save();
       m.translate(-.5, 2.5 * TABLE_HEIGHT, (TABLE_DEPTH - HALL_WIDTH) / 2);
-      state.isToon = true;
       let skinColor = [1,.5,.3], D;
+      state.isToon = true;
 
       m.save();
          m.translate(CG.mix(A,C,.5)).aimZ(CG.subtract(A,C)).scale(.05,.05,.37);
@@ -855,7 +865,6 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       m.restore();
 
       state.isToon = false;
-
    m.restore();
 
    /*-----------------------------------------------------------------
