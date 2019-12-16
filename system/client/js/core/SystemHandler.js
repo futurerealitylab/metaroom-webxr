@@ -21,7 +21,7 @@ function pollGrab(state) {
     }
 }
 
-function checkIntersection(P, verts) {
+function getBoundingBox(verts){
     const lo = [ 10000, 10000, 10000 ],
           hi = [-10000,-10000,-10000 ];
 
@@ -31,9 +31,30 @@ function checkIntersection(P, verts) {
            if (verts[i+j] > hi[j]) hi[j] = verts[i+j];
         }
 
+    return [lo,hi];
+}
+
+function checkIntersection(P, verts) {
+    let bb = getBoundingBox(verts);
+    let lo = bb[0];
+    let hi = bb[1];
+
     return P[0] > lo[0] && P[0] < hi[0] &&
            P[1] > lo[1] && P[1] < hi[1] &&
            P[2] > lo[2] && P[2] < hi[2] ;
+}
+
+function checkSphereIntersection(P, verts){
+    let bb = getBoundingBox(verts);
+    let lo = bb[0];
+    let hi = bb[1];
+
+    let center = [lo[0]+hi[0]/2.0, lo[1]+hi[1]/2.0, lo[2]+hi[2]/2.0];
+    let radius = CG.norm((lo - hi))/2.0;
+    
+    return P[0] > (center[0]-radius) && P[0] < (center[0]+radius) &&
+           P[1] > (center[1]-radius) && P[1] < (center[1]+radius) &&
+           P[2] > (center[2]-radius) && P[2] < (center[2]+radius);
 }
 
 function releaseLocks(state) {
@@ -167,3 +188,25 @@ function pollAvatarData() {
         }
     }
 }
+
+
+/************************************************************************
+
+This is an example of a spawn message we send to the server.
+
+************************************************************************/
+
+function sendSpawnMessage(object) {
+   const response = 
+      {
+         type: "spawn",
+         uid: object.uid,
+         lockid: -1,
+         state: {
+            position: object.position,
+            orientation: object.orientation,
+         }
+      };
+   MR.syncClient.send(response);
+}
+

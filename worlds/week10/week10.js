@@ -303,25 +303,6 @@ async function setup(state) {
    sendSpawnMessage(grabbableCube);
 }
 
-/************************************************************************
-
-This is an example of a spawn message we send to the server.
-
-************************************************************************/
-
-function sendSpawnMessage(object) {
-   const response = 
-      {
-         type: "spawn",
-         uid: object.uid,
-         lockid: -1,
-         state: {
-            position: object.position,
-            orientation: object.orientation,
-         }
-      };
-   MR.syncClient.send(response);
-}
 
 function onStartFrame(t, state) {
 
