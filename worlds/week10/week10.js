@@ -28,7 +28,7 @@ const LEG_THICKNESS    = inchesToMeters(  2.5);
 let enableModeler = true;
 
 /*Example Grabble Object*/
-let grabbableCube = new Obj(CG.torus);
+let grabbableCube = new Obj(CG.sphere);
 
 let lathe = CG.createMeshVertices(10, 16, CG.uvToLathe,
              [ CG.bezierToCubic([-1.0,-1.0,-0.7,-0.3,-0.1 , 0.1, 0.3 , 0.7 , 1.0 ,1.0]),

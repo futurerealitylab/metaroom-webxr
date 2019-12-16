@@ -3,7 +3,7 @@ function pollGrab(state) {
     if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {
         let controller = input.LC.isDown() ? input.LC : input.RC;
         for (let i = 0; i < MR.objs.length; i++)
-            if (checkIntersection(controller.tip(), MR.objs[i].shape))
+            if (checkSphereIntersection(controller.tip(), MR.objs[i].shape))
                 if (MR.objs[i].lock.locked) {
                     MR.objs[i].position = controller.tip();
 		    MR.syncClient.send({
@@ -20,6 +20,10 @@ function pollGrab(state) {
                     MR.objs[i].lock.request(MR.objs[i].uid);
     }
 }
+
+//TODO: Since translation, scaling, and rotation are resolved in the 
+//matrix stack this does not give us the answer we expect. Talk to Ken
+//about how we want to resolve this.
 
 function getBoundingBox(verts){
     const lo = [ 10000, 10000, 10000 ],
@@ -48,10 +52,18 @@ function checkSphereIntersection(P, verts){
     let bb = getBoundingBox(verts);
     let lo = bb[0];
     let hi = bb[1];
+    //just for now....
+    lo = [0.3* lo[0], 0.3*lo[1], 0.3*lo[2]];
+    hi = [0.3* hi[0], 0.3*hi[1], 0.3*hi[2]];
 
     let center = [lo[0]+hi[0]/2.0, lo[1]+hi[1]/2.0, lo[2]+hi[2]/2.0];
-    let radius = CG.norm((lo - hi))/2.0;
+    let diff = [lo[0]-hi[0], lo[1]-hi[1], lo[2]-hi[2]];
+    let radius = CG.norm(diff)/2.0;
     
+    console.log("center:");
+    console.log(center);
+    console.log("radius:");
+    console.log(radius);
     return P[0] > (center[0]-radius) && P[0] < (center[0]+radius) &&
            P[1] > (center[1]-radius) && P[1] < (center[1]+radius) &&
            P[2] > (center[2]-radius) && P[2] < (center[2]+radius);
