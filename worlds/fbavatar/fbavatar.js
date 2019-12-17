@@ -750,6 +750,38 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
         m.restore();
     }
 
+    // w: 0.82 h:1.8 margin:0.095
+    let drawFloorSensorArea = (pos, rot, color) => {
+        m.save();
+            m.translate(pos[0], pos[1], pos[2]);
+            m.scale(0.095, 0.5, 0.095);
+            m.rotateQ(rot);
+            m.rotateX(Math.PI/2);            
+            drawShape(CG.cylinder, color);
+        m.restore();
+        m.save();
+            m.translate(pos[0]+0.82+0.19, pos[1], pos[2]);
+            m.scale(0.095, 0.5, 0.095);
+            m.rotateQ(rot);
+            m.rotateX(Math.PI/2);            
+            drawShape(CG.cylinder, color);
+        m.restore();
+        m.save();
+        m.translate(pos[0]+0.82+0.19, pos[1], pos[2]+1.8);
+            m.scale(0.095, 0.5, 0.095);
+            m.rotateQ(rot);
+            m.rotateX(Math.PI/2);            
+            drawShape(CG.cylinder, color);
+        m.restore();
+        m.save();
+        m.translate(pos[0], pos[1], pos[2]+1.8);
+            m.scale(0.095, 0.5, 0.095);
+            m.rotateQ(rot);
+            m.rotateX(Math.PI/2);            
+            drawShape(CG.cylinder, color);
+        m.restore();
+    }
+
     if (input.LC) {
         if (isMiniature)
             drawHeadset(input.HS.position(), input.HS.orientation());
@@ -909,13 +941,12 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
     }
 
     for (let rb in MR.rbs) {
-        const color = rb == "left" ? [1,0,0] : [0,1,0];
+        const color = rb == "leftfoot" ? [1,0,0] : [0,1,0];
 
-        m.save();
-            m.translate(MR.rbs[rb].position[0], MR.rbs[rb].position[1], MR.rbs[rb].position[2]);
-            m.scale(0.1, 0.1, 0.1);
-            drawShape(MR.rbs[rb].vertices, color);
-        m.restore();
+        if(rb == "floorsensor"){
+            // draw four columns
+            drawFloorSensorArea(MR.rbs[rb].position, MR.rbs[rb].orientation, [101/255, 67/255, 33/255])
+        }        
     }
 }
 
