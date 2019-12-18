@@ -21,6 +21,8 @@ module.exports = {
   {
     name: 'Object Sync Server',
     script: './webxr-server/server.js',
+	node_args: '--datacollection=1',
+    //"node_args": "--datacollection=1",
     // Options reference: https://pm2.keymetrics.io/docs/usage/application-declaration/
     // args: './webxr-server/server.js',
     instances: 1,
