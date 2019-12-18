@@ -287,6 +287,7 @@ function pollAvatarData()
                 const avatar_message = {
                     type: "avatar",
                     user: MR.playerid,
+                    timestamp: time.time(),
                     state: {
                         mode: MR.UserType.vr,
                         pos: CG.matrixTransform(MR.avatarMatrixInverse, headsetPos),
