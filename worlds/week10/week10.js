@@ -462,6 +462,31 @@ function onStartFrame(t, state) {
       let lx = getX(input.LC);
       let rx = getX(input.RC);
       let sep = metersToInches(TABLE_DEPTH - 2 * RING_RADIUS);
+
+      // zhenyi
+      const response =
+      {
+          type: "calibrateDebug",
+          state: {
+              require: sep,
+              my: d,
+              controllers1:MR.controllers[0],
+              controllers2:MR.controllers[1],
+              controllers3:MR.controllers[2],
+              controllers4:MR.controllers[3],
+              leftController:MR.leftController,
+              rightController:MR.rightController,
+              LC:input.LC,
+              RC:input.RC,
+              LP:LP,
+              RP:RP,
+              D:D,
+              lx:lx,
+              rx:rx
+          },
+      };
+      MR.syncClient.send(response);
+      
       if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
          if (state.calibrationCount === undefined)
             state.calibrationCount = 0;

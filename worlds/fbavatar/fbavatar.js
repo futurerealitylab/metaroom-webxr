@@ -446,6 +446,8 @@ function onStartFrame(t, state) {
     }
 
     if (input.LC) {
+        if (!input.LC || !Object.keys(input.LC).length) input.LC = new ControllerHandler(MR.leftController);
+        if (!input.RC || !Object.keys(input.RC).length) input.RC = new ControllerHandler(MR.rightController);
         let LP = input.LC.center();
         let RP = input.RC.center();
         let D  = CG.subtract(LP, RP);
@@ -462,6 +464,30 @@ function onStartFrame(t, state) {
         let lx = getX(input.LC);
         let rx = getX(input.RC);
         let sep = metersToInches(TABLE_DEPTH - 2 * RING_RADIUS);
+        // zhenyi
+        const response =
+        {
+            type: "calibrateDebug",
+            state: {
+                require: sep,
+                my: d,
+                controllers1:MR.controllers[0],
+                controllers2:MR.controllers[1],
+                controllers3:MR.controllers[2],
+                controllers4:MR.controllers[3],
+                leftController:MR.leftController,
+                rightController:MR.rightController,
+                LC:input.LC,
+                RC:input.RC,
+                LP:LP,
+                RP:RP,
+                D:D,
+                lx:lx,
+                rx:rx
+            },
+        };
+        MR.syncClient.send(response);
+
         if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
             if (state.calibrationCount === undefined)
                 state.calibrationCount = 0;
@@ -947,6 +973,15 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             // draw four columns
             drawFloorSensorArea(MR.rbs[rb].position, MR.rbs[rb].orientation, [101/255, 67/255, 33/255])
         }        
+    }
+
+    // draw cylinders to show the calibration
+    if(state.calibrationCount > 0){
+        m.save();
+            m.translate(0,1,0);
+            m.scale(0.5,0.5,0.5);
+            drawShape(CG.cylinder, [1,1,1]);
+        m.restore();
     }
 }
 

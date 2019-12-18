@@ -98,6 +98,9 @@ MR.syncClient.eventBus.subscribe("optitrack", (json) => {
     const payload = json["data"];
     //console.log(json);
     // console.log(payload);
+    if(!MR.rbMappings[payload["id"]])
+        return;
+        
     if (!MR.rbs[MR.rbMappings[payload["id"]]]){
         let item = new RigidBody(CG.cylinder);
         item.position = [0,0,0];
