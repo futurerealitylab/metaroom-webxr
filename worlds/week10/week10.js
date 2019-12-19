@@ -459,22 +459,30 @@ function onStartFrame(t, state) {
       let lx = getX(input.LC);
       let rx = getX(input.RC);
       let sep = metersToInches(TABLE_DEPTH - 2 * RING_RADIUS);
-      if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
-         if (state.calibrationCount === undefined)
-            state.calibrationCount = 0;
-         if (++state.calibrationCount == 30) {
-            m.save();
-               m.identity();
-               m.translate(CG.mix(LP, RP, .5));
-               m.rotateY(Math.atan2(D[0], D[2]) + Math.PI/2);
-               m.translate(-2.35,1.00,-.72);
-               state.avatarMatrixInverse = m.value();
-	       m.invert();
-               state.avatarMatrixForward = m.value();
-            m.restore();
-            state.calibrationCount = 0;
-         }
+      if (d >= sep - 1 && d <= sep + 1) {
+         // the distance is correct, let's change the color for left controller
+         MR.isCalibratorHint = true;
+         if(Math.abs(lx) < 0.03){
+            MR.isCalibratorHint = false;
+            if (state.calibrationCount === undefined) state.calibrationCount = 0;
+            if (++state.calibrationCount >= 30) {
+              m.save();
+                m.identity();
+                m.translate(CG.mix(LP, RP, 0.5));
+                m.rotateY(Math.atan2(D[0], D[2]) + Math.PI / 2);
+                m.translate(-2.35, 1.0, -0.72);
+                state.avatarMatrixInverse = m.value();
+                m.invert();
+                state.avatarMatrixForward = m.value();
+              m.restore();
+              state.calibrationCount = 0;
+            }
+         }        
       }
+      else{
+         MR.isCalibratorHint = false;
+         state.calibrationCount = 0;
+      }      
    }
 
     /*-----------------------------------------------------------------
@@ -728,7 +736,10 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          m.restore();
          m.save();
                m.translate(0,0,-.01).scale(.04,.04,.13);
-               drawShape(CG.torus1, [0,0,0]);
+               if(hand == 0 && MR.isCalibratorHint)
+                  drawShape(CG.torus1, MR.calibratorColor);
+               else
+                  drawShape(CG.torus1, [0,0,0]);
          m.restore();
          m.save();
                m.translate(0,-.0135,-.008).scale(.04,.0235,.0015);
