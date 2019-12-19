@@ -12,7 +12,11 @@
                 "<node_internals>/**"
             ],
             "program": "${file}",
+<<<<<<< HEAD
             "args": ["-dc=1"],
+=======
+            "args":"-dc=1"
+>>>>>>> 75d31c7d9146add69d0237d5f7b2155702b3bdb6
         }
     ]
 }
