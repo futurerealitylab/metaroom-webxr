@@ -349,9 +349,11 @@ function onStartFrame(t, state) {
 
     if (! state.avatarMatrixForward) {
         // MR.avatarMatrixForward is because i need accesss to this in callback.js, temp hack
-        MR.avatarMatrixForward = state.avatarMatrixForward = CG.matrixIdentity();
-        MR.avatarMatrixInverse = state.avatarMatrixInverse = CG.matrixIdentity();
+        state.avatarMatrixForward = CG.matrixIdentity();
+        state.avatarMatrixInverse = CG.matrixIdentity();
     } 
+    MR.avatarMatrixForward = state.avatarMatrixForward;
+    MR.avatarMatrixInverse = state.avatarMatrixInverse;
 
     if (MR.VRIsActive()) {
         if (!input.HS) input.HS = new HeadsetHandler(MR.headset);
@@ -471,38 +473,37 @@ function onStartFrame(t, state) {
             state: {
                 require: sep,
                 my: d,
-                controllers1:MR.controllers[0],
-                controllers2:MR.controllers[1],
-                controllers3:MR.controllers[2],
-                controllers4:MR.controllers[3],
-                leftController:MR.leftController,
-                rightController:MR.rightController,
-                LC:input.LC,
-                RC:input.RC,
-                LP:LP,
-                RP:RP,
-                D:D,
                 lx:lx,
-                rx:rx
+                rx:rx,
+                cond1:d >= sep - 1,
+                cond2:d <= sep + 1,
+                cond3:Math.abs(lx)< .03,
+                cond4:Math.abs(rx)< .03,
+                calibrationCount:state.calibrationCount,
+                sMF:state.avatarMatrixForward,
+                mrMF:MR.avatarMatrixForward,
             },
         };
         MR.syncClient.send(response);
 
-        if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
+        if (d >= sep - 1 && d <= sep + 1) {
             if (state.calibrationCount === undefined)
-                state.calibrationCount = 0;
+               state.calibrationCount = 0;
             if (++state.calibrationCount == 30) {
-                m.save();
-                    m.identity();
-                    m.translate(CG.mix(LP, RP, .5));
-                    m.rotateY(Math.atan2(D[0], D[2]) + Math.PI/2);
-                    m.translate(-2.35,1.00,-.72);
-                    state.avatarMatrixForward = CG.matrixInverse(m.value());
-                    state.avatarMatrixInverse = m.value();
-                m.restore();
-                state.calibrationCount = 0;
+               m.save();
+                  m.identity();
+                  m.translate(CG.mix(LP, RP, .5));
+                  m.rotateY(Math.atan2(D[0], D[2]) + Math.PI/2);
+                  m.translate(-2.35,1.00,-.72);
+                  state.avatarMatrixInverse = m.value();
+              m.invert();
+                  state.avatarMatrixForward = m.value();
+               m.restore();
+               state.calibrationCount = 0;
             }
-        }
+         }
+         else
+            state.calibrationCount = 0;
     }
 
      /*-----------------------------------------------------------------
@@ -698,6 +699,28 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
         m.save();
             m.multiply(state.avatarMatrixForward);
+            m.translate(P[0],P[1],P[2]);
+            m.rotateQ(orientation);
+            m.scale(.1);
+            m.save();
+                m.scale(1,1.5,1);
+                drawShape(CG.sphere, [0,0,0]);
+            m.restore();
+            for (let s = -1 ; s <= 1 ; s += 2) {
+                m.save();
+                    m.translate(s*.4,.2,-.8);
+                    m.scale(.4,.4,.1);
+                    drawShape(CG.sphere, [10,10,10]);
+                m.restore();
+            }
+        m.restore();
+    }
+
+    let drawSyncHeadset = (position, orientation) => {
+        //  let P = HS.position();'
+        let P = position;
+
+        m.save();
             m.translate(P[0],P[1],P[2]);
             m.rotateQ(orientation);
             m.scale(.1);
@@ -955,7 +978,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             let hpos = headsetPos.slice();
             hpos[1] += EYE_HEIGHT;
 
-            drawHeadset(hpos, headsetRot);
+            drawSyncHeadset(hpos, headsetRot);
             let lpos = lcontroller.position.slice();
             lpos[1] += EYE_HEIGHT;
             let rpos = rcontroller.position.slice();
@@ -975,14 +998,12 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
         }        
     }
 
-    // draw cylinders to show the calibration
-    if(state.calibrationCount > 0){
-        m.save();
-            m.translate(0,1,0);
-            m.scale(0.5,0.5,0.5);
-            drawShape(CG.cylinder, [1,1,1]);
-        m.restore();
-    }
+    //
+    m.save();
+        m.translate(1,1,1);
+        m.scale(0.1,0.2,0.5);
+        drawShape(CG.cube, [1,0,0]);
+    m.restore();
 }
 
 function onEndFrame(t, state) {

@@ -467,24 +467,18 @@ function onStartFrame(t, state) {
           state: {
               require: sep,
               my: d,
-              controllers1:MR.controllers[0],
-              controllers2:MR.controllers[1],
-              controllers3:MR.controllers[2],
-              controllers4:MR.controllers[3],
-              leftController:MR.leftController,
-              rightController:MR.rightController,
-              LC:input.LC,
-              RC:input.RC,
-              LP:LP,
-              RP:RP,
-              D:D,
               lx:lx,
-              rx:rx
+              rx:rx,
+              cond1:d >= sep - 1,
+              cond2:d <= sep + 1,
+              cond3:Math.abs(lx)< .03,
+              cond4:Math.abs(rx)< .03,
+              calibrationCount:state.calibrationCount,
           },
       };
       MR.syncClient.send(response);
       
-      if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
+      if (d >= sep - 1 && d <= sep + 1) {
          if (state.calibrationCount === undefined)
             state.calibrationCount = 0;
          if (++state.calibrationCount == 30) {
@@ -500,6 +494,8 @@ function onStartFrame(t, state) {
             state.calibrationCount = 0;
          }
       }
+      else
+         state.calibrationCount = 0;
    }
 
     /*-----------------------------------------------------------------

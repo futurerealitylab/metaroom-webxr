@@ -91,11 +91,14 @@ function pollAvatarData() {
             user: MR.playerid,
             state: {
                 mode: MR.UserType.vr,
-                pos: CG.matrixTransform(MR.avatarMatrixInverse, headsetPos),
+                matrix: MR.avatarMatrixForward,
+                rawpos: headsetPos,
+                pos: CG.matrixTransform(MR.avatarMatrixForward, headsetPos),
                 rot: headsetRot,
                 controllers: {
                 left: {
-                    pos: CG.matrixTransform(MR.avatarMatrixInverse, [
+                    rawpos: controllerLeftPos,
+                    pos: CG.matrixTransform(MR.avatarMatrixForward, [
                         controllerLeftPos[0],
                         controllerLeftPos[1],
                         controllerLeftPos[2]
@@ -116,7 +119,8 @@ function pollAvatarData() {
                     analogy: controllerLeft.axes[1]
                 },
                 right: {
-                    pos: CG.matrixTransform(MR.avatarMatrixInverse, [
+                    rawpos: controllerRightPos,
+                    pos: CG.matrixTransform(MR.avatarMatrixForward, [
                         controllerRightPos[0],
                         controllerRightPos[1],
                         controllerRightPos[2]
