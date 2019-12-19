@@ -22,3 +22,4 @@ export const TABLE_HEIGHT     = inchesToMeters( 29);
 export TABLE_WIDTH            = inchesToMeters( 60);
 export TABLE_THICKNESS        = inchesToMeters( 11/8);
 export LEG_THICKNESS          = inchesToMeters(  2.5);
+

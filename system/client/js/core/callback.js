@@ -105,6 +105,7 @@ MR.EventBus.subscribe("optitrack", (json) => {
         let item = new RigidBody(CG.cylinder);
         item.position = [0,0,0];
         item.orientation = [0,0,0,1];
+        item.lcposition = [0,0,0];
         MR.rbs[MR.rbMappings[payload["id"]]] = item;
     }
     MR.rbs[MR.rbMappings[payload["id"]]].position = payload["pos"]

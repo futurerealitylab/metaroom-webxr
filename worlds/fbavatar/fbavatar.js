@@ -9,7 +9,6 @@ Note that I measured everything in inches, and then converted to units of meters
 (which is what VR requires) by multiplying by 0.0254.
 
 --------------------------------------------------------------------------------*/
-
 const inchesToMeters = inches => inches * 0.0254;
 const metersToInches = meters => meters / 0.0254;
 
@@ -91,6 +90,30 @@ function ControllerHandler(controller) {
     }
     let wasDown = false;
 }
+
+function toEulerAngles(q) {
+    let eulerAngle = [0,0,0];
+
+    // roll (x-axis rotation)
+    let sinr_cosp = 2 * (q[3] * q[0] + q[1] * q[2]);
+    let cosr_cosp = 1 - 2 * (q[0] * q[0] + q[1] * q[1]);
+    eulerAngle[0] = Math.atan2(sinr_cosp, cosr_cosp);
+
+    // pitch (y-axis rotation)
+    let sinp = 2 * (q[3] * q[1] - q[2] * q[0]);
+    if (Math.abs(sinp) >= 1)
+        eulerAngle[1] = Math.copysign(M_PI / 2, sinp); // use 90 degrees if out of range
+    else
+        eulerAngle[1] = Math.asin(sinp);
+
+    // yaw (z-axis rotation)
+    let siny_cosp = 2 * (q.w * q.z + q.x * q.y);
+    let cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
+    eulerAngle[2] = Math.atan2(siny_cosp, cosy_cosp);
+
+    return eulerAngle;
+}
+
 
 // (New Info): constants can be reloaded without worry
 // let VERTEX_SIZE = 8;
@@ -802,32 +825,32 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
     // w: 0.82 h:1.8 margin:0.095
     let drawFloorSensorArea = (pos, rot, color) => {
         m.save();
-            m.translate(pos[0], pos[1], pos[2]);
-            m.scale(0.095, 0.5, 0.095);
-            m.rotateQ(rot);
-            m.rotateX(Math.PI/2);            
-            drawShape(CG.cylinder, color);
-        m.restore();
-        m.save();
-            m.translate(pos[0]+0.82+0.19, pos[1], pos[2]);
-            m.scale(0.095, 0.5, 0.095);
-            m.rotateQ(rot);
-            m.rotateX(Math.PI/2);            
-            drawShape(CG.cylinder, color);
-        m.restore();
-        m.save();
-        m.translate(pos[0]+0.82+0.19, pos[1], pos[2]+1.8);
-            m.scale(0.095, 0.5, 0.095);
-            m.rotateQ(rot);
-            m.rotateX(Math.PI/2);            
-            drawShape(CG.cylinder, color);
-        m.restore();
-        m.save();
-        m.translate(pos[0], pos[1], pos[2]+1.8);
-            m.scale(0.095, 0.5, 0.095);
-            m.rotateQ(rot);
-            m.rotateX(Math.PI/2);            
-            drawShape(CG.cylinder, color);
+        m.multiply(state.avatarMatrixForward);
+        m.translate(pos[0], 0.5, pos[2]);
+        m.rotateY(toEulerAngles(rot)[1]);
+            m.save();
+                m.scale(0.095, 1, 0.095);
+                m.rotateX(Math.PI/2);            
+                drawShape(CG.cylinder, color);
+            m.restore();
+            m.save();
+                m.translate(0.82+0.19, 0, 0);
+                m.scale(0.095, 1, 0.095);
+                m.rotateX(Math.PI/2);            
+                drawShape(CG.cylinder, color);
+            m.restore();
+            m.save();
+            m.translate(0.82+0.19, 0, 1.8);
+                m.scale(0.095, 1, 0.095);
+                m.rotateX(Math.PI/2);            
+                drawShape(CG.cylinder, color);
+            m.restore();
+            m.save();
+            m.translate(0, 0, 1.8);
+                m.scale(0.095, 1, 0.095);                
+                m.rotateX(Math.PI/2);    
+                drawShape(CG.cylinder, color);
+            m.restore();
         m.restore();
     }
 
@@ -990,20 +1013,17 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
     }
 
     for (let rb in MR.rbs) {
-        const color = rb == "leftfoot" ? [1,0,0] : [0,1,0];
+        // const color = rb == "leftfoot" ? [1,0,0] : [0,1,0];
 
         if(rb == "floorsensor"){
             // draw four columns
-            drawFloorSensorArea(MR.rbs[rb].position, MR.rbs[rb].orientation, [101/255, 67/255, 33/255])
+            // we draw it based on the controller command, not the rigidbody since we don't know how to sync them right now.
+            if (input.LC && input.LC.isDown()){
+                MR.rbs[rb].lcposition = input.LC.position();
+            }            
+            drawFloorSensorArea(MR.rbs[rb].lcposition, MR.rbs[rb].orientation, [101/255, 67/255, 33/255])
         }        
     }
-
-    //
-    m.save();
-        m.translate(1,1,1);
-        m.scale(0.1,0.2,0.5);
-        drawShape(CG.cube, [1,0,0]);
-    m.restore();
 }
 
 function onEndFrame(t, state) {
