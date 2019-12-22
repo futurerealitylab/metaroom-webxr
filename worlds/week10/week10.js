@@ -1,5 +1,7 @@
 "use strict"
 
+import { MIDIInterface } from "./../../lib/midi_interface.js";
+
 /*--------------------------------------------------------------------------------
 
 The proportions below just happen to match the dimensions of my physical space
@@ -287,6 +289,8 @@ async function setup(state) {
    this.audioContext1 = new SpatialAudioContext(['assets/audio/blop.wav']);
    this.audioContext2 = new SpatialAudioContext(['assets/audio/peacock.wav']);
 
+   await MIDIInterface.init({onStateChange : function(s) { console.log(s) }});
+
    /************************************************************************
 
    Here we show an example of how to create a synchronized grabbable object.
@@ -324,7 +328,7 @@ function sendSpawnMessage(object) {
 }
 
 function onStartFrame(t, state) {
-
+   
    /*-----------------------------------------------------------------
 
    Whenever the user enters VR Mode, create the left and right
@@ -337,7 +341,7 @@ function onStartFrame(t, state) {
    particular physical room.
 
    -----------------------------------------------------------------*/
-
+   
    const input  = state.input;
    const editor = state.editor;
    
@@ -537,11 +541,16 @@ function Obj(shape) {
 }
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
+   console.log()
    m.identity();
-
-   m.rotateX(state.tiltAngle);
-   m.rotateY(state.turnAngle);
-   m.translate(state.position);
+   if (!MR.VRIsActive()) {
+      m.save();
+         m.rotateX(state.tiltAngle);
+         m.rotateY(state.turnAngle);
+         m.translate(state.position);
+         viewMat = m.value();
+      m.restore();
+   }
 
    // FIRST DRAW THE SCENE FULL SIZE.
 
@@ -561,8 +570,8 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
 function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
-   gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
-   gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
+   gl.uniformMatrix4fv(state.uViewLoc, false, viewMat);
+   gl.uniformMatrix4fv(state.uProjLoc, false, projMat);
 
    let prev_shape = null;
 
