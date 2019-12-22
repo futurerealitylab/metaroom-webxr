@@ -538,10 +538,14 @@ function Obj(shape) {
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
    m.identity();
-
-   m.rotateX(state.tiltAngle);
-   m.rotateY(state.turnAngle);
-   m.translate(state.position);
+   if (!MR.VRIsActive()) {
+      m.save();
+         m.rotateX(state.tiltAngle);
+         m.rotateY(state.turnAngle);
+         m.translate(state.position);
+         viewMat = m.value();
+      m.restore();
+   }
 
    // FIRST DRAW THE SCENE FULL SIZE.
 
@@ -561,8 +565,8 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
 function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
-   gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
-   gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
+   gl.uniformMatrix4fv(state.uViewLoc, false, viewMat);
+   gl.uniformMatrix4fv(state.uProjLoc, false, projMat);
 
    let prev_shape = null;
 
