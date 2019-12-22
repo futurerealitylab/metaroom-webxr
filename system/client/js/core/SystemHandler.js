@@ -67,25 +67,25 @@ function pollAvatarData() {
 
         if (MR.controllers[0] != null && MR.controllers[1] != null) {
             //Controllers
-            const controllerRight = MR.controllers[0];
+            const controllerRight = MR.rightController;
             const controllerRightPos = controllerRight.pose.position;
             const controllerRightRot = controllerRight.pose.orientation;
             const controllerRightButtons = controllerRight.buttons;
 
-            const controllerLeft = MR.controllers[1];
+            const controllerLeft = MR.leftController;
             const controllerLeftPos = controllerLeft.pose.position;
             const controllerLeftRot = controllerLeft.pose.orientation;
             const controllerLeftButtons = controllerLeft.buttons;
 
-            //buttons have a 'pressed' variable that is a boolean.
-            /*A quick mapping of the buttons:
+            // buttons have a 'pressed' variable that is a boolean.
+            /* A quick mapping of the buttons:
                             0: analog stick
                             1: trigger
                             2: side trigger
                             3: x button
                             4: y button
                             5: home button
-                    */
+            */
             const avatar_message = {
             type: "avatar",
             user: MR.playerid,
