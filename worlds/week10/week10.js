@@ -30,6 +30,107 @@ let enableModeler = true;
 /*Example Grabble Object*/
 let grabbableCube = new Obj(CG.sphere);
 
+/*Just here for testing skeleton drawing, can remove later*/
+let graph_data = {
+   names : [
+      'root', //0
+      'waist', // 1
+      'sternum', // 2
+      'chest', // 3
+      'neck', // 4
+      'head', // 5
+      'Lclavicle', //6
+      'Lshoulder', // 7
+      'Lupper_arm', // 8
+      'Lelbow', // 9 
+      'Llower_arm', //10
+      'Lwrist', //11
+      'Lhand', //12
+      'Lthumb', //13
+      'Lhip', //14
+      'Lupper_leg', //15
+      'Lknee', //16
+      'Llower_leg', //17
+      'Lankle', //18
+      'Lfoot', //19
+      'Ltoes', //20
+      'Rclavicle', //21
+      'Rshoulder', // 22
+      'Rupper_arm', //23
+      'Relbow', //24
+      'Rlower_arm', //25
+      'Rwrist', //26
+      'Rhand', //27
+      'Rthumb', //28
+      'Rhip', //29
+      'Rupper_leg', //30
+      'Rknee', //31
+      'Rlower_leg', //32
+      'Rankle', // 33
+      'Rfoot', // 34
+      'Rtoes', //35
+   ],
+   nodes : [
+      [-0.019,0.000,1.155],
+      [-0.043,0.000,1.304],
+      [-0.065,0.000,1.425],
+      [-0.047,0.001,1.627],
+      [-0.039,0.001,1.703],
+      [-0.024,0.000,1.853],
+      [-0.012,-0.037,1.665],
+      [-0.019,-0.165,1.716],
+      [-0.020,-0.194,1.605],
+      [-0.021,-0.243,1.454],
+      [-0.034,-0.306,1.325],
+      [-0.049,-0.378,1.179],
+      [-0.058,-0.420,1.094],
+      [-0.081,-0.403,1.159],
+      [-0.020,-0.120,1.149],
+      [0.020,-0.095,0.913],
+      [0.025,-0.090,0.634],
+      [0.047,-0.090,0.446],
+      [0.021,-0.090,0.077],
+      [-0.011,-0.090,0.032],
+      [-0.103,-0.090,0.013],
+      [-0.012,0.039,1.666],
+      [-0.019,0.167,1.717],
+      [0.015,0.196,1.611],
+      [0.061,0.244,1.468],
+      [0.093,0.307,1.342],
+      [0.128,0.378,1.199],
+      [0.149,0.420,1.116],
+      [0.106,0.406,1.171],
+      [-0.020,0.120,1.149],
+      [0.020,0.095,0.913],
+      [0.025,0.090,0.634],
+      [0.047,0.090,0.446],
+      [0.021,0.090,0.077],
+      [-0.011,0.090,0.032],
+      [-0.103,0.090,0.013],
+   ],
+   links : [
+      [ 0, 1],
+      [ 0,14],
+      [ 0,29],
+      [ 1, 2],
+      [ 2, 3],
+      [ 3, 4],
+      [ 3, 6],
+      [ 3,21],
+      [ 4, 5],
+      [ 6, 7],
+      [ 7, 9],
+      [ 9,11],
+      [14,16],
+      [16,18],
+      [21,22],
+      [22,24],
+      [24,26],
+      [29,31],
+      [31,33],
+   ]
+};
+
 let lathe = CG.createMeshVertices(10, 16, CG.uvToLathe,
              [ CG.bezierToCubic([-1.0,-1.0,-0.7,-0.3,-0.1 , 0.1, 0.3 , 0.7 , 1.0 ,1.0]),
                CG.bezierToCubic([ 0.0, 0.5, 0.8, 1.1, 1.25, 1.4, 1.45, 1.55, 1.7 ,0.0]) ]);
@@ -691,19 +792,17 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       drawShape(obj.shape, n==0 ? [1,.5,.5] : [1,1,1]);
    }
 
-   //Psuedo code for drawing body.....
-   
-   let drawFBAvatar = (joints) => {
-      for(let i = 0; i < joints.length; i++){
-         m.save();
-            m.multiply(state.avatarMatrixForward);
-            m.translate(joints[i].position);
-            m.rotateQ(joints[i].orientation);
-            m.scale(.3,.3,.3);
-            drawShape(joints[i].shape, [1,.5,.5]);
+   //If you don't like the name feel free to change it, haha.
+   let drawFBAvatar = (data) => {
+      for(let i = 0; i < data.nodes.length; i++){
+         m.save(); 
+            //We need to swap axes.
+            let current = [data.nodes[i][0], data.nodes[i][2], data.nodes[i][1]];
+            m.translate(current);
+            m.scale(.03,.03,.03);
+            drawShape(CG.sphere, [1,.5,.5]);
          m.restore();
       }
-
       //Here I need to render the actual bones...
    }
 
@@ -773,6 +872,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       m.restore();
    }
 
+   drawFBAvatar(graph_data);
 
    /*-----------------------------------------------------------------
 
