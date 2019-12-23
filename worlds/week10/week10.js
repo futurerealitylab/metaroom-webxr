@@ -815,10 +815,17 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             let sum = CG.add(first, second);
             let diff = CG.subtract(second,first);
             let dist = CG.norm(diff);
-            //let xzdistance = Math.sqrt((distance[0] * distance[0]) + (distance[1]*distance[1]));
-            //let angles = [ (-1 * Math.atan2(distance[1], xzdistance)) * (180/Math.PI),(-1 * Math.atan2(-1 * distance[0], distance[2])) * (180/Math.PI) ,0];
-            //m.rotateX(angles[0]);
-            //m.rotateY(angles[1]);
+
+            //Trying to do look at
+            /*
+            let forward = CG.normalize(second, first);
+            let dot  = CG.dot([0,0,1], forward);
+            let rotAngle = Math.acos(dot);
+            let rotAxis = CG.normalize(CG.cross([0,0,1], forward));
+            let halfAngle = rotAngle * 0.5;
+            let s = Math.sin(halfAngle);
+            let quat = [rotAxis[0] * s, rotAxis[1] * s, rotAxis[2] * s, Math.cos(halfAngle)];
+            m.rotateQ(quat);*/
             m.translate(sum[0]/2, sum[1]/2, sum[2]/2);
             m.scale(.03,dist/2,.03);
             drawShape(CG.cylinder, [0,.5,.5]);
