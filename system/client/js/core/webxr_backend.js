@@ -102,10 +102,10 @@ window.XRBackend = (function() {
             this.options = options;
             this.main = options.main;
             this.glDoResourceTracking = options.glDoResourceTracking;
-            this.useCustomState = options.useCustomState;
-            this._projectionMatrix = mat4.create();
-            this._viewMatrix = mat4.create();
-            this._animationHandle = 0;
+            this.useCustomState       = options.useCustomState;
+            this._projectionMatrix    = mat4.create();
+            this._viewMatrix          = mat4.create();
+            this._animationHandle     = 0;
 
             this.buttonsCache = [];
 
@@ -113,12 +113,15 @@ window.XRBackend = (function() {
 
             this.VRIsActive = () => {
                 return this._VRIsActive;
-            }
+            };
+
             MR.VRIsActive = this.VRIsActive;
+            MR.XRIsActive = this.XRIsActive;
+
             // Bound functions
             this.onVRRequestPresent = this._onVRRequestPresent.bind(this);
-            this.onVRExitPresent = this._onVRExitPresent.bind(this);
-            this.onVRPresentChange = this._onVRPresentChange.bind(this);
+            this.onVRExitPresent    = this._onVRExitPresent.bind(this);
+            this.onVRPresentChange  = this._onVRPresentChange.bind(this);
 
             // Uninitialized member variables (see _init()).
             this._parent = null;
@@ -130,12 +133,13 @@ window.XRBackend = (function() {
             this._version = null;
             this._button = null;
             this._frameData = null;
+            
             this.frameData = () => {
                 return this._frameData;
             }
+            
             MR.frameData = this.frameData;
             MR.controllers = navigator.getGamepads();
-
 
             this.customState = null;
             this.persistentStateMap = null;
@@ -302,10 +306,9 @@ window.XRBackend = (function() {
             this.timeStart = 0;
             window.timeStart = this.timeStart;
 
-
-
-            this.menu = new Menu();
-            if (this.options.enableMultipleWorlds) {
+            // TODO(TR): separate into UI code in other files
+            //
+                this.menu = new Menu();
 
                 this.worldsScroll = createVerticalMenuElement();
 
@@ -371,13 +374,13 @@ window.XRBackend = (function() {
                     'ge_menu', 
                     'Prev',
                     () => { MR.wrangler.doWorldTransition({direction : -1, broadcast : true}); }
-                    );
+                );
                 this.menu.menus.transition = new MenuItem(
                     this.menu.el, 
                     'ge_menu', 
                     'Next',
                     () => { return MR.wrangler.doWorldTransition({direction : +1, broadcast : true}); }
-                    );
+                );
 
                 this.playerViewScroll = createVerticalMenuElement();
 
@@ -450,7 +453,7 @@ window.XRBackend = (function() {
                 );
                 this.menu.menus.playerViewSelection.el.appendChild(this.playerViewScroll);
 
-                }
+                
 
                 this.menu.menus.worldsSelection = new MenuItem(
                     this.menu.el,

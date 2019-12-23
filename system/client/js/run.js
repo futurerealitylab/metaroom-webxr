@@ -104,11 +104,15 @@ function initFailed(msg) {
     );   
 }
 
-db.log("HA");
-
 const VERSION = document.getElementById("version").getAttribute("value");
 MR.VERSION = parseInt(VERSION);
-console.log("running version:", VERSION);
+console.log(
+    "%crunning version: %d, backend: %s",
+    'font-size: 15px color: #9f00ff',
+    MR.VERSION, 
+    Metaroom.TYPE_TO_NAME[MR.type]
+);
+
 switch (MR.VERSION) {
 case 2: {
     async function run() {
