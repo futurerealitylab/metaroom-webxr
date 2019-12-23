@@ -275,3 +275,6 @@ window.onbeforeunload = function() {
 
 
 MR.viewpointController = new ViewpointController();
+
+MR.calibratorColor = [0.8,0.2,0];
+MR.isCalibratorHint = false;
