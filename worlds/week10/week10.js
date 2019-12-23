@@ -804,6 +804,26 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          m.restore();
       }
       //Here I need to render the actual bones...
+      for(let i = 0; i < data.links.length; i++){
+         m.save(); 
+            //We need to swap axes.
+            //let current = [data.nodes[i][0], data.nodes[i][2], data.nodes[i][1]];
+            //m.translate(current);
+            //m.scale(.03,.03,.03);
+            let first = [data.nodes[data.links[i][0]][0], data.nodes[data.links[i][0]][2], data.nodes[data.links[i][0]][1]];
+            let second = [data.nodes[data.links[i][1]][0], data.nodes[data.links[i][1]][2], data.nodes[data.links[i][1]][1]]
+            let sum = CG.add(first, second);
+            let diff = CG.subtract(second,first);
+            let dist = CG.norm(diff);
+            //let xzdistance = Math.sqrt((distance[0] * distance[0]) + (distance[1]*distance[1]));
+            //let angles = [ (-1 * Math.atan2(distance[1], xzdistance)) * (180/Math.PI),(-1 * Math.atan2(-1 * distance[0], distance[2])) * (180/Math.PI) ,0];
+            //m.rotateX(angles[0]);
+            //m.rotateY(angles[1]);
+            m.translate(sum[0]/2, sum[1]/2, sum[2]/2);
+            m.scale(.03,dist/2,.03);
+            drawShape(CG.cylinder, [0,.5,.5]);
+         m.restore();
+      }
    }
 
    /*-----------------------------------------------------------------
