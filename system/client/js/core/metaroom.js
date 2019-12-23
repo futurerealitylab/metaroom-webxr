@@ -72,18 +72,14 @@ Metaroom.create = function(type = Metaroom.BACKEND_TYPE.WEBXR) {
 }
 
 // Argument defaults
-let type = Metaroom.BACKEND_TYPE.WEBVR;
+let type = Metaroom.BACKEND_TYPE.WEBXR;
 
 // Parse URL arguments
 var urlParams = new URLSearchParams(window.location.search);
 
-// (1) useShim - when present and set to '1', applies the WebXR version
-//     shim.  This will become unnecessary once the WebXR becomes stable. 
-// if (urlParams.has('useShim') && urlParams.get('useShim') == '1') {
-//     const shim = new WebXRVersionShim();
-// }
-// (2) mrBackend - specify the Metaroom backend type.  Valid options are
-//     '0' for WebXR and '1' for WebVR (default).
+
+// mrBackend - specify the Metaroom backend type.  Valid options are
+// '0' for WebXR (default) and '1' for WebVR.
 if (urlParams.has('mrBackend')) {
     type = parseInt(urlParams.get('mrBackend'))
 }

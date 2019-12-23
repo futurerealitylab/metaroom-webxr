@@ -95,6 +95,9 @@ window.XRBackend = (function() {
             options.enableEntryByButton    = (options.enableEntryByButton !== undefined)    ? options.enableEntryByButton    : true;
             options.enableMultipleWorlds   = (options.enableMultipleWorlds !== undefined)   ? options.enableMultipleWorlds   : true;
             options.enableBellsAndWhistles = (options.enableBellsAndWhistles !== undefined) ? options.enableBellsAndWhistles : true;
+            
+            options.gpuAPI = options.gpuAPI || "default";
+
             // Member variables.
             this.options = options;
             this.main = options.main;
@@ -175,11 +178,14 @@ window.XRBackend = (function() {
                 await conf.onReload(this.customState);
             }
 
-            conf.onStartFrame = options.onStartFrame || conf.onStartFrame;
+            conf.onStartFrame = options.onStartFrame || conf.onStartFram
+            conf.onStartFrameXR = options.onStartFrameXR || conf.onStartFrame;
             conf.onEndFrame = options.onEndFrame || conf.onEndFrame;
+            conf.onEndFrameXR = options.onEndFrameXR || conf.onEndFrame;
             conf.onDraw = options.onDraw || conf.onDraw;
             conf.onDrawXR = options.onDrawXR || conf.onDraw;
             conf.onExit = options.onExit || conf.onExit;
+            conf.onExitXR = options.onExitXR || conf.onExit;
             conf.onAnimationFrame = options.onAnimationFrame || conf.onAnimationFrame;
             conf.onAnimationFrameWindow = options.onAnimationFrameWindow || conf.onAnimationFrameWindow;
         }
@@ -194,15 +200,42 @@ window.XRBackend = (function() {
 
             options = options || {};
 
-            options.onStartFrame = options.onStartFrame || (function(t, state) {});
-            options.onEndFrame = options.onEndFrame || (function(t, state) {});
-            options.onDraw = options.onDraw || (function(t, p, v, state, eyeIdx) {}); // projMat, viewMat
-            options.onDrawXR = options.onDrawXR || options.onDraw;
-            options.onAnimationFrame = options.onAnimationFrame || this._onAnimationFrame.bind(this);
-            options.onAnimationFrameWindow = options.onAnimationFrameWindow || this._onAnimationFrameWindow.bind(this);
-            options.onSelectStart = options.onSelectStart || function(t, state) {};
-            options.onReload = options.onReload || function(state) {};
-            options.onExit = options.onExit || function(state) {};
+            options.onStartFrame = options.onStartFrame || 
+                                    (function(t, state) {});
+            options.onStartFrameXR = options.onStartFrameXR || 
+                                    options.onStartFrame || 
+                                    (function(t, state) {});
+            
+            options.onEndFrame = options.onEndFrame || 
+                                    (function(t, state) {});
+            options.onEndFrameXR = options.onEndFrameXR || 
+                                    options.onEndFrame || 
+                                    (function(t, state) {});
+            
+            options.onDraw = options.onDraw || 
+                                (function(t, p, v, state, eyeIdx) {});
+            options.onDrawXR = options.onDrawXR || 
+                                options.onDraw ||
+                                (function(t, p, v, state, eyeIdx) {});
+            
+            options.onAnimationFrame = options.onAnimationFrame || 
+                                    this._onAnimationFrame.bind(this);
+            options.onAnimationFrameWindow = options.onAnimationFrameWindow || 
+                                    this._onAnimationFrameWindow.bind(this);
+            
+            options.onSelectStart = options.onSelectStart || 
+                                    function(t, state) {};
+            
+            options.onReload = options.onReload || 
+                                function(state) {};
+            
+            options.onExit = options.onExit || 
+                            function(state) {};
+
+            options.onExitXR = options.onExitXR || 
+                                options.onExit || 
+                                function(state) {};
+
 
             options.onSelect = options.onSelect || (function(t, state) {});
             options.onSelectEnd = options.selectEnd || (function(t, state) {});
@@ -224,28 +257,37 @@ window.XRBackend = (function() {
             }
 
             if (options.setup) {
-                // try {
-                    return options.setup(this.customState, this, this._session).then(() => {
-                        this.start();
-                    })
-                // } catch (e) {
-                //   console.error(e);
-                //   throw new Error("setup unsuccessful");
-                // }
+                return options.setup(this.customState, this, this._session).then(() => {
+                    this.start();
+                });
             }
             return this.start();
         }
-
-        //
-        // Private member functions (if we can claim such a thing...)
-        //
 
         async _init() {
             this._initButton();
             this._initCanvasOnParentElement();
             this._initCustomState();
 
-            const ctx = GFX.initGLContext(this._canvas, this.options.contextNames, this.options.contextOptions);
+            let ctx;
+
+            if (this.options.gpuAPI == "default") {
+                ctx = GFX.initGLContext(
+                    this._canvas, 
+                    this.options.contextNames, 
+                    this.options.contextOptions
+                );
+            } else if (this.options.gpuAPI == 'webgpu') {
+                console.error("webgpu not supported yet");
+                return;
+            } else {
+                ctx = GFX.initGLContext(
+                    this._canvas, 
+                    [this.options.gpuAPI], 
+                    this.options.contextOptions
+                );                
+            }
+
             console.assert(ctx.isValid);
             this._gl      = ctx.gl;
             this._version = ctx.version;
@@ -626,13 +668,16 @@ window.XRBackend = (function() {
                 const options = this.config;
 
                 options.onStartFrame = (function(t, state) {});
+                options.onStartFrameXR = (function(t, state) {});
                 options.onEndFrame = (function(t, state) {});
+                options.onEndFrameXR = (function(t, state) {});
                 options.onDraw = (function(t, p, v, state, eyeIdx) {});
                 options.onDrawXR = (function(t, p, v, state, eyeIdx) {});
                 options.onAnimationFrame = this._onAnimationFrame.bind(this);
                 options.onAnimationFrameWindow = this._onAnimationFrameWindow.bind(this);
-                options.onReload = function(state) {};
-                options.onExit = function(state) {};
+                options.onReload   = function(state) {};
+                options.onExit     = function(state) {};
+                options.onExitXR   = function(state) {};
             //options.onWindowFrame = this._onWindowFrame.bind(this);
 
             // selection
@@ -757,7 +802,7 @@ window.XRBackend = (function() {
             const vrDisplay = this._vrDisplay;
             if (!vrDisplay) {
                 this.config.onAnimationFrameWindow(t);
-                if (this.options.enableMultipleWorlds && doTransition) {
+                if (doTransition) {
                    this.doWorldTransition({direction : 1, broadcast : true});
                 }
                 return;
@@ -777,7 +822,7 @@ window.XRBackend = (function() {
             this._animationHandle = vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
 
             Input.updateControllerState();
-            this.config.onStartFrame(t, this.customState);
+            this.config.onStartFrameXR(t, this.customState);
 
             // left eye
             gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
@@ -789,8 +834,8 @@ window.XRBackend = (function() {
             GFX.viewportXOffset = gl.canvas.width * 0.5;
             this.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, this.customState);
 
-            this.config.onEndFrame(t, this.customState);
-            if (this.options.enableMultipleWorlds && doTransition) {
+            this.config.onEndFrameXR(t, this.customState);
+            if (doTransition) {
                this.doWorldTransition({direction : 1, broadcast : true});
             }
             vrDisplay.submitFrame();

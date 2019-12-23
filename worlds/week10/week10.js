@@ -1002,22 +1002,25 @@ function onEndFrame(t, state) {
 export default function main() {
    const def = {
       name: 'YOUR_NAME_HERE week10',
-      setup: setup,
-      onStartFrame: onStartFrame,
-      onEndFrame: onEndFrame,
-      onDraw: onDraw,
+      setup        : setup,
+      onStartFrame : onStartFrame,
+      onDraw       : onDraw,
+      onEndFrame   : onEndFrame,
 
       // (New Info): New callbacks:
 
-      // VR-specific drawing callback
+      // VR-specific drawing callbacks
       // e.g. for when the UI must be different 
       //      in VR than on desktop
       //      currently setting to the same callback as on desktop
-      onDrawXR: onDraw,
+      onStartFrameXR : onStartFrame,
+      onDrawXR       : onDraw,
+      onEndFrameXR   : onEndFrame,
       // call upon reload
-      onReload: onReload,
+      onReload       : onReload,
       // call upon world exit
-      onExit: onExit
+      onExit         : onExit,
+      onExitXR       : onExit
    };
 
    return def;

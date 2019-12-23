@@ -66,11 +66,17 @@ window.hotReloadFile = function(localPath) {
 
         MR.wrangler.reloadGeneration += 1;
 
-        import(window.location.href + filename + "?generation=" + MR.wrangler.reloadGeneration).then(
+        function rawURL(url) {
+            return url.split(/[?#]/)[0];
+        }
+
+        const importName = rawURL(window.location.href) + 
+                            filename + "?generation=" + 
+                            MR.wrangler.reloadGeneration;
+        import(importName).then(
             (world) => {
-      
-                    const conf = world.default();
-                    MR.wrangler.onReload(conf);
+                const conf = world.default();
+                MR.wrangler.onReload(conf);
             }).catch(err => { console.error(err); });
 
     }, saveTo);
@@ -79,13 +85,21 @@ window.hotReloadFile = function(localPath) {
 }
 
 
-// db.initLoggerSystem({
-//   logger : new db.LoggerDefault()
-// });
+db.initLoggerSystem({
+    logger : new db.LoggerDefault()
+});
 
 function notImplemented(version) {
     console.warn(`Version ${version}: Not yet implemented`);
-    document.body.appendChild(document.createTextNode(`Version ${version}: Not yet implemented`));
+    document.body.appendChild(
+        document.createTextNode(`Version ${version}: Not yet implemented`)
+    );
+}
+
+function initFailed(msg) {
+    document.body.appendChild(
+        document.createTextNode(msg)
+    );   
 }
 
 const VERSION = document.getElementById("version").getAttribute("value");
@@ -93,7 +107,232 @@ MR.VERSION = parseInt(VERSION);
 console.log("running version:", VERSION);
 switch (MR.VERSION) {
 case 2: {
-    notImplemented(MR.VERSION);
+    async function run() {
+        let deferredActions = [];
+
+        const RESOLUTION = document.getElementById("resolution").getAttribute("value").split(',');
+        
+        // load worlds first
+        async function loadWorlds() {
+            const sourceFiles = document.getElementsByClassName("worlds");
+
+            let worldIt = sourceFiles[0].firstElementChild;
+            while (worldIt !== null) {
+                const src = worldIt.src;
+                console.log("loading world: %s", src);
+                const world     = await import(src);
+                const localPath = getCurrentPath(src)
+
+                MR.registerWorld({
+                    world     : world, 
+                    localPath : localPath
+                });
+
+                worldIt = worldIt.nextElementSibling;
+            }
+        }
+
+        try {
+            await loadWorlds();
+        } catch (err) {
+            console.error(err);
+            initFailed(err.message);
+            return;
+        }
+
+        MR.init({
+            outputSurfaceName      : 'output-element',
+            outputWidth            : parseInt(RESOLUTION[0]),
+            outputHeight           : parseInt(RESOLUTION[1]),
+            glUseGlobalContext     : true,
+            // frees gpu resources upon world switch
+            glDoResourceTracking      : true,
+            glEnableEditorHook        : true,
+            enableEntryByButton       : true,
+            enableBellsAndWhistles    : true,
+            synchronizeTimeWithServer : false,
+            gpuAPI : "webgl2",
+
+            // main() is the system's entry point
+            main : async () => {
+
+                MREditor.enable();
+
+                MREditor.init({
+                    defaultShaderCompilationFunction : MREditor.onNeedsCompilationDefault,
+                });
+
+                MREditor.detectFeatures();
+
+                wrangler.isTransitioning = false;
+
+                try {
+                    const worldInfo = MR.worlds[MR.worldIdx];
+                    setPath(worldInfo.localPath);
+                    wrangler.isTransitioning = true;
+                    MR.wrangler.beginSetup(worldInfo.world.default()).catch(err => {
+                        console.error(err);
+                        MR.wrangler.doWorldTransition({direction : 1, broadcast : true});
+                    }).then(() => { wrangler.isTransitioning = false;               
+                        for (let d = 0; d < deferredActions.length; d += 1) {
+                            deferredActions[d]();
+                        }
+                        deferredActions = [];
+
+                        CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
+
+                        window.DISABLEMENUFORWORLDSEXCEPT(MR.worldIdx);
+                    });
+
+                } catch (err) {
+                    console.error(err);
+                }
+
+                MR.initWorldsScroll();
+                MR.initPlayerViewSelectionScroll();
+
+                MR.syncClient.connect(window.IP, window.PORT_SYNC);
+
+                window.COUNT = 0;
+
+                
+                wrangler.defineWorldTransitionProcedure(function(args) {
+                    //console.trace();
+                    let ok = false;
+                    COUNT += 1;
+                    //console.log(COUNT, args);
+                    // try to transition to the next world
+                    while (!ok) {
+                        if (args.direction) {
+                            //console.log(COUNT, "has direction");
+                            MR.worldIdx = (MR.worldIdx + args.direction) % MR.worlds.length;
+                            if (MR.worldIdx < 0) {
+                                MR.worldIdx = MR.worlds.length - 1;
+                            }
+                        } else if (args.key !== null) {
+                            //console.log(COUNT, "key exists", args.key, "worldidx", MR.worldIdx);
+                            if (args.key == MR.worldIdx) {
+                                ok = true;
+                                continue;
+                            }
+                            MR.worldIdx = parseInt(args.key);
+                            //console.log(COUNT, "WORLDIDX",  MR.worldIdx);
+                        }
+
+
+                        wrangler.isTransitioning = true;
+
+                        //console.log(COUNT, "transitioning to world: [" + MR.worldIdx + "]");
+                        //console.log(COUNT, "broadcast", args.broadcast, "direction: ", args.direction, "key", args.key);
+
+                        CanvasUtil.setOnResizeEventHandler(null);
+                        CanvasUtil.resize(MR.getCanvas(), 
+                            MR.wrangler.options.outputWidth, 
+                            MR.wrangler.options.outputHeight
+                        );
+
+                        MR.wrangler._gl.useProgram(null);
+                        MR.wrangler._reset();
+                        MR.wrangler._glFreeResources();
+                        ScreenCursor.clearTargetEvents();
+                        Input.deregisterKeyHandlers();
+
+                        try {
+                            // call the main function of the selected world
+                            MR.server.subsLocal = new ServerPublishSubscribe();
+                            MREditor.resetState();
+                            
+                            let hadError = false;
+
+                            const worldInfo = MR.worlds[MR.worldIdx];
+                            setPath(worldInfo.localPath);
+
+                            MR.wrangler.beginSetup(worldInfo.world.default()).catch((e) => {
+                                console.error(e);
+                                setTimeout(function(){ 
+                                    console.log("Trying another world");
+                                    wrangler.doWorldTransition({direction : 1, broadcast : true});
+                                }, 500);  
+                            }).then(() => {
+                                wrangler.isTransitioning = false;
+
+                                //console.log("now we should do deferred actions");
+                                //console.log("ready");
+
+                                for (let d = 0; d < deferredActions.length; d += 1) {
+                                    deferredActions[d]();
+                                }
+                                deferredActions = [];
+
+                                CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
+
+                                window.DISABLEMENUFORWORLDSEXCEPT(MR.worldIdx);
+
+                            });
+
+                            ok = true;
+
+                        } catch (e) {
+                            console.error(e);
+
+
+                            setTimeout(function(){ 
+                                console.log(COUNT, "Trying another world");
+                            }, 500);
+                        }
+                    }
+
+                    if (args.broadcast && MR.server.sock.readyState == WebSocket.OPEN) {
+                        //console.log(COUNT, "broadcasting");
+                        try {
+                            MR.server.sock.send(JSON.stringify({
+                                "MR_Message" : "Load_World", "key" : MR.worldIdx, "content" : "TODO", "count" : COUNT})
+                            );
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    }
+                });
+        
+                MR.server.subs.subscribe("Load_World", (_, args) => {
+                    if (args.key === MR.worldIdx) {
+                        return;
+                    }
+
+                    //console.log("loading world", args);
+                    if (wrangler.isTransitioning) {
+                        //console.log("is deferring transition");
+                        deferredActions = [];
+                        deferredActions.push(() => { 
+                            MR.wrangler.doWorldTransition({direction : null, key : args.key, broadcast : false});
+                        });
+                        return;
+                    }
+                    //console.log("not deferring transition");
+                    MR.wrangler.doWorldTransition({direction : null, key : args.key, broadcast : false});
+                });
+
+            },
+            useExternalWindow : (
+                new URLSearchParams(window.location.search)
+            ).has('externWin')
+        });
+
+    }
+    
+    // TODO initialization order revision
+    MR.initialWorldIdx = 0;
+    MR.server.subs.subscribe("Init", (_, args) => {
+        MR.worldIdx = args.key || 0;
+        MR.initialWorldIdx = args.key || 0;
+        MR.server.uid = args.uid;
+    });
+
+    MR.initServer();
+
+    setTimeout(() => {
+        run();
+    }, 100);
     break;
 }
 case 1: {
