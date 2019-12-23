@@ -289,7 +289,24 @@ async function setup(state) {
    this.audioContext1 = new SpatialAudioContext(['assets/audio/blop.wav']);
    this.audioContext2 = new SpatialAudioContext(['assets/audio/peacock.wav']);
 
-   await MIDIInterface.init({onStateChange : function(s) { console.log(s) }});
+   await MIDIInterface.init({
+      onInitProc : function() {
+         const MIDIinputs  = MIDIInterface.inputs();
+         const MIDIoutputs = MIDIInterface.outputs();
+
+         for (const [key, value] of MIDIinputs) {
+            console.log(key, value);
+         }
+         for (const [key, value] of MIDIoutputs) {
+            console.log(key, value);
+         }
+      },
+      onStateChangeProc : function(s) { 
+         console.log(s) 
+      }
+   });
+
+
 
    /************************************************************************
 
@@ -541,7 +558,6 @@ function Obj(shape) {
 }
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
-   console.log()
    m.identity();
    if (!MR.VRIsActive()) {
       m.save();
