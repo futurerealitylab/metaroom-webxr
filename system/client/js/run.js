@@ -85,22 +85,26 @@ window.hotReloadFile = function(localPath) {
 }
 
 
-db.initLoggerSystem({
-    logger : new db.LoggerDefault()
-});
+// db.initLoggerSystem({
+//     logger : new db.LoggerGUIDefault(),
+//     redirect : true
+// });
 
 function notImplemented(version) {
     console.warn(`Version ${version}: Not yet implemented`);
-    document.body.appendChild(
-        document.createTextNode(`Version ${version}: Not yet implemented`)
+    document.body.insertBefore(
+        document.createTextNode(`Version ${version}: Not yet implemented`),
+        document.body.firstChild
     );
 }
 
 function initFailed(msg) {
-    document.body.appendChild(
-        document.createTextNode(msg)
+    document.body.insertBefore(
+        document.createTextNode(msg), document.body.firstChild
     );   
 }
+
+db.log("HA");
 
 const VERSION = document.getElementById("version").getAttribute("value");
 MR.VERSION = parseInt(VERSION);

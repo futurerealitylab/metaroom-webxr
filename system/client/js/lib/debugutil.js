@@ -132,7 +132,7 @@ window.db = (function() {
            	textNode = thisTextArea;
            	div.appendChild(thisTextArea);
 
-           	doc.body.appendChild(div);
+           	doc.body.insertBefore(div, document.body.firstChild);
 		}
 	}
 	_out.initLoggerSystem = initLoggerSystem;
