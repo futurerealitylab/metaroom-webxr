@@ -296,6 +296,9 @@ async function setup(state) {
 
          for (const [key, value] of MIDIinputs) {
             console.log(key, value);
+            MIDIInterface.setInputHandler(value, (e) => {
+               console.log(e);
+            });
          }
          for (const [key, value] of MIDIoutputs) {
             console.log(key, value);
