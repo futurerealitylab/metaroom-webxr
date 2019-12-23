@@ -104,7 +104,7 @@ default: {
         let deferredActions = [];
 
         const RESOLUTION = document.getElementById("resolution").getAttribute("value").split(',');
-        MR.wrangler.init({
+        MR.init({
             outputSurfaceName      : 'output-element',
             outputWidth            : parseInt(RESOLUTION[0]),
             outputHeight           : parseInt(RESOLUTION[1]),
@@ -231,8 +231,8 @@ default: {
 
                         CanvasUtil.setOnResizeEventHandler(null);
                         CanvasUtil.resize(MR.getCanvas(), 
-                                MR.wrangler.options.outputWidth, 
-                                MR.wrangler.options.outputHeight
+                            MR.wrangler.options.outputWidth, 
+                            MR.wrangler.options.outputHeight
                         );
 
                         MR.wrangler._gl.useProgram(null);

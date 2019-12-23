@@ -1,10 +1,12 @@
 "use strict";
 
 
+// the "base" type
 function Metaroom() {
     this.worldIdx = 0;
     this.worlds = [];
 }
+// enums
 Metaroom.BACKEND_TYPE = {
     WEBXR: 0,
     WEBVR: 1,
@@ -24,35 +26,22 @@ Metaroom.prototype = {
     }
 };
 
-// NGV220 says: we need to document the API boundary of the Metaroom, Metaroom_*, and
-// MetaroomBackend (currently 'wrangler').  The passing back-and-forth of worlds, funcs,
-// et al is difficult to follow.
 
+// WebXR backend
 function Metaroom_WebXR() {
-    //this.type = METAROOM_TYPES.WEBXR;
-    //this.wrangler = new XRCanvasWrangler(); 
-
-    //this.worldIdx = 0;
-    //this.MR.worlds = [];
-
     Metaroom.call(this);
-
-    // TODO(KTR): temp still make the global var wrangler, but
-    // considering making the wrangler a component of the full MetaRoom struct,
-    // and separating the animation handling from the canvas wrangling
     window.wrangler = this.wrangler;
     window.MR = this;
 }
-// Metaroom_WebXR.prototype = Object.create(
-//     Metaroom.prototype,
-//     {
-//         type : {value : Metaroom.BACKEND_TYPE.WEBXR},
-//         wrangler : {value : new XRCanvasWrangler()},
-//     }
-// );
+Metaroom_WebXR.prototype = Object.create(
+    Metaroom.prototype,
+    {
+        type     : {value : Metaroom.BACKEND_TYPE.WEBXR},
+        wrangler : {value : new XRBackend()},
+    }
+);
 
-// Metaroom impl using WebVR backend.  See `js/webxr-wrangler.js` for
-// details. 
+// WebVR backend
 function Metaroom_WebVR() {
     Metaroom.call(this);
     window.wrangler = this.wrangler;
@@ -61,27 +50,26 @@ function Metaroom_WebVR() {
 Metaroom_WebVR.prototype = Object.create(
     Metaroom.prototype,
     {
-        type : {value : Metaroom.BACKEND_TYPE.WEBVR},
+        type     : {value : Metaroom.BACKEND_TYPE.WEBVR},
         wrangler : {value : new VRCanvasWrangler()},
     }
-    );
+);
 
 Metaroom.create = function(type = Metaroom.BACKEND_TYPE.WEBXR) {
     this.type = type;
     switch (type) {
         case Metaroom.BACKEND_TYPE.WEBXR: {
-        // return new Metaroom_WebXR();
-        console.error("WebXR not yet implemented");
+        return new Metaroom_WebXR();
         break;
     } case Metaroom.BACKEND_TYPE.WEBVR: {
         return new Metaroom_WebVR();
         break;
     } default: {
-        console.error("ERROR: unsupported type");
+        console.error("ERROR: unsupported backend type");
         break;
     }
 }
-}   
+}
 
 // Argument defaults
 let type = Metaroom.BACKEND_TYPE.WEBVR;
@@ -102,10 +90,8 @@ if (urlParams.has('mrBackend')) {
 
 window.MR = Metaroom.create(type);
 
+MR.init = MR.wrangler.init.bind(MR.wrangler);
 
-// console.log(
-//   "wss://127.0.0.1:3001"
-// );
 
 const SOCKET_STATE_MAP = {
     [WebSocket.CLOSED]     : "CLOSED",
@@ -115,7 +101,6 @@ const SOCKET_STATE_MAP = {
 };
 
 {
-
     //const IP_ELEMENT   = document.getElementById("server-ip");
     //window.IP          = (IP_ELEMENT && IP_ELEMENT.getAttribute("value")) || "localhost";
     window.IP          = window.location.hostname;
@@ -135,7 +120,6 @@ MR.server.onOpen = null;
 MR.initServer = () => {
     console.log("initializing server");
 
-
     MR.server.sock = {
         addEventListener : () => {},
         send : () => {},
@@ -154,94 +138,88 @@ MR.initServer = () => {
     };
 
 
-    // if (MR.server.sock.readyState !== WebSocket.CLOSED) {
-        MR.server.sock.addEventListener('open', () => {
-            console.log("connected to server");
-            MR.server.subs.publish('open', null);
-        });
+    MR.server.sock.addEventListener('open', () => {
+        console.log("connected to server");
+        MR.server.subs.publish('open', null);
+    });
 
 
-        MR.server.sock.addEventListener('message', (ev) => {
-      //console.log("received message from server");
+    MR.server.sock.addEventListener('message', (ev) => {
+        const data = JSON.parse(ev.data);
+        if (data.MR_Message) {
+            MR.server.subs.publish(data.MR_Message, data);
+            MR.server.subsLocal.publish(data.MR_Message, data);
+        }
+    });
 
-      const data = JSON.parse(ev.data);
-      if (data.MR_Message) {
-        MR.server.subs.publish(data.MR_Message, data);
-        MR.server.subsLocal.publish(data.MR_Message, data);
-      }
-  });
+    MR.server.sock.addEventListener('close', (ev) => {
+        console.log("socket closed");
+    });  
+}
 
-        MR.server.sock.addEventListener('close', (ev) => {
-            console.log("socket closed");
-        });  
+
+
+
+class ServerPublishSubscribe {
+    constructor() {
+        this.subscribers = {};
+        this.subscribersOneShot = {};
     }
-
-
-
-
-    class ServerPublishSubscribe {
-        constructor() {
-            this.subscribers = {};
-            this.subscribersOneShot = {};
-        }
-        subscribe(channel, subscriber, data) {
-            this.subscribers[channel] = this.subscribers[channel] || new Map();
-            this.subscribers[channel].set(subscriber, {sub: subscriber, data: data});
-        }
-        unsubscribeAll(subscriber) {
-            for (let prop in this.subscribers) {
-                if (Object.prototype.hasOwnProperty.call(this.subscribers, prop)) {
-                    const setObj = this.subscribers[prop].delete(subscriber);
-                }
+    subscribe(channel, subscriber, data) {
+        this.subscribers[channel] = this.subscribers[channel] || new Map();
+        this.subscribers[channel].set(subscriber, {sub: subscriber, data: data});
+    }
+    unsubscribeAll(subscriber) {
+        for (let prop in this.subscribers) {
+            if (Object.prototype.hasOwnProperty.call(this.subscribers, prop)) {
+                const setObj = this.subscribers[prop].delete(subscriber);
             }
-            
         }
-        subscribeOneShot(channel, subscriber, data) {
-            this.subscribersOneShot[channel] = this.subscribersOneShot[channel] || new Map();
-            this.subscribersOneShot[channel].set(subscriber, {sub: subscriber, data: data});    
+        
+    }
+    subscribeOneShot(channel, subscriber, data) {
+        this.subscribersOneShot[channel] = this.subscribersOneShot[channel] || new Map();
+        this.subscribersOneShot[channel].set(subscriber, {sub: subscriber, data: data});    
+    }
+    publish (channel, ...args) {
+        (this.subscribers[channel] || new Map()).forEach((value, key) => value.sub(value.data, ...args));
+        (this.subscribersOneShot[channel] || new Map()).forEach((value, key) => value.sub(value.data, ...args));
+        this.subscribersOneShot = {};
+    }
+}
+MR.server.subs = new ServerPublishSubscribe();
+MR.server.subsLocal = new ServerPublishSubscribe();
+MR.server.echo = (message) => {   
+    MR.server.sock.send(JSON.stringify({
+        "MR_Message" : "Echo",
+        "data": {
+            "message" : message || ""
         }
-        publish (channel, ...args) {
-            (this.subscribers[channel] || new Map()).forEach((value, key) => value.sub(value.data, ...args));
-            (this.subscribersOneShot[channel] || new Map()).forEach((value, key) => value.sub(value.data, ...args));
-            this.subscribersOneShot = {};
-        }
-    }
-    MR.server.subs = new ServerPublishSubscribe();
-    MR.server.subsLocal = new ServerPublishSubscribe();
-    MR.server.echo = (message) => {   
-        MR.server.sock.send(JSON.stringify({
-            "MR_Message" : "Echo",
-            "data": {
-                "message" : message || ""
-            }
-        }));
-    };
+    }));
+};
 
-    MR.server.uid = 0;
-    MR.uid = () => {
-        return MR.server.uid;
-    }
+MR.server.uid = 0;
+MR.uid = () => {
+    return MR.server.uid;
+}
+
+MR.getCanvas = () => MR.wrangler._canvas;
+MR.time = () => MR.wrangler.time;
+MR.timeMS = () => MR.wrangler.timeMS;
+
+MR.getMessagePublishSubscriber = () => { 
+    return MR.server.subsLocal; 
+}
+
+MR.dynamicImport = function(path) {
+    return import(path + "?generation=" + MR.wrangler.reloadGeneration);
+};
 
 
-
-    MR.getCanvas = () => MR.wrangler._canvas;
-    MR.time = () => MR.wrangler.time;
-    MR.timeMS = () => MR.wrangler.timeMS;
-
-    MR.getMessagePublishSubscriber = () => { 
-        return MR.server.subsLocal; 
-    }
-
-    MR.dynamicImport = function(path) {
-        return import(path + "?generation=" + MR.wrangler.reloadGeneration);
-    };
-
-
-    MR._keydown = null;
-    MR._keyup = null;
+MR._keydown = null;
+MR._keyup = null;
 
 MR._keyQueue = new Queue();
-
 
 MR.input = {
     keyPrev : null,
@@ -249,14 +227,13 @@ MR.input = {
     isInit  : false
 };
 
-
 MR.UserType = {"browser":0, "vr":1, "spectator":2};
-Object.freeze(MR.UserType)
+Object.freeze(MR.UserType);
 
 //TODO: We should do this more cleanly.
 MR.VRIsActive = () => {
-                return false;
-            }
+    return false;
+}
 
 MR.syncClient = new Client();
 // MR.syncClient.connect(window.IP_SYNC, window.PORT_SYNC);
@@ -271,7 +248,5 @@ window.onbeforeunload = function() {
     websocket.onclose = function () {}; // disable onclose handler first
     websocket.close();
 };
-
-
 
 MR.viewpointController = new ViewpointController();
