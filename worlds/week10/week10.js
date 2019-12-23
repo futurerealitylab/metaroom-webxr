@@ -296,7 +296,7 @@ async function setup(state) {
    ************************************************************************/
 
    MR.objs.push(grabbableCube);
-   grabbableCube.position    = [0,-.5,-.5];
+   grabbableCube.position    = [0,0,-.5];
    grabbableCube.orientation = [0,0,0,1];
    grabbableCube.uid = 0;
    grabbableCube.lock = new Lock();
@@ -535,6 +535,12 @@ function Obj(shape) {
 }
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
+
+   // IF THE HEADSET IS JUST SITTING IDLE, DON'T DRAW ANYTHING.
+
+   if (state.input.brightness == 0)
+      return;
+
    m.identity();
 
    m.rotateX(state.tiltAngle);
@@ -579,6 +585,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    -----------------------------------------------------------------*/
 
    let drawShape = (shape, color, texture, textureScale) => {
+      let drawArrays = () => gl.drawArrays(shape == CG.cube ||
+                                           shape == CG.quad ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
       gl.uniform1f(state.uBrightnessLoc, input.brightness === undefined ? 1 : input.brightness);
       gl.uniform4fv(state.uColorLoc, color.length == 4 ? color : color.concat([1]));
       gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
@@ -589,12 +597,13 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       if (state.isToon) {
          gl.uniform1f (state.uToonLoc, .3 * CG.norm(m.value().slice(0,3)));
          gl.cullFace(gl.FRONT);
-         gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+         drawArrays();
          gl.cullFace(gl.BACK);
          gl.uniform1f (state.uToonLoc, 0);
       }
-      gl.drawArrays(shape == CG.cube ||
-                    shape == CG.quad ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+      if (state.isMirror) gl.cullFace(gl.FRONT);
+      drawArrays();
+      gl.cullFace(gl.BACK);
       prev_shape = shape;
    }
 
@@ -745,8 +754,15 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       m.restore();
    }
 
-   if (input.brightness == 0)
-      return;
+   let drawInMirror = (z, drawProc) => {
+      m.save();
+         m.translate(0,0,2 * z);
+         m.scale(1,1,-1);
+         state.isMirror = true;
+         drawProc();
+         state.isMirror = false;
+      m.restore();
+   }
 
    if (input.LC) {
       if (isMiniature)
@@ -805,6 +821,32 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       m.scale(-HALL_WIDTH/2, -dy, -HALL_LENGTH/2);
       drawShape(CG.cube, [1,1,1], 1,4, 2,4);
    m.restore();
+
+   /*-----------------------------------------------------------------
+
+   Demonstration of how to render the mirror reflection of an object.
+
+   -----------------------------------------------------------------*/
+
+   let drawTestShape = () => {
+      m.save();
+         m.rotateY(state.time).scale(.1);
+         drawShape(CG.cube, [.5,1,1]);
+	 m.translate(1.5,.5,.5).scale(.5);
+         drawShape(CG.cube, [.5,1,1]);
+      m.restore();
+   }
+   m.save();
+      m.translate(0,EYE_HEIGHT-.2,-2).rotateY(Math.PI/2).translate(0,0,.4);
+      drawTestShape();
+      drawInMirror(-.4, drawTestShape);
+   m.restore();
+
+   /*-----------------------------------------------------------------
+
+   Draw the two tables in the room.
+
+   -----------------------------------------------------------------*/
 
    m.save();
       m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, 0);
@@ -910,19 +952,6 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          m.restore();
       }
    }
-
-/*
-   // THIS IS JUST CODE FOR A PRELIMINARY TEST OF VOLUMETRIC NOISE
-
-   let nn = 16;
-   for (let n = 0 ; n < nn ; n++) {
-      let alpha = 1 - Math.abs(n - (nn-1)/2) / (nn/2);
-      m.save();
-         m.translate(0,EYE_HEIGHT,-.2 + .01 * n).scale(.05);
-         drawShape(CG.quad, [1,1,1,alpha]);
-      m.restore();
-   }
-*/
 }
 
 function onEndFrame(t, state) {
