@@ -511,8 +511,11 @@ let findInMenu = (mp, mq, p) => {
    return -1;
 }
 
+
+
 function Obj(shape) {
    this.shape = shape;
+   this.transform = CG.matrixIdentity;
 }
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
@@ -683,6 +686,27 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       m.restore();
    }
 
+   let drawObj = (obj, m, n) => {
+      obj.transform = m.value();
+      drawShape(obj.shape, n==0 ? [1,.5,.5] : [1,1,1]);
+   }
+
+   //Psuedo code for drawing body.....
+   
+   let drawFBAvatar = (joints) => {
+      for(let i = 0; i < joints.length; i++){
+         m.save();
+            m.multiply(state.avatarMatrixForward);
+            m.translate(joints[i].position);
+            m.rotateQ(joints[i].orientation);
+            m.scale(.3,.3,.3);
+            drawShape(joints[i].shape, [1,.5,.5]);
+         m.restore();
+      }
+
+      //Here I need to render the actual bones...
+   }
+
    /*-----------------------------------------------------------------
 
    The below is just my particular visual design for the size and
@@ -749,6 +773,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       m.restore();
    }
 
+
    /*-----------------------------------------------------------------
 
    This is where I draw the objects that have been created.
@@ -765,8 +790,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          m.multiply(state.avatarMatrixForward);
          m.translate(obj.position);
          m.rotateQ(obj.orientation);
-         m.scale(.03,.03,.03);
-         drawShape(obj.shape, n==0 ? [1,.5,.5] : [1,1,1]);
+         m.scale(.3,.3,.3);
+         drawObj(obj, m, n);
       m.restore();
    }
 

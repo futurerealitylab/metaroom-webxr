@@ -5,6 +5,7 @@ function Metaroom() {
     this.worldIdx = 0;
     this.worlds = [];
 }
+
 Metaroom.BACKEND_TYPE = {
     WEBXR: 0,
     WEBVR: 1,

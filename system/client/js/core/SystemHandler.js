@@ -3,7 +3,7 @@ function pollGrab(state) {
     if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {
         let controller = input.LC.isDown() ? input.LC : input.RC;
         for (let i = 0; i < MR.objs.length; i++)
-            if (checkSphereIntersection(controller.tip(), MR.objs[i].shape))
+            if (checkSphereIntersection(controller.tip(), MR.objs[i]))
                 if (MR.objs[i].lock.locked) {
                     MR.objs[i].position = controller.tip();
 		    MR.syncClient.send({
@@ -38,8 +38,8 @@ function getBoundingBox(verts){
     return [lo,hi];
 }
 
-function checkIntersection(P, verts) {
-    let bb = getBoundingBox(verts);
+function checkIntersection(P, obj) {
+    let bb = getBoundingBox(obj.shape);
     let lo = bb[0];
     let hi = bb[1];
 
@@ -48,25 +48,24 @@ function checkIntersection(P, verts) {
            P[2] > lo[2] && P[2] < hi[2] ;
 }
 
-function checkSphereIntersection(P, verts){
-    let bb = getBoundingBox(verts);
-    let lo = bb[0];
-    let hi = bb[1];
-    //just for now....
-    lo = [0.3* lo[0], 0.3*lo[1], 0.3*lo[2]];
-    hi = [0.3* hi[0], 0.3*hi[1], 0.3*hi[2]];
+function checkSphereIntersection(P, obj){
+    let inverse = CG.matrixInvert(obj.transform);
+    let V = CG.matrixTransform(inverse, P);
+    let dist = CG.norm(V);
 
-    let center = [lo[0]+hi[0]/2.0, lo[1]+hi[1]/2.0, lo[2]+hi[2]/2.0];
-    let diff = [lo[0]-hi[0], lo[1]-hi[1], lo[2]-hi[2]];
-    let radius = CG.norm(diff)/2.0;
-    
-    console.log("center:");
-    console.log(center);
-    console.log("radius:");
-    console.log(radius);
-    return P[0] > (center[0]-radius) && P[0] < (center[0]+radius) &&
-           P[1] > (center[1]-radius) && P[1] < (center[1]+radius) &&
-           P[2] > (center[2]-radius) && P[2] < (center[2]+radius);
+    console.log("controller tip");
+    console.log(P);
+    console.log("obj");
+    console.log(obj.transform);
+    console.log("inverse");
+    console.log(inverse)
+    console.log("matrix transform");
+    console.log(V);
+    console.log("distance");
+    console.log(dist);
+
+
+    return dist < 1;
 }
 
 function releaseLocks(state) {
