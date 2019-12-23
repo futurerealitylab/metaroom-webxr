@@ -340,11 +340,13 @@ function onStartFrame(t, state) {
 
    const input  = state.input;
    const editor = state.editor;
-
+   
    if (! state.avatarMatrixForward) {
-      MR.avatarMatrixForward = state.avatarMatrixForward = CG.matrixIdentity();
-      MR.avatarMatrixInverse = state.avatarMatrixInverse = CG.matrixIdentity();
-   } 
+      state.avatarMatrixForward = CG.matrixIdentity();
+      state.avatarMatrixInverse = CG.matrixIdentity();
+   }
+   MR.avatarMatrixForward = state.avatarMatrixForward;
+   MR.avatarMatrixInverse = state.avatarMatrixInverse;
 
    if (MR.VRIsActive()) {
       if (!input.HS) input.HS = new HeadsetHandler(MR.headset);
@@ -693,7 +695,6 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    let drawHeadset = (position, orientation) => {
       m.save();
-         m.multiply(state.avatarMatrixForward);
          m.translate(position);
          m.rotateQ(orientation);
          m.scale(.1);
@@ -765,22 +766,26 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    }
 
    if (input.LC) {
-      if (isMiniature)
-         drawHeadset(input.HS.position(), input.HS.orientation());
+      if (isMiniature){
+         m.save();
+            m.multiply(state.avatarMatrixForward);
+            drawHeadset(input.HS.position(), input.HS.orientation());
+         m.restore();
+      }         
       m.save();
 
-      let P = state.position;
-      m.translate(-P[0],-P[1],-P[2]);
-      m.rotateY(-state.turnAngle);
-      m.rotateX(-state.tiltAngle);
+         let P = state.position;
+         m.translate(-P[0],-P[1],-P[2]);
+         m.rotateY(-state.turnAngle);
+         m.rotateX(-state.tiltAngle);
 
-      m.save();
-         m.multiply(state.avatarMatrixForward);
-         drawController(input.LC.position(), input.LC.orientation(), 0, input.LC.isDown());
-         drawController(input.RC.position(), input.RC.orientation(), 1, input.RC.isDown());
-      m.restore();
-      if (enableModeler && input.RC.isDown())
-         showMenu(input.RC.position());
+         m.save();
+            m.multiply(state.avatarMatrixForward);
+            drawController(input.LC.position(), input.LC.orientation(), 0, input.LC.isDown());
+            drawController(input.RC.position(), input.RC.orientation(), 1, input.RC.isDown());
+         m.restore();
+         if (enableModeler && input.RC.isDown())
+            showMenu(input.RC.position());
       m.restore();
    }
 
