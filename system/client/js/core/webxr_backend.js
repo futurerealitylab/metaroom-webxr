@@ -465,12 +465,12 @@ window.XRBackend = (function() {
                 if (this.options.enableBellsAndWhistles) {
                     const status = await this._initWebVR();
                     if (!status) {
-                        console.log('Initializing PC browser mode ...');
-                        this._initFallback();
+                        console.log('Initializing PC window mode ...');
+                        this._initWindow();
                     }
                 } else {
-                    console.log('Initializing PC browser mode ...');
-                    this._initFallback();        
+                    console.log('Initializing PC window mode ...');
+                    this._initWindow();        
                 }
                 this.main();
             }
@@ -562,7 +562,7 @@ window.XRBackend = (function() {
                 this.doWorldTransition = fn.bind(this);
             }
 
-            _initFallback() {
+            _initWindow() {
                 const modalCanvasInit = () => {
                     const bodyWidth = document.body.getBoundingClientRect().width;
                     const parent = document.getElementById('output-container');
