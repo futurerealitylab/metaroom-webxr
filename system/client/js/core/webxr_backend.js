@@ -24,7 +24,6 @@ console.log(GPU);
 console.log(GPU.WebGLInterface);
 const wgl = new GPU.WebGLInterface();
 console.log(wgl);
-console.log(GPU.WEBGL_CONTEXT_TYPE_TO_NAME[GPU.WEBGL_CONTEXT_TYPE_WEBGL2]);
 //
 // other many ways of doing it:
 //

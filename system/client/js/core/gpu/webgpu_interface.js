@@ -6,6 +6,7 @@ class WebGPUInterface {
 }
 
 // enums
+export const WEBGPU_API_TYPE = 'webgpu';
 export const CONTEXT_TYPE_WEBGPU  = 0;
 
 const CONTEXT_TYPE = {
@@ -17,7 +18,7 @@ const CONTEXT_TYPE_TO_NAME = {
 };
 
 export {
-    CONTEXT_TYPE as WEBGPU_CONTEXT_TYPE, 
+    CONTEXT_TYPE         as WEBGPU_CONTEXT_TYPE, 
     CONTEXT_TYPE_TO_NAME as WEBGPU_CONTEXT_TYPE_TO_NAME
 };
 

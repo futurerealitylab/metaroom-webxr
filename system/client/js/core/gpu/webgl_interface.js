@@ -6,7 +6,7 @@ export class WebGLInterface {
 }
 
 // enums
-
+export const WEBGL_API_TYPE = 'webgl';
 export const CONTEXT_TYPE_WEBGL  = 0;
 export const CONTEXT_TYPE_WEBGL2 = 1;
 
@@ -21,6 +21,6 @@ const CONTEXT_TYPE_TO_NAME = {
 };
 
 export {
-    CONTEXT_TYPE as WEBGL_CONTEXT_TYPE, 
+    CONTEXT_TYPE         as WEBGL_CONTEXT_TYPE, 
     CONTEXT_TYPE_TO_NAME as WEBGL_CONTEXT_TYPE_TO_NAME
 };
