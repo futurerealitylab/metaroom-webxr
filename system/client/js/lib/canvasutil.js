@@ -26,7 +26,7 @@ const CanvasUtil = (function() {
 	}
 
 
-	function createCanvasOnElement(canvasName, parentName = 'output-element', width = 400, height = 400) {
+	function createCanvasOnElement(canvasName, parentName = 'output-surface', width = 400, height = 400) {
 	  const parent = document.querySelector('#' + parentName);
 	  if (!parent) {
 	    return null;

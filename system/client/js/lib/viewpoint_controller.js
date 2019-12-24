@@ -1,6 +1,6 @@
 "use strict";
 
-class ViewpointController {
+export class ViewpointController {
     constructor() {
         this.splitscreen = true;
         this.playerid    = -1;

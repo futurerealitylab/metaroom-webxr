@@ -6,6 +6,7 @@ import {MREditor}               from "./lib/mreditor.js";
 
 window.MREditor = MREditor;
 
+
 function treq(data) {
     fetch("/world_transition", {
         method: "POST",
@@ -151,7 +152,7 @@ case 2: {
         }
 
         MR.init({
-            outputSurfaceName      : 'output-element',
+            outputSurfaceName      : 'output-surface',
             outputWidth            : parseInt(RESOLUTION[0]),
             outputHeight           : parseInt(RESOLUTION[1]),
             glUseGlobalContext     : true,
@@ -165,6 +166,12 @@ case 2: {
 
             // main() is the system's entry point
             main : async () => {
+                {
+                    const mod = await import("./lib/default_window_ui.js");
+                    MR.wrangler.ui = new mod.DefaultWindowUI();
+                    // temp hack
+                    MR.wrangler.menu = MR.wrangler.ui.menu;
+                }
 
                 MREditor.enable();
 
@@ -354,7 +361,7 @@ default: {
 
         const RESOLUTION = document.getElementById("resolution").getAttribute("value").split(',');
         MR.init({
-            outputSurfaceName      : 'output-element',
+            outputSurfaceName      : 'output-surface',
             outputWidth            : parseInt(RESOLUTION[0]),
             outputHeight           : parseInt(RESOLUTION[1]),
             glUseGlobalContext     : true,

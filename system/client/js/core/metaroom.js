@@ -2,6 +2,8 @@
 
 import {MetaroomXRBackend} from "./webxr_backend.js";
 import {ServerPublishSubscribe} from "./server_publish_subscribe.js";
+import {ViewpointController} from "./../lib/viewpoint_controller.js";
+import {Client} from "./client.js";
 
 // the "base" type
 export function Metaroom() {

@@ -19,12 +19,12 @@
   <script src="system/client/js/lib/gfxutil.js"></script>
   <script src="system/client/js/lib/imageutil.js"></script>
   <script src="system/client/js/lib/audio.js"></script>
-  <script src="system/client/js/lib/viewpoint_controller.js"></script>
+  <script type="module" src="system/client/js/lib/viewpoint_controller.js"></script>
 
   <!-- Button implements a button to toggle in and out of XR. -->
   <script src="system/client/js/lib/webxr-button.js"></script>
   <!-- Server and Client. -->
-  <script src="system/client/js/core/client.js"></script>
+  <script type="module" src="system/client/js/core/client.js"></script>
   <script src="system/client/js/core/avatar.js"></script>
   <script src="system/client/js/core/EventBus.js"></script>
   <script src="system/client/js/core/SystemHandler.js"></script>
@@ -51,7 +51,7 @@
 </head>
 <body style="background-color: black; color: white; text-emphasis-color: white;">
 <div id=output-container style="border: none solid #FFF5; position: fixed; text-align: center vertical-align: text-top; z-index: 10">
-  <div id=output-element></div>
+  <div id=output-surface></div>
 </div>
 
   <!-- Shader Editor Areas -->

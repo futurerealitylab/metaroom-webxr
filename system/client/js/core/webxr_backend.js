@@ -85,7 +85,7 @@ export class MetaroomXRBackend {
         options.main = options.main || function() {};
         options.glDoResourceTracking = options.glDoResourceTracking || true;
         options.glUseGlobalContext = options.glUseGlobalContext || true;
-        options.outputSurfaceName = options.outputSurfaceName || 'output-element';
+        options.outputSurfaceName = options.outputSurfaceName || 'output-surface';
         options.outputWidth = options.outputWidth || 1280;
         options.outputHeight = options.outputHeight || 720;
         options.useCustomState = options.useCustomState || true;
@@ -303,381 +303,225 @@ export class MetaroomXRBackend {
         this.timeStart = 0;
         window.timeStart = this.timeStart;
 
-        // TODO(TR): separate into UI code in other files
-        //
-            this.menu = new Menu();
-
-            this.worldsScroll = createVerticalMenuElement();
-
-            MR.initWorldsScroll = () => {
-                window.CLICKMENU = (id) => {
-                    const el = document.getElementById(id);
-                    el.classList = "active";
-                    MR.wrangler.doWorldTransition({direction : null, key : id, broadcast : true}); 
-                    MR.wrangler.menu.enableDisableWorldsScroll();     
-
-                    window.DISABLEMENUFORWORLDSEXCEPT(id);   
-                }
-                window.DISABLEMENUFORWORLDSEXCEPT = (id) => {
-                    const worldsMenuItems = this.worldsScroll.getElementsByTagName("div");
-
-                    id = parseInt(id);
-                    for (let i = 0; i < id; i += 1) {
-                        worldsMenuItems[i].classList.remove("active");
-                    }
-                    for (let i = id + 1; i < worldsMenuItems.length; i += 1) {
-                        worldsMenuItems[i].classList.remove("active");
-                    }
-                    worldsMenuItems[id].classList.add("active");
-                }
-                const worlds = MR.worlds;
-                const wCount = worlds.length;
-                const contentArr = [];
-                for (let i = 0; i < wCount; i += 1) {
-                    contentArr.push(
-                        "<div id="
-                    );
-                    contentArr.push(i);
-                    contentArr.push(' onclick="window.CLICKMENU(this.id)">');
-                    contentArr.push(i);
-                    contentArr.push(' ');
-                    contentArr.push(worlds[i].world.default().name);
-                    contentArr.push("</div>\n");
-                }
-
-                this.worldsScroll.innerHTML = contentArr.join('');
-            };
-
-            this.worldsScrollEnabled = 0;
-            this.worldsScroll.style.display = "none";
-            const worldsScrollDisplayOpt = ["none", ""];
-
-            this.menu.enableDisableWorldsScroll = () => {
-                this.worldsScrollEnabled = 1 - this.worldsScrollEnabled; 
-                this.worldsScroll.style.display = 
-                worldsScrollDisplayOpt[this.worldsScrollEnabled]; 
-            }
-
-            this.menu.menus.worldsSelection = new MenuItem(
-                this.menu.el,
-                'ge_menu',
-                "Worlds",
-                this.menu.enableDisableWorldsScroll
-            );
-            this.menu.menus.worldsSelection.el.appendChild(this.worldsScroll);
-
-            this.menu.menus.transition = new MenuItem(
-                this.menu.el, 
-                'ge_menu', 
-                'Prev',
-                () => { MR.wrangler.doWorldTransition({direction : -1, broadcast : true}); }
-            );
-            this.menu.menus.transition = new MenuItem(
-                this.menu.el, 
-                'ge_menu', 
-                'Next',
-                () => { return MR.wrangler.doWorldTransition({direction : +1, broadcast : true}); }
-            );
-
-            this.playerViewScroll = createVerticalMenuElement();
-
-            MR.initPlayerViewSelectionScroll = () => {
-                window.CLICKMENUPLAYERS = (id) => {
-                    const el = document.getElementById(id);
-                    el.classList = "active";
-                    MR.wrangler.menu.enableDisablePlayersScroll();     
-
-                    window.DISABLEMENUFORPLAYERSEXCEPT(id);   
-                }
-                window.DISABLEMENUFORPLAYERSEXCEPT = (id) => {
-                    const playersMenuItems = this.playerViewScroll.getElementsByTagName("div");
-                    id = parseInt(id);
-                    for (let i = 0; i < id; i += 1) {
-                        playersMenuItems[i].classList.remove("active");
-                    }
-
-                    const len = playersMenuItems.length;
-                    for (let i = id + 1; i < len; i += 1) {
-                        playersMenuItems[i].classList.remove("active");
-                    }
-                    playersMenuItems[id].classList.add("active");
-
-                    const playerid = playersMenuItems[id].getAttribute("value");
-                    MR.viewpointController.switchView(playerid);
-                    MR.updatePlayersMenu();
-                }
-                function addPlayerMenuEntry(contentArr, i, id) {
-                    contentArr.push(
-                        "<div id="
-                    );
-                    contentArr.push(i);
-                    contentArr.push(" value=");
-                    contentArr.push(id);
-                    contentArr.push(' onclick="window.CLICKMENUPLAYERS(this.id)">');
-                    contentArr.push('       ');
-                    contentArr.push(id);
-                    contentArr.push("</div>\n");                        
-                }
-                MR.updatePlayersMenu = () => {
-                    const players = MR.avatars;
-                    const contentArr = [];
-
-                    let i = 0;
-                    for (let id in players) {
-                        addPlayerMenuEntry(contentArr, i, id);
-                        i += 1;
-                    }
-
-                    this.playerViewScroll.innerHTML = contentArr.join('');
-                };
-            };
-
-            this.playerViewScrollEnabled = 0;
-            this.playerViewScroll.style.display = "none";
-            const playerViewScrollDisplayOpt = ["none", ""];
-
-            this.menu.enableDisablePlayersScroll = () => {
-                this.playerViewScrollEnabled = 1 - this.playerViewScrollEnabled; 
-                this.playerViewScroll.style.display = 
-                playerViewScrollDisplayOpt[this.playerViewScrollEnabled]; 
-            }
-//////////////////////////////////////////////////////////////////////////////////
-            this.menu.menus.playerViewSelection = new MenuItem(
-                this.menu.el,
-                'ge_menu',
-                'User View',
-                this.menu.enableDisablePlayersScroll
-            );
-            this.menu.menus.playerViewSelection.el.appendChild(this.playerViewScroll);
-
-            
-
-            this.menu.menus.worldsSelection = new MenuItem(
-                this.menu.el,
-                'ge_menu',
-                "Reconnect",
-                MR.initServer
-                );
-
-            if (this.options.enableBellsAndWhistles) {
-                const status = await this._initWebVR();
-                if (!status) {
-                    console.log('Initializing PC window mode ...');
-                    this._initWindow();
-                }
-            } else {
+        if (this.options.enableBellsAndWhistles) {
+            const status = await this._initWebVR();
+            if (!status) {
                 console.log('Initializing PC window mode ...');
-                this._initWindow();        
+                this._initWindow();
             }
-            this.main();
+        } else {
+            console.log('Initializing PC window mode ...');
+            this._initWindow();        
         }
+        this.main();
+    }
 
-        _initButton() {
-            if (this.options.enableBellsAndWhistles && this.options.enableEntryByButton) {
-                this._button = new XRDeviceButton({
-                    onRequestSession: this._onVRRequestPresent.bind(this),
-                    onEndSession: this._onVRExitPresent.bind(this)
-                });
-                document.querySelector('body').prepend(this._button.domElement);
-            }
-        }
-
-        _initCanvasOnParentElement(parent = 'active') {
-            const parentCanvasRecord = CanvasUtil.createCanvasOnElement(
-                'active',
-                this.options.outputSurfaceName,
-                this.options.outputWidth,
-                this.options.outputHeight
-                );
-            console.assert(parentCanvasRecord !== null);
-            console.assert(parentCanvasRecord.parent !== null);
-            console.assert(parentCanvasRecord.canvas !== null);
-
-            this._parent = parentCanvasRecord.parent;
-            this._canvas = parentCanvasRecord.canvas;
-        }
-
-        _initCustomState() {
-            if (this.useCustomState) {
-                console.log('Initializing custom state');
-                this.customState = {};
-                this.persistentStateMap = new Map();
-                this.globalPersistent = {};
-            }
-        }
-
-        _initWebVR() {
-            if (navigator.getVRDisplays) {
-                this._frameData = new VRFrameData();
-                const button = this._button;
-                const me = this;
-                navigator.getVRDisplays().then(function(displays) {
-                    if (displays.length > 0) {
-                    const vrDisplay = displays[displays.length - 1]; // ?
-                    me._vrDisplay = vrDisplay;
-
-                    // It's highly recommended that you set the near and far planes to somethin
-                    // appropriate for your scene so the projection matrices WebVR produces
-                    // have a well-scaled depth buffer.
-                    vrDisplay.depthNear = 0.1;
-                    vrDisplay.depthFar = 1024.0;
-
-                    // Generally, you want to wait until VR support is confirmed and you know the
-                    // user has a VRDisplay capable of presenting connected before adding UI that
-                    // advertizes VR features.
-                    if (vrDisplay.capabilities.canPresent) {
-                        button.enabled = true;
-                    }
-
-                    // The UA may kick us out of VR present mode for any reason, so to ensure we
-                    // always know when we gegin/end presenting we need to listen for events.
-                    window.addEventListener('vrdisplaypresentchange', me.onVRPresentChange, false);
-
-                    // These events fire when the user agent has had some indication that it would
-                    // be appropriate to enter or exit VR presentation mode, such as the user putting
-                    // on a headset and triggering a proximity sensor.
-                    window.addEventListener('vrdisplayactivate', me.onVRRequestPresent, false);
-                    window.addEventListener('vrdisplaydeactivate', me.onVRExitPresent, false);
-                } else {
-                    console.warn('WebVR supported, but no displays found.');
-                    // TODO route error modes to fallback display
-                }
-            }, function() {
-                console.warn('Your browser does not support WebVR.');
-                // TODO route error modes to fallback display
+    _initButton() {
+        if (this.options.enableBellsAndWhistles && this.options.enableEntryByButton) {
+            this._button = new XRDeviceButton({
+                onRequestSession: this._onVRRequestPresent.bind(this),
+                onEndSession: this._onVRExitPresent.bind(this)
             });
-                return true;
-            } else if (navigator.getVRDevices) {
-                console.warn('Your browser supports WebVR, but not the latest version.')
-                return false;
+            document.querySelector('body').prepend(this._button.domElement);
+        }
+    }
+
+    _initCanvasOnParentElement(parent = 'active') {
+        const parentCanvasRecord = CanvasUtil.createCanvasOnElement(
+            'active',
+            this.options.outputSurfaceName,
+            this.options.outputWidth,
+            this.options.outputHeight
+            );
+        console.assert(parentCanvasRecord !== null);
+        console.assert(parentCanvasRecord.parent !== null);
+        console.assert(parentCanvasRecord.canvas !== null);
+
+        this._parent = parentCanvasRecord.parent;
+        this._canvas = parentCanvasRecord.canvas;
+    }
+
+    _initCustomState() {
+        if (this.useCustomState) {
+            console.log('Initializing custom state');
+            this.customState = {};
+            this.persistentStateMap = new Map();
+            this.globalPersistent = {};
+        }
+    }
+
+    _initWebVR() {
+        if (navigator.getVRDisplays) {
+            this._frameData = new VRFrameData();
+            const button = this._button;
+            const me = this;
+            navigator.getVRDisplays().then(function(displays) {
+                if (displays.length > 0) {
+                const vrDisplay = displays[displays.length - 1]; // ?
+                me._vrDisplay = vrDisplay;
+
+                // It's highly recommended that you set the near and far planes to somethin
+                // appropriate for your scene so the projection matrices WebVR produces
+                // have a well-scaled depth buffer.
+                vrDisplay.depthNear = 0.1;
+                vrDisplay.depthFar = 1024.0;
+
+                // Generally, you want to wait until VR support is confirmed and you know the
+                // user has a VRDisplay capable of presenting connected before adding UI that
+                // advertizes VR features.
+                if (vrDisplay.capabilities.canPresent) {
+                    button.enabled = true;
+                }
+
+                // The UA may kick us out of VR present mode for any reason, so to ensure we
+                // always know when we gegin/end presenting we need to listen for events.
+                window.addEventListener('vrdisplaypresentchange', me.onVRPresentChange, false);
+
+                // These events fire when the user agent has had some indication that it would
+                // be appropriate to enter or exit VR presentation mode, such as the user putting
+                // on a headset and triggering a proximity sensor.
+                window.addEventListener('vrdisplayactivate', me.onVRRequestPresent, false);
+                window.addEventListener('vrdisplaydeactivate', me.onVRExitPresent, false);
             } else {
-                return false;
+                console.warn('WebVR supported, but no displays found.');
+                // TODO route error modes to fallback display
             }
+        }, function() {
+            console.warn('Your browser does not support WebVR.');
+            // TODO route error modes to fallback display
+        });
+            return true;
+        } else if (navigator.getVRDevices) {
+            console.warn('Your browser supports WebVR, but not the latest version.')
+            return false;
+        } else {
+            return false;
         }
+    }
 
-        defineWorldTransitionProcedure(fn) {
-            this.doWorldTransition = fn.bind(this);
-        }
+    defineWorldTransitionProcedure(fn) {
+        this.doWorldTransition = fn.bind(this);
+    }
 
-        _initWindow() {
-            const modalCanvasInit = () => {
-                const bodyWidth = document.body.getBoundingClientRect().width;
-                const parent = document.getElementById('output-container');
-                parent.float = 'right';
-                let P = parent;
-                P.style.left = (((P.style.left) + bodyWidth - this._canvas.clientWidth)) + "px";
+    _initWindow() {
+        const modalCanvasInit = () => {
+            const bodyWidth = document.body.getBoundingClientRect().width;
+            const parent = document.getElementById('output-container');
+            parent.float = 'right';
+            let P = parent;
+            P.style.left = (((P.style.left) + bodyWidth - this._canvas.clientWidth)) + "px";
 
-                const out = document.getElementById('output-element');
-                out.style.position = 'relative';
-                out.style.float = 'right';
+            const out = document.getElementById(this.options.outputSurfaceName);
+            out.style.position = 'relative';
+            out.style.float = 'right';
 
-                let shiftX = parseInt(P.style.left);
-                let shiftY = 0;
+            let shiftX = parseInt(P.style.left);
+            let shiftY = 0;
 
-                let shiftDown__ = false;
-                let mouseDown__ = false;
-                let altDown = false;
-                let clientX = 0;
-                let clientY = 0;
+            let shiftDown__ = false;
+            let mouseDown__ = false;
+            let altDown = false;
+            let clientX = 0;
+            let clientY = 0;
 
-                window.getClientX = () => {
-                    return clientX;
-                }
-
-                window.getClientY = () => {
-                    return clientY;
-                }
-
-                const mouseMoveHandler__ = function(event) {
-                    const w = MR.wrangler._canvas.clientWidth;
-                    const h = MR.wrangler._canvas.clientHeight;
-                    P.style.left = (clientX - (w / 2.0)) + "px";
-                    P.style.top = (clientY - (h / 2.0)) + "px";
-                };
-
-                let beforeW;
-                let beforeH;
-                let altInitDown = true;
-                let initialX = 0;
-
-                document.addEventListener('mousemove', (event) => {
-                    clientX = event.clientX;
-                    clientY = event.clientY;
-
-                    if (altDown) {
-                        const cursorX = clientX;
-                        if (altInitDown) {
-                            altInitDown = false;
-                            beforeW = CanvasUtil.baseCanvasDimensions.width;
-                            beforeH = CanvasUtil.baseCanvasDimensions.height;
-                            initialX = cursorX;
-                        }
-
-                        const xDist = (cursorX - initialX);
-                        this._canvas.width = Math.max(64, beforeW + xDist);
-                        this._canvas.height = Math.floor(beforeH * ((this._canvas.width / beforeW)));
-                        
-                        CanvasUtil.baseCanvasDimensions.width = this._canvas.clientWidth;
-                        CanvasUtil.baseCanvasDimensions.height = this._canvas.clientHeight;
-                        CanvasUtil.handleResizeEvent(this._canvas, this._canvas.clientWidth, this._canvas.clientHeight);
-                    }
-                });
-                document.addEventListener('mousedown', (event) => {
-                    clientX = event.clientX;
-                    clientY = event.clientY;
-                });
-                document.addEventListener('mouseup', (event) => {
-                    clientX = event.clientX;
-                    clientY = event.clientY;
-                });
-                document.addEventListener('keydown', (event) => {
-                    if (event.key == "`") {
-                        window.addEventListener('mousemove', mouseMoveHandler__);
-                        shiftDown__ = true;
-                        mouseMoveHandler__({clientX : clientX, clientY : clientY});
-                    } else if (event.key == 'Alt') {
-                        if (window.navigator.userAgent.indexOf("Mac") != -1)
-                            altDown = true;
-
-                        event.preventDefault();
-                    }
-                });
-                document.addEventListener('keyup', (event) => {
-                    if (event.key == "`") {
-                        window.removeEventListener('mousemove', mouseMoveHandler__);
-                        shiftDown__ = false;
-                    } else if (event.key == 'Alt') {
-                        CanvasUtil.baseCanvasDimensions.width = this._canvas.clientWidth;
-                        CanvasUtil.baseCanvasDimensions.height = this._canvas.clientHeight;
-                        CanvasUtil.handleResizeEvent(this._canvas, this._canvas.clientWidth, this._canvas.clientHeight);
-
-                        altInitDown = true;
-                        altDown = false;
-
-                        event.preventDefault();
-                    }
-                });
+            window.getClientX = () => {
+                return clientX;
             }
-            modalCanvasInit();
 
+            window.getClientY = () => {
+                return clientY;
+            }
 
+            const mouseMoveHandler__ = function(event) {
+                const w = MR.wrangler._canvas.clientWidth;
+                const h = MR.wrangler._canvas.clientHeight;
+                P.style.left = (clientX - (w / 2.0)) + "px";
+                P.style.top = (clientY - (h / 2.0)) + "px";
+            };
+
+            let beforeW;
+            let beforeH;
+            let altInitDown = true;
+            let initialX = 0;
+
+            document.addEventListener('mousemove', (event) => {
+                clientX = event.clientX;
+                clientY = event.clientY;
+
+                if (altDown) {
+                    const cursorX = clientX;
+                    if (altInitDown) {
+                        altInitDown = false;
+                        beforeW = CanvasUtil.baseCanvasDimensions.width;
+                        beforeH = CanvasUtil.baseCanvasDimensions.height;
+                        initialX = cursorX;
+                    }
+
+                    const xDist = (cursorX - initialX);
+                    this._canvas.width = Math.max(64, beforeW + xDist);
+                    this._canvas.height = Math.floor(beforeH * ((this._canvas.width / beforeW)));
+                    
+                    CanvasUtil.baseCanvasDimensions.width = this._canvas.clientWidth;
+                    CanvasUtil.baseCanvasDimensions.height = this._canvas.clientHeight;
+                    CanvasUtil.handleResizeEvent(this._canvas, this._canvas.clientWidth, this._canvas.clientHeight);
+                }
+            });
+            document.addEventListener('mousedown', (event) => {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            });
+            document.addEventListener('mouseup', (event) => {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            });
+            document.addEventListener('keydown', (event) => {
+                if (event.key == "`") {
+                    window.addEventListener('mousemove', mouseMoveHandler__);
+                    shiftDown__ = true;
+                    mouseMoveHandler__({clientX : clientX, clientY : clientY});
+                } else if (event.key == 'Alt') {
+                    if (window.navigator.userAgent.indexOf("Mac") != -1)
+                        altDown = true;
+
+                    event.preventDefault();
+                }
+            });
+            document.addEventListener('keyup', (event) => {
+                if (event.key == "`") {
+                    window.removeEventListener('mousemove', mouseMoveHandler__);
+                    shiftDown__ = false;
+                } else if (event.key == 'Alt') {
+                    CanvasUtil.baseCanvasDimensions.width = this._canvas.clientWidth;
+                    CanvasUtil.baseCanvasDimensions.height = this._canvas.clientHeight;
+                    CanvasUtil.handleResizeEvent(this._canvas, this._canvas.clientWidth, this._canvas.clientHeight);
+
+                    altInitDown = true;
+                    altDown = false;
+
+                    event.preventDefault();
+                }
+            });
         }
+        modalCanvasInit();
 
-        _clearConfig() {
-            this.config = this.config || {};
-            const options = this.config;
 
-            options.onStartFrame = (function(t, state) {});
-            options.onStartFrameXR = (function(t, state) {});
-            options.onEndFrame = (function(t, state) {});
-            options.onEndFrameXR = (function(t, state) {});
-            options.onDraw = (function(t, p, v, state, eyeIdx) {});
-            options.onDrawXR = (function(t, p, v, state, eyeIdx) {});
-            options.onAnimationFrame = this._onAnimationFrame.bind(this);
-            options.onAnimationFrameWindow = this._onAnimationFrameWindow.bind(this);
-            options.onReload   = function(state) {};
-            options.onExit     = function(state) {};
-            options.onExitXR   = function(state) {};
+    }
+
+    _clearConfig() {
+        this.config = this.config || {};
+        const options = this.config;
+
+        options.onStartFrame = (function(t, state) {});
+        options.onStartFrameXR = (function(t, state) {});
+        options.onEndFrame = (function(t, state) {});
+        options.onEndFrameXR = (function(t, state) {});
+        options.onDraw = (function(t, p, v, state, eyeIdx) {});
+        options.onDrawXR = (function(t, p, v, state, eyeIdx) {});
+        options.onAnimationFrame = this._onAnimationFrame.bind(this);
+        options.onAnimationFrameWindow = this._onAnimationFrameWindow.bind(this);
+        options.onReload   = function(state) {};
+        options.onExit     = function(state) {};
+        options.onExitXR   = function(state) {};
         //options.onWindowFrame = this._onWindowFrame.bind(this);
 
         // selection

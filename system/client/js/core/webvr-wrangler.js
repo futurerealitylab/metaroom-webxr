@@ -88,7 +88,7 @@ window.VRCanvasWrangler = (function() {
             options.main = options.main || function() {};
             options.glDoResourceTracking = options.glDoResourceTracking || true;
             options.glUseGlobalContext = options.glUseGlobalContext || true;
-            options.outputSurfaceName = options.outputSurfaceName || 'output-element';
+            options.outputSurfaceName = options.outputSurfaceName || 'output-surface';
             options.outputWidth = options.outputWidth || 1280;
             options.outputHeight = options.outputHeight || 720;
             options.useCustomState = options.useCustomState || true;
@@ -525,7 +525,7 @@ window.VRCanvasWrangler = (function() {
                     let P = parent;
                     P.style.left = (((P.style.left) + bodyWidth - this._canvas.clientWidth)) + "px";
 
-                    const out = document.getElementById('output-element');
+                    const out = document.getElementById('output-surface');
                     out.style.position = 'relative';
                     out.style.float = 'right';
 

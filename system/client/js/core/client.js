@@ -4,9 +4,7 @@
 // TODO: finish automatic reconnection
 // TODO: max retries + timeout
 
-class Client
-{
-
+export class Client {
     constructor(heartbeat = 30000) {
         this.locks = {};
         this.heartbeatTick = heartbeat;
