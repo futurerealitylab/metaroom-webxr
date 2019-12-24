@@ -1,5 +1,43 @@
 'use strict';
 
+// statically import 
+// the exported symbol at start-time 
+//
+// note: begin with ./ to specify a path relative to the current file,
+//       begin with / to start at the root
+// 
+// examples:
+// here I'm using the local path -- importing an individual symbol renaming it "wgl"
+// import {WebGLInterface as wgl} from "./gpu/webgl_interface.js";
+// 
+// here I'm using the path from the project root -- importing an individual symbol and not renaming it 
+// import {WebGLInterface} from "/system/client/js/core/gpu/webgl_interface.js";
+//
+// here I'm importing absolutely all exported symbols into a single namespace called "wgl"
+// import * as wgl from "./gpu/webgl_interface.js";
+// console.log(wgl);
+//
+// here I'm importing the module containing submodules, and packaging all
+// symbols into just one namespace
+import * as GPU from "./gpu/gpu.js";
+//
+// other many ways of doing it:
+//
+// import defaultExport from "module-name";
+// import * as name from "module-name";
+// import { export1 } from "module-name";
+// import { export1 as alias1 } from "module-name";
+// import { export1 , export2 } from "module-name";
+// import { foo , bar } from "module-name/path/to/specific/un-exported/file";
+// import { export1 , export2 as alias2 , [...] } from "module-name";
+// import defaultExport, { export1 [ , [...] ] } from "module-name";
+// import defaultExport, * as name from "module-name";
+// import "module-name";
+//
+// dynamic imports at runtime, don't need to be in the index.html
+// const promise = await import("module-name");
+// import("module-name").then((result) => {} ... etc.
+
 const mat4 = {};
 mat4.create = function() {
     return new Float32Array(16);
@@ -83,8 +121,8 @@ export class MetaroomXRBackend {
         options.contextOptions = options.contextOptions || { xrCompatible: true };
         options.contextNames = options.contextNames || ['webgl2', 'webgl', 'experimental-webgl'];
         options.main = options.main || function() {};
-        options.glDoResourceTracking = options.glDoResourceTracking || true;
-        options.glUseGlobalContext = options.glUseGlobalContext || true;
+        options.doResourceTracking = options.doResourceTracking || true;
+        options.useGlobalContext = options.useGlobalContext || true;
         options.outputSurfaceName = options.outputSurfaceName || 'output-surface';
         options.outputWidth = options.outputWidth || 1280;
         options.outputHeight = options.outputHeight || 720;
@@ -98,7 +136,7 @@ export class MetaroomXRBackend {
         // Member variables.
         this.options = options;
         this.main = options.main;
-        this.glDoResourceTracking = options.glDoResourceTracking;
+        this.doResourceTracking   = options.doResourceTracking;
         this.useCustomState       = options.useCustomState;
         this._projectionMatrix    = mat4.create();
         this._viewMatrix          = mat4.create();
@@ -265,40 +303,72 @@ export class MetaroomXRBackend {
         return this.start();
     }
 
+    async initGPUAPI(options, target) {
+        let gpuInterface;
+
+        this.gpuAPI = null;
+
+        switch (options.gpuAPI) {
+        default: /* webgl2 */ {
+            const api          = await GPU.loadAPI(GPU.GPU_API_TYPE.WEBGL);
+            this.gpuInterface  = new api.GPUInterface();
+            this.gpuAPI        = api;
+            break;
+        }
+        case 'webgpu': {
+            console.error("webgpu unsupported");
+            return null;
+        }
+        case 'webgl': {
+            const api          = await GPU.loadAPI(GPU.GPU_API_TYPE.WEBGL);
+            this.gpuInterface  = new api.GPUInterface();
+            this.gpuAPI        = api;
+            break;
+        }
+        }
+
+
+        let ok = false;
+        if (options.gpuAPI == "default") {
+            ok = this.gpuInterface.init({
+                target         : this._canvas, 
+                contextNames   : this.options.contextNames, 
+                contextOptions : this.options.contextOptions
+            });
+        } else if (options.gpuAPI == 'webgpu') {
+            console.error("webgpu not supported yet");
+            return;
+        } else {
+            ok = this.gpuInterface.init({
+                target         : this._canvas, 
+                contextNames   : [options.gpuAPI], 
+                contextOptions : this.options.contextOptions
+            });                
+        }
+
+        console.assert(ok);
+        this._gl      = this.gpuInterface.ctx;
+        this._version = this.gpuInterface.version;
+
+        if (options.useGlobalContext) {
+            window.gl = this._gl;
+        }
+        if (options.doResourceTracking) {
+            this.gpuInterface.enableResourceTracking();
+        }
+
+        return gpuInterface;
+    }
+
     async _init() {
         this._initButton();
         this._initCanvasOnParentElement();
         this._initCustomState();
 
-        let ctx;
-
-        if (this.options.gpuAPI == "default") {
-            ctx = GFX.initGLContext(
-                this._canvas, 
-                this.options.contextNames, 
-                this.options.contextOptions
-            );
-        } else if (this.options.gpuAPI == 'webgpu') {
-            console.error("webgpu not supported yet");
-            return;
-        } else {
-            ctx = GFX.initGLContext(
-                this._canvas, 
-                [this.options.gpuAPI], 
-                this.options.contextOptions
-            );                
-        }
-
-        console.assert(ctx.isValid);
-        this._gl      = ctx.gl;
-        this._version = ctx.version;
-
-        if (this.options.glUseGlobalContext) {
-            window.gl = this._gl;
-        }
-        if (this.options.glDoResourceTracking) {
-            this._glAttachResourceTracking();
-        }
+        await this.initGPUAPI(
+            this.options, 
+            this._canvas
+        );
 
         this.timeStart = 0;
         window.timeStart = this.timeStart;
@@ -332,7 +402,7 @@ export class MetaroomXRBackend {
             this.options.outputSurfaceName,
             this.options.outputWidth,
             this.options.outputHeight
-            );
+        );
         console.assert(parentCanvasRecord !== null);
         console.assert(parentCanvasRecord.parent !== null);
         console.assert(parentCanvasRecord.canvas !== null);
@@ -683,20 +753,5 @@ export class MetaroomXRBackend {
            this.doWorldTransition({direction : 1, broadcast : true});
         }
         vrDisplay.submitFrame();
-    }
-
-    _glAttachResourceTracking() {
-        if (!this.glDoResourceTracking) {
-            return;
-        }
-        GFX.glAttachResourceTracking(this._gl, this._version);
-    }
-
-    _glFreeResources() {
-        if (!this.glDoResourceTracking) {
-            return;
-        }
-        //console.log("Cleaning graphics context:");
-        GFX.glFreeResources(this._gl);
     }
 };
