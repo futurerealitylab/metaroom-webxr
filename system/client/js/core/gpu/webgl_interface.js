@@ -149,7 +149,7 @@ export function enableResourceTracking(args) {
 
             return out;
 
-        }.bind(GL);
+        };
     }
 }
 

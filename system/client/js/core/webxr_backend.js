@@ -370,12 +370,9 @@ export class MetaroomXRBackend {
             this._canvas
         );
 
-        this.timeStart = 0;
-        window.timeStart = this.timeStart;
-
         if (this.options.enableBellsAndWhistles) {
-            const status = await this._initWebVR();
-            if (!status) {
+            const ok = await this._initWebVR();
+            if (!ok) {
                 console.log('Initializing PC window mode ...');
                 this._initWindow();
             }
