@@ -1,5 +1,30 @@
 'use strict';
 
+// statically import 
+// the exported symbol at start-time 
+//
+// note: begin with ./ to specify a path relative to the current file,
+//       begin with / to start at the root
+import {WebGLInterface as wgl} from "./gpu/webgl_interface.js";
+//import {WebGLInterface} from "/system/client/js/core/gpu/webgl_interface.js";
+//
+// other many ways of doing it:
+//
+// import defaultExport from "module-name";
+// import * as name from "module-name";
+// import { export1 } from "module-name";
+// import { export1 as alias1 } from "module-name";
+// import { export1 , export2 } from "module-name";
+// import { foo , bar } from "module-name/path/to/specific/un-exported/file";
+// import { export1 , export2 as alias2 , [...] } from "module-name";
+// import defaultExport, { export1 [ , [...] ] } from "module-name";
+// import defaultExport, * as name from "module-name";
+// import "module-name";
+//
+// dynamic imports at runtime, don't need to be in the index.html
+// const promise = await import("module-name");
+// import("module-name").then((result) => {} ... etc.
+
 const mat4 = {};
 mat4.create = function() {
     return new Float32Array(16);
