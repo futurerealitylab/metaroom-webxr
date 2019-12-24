@@ -1,63 +1,72 @@
 "use strict";
 
-//code.iamkate.com
-function Queue(){var a=[],b=0;this.getLength=function(){return a.length-b};this.isEmpty=function(){return 0==a.length};this.enqueue=function(b){a.push(b)};this.dequeue=function(){if(0!=a.length){var c=a[b];2*++b>=a.length&&(a=a.slice(b),b=0);return c}};this.peek=function(){return 0<a.length?a[b]:void 0}};
-
+import {Queue} from "./queue.js"
 
 window.Input = {};
 window.Input.INPUT_TYPE_KEYDOWN = "keydown";
 window.Input.INPUT_TYPE_KEYUP   = "keyup";
 
+Input._keydown = null;
+Input._keyup = null;
+
+Input._keyQueue = new Queue();
+
+Input.input = {
+    keyPrev : null,
+    keyCurr : null,
+    isInit  : false
+};
+
 window.Input.initKeyEvents = function(keypoll) {
 
-    MR._keypoll = keypoll;
+    Input._keypoll = keypoll;
 
-    MR.input.keyPrev = new Uint8Array(512);
-    MR.input.keyCurr = new Uint8Array(512);
+    Input.input.keyPrev = new Uint8Array(512);
+    Input.input.keyCurr = new Uint8Array(512);
 
     for (let i = 0; i < 512; i += 1) {
-        MR.input.keyPrev[i] = 0;
+        Input.input.keyPrev[i] = 0;
     }
     for (let i = 0; i < 512; i += 1) {
-        MR.input.keyCurr[i] = 0;
+        Input.input.keyCurr[i] = 0;
     }
 
-    if (!MR.input.isInit) {
+    if (!Input.input.isInit) {
         document.addEventListener("keydown", (e) => {
             if (e.target != document.body) { return; }
 
-            MR._keyQueue.enqueue(e);
+            Input._keyQueue.enqueue(e);
 
-            if (MR._keydown) {
-                MR._keydown(e);
+            if (Input._keydown) {
+                Input._keydown(e);
             }
         }, false);
         document.addEventListener("keyup", (e) => {
             if (e.target != document.body) { return; }
 
-            MR._keyQueue.enqueue(e);
+            Input._keyQueue.enqueue(e);
 
-            if (MR._keyup) {
-                MR._keyup(e);
+            if (Input._keyup) {
+                Input._keyup(e);
             }
         }, false);
 
-        MR.input.isInit = true;
+        Input.input.isInit = true;
     }
 };
 
 
 window.Input.updateKeyState = function() {
-    const keyPrev    = MR.input.keyPrev;
-    const keyPrevLen = MR.input.keyPrev.length;
-    const keyCurr    = MR.input.keyCurr;
+    const keyPrev    = Input.input.keyPrev;
+    const keyPrevLen = Input.input.keyPrev.length;
+    const keyCurr    = Input.input.keyCurr;
 
     for (let i = 0; i < keyPrevLen; i += 1) {
         keyPrev[i] = keyCurr[i];
     }
 
-    const Q = MR._keyQueue;
-    const currState = MR.input.keyCurr;
+    const Q = Input._keyQueue;
+    const currState = Input.input.keyCurr;
     while (!Q.isEmpty()) {
         const e = Q.dequeue();
         const keyCode = e.keyCode;
@@ -70,49 +79,47 @@ window.Input.updateKeyState = function() {
                 keyCurr[keyCode] = 0;
                 break;
             }
-            default: {
-
-            }
+            default: {}
         }
     }
 };
 
 window.Input.keyWentDown = function(code) {
-    return !MR.input.keyPrev[code] && MR.input.keyCurr[code];
+    return !Input.input.keyPrev[code] && Input.input.keyCurr[code];
 };
 window.Input.keyWentDownNum = function(code) {
-    return (~MR.input.keyPrev[code]) & MR.input.keyCurr[code];
+    return (~Input.input.keyPrev[code]) & Input.input.keyCurr[code];
 };
 
 window.Input.keyIsDown = function(code) {
-    return MR.input.keyCurr[code];
+    return Input.input.keyCurr[code];
 };
 window.Input.keyIsDownNum = function(code) {
-    return MR.input.keyCurr[code];
+    return Input.input.keyCurr[code];
 };
 window.Input.keyIsUp = function(code) {
-    return !MR.input.keyCurr[code];
+    return !Input.input.keyCurr[code];
 };
 window.Input.keyIsUpNum = function(code) {
-    return ~MR.input.keyCurr[code];
+    return ~Input.input.keyCurr[code];
 };
 
 window.Input.keyWentUp = function(code) {
-    return MR.input.keyPrev[code] && !MR.input.keyCurr[code];
+    return Input.input.keyPrev[code] && !Input.input.keyCurr[code];
 };
 window.Input.keyWentUpNum = function(code) {
-    return MR.input.keyPrev[code] & (~MR.input.keyCurr[code]);
+    return Input.input.keyPrev[code] & (~Input.input.keyCurr[code]);
 };
 
 window.Input.registerKeyDownHandler = function(handler) {
-    MR._keydown = handler;
+    Input._keydown = handler;
 }
 window.Input.registerKeyUpHandler = function(handler) {
-    MR._keyup = handler;
+    Input._keyup = handler;
 }
 window.Input.deregisterKeyHandlers = function() {
-    MR._keydown = null;
-    MR._keyup   = null;
+    Input._keydown = null;
+    Input._keyup   = null;
 }
 
 window.Input.KEY_LEFT  = 37;

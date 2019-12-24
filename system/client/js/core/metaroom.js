@@ -184,16 +184,7 @@ MR.dynamicImport = function(path) {
 };
 
 
-MR._keydown = null;
-MR._keyup = null;
 
-MR._keyQueue = new Queue();
-
-MR.input = {
-    keyPrev : null,
-    keyCurr : null,
-    isInit  : false
-};
 
 MR.UserType = {"browser":0, "vr":1, "spectator":2};
 Object.freeze(MR.UserType);
