@@ -14,7 +14,17 @@
 // import {WebGLInterface} from "/system/client/js/core/gpu/webgl_interface.js";
 //
 // here I'm importing absolutely all exported symbols into a single namespace called "wgl"
-import * as wgl from "./gpu/webgl_interface.js";
+// import * as wgl from "./gpu/webgl_interface.js";
+// console.log(wgl);
+//
+// here I'm importing the module containing submodules, and packaging all
+// symbols into just one namespace
+import * as GPU from "./gpu/gpu.js";
+console.log(GPU);
+console.log(GPU.WebGLInterface);
+const wgl = new GPU.WebGLInterface();
+console.log(wgl);
+console.log(GPU.WEBGL_CONTEXT_TYPE_TO_NAME[GPU.WEBGL_CONTEXT_TYPE_WEBGL2]);
 //
 // other many ways of doing it:
 //
