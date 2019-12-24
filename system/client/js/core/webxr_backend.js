@@ -5,8 +5,16 @@
 //
 // note: begin with ./ to specify a path relative to the current file,
 //       begin with / to start at the root
-import {WebGLInterface as wgl} from "./gpu/webgl_interface.js";
-//import {WebGLInterface} from "/system/client/js/core/gpu/webgl_interface.js";
+// 
+// examples:
+// here I'm using the local path -- importing an individual symbol renaming it "wgl"
+// import {WebGLInterface as wgl} from "./gpu/webgl_interface.js";
+// 
+// here I'm using the path from the project root -- importing an individual symbol and not renaming it 
+// import {WebGLInterface} from "/system/client/js/core/gpu/webgl_interface.js";
+//
+// here I'm importing absolutely all exported symbols into a single namespace called "wgl"
+import * as wgl from "./gpu/webgl_interface.js";
 //
 // other many ways of doing it:
 //
