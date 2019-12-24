@@ -1,3 +1,5 @@
+"use strict"
+
 // TODO:
 // handle scope with subscription
 // return unsubscribe "token"

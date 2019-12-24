@@ -20,17 +20,18 @@
   <script src="system/client/js/lib/audio.js"></script>
   <script src="system/client/js/lib/viewpoint_controller.js"></script>
 
-  <!-- WebXR Button implements a button to toggle in and out of VR. -->
+  <!-- Button implements a button to toggle in and out of XR. -->
   <script src="system/client/js/lib/webxr-button.js"></script>
-  <!-- WebXR Server and Client. -->
+  <!-- Server and Client. -->
   <script src="system/client/js/core/client.js"></script>
   <script src="system/client/js/core/avatar.js"></script>
   <script src="system/client/js/core/EventBus.js"></script>
   <script src="system/client/js/core/SystemHandler.js"></script>
-  <script src="system/client/js/core/lock.js"></script>
-  <!-- WebXR Canvas Wrangler back-end. -->
+  <script type="module" src="system/client/js/core/lock.js"></script>
+  <script type="module" src="system/client/js/core/server_publish_subscribe.js"></script>
+  <!-- system backends -->
   <script src="system/client/js/core/webvr-wrangler.js"></script>
-  <script src="system/client/js/core/webxr_backend.js"></script>
+  <script type="module" src="system/client/js/core/webxr_backend.js"></script>
   <script src=lib/CG.js></script>
 
   <!--   System Initialization -->
@@ -40,8 +41,8 @@
   <div id='server-comm-port' value='3001'></div>
   <div id=''                 value='192.168.1.105'></div>
   <div id='server-sync-port' value='11235'></div>
-  <script src="system/client/js/core/metaroom.js"></script>
-  <script src="system/client/js/core/callback.js"></script>  
+  <script type="module" src="system/client/js/core/metaroom.js"></script>
+  <script type="module" src="system/client/js/core/callback.js"></script>  
   <!-- Shader Editor -->
   <script type="module" src="system/client/js/lib/mreditor.js"></script>
 

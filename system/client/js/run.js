@@ -1,6 +1,8 @@
 "use strict";
 
-import {MREditor} from "./lib/mreditor.js";
+import {Metaroom}               from "./core/metaroom.js";
+import {ServerPublishSubscribe} from "./core/server_publish_subscribe.js";
+import {MREditor}               from "./lib/mreditor.js";
 
 window.MREditor = MREditor;
 

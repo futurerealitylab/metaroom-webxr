@@ -1,8 +1,10 @@
 "use strict";
 
+import {MetaroomXRBackend} from "./webxr_backend.js";
+import {ServerPublishSubscribe} from "./server_publish_subscribe.js";
 
 // the "base" type
-function Metaroom() {
+export function Metaroom() {
     this.worldIdx = 0;
     this.worlds = [];
 }
@@ -37,7 +39,7 @@ Metaroom_WebXR.prototype = Object.create(
     Metaroom.prototype,
     {
         type     : {value : Metaroom.BACKEND_TYPE.WEBXR},
-        wrangler : {value : new XRBackend()},
+        wrangler : {value : new MetaroomXRBackend()},
     }
 );
 
@@ -89,7 +91,7 @@ window.MR = Metaroom.create(type);
 MR.init = MR.wrangler.init.bind(MR.wrangler);
 
 
-const SOCKET_STATE_MAP = {
+export const SOCKET_STATE_MAP = {
     [WebSocket.CLOSED]     : "CLOSED",
     [WebSocket.CLOSING]    : "CLOSING",
     [WebSocket.CONNECTING] : "CONNECTING",
@@ -153,36 +155,6 @@ MR.initServer = () => {
     });  
 }
 
-
-
-
-class ServerPublishSubscribe {
-    constructor() {
-        this.subscribers = {};
-        this.subscribersOneShot = {};
-    }
-    subscribe(channel, subscriber, data) {
-        this.subscribers[channel] = this.subscribers[channel] || new Map();
-        this.subscribers[channel].set(subscriber, {sub: subscriber, data: data});
-    }
-    unsubscribeAll(subscriber) {
-        for (let prop in this.subscribers) {
-            if (Object.prototype.hasOwnProperty.call(this.subscribers, prop)) {
-                const setObj = this.subscribers[prop].delete(subscriber);
-            }
-        }
-        
-    }
-    subscribeOneShot(channel, subscriber, data) {
-        this.subscribersOneShot[channel] = this.subscribersOneShot[channel] || new Map();
-        this.subscribersOneShot[channel].set(subscriber, {sub: subscriber, data: data});    
-    }
-    publish (channel, ...args) {
-        (this.subscribers[channel] || new Map()).forEach((value, key) => value.sub(value.data, ...args));
-        (this.subscribersOneShot[channel] || new Map()).forEach((value, key) => value.sub(value.data, ...args));
-        this.subscribersOneShot = {};
-    }
-}
 MR.server.subs = new ServerPublishSubscribe();
 MR.server.subsLocal = new ServerPublishSubscribe();
 MR.server.echo = (message) => {   

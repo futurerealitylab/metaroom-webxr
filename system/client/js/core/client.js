@@ -1,3 +1,5 @@
+"use strict"
+
 // TODO: add ping pong heartbeart to keep connections alive
 // TODO: finish automatic reconnection
 // TODO: max retries + timeout

@@ -1,4 +1,6 @@
-class Lock {
+"use strict";
+
+export class Lock {
     constructor() {
         this.locked = false;       
     }
@@ -34,3 +36,5 @@ class Lock {
         this.locked = true;
     }
 };
+
+window.Lock = Lock;
