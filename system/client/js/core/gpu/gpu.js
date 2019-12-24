@@ -19,10 +19,10 @@ export const GPU_API_TYPE = {
 export function initAPI(type, args) {
     switch (type) {
     default /* GPU_API_TYPE.WEBGL */ : {
-        return new WGL.WebGLInterface(args); 
+        return new WGL.WebGLInterface(); 
     }
     case GPU_API_TYPE.WEBGPU: {
-        return new WGPU.WebGPUInterace(args);
+        return new WGPU.WebGPUInterace();
     }
     }
 };

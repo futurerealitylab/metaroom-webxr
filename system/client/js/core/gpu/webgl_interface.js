@@ -2,7 +2,26 @@
 
 // expose this class in the declaration
 export class WebGLInterface {
-    
+    initContext(args) {
+        this.version = 0;
+        this.target  = null;
+        this.ctx     = null;
+
+        const target = args.target;
+        this.contextOptions = args.options;
+        const contextNames = args.contextNames;
+        const len = contextNames.length;
+        for (let i = 0; i < len; i += 1) {
+            const ctx = target.getContext(contextNames[i], contextOptions);
+            if (ctx != null) {
+                this.version = contextNames[i];
+                this.target = target;
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
 
 // enums
