@@ -20,6 +20,7 @@
 // here I'm importing the module containing submodules, and packaging all
 // symbols into just one namespace
 import * as GPU from "./gpu/gpu.js";
+import {WebXRButton} from "./../lib/webxr-button.js";
 //
 // other many ways of doing it:
 //
@@ -166,7 +167,7 @@ export class MetaroomXRBackend {
         this._immersiveCanvas = null;
         this._gl = null;
         this._version = null;
-        this._button = null;
+        this.xrButton = null;
         this._frameData = null;
         
         this.frameData = () => {
@@ -385,11 +386,11 @@ export class MetaroomXRBackend {
 
     _initButton() {
         if (this.options.enableBellsAndWhistles && this.options.enableEntryByButton) {
-            this._button = new XRDeviceButton({
-                onRequestSession: this._onVRRequestPresent.bind(this),
-                onEndSession: this._onVRExitPresent.bind(this)
+            this.xrButton = new WebXRButton({
+                onRequestSession : this.onRequestSession,
+                onEndSession     : this.onEndSession
             });
-            document.querySelector('body').prepend(this._button.domElement);
+            document.querySelector('body').prepend(this.xrButton.domElement);
         }
     }
 
@@ -420,7 +421,7 @@ export class MetaroomXRBackend {
     _initWebVR() {
         if (navigator.getVRDisplays) {
             this._frameData = new VRFrameData();
-            const button = this._button;
+            const button = this.xrButton;
             const me = this;
             navigator.getVRDisplays().then(function(displays) {
                 if (displays.length > 0) {
@@ -605,6 +606,45 @@ export class MetaroomXRBackend {
         }
     }
 
+    enableImmersiveVR(supported) {
+        this.xrButton.enabled = supported;
+    }
+
+    initWebXR() {
+        if (!navigator.xr) {
+            return false;
+        }
+
+        return navigator.xr.isSessionSupported('immersive-vr').
+        then((supported) => {
+            this.enableImmersiveVR(supported);
+        }).catch((err) => {
+            console.error(err.message);
+        });
+    }
+
+    onRequestSession() {
+        console.log("requesting session");
+        return navigator.xr.requestSession('immersive-vr').then(
+            this.onSessionStarted
+        );
+    }
+    onSessionStarted(session) {
+        console.log("session started");
+        this.xrButton.setSession(session);
+
+        session.addEventListener('end', onSessionEnded)
+    }
+    onEndSession(session) {
+        console.log("session ended");
+        session.end();
+    }
+    onSessionEnded(e) {
+        this.xrButton.setSession(null);
+    }
+
+    // OLD
+
     _onVRRequestPresent () {
         // This can only be called in response to a user gesture.
         this._vrDisplay.requestPresent([{ source: this._canvas }]).then(function () {
@@ -658,6 +698,8 @@ export class MetaroomXRBackend {
 
     _onFrameXR(t) {
     }
+
+    //
 
     _onAnimationFrameWindow(t) {
         this.time = t / 1000.0;
