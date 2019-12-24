@@ -11,7 +11,7 @@
 // decorators
 // handle underflow for uniqueId in case of long running server
 
-class EventBus {
+export class EventBus {
     constructor() {
         this.callbacks = {};
         this.currentId = 0;
