@@ -3,6 +3,7 @@
 import {Metaroom}               from "./core/metaroom.js";
 import {ServerPublishSubscribe} from "./core/server_publish_subscribe.js";
 import {MREditor}               from "./lib/mreditor.js";
+import * as GPU                 from "./core/gpu/gpu.js";
 
 window.MREditor = MREditor;
 
@@ -155,9 +156,9 @@ case 2: {
             outputSurfaceName      : 'output-surface',
             outputWidth            : parseInt(RESOLUTION[0]),
             outputHeight           : parseInt(RESOLUTION[1]),
-            glUseGlobalContext     : true,
+            useGlobalContext     : true,
             // frees gpu resources upon world switch
-            glDoResourceTracking      : true,
+            doResourceTracking        : true,
             glEnableEditorHook        : true,
             enableEntryByButton       : true,
             enableBellsAndWhistles    : true,
@@ -167,7 +168,7 @@ case 2: {
             // main() is the system's entry point
             main : async () => {
                 {
-                    const mod = await import("./lib/default_window_ui.js");
+                    const mod      = await import("./lib/default_window_ui.js");
                     MR.wrangler.ui = new mod.DefaultWindowUI();
                     // temp hack
                     MR.wrangler.menu = MR.wrangler.ui.menu;
@@ -250,7 +251,7 @@ case 2: {
 
                         MR.wrangler._gl.useProgram(null);
                         MR.wrangler._reset();
-                        MR.wrangler._glFreeResources();
+                        MR.wrangler.gpuInterface.freeResources();
                         ScreenCursor.clearTargetEvents();
                         Input.deregisterKeyHandlers();
 

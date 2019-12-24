@@ -1,8 +1,10 @@
 "use strict"
 
 // highly experimental web graphics API for future experimentation
-class WebGPUInterface {
-    
+class GPUInterface {
+    init(args) {
+        console.error("NOT IMPLEMENTED");
+    }
 }
 
 // enums
