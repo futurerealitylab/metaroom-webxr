@@ -36,5 +36,3 @@ export class Lock {
         this.locked = true;
     }
 };
-
-window.Lock = Lock;

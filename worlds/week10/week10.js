@@ -1,5 +1,7 @@
 "use strict"
 
+import {Lock} from "/system/client/js/core/lock.js";
+
 /*--------------------------------------------------------------------------------
 
 The proportions below just happen to match the dimensions of my physical space
