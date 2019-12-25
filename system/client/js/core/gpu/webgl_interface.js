@@ -1,13 +1,13 @@
 "use strict"
 
 // expose this class in the declaration
-export class GPUInterface {
+export class GPUCtxInfo {
 
     init(args) {
         this.version = null;
         this.ctx     = null;
 
-        const target         = args.target;
+        const target         = args.targetSurface;
         const contextOptions = args.options;
         const contextNames   = args.contextNames;
         const len = contextNames.length;
@@ -208,30 +208,13 @@ export function freeResources(args) {
         GL.vertexAttribPointer(a, 1, GL.FLOAT, false, 0, 0);
     }
     GL.deleteBuffer(tempBuf);
+
+    GL.useProgram(null);
+    
     console.log("Done!");
     console.groupEnd();
 }
 
-
-// enums
-export const WEBGL_API_TYPE = 'webgl';
-export const CONTEXT_TYPE_WEBGL  = 0;
-export const CONTEXT_TYPE_WEBGL2 = 1;
-
-const CONTEXT_TYPE = {
-    webgl  : CONTEXT_TYPE_WEBGL,
-    webgl2 : CONTEXT_TYPE_WEBGL2
-};
-
-const CONTEXT_TYPE_TO_NAME = {
-    CONTEXT_TYPE_WEBGL  : 'webgl',
-    CONTEXT_TYPE_WEBGL2 : 'webgl2'
-};
-
-export {
-    CONTEXT_TYPE         as WEBGL_CONTEXT_TYPE, 
-    CONTEXT_TYPE_TO_NAME as WEBGL_CONTEXT_TYPE_TO_NAME
-};
 
 export function getWebXRLayerConstructor() {
     return window.XRWebGLLayer;

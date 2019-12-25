@@ -68,7 +68,7 @@ window.hotReloadFile = function(localPath) {
             return;
         }
 
-        MR.wrangler.reloadGeneration += 1;
+        MR.system.reloadGeneration += 1;
 
         function rawURL(url) {
             return url.split(/[?#]/)[0];
@@ -76,11 +76,11 @@ window.hotReloadFile = function(localPath) {
 
         const importName = rawURL(window.location.href) + 
                             filename + "?generation=" + 
-                            MR.wrangler.reloadGeneration;
+                            MR.system.reloadGeneration;
         import(importName).then(
             (world) => {
                 const conf = world.default();
-                MR.wrangler.onReload(conf);
+                MR.system.onReload(conf);
             }).catch(err => { console.error(err); });
 
     }, saveTo);
@@ -156,22 +156,23 @@ case 2: {
             outputSurfaceName      : 'output-surface',
             outputWidth            : parseInt(RESOLUTION[0]),
             outputHeight           : parseInt(RESOLUTION[1]),
-            useGlobalContext     : true,
+            useGlobalContext       : true,
             // frees gpu resources upon world switch
             doResourceTracking        : true,
             glEnableEditorHook        : true,
             enableEntryByButton       : true,
             enableBellsAndWhistles    : true,
             synchronizeTimeWithServer : false,
-            gpuAPI : "webgl2",
+            GPUAPIProvidedContext     : null,
+            GPUAPIType                : GPU.GPU_API_TYPE.WEBGL,
 
             // main() is the system's entry point
             main : async () => {
                 {
-                    const mod      = await import("./lib/default_window_ui.js");
-                    MR.wrangler.ui = new mod.DefaultWindowUI();
+                    const ui      = await import("./lib/default_window_ui.js");
+                    MR.system.ui = new ui.DefaultWindowUI();
                     // temp hack
-                    MR.wrangler.menu = MR.wrangler.ui.menu;
+                    MR.system.menu = MR.system.ui.menu;
                 }
 
                 MREditor.enable();
@@ -182,15 +183,15 @@ case 2: {
 
                 MREditor.detectFeatures();
 
-                wrangler.isTransitioning = false;
+                MR.system.isTransitioning = false;
 
                 try {
                     const worldInfo = MR.worlds[MR.worldIdx];
                     setPath(worldInfo.localPath);
                     wrangler.isTransitioning = true;
-                    MR.wrangler.beginSetup(worldInfo.world.default()).catch(err => {
+                    MR.system.beginSetup(worldInfo.world.default()).catch(err => {
                         console.error(err);
-                        MR.wrangler.doWorldTransition({direction : 1, broadcast : true});
+                        MR.system.doWorldTransition({direction : 1, broadcast : true});
                     }).then(() => { wrangler.isTransitioning = false;               
                         for (let d = 0; d < deferredActions.length; d += 1) {
                             deferredActions[d]();
@@ -214,7 +215,7 @@ case 2: {
                 window.COUNT = 0;
 
                 
-                wrangler.defineWorldTransitionProcedure(function(args) {
+                MR.system.defineWorldTransitionProcedure(function(args) {
                     //console.trace();
                     let ok = false;
                     COUNT += 1;
@@ -238,20 +239,18 @@ case 2: {
                         }
 
 
-                        wrangler.isTransitioning = true;
+                        MR.system.isTransitioning = true;
 
                         //console.log(COUNT, "transitioning to world: [" + MR.worldIdx + "]");
                         //console.log(COUNT, "broadcast", args.broadcast, "direction: ", args.direction, "key", args.key);
 
                         CanvasUtil.setOnResizeEventHandler(null);
                         CanvasUtil.resize(MR.getCanvas(), 
-                            MR.wrangler.options.outputWidth, 
-                            MR.wrangler.options.outputHeight
+                            MR.system.options.outputWidth, 
+                            MR.system.options.outputHeight
                         );
 
-                        MR.wrangler._gl.useProgram(null);
-                        MR.wrangler._reset();
-                        MR.wrangler.gpuInterface.freeResources();
+                        MR.system.clearWorld();
                         ScreenCursor.clearTargetEvents();
                         Input.deregisterKeyHandlers();
 
@@ -265,14 +264,14 @@ case 2: {
                             const worldInfo = MR.worlds[MR.worldIdx];
                             setPath(worldInfo.localPath);
 
-                            MR.wrangler.beginSetup(worldInfo.world.default()).catch((e) => {
+                            MR.system.beginSetup(worldInfo.world.default()).catch((e) => {
                                 console.error(e);
                                 setTimeout(function(){ 
                                     console.log("Trying another world");
                                     wrangler.doWorldTransition({direction : 1, broadcast : true});
                                 }, 500);  
                             }).then(() => {
-                                wrangler.isTransitioning = false;
+                                MR.system.isTransitioning = false;
 
                                 //console.log("now we should do deferred actions");
                                 //console.log("ready");
@@ -322,12 +321,12 @@ case 2: {
                         //console.log("is deferring transition");
                         deferredActions = [];
                         deferredActions.push(() => { 
-                            MR.wrangler.doWorldTransition({direction : null, key : args.key, broadcast : false});
+                            MR.system.doWorldTransition({direction : null, key : args.key, broadcast : false});
                         });
                         return;
                     }
                     //console.log("not deferring transition");
-                    MR.wrangler.doWorldTransition({direction : null, key : args.key, broadcast : false});
+                    MR.system.doWorldTransition({direction : null, key : args.key, broadcast : false});
                 });
 
             },
@@ -381,7 +380,7 @@ default: {
 
                 MREditor.init({
                     defaultShaderCompilationFunction : MREditor.onNeedsCompilationDefault,
-                    //externalWindowGetter : function() { return MR.wrangler.externalWindow; }
+                    //externalWindowGetter : function() { return MR.system.externalWindow; }
                 });
 
                 MREditor.detectFeatures();
@@ -391,7 +390,7 @@ default: {
                 let sourceFiles = document.getElementsByClassName("worlds");
                 
                 // call the main function of the selected world
-                if (MR.wrangler.options.enableMultipleWorlds) {
+                if (MR.system.options.enableMultipleWorlds) {
 
                     try {
 
@@ -412,10 +411,10 @@ default: {
                         const worldInfo = MR.worlds[MR.worldIdx];
                         setPath(worldInfo.localPath);
                         wrangler.isTransitioning = true;
-                        MR.wrangler.beginSetup(worldInfo.world.default()).catch(err => {
+                        MR.system.beginSetup(worldInfo.world.default()).catch(err => {
                                 //console.trace();
                                 console.error(err);
-                                MR.wrangler.doWorldTransition({direction : 1, broadcast : true});
+                                MR.system.doWorldTransition({direction : 1, broadcast : true});
                         }).then(() => { wrangler.isTransitioning = false;               
                                 for (let d = 0; d < deferredActions.length; d += 1) {
                                     deferredActions[d]();
@@ -438,7 +437,7 @@ default: {
                         setPath(getCurrentPath(src));
 
                         const world = await import(src);
-                        MR.wrangler.beginSetup(world.default()).catch(err => {
+                        MR.system.beginSetup(world.default()).catch(err => {
                                 console.trace();
                                 console.error(err);
 
@@ -488,13 +487,13 @@ default: {
 
                         CanvasUtil.setOnResizeEventHandler(null);
                         CanvasUtil.resize(MR.getCanvas(), 
-                            MR.wrangler.options.outputWidth, 
-                            MR.wrangler.options.outputHeight
+                            MR.system.options.outputWidth, 
+                            MR.system.options.outputHeight
                         );
 
-                        MR.wrangler._gl.useProgram(null);
-                        MR.wrangler._reset();
-                        MR.wrangler._glFreeResources();
+                        MR.system._gl.useProgram(null);
+                        MR.system._reset();
+                        MR.system._glFreeResources();
                         ScreenCursor.clearTargetEvents();
                         Input.deregisterKeyHandlers();
 
@@ -511,7 +510,7 @@ default: {
                             const worldInfo = MR.worlds[MR.worldIdx];
                             setPath(worldInfo.localPath);
 
-                            MR.wrangler.beginSetup(worldInfo.world.default()).catch((e) => {
+                            MR.system.beginSetup(worldInfo.world.default()).catch((e) => {
                                     console.error(e);
                                     setTimeout(function(){ 
                                             console.log("Trying another world");
@@ -571,12 +570,12 @@ default: {
                             //console.log("is deferring transition");
                             deferredActions = [];
                             deferredActions.push(() => { 
-                                MR.wrangler.doWorldTransition({direction : null, key : args.key, broadcast : false});
+                                MR.system.doWorldTransition({direction : null, key : args.key, broadcast : false});
                             });
                             return;
                         }
                         //console.log("not deferring transition");
-                        MR.wrangler.doWorldTransition({direction : null, key : args.key, broadcast : false});
+                        MR.system.doWorldTransition({direction : null, key : args.key, broadcast : false});
                 });
 
             },

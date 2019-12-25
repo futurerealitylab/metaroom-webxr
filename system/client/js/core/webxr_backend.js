@@ -1,44 +1,8 @@
 'use strict';
 
-// statically import 
-// the exported symbol at start-time 
-//
-// note: begin with ./ to specify a path relative to the current file,
-//       begin with / to start at the root
-// 
-// examples:
-// here I'm using the local path -- importing an individual symbol renaming it "wgl"
-// import {WebGLInterface as wgl} from "./gpu/webgl_interface.js";
-// 
-// here I'm using the path from the project root -- importing an individual symbol and not renaming it 
-// import {WebGLInterface} from "/system/client/js/core/gpu/webgl_interface.js";
-//
-// here I'm importing absolutely all exported symbols into a single namespace called "wgl"
-// import * as wgl from "./gpu/webgl_interface.js";
-// console.log(wgl);
-//
-// here I'm importing the module containing submodules, and packaging all
-// symbols into just one namespace
 import * as GPU from "./gpu/gpu.js";
 import {WebXRButton} from "./../lib/webxr-button.js";
 import {XRInfo, XR_REFERENCE_SPACE_TYPE, XR_SESSION_MODE} from "./../core/webxr_util.js";
-//
-// other many ways of doing it:
-//
-// import defaultExport from "module-name";
-// import * as name from "module-name";
-// import { export1 } from "module-name";
-// import { export1 as alias1 } from "module-name";
-// import { export1 , export2 } from "module-name";
-// import { foo , bar } from "module-name/path/to/specific/un-exported/file";
-// import { export1 , export2 as alias2 , [...] } from "module-name";
-// import defaultExport, { export1 [ , [...] ] } from "module-name";
-// import defaultExport, * as name from "module-name";
-// import "module-name";
-//
-// dynamic imports at runtime, don't need to be in the index.html
-// const promise = await import("module-name");
-// import("module-name").then((result) => {} ... etc.
 
 const mat4 = {};
 mat4.create = function() {
@@ -133,7 +97,7 @@ export class MetaroomXRBackend {
         options.enableMultipleWorlds   = (options.enableMultipleWorlds !== undefined)   ? options.enableMultipleWorlds   : true;
         options.enableBellsAndWhistles = (options.enableBellsAndWhistles !== undefined) ? options.enableBellsAndWhistles : true;
         
-        options.gpuAPI = options.gpuAPI || "default";
+        options.GPUAPI = options.GPUAPI || "default";
 
         // Member variables.
         this.options = options;
@@ -163,10 +127,10 @@ export class MetaroomXRBackend {
         // Uninitialized member variables (see _init()).
         this._parent = null;
         this._canvas = null;
-        this._glCanvas = null;
+        this.GPUCtxCanvas = null;
         this._mirrorCanvas = null;
         this._immersiveCanvas = null;
-        this._gl = null;
+        this.GPUCtx = null;
         this._version = null;
         this.xrButton = null;
         this._frameData = null;
@@ -306,62 +270,42 @@ export class MetaroomXRBackend {
         return this.start();
     }
 
-    async initGPUAPI(options, target) {
-        let gpuInterface;
+    async initGPUAPI(options, targetSurface) {
 
-        this.gpuAPI = null;
+        // note, initialization is the same for now,
+        // but likely to change -- will keep separated for now
 
-        switch (options.gpuAPI) {
-        default: /* webgl2 */ {
-            const api          = await GPU.loadAPI(GPU.GPU_API_TYPE.WEBGL);
-            this.gpuAPI        = api;
-            this.gpuInterface  = new api.GPUInterface();
-            
+        let GPUInterface;
+        switch (options.GPUAPIType) {
+        case GPU.GPU_API_TYPE.WEBGL: {
+            GPUInterface = await GPU.initWebGL(this, options, targetSurface);
             break;
         }
-        case 'webgpu': {
-            console.error("webgpu unsupported");
-            return null;
-        }
-        case 'webgl': {
-            const api          = await GPU.loadAPI(GPU.GPU_API_TYPE.WEBGL);
-            this.gpuAPI        = api;
-            this.gpuInterface  = new api.GPUInterface();
+        case GPU.GPU_API_TYPE.WEBGPU: {
+            GPUInterface = await GPU.initWebGPU(this, options, targetSurface);
             break;
         }
+        default: {
+            console.error(
+                "Unsupported GPU API, initialization should be done externally"
+            );
+
+            return false;
+        }
         }
 
-
-        let ok = false;
-        if (options.gpuAPI == "default") {
-            ok = this.gpuInterface.init({
-                target         : this._canvas, 
-                contextNames   : this.options.contextNames, 
-                contextOptions : this.options.contextOptions
-            });
-        } else if (options.gpuAPI == 'webgpu') {
-            console.error("webgpu not supported yet");
-            return;
-        } else {
-            ok = this.gpuInterface.init({
-                target         : this._canvas, 
-                contextNames   : [options.gpuAPI], 
-                contextOptions : this.options.contextOptions
-            });                
-        }
-
-        console.assert(ok);
-        this._gl      = this.gpuInterface.ctx;
-        this._version = this.gpuInterface.version;
+        this.GPUInterface = GPUInterface;
+        this.GPUAPI       = GPUInterface.GPUAPI;
+        this.GPUCtx       = this.GPUInterface.GPUCtxInfo.ctx;
 
         if (options.useGlobalContext) {
-            window.gl = this._gl;
+            window.gl = this.GPUCtx;
         }
         if (options.doResourceTracking) {
-            this.gpuInterface.enableResourceTracking();
+            this.GPUInterface.GPUCtxInfo.enableResourceTracking();
         }
 
-        return gpuInterface;
+        return GPUInterface;
     }
 
     async _init() {
@@ -605,6 +549,11 @@ export class MetaroomXRBackend {
         options.onSelectEnd = (function(t, state) {});
     }
 
+    clearWorld() {
+        this._reset();
+        this.GPUInterface.GPUCtxInfo.freeResources();
+    }
+
     _reset() {
         if (this.xrInfo.session) {
             console.log('resetting XR animation frame');
@@ -687,10 +636,10 @@ export class MetaroomXRBackend {
                 this.xrInfo.immersiveRefSpace = refSpace;
             })
         }).then(() => {;
-            const gpuAPILayer = new this.gpuAPI.WebXRLayer();
+            const GPUAPILayer = new this.GPUAPI.WebXRLayer();
 
             session.updateRenderState({
-                baseLayer : gpuAPILayer
+                baseLayer : GPUAPILayer
             });
 
             this.start();
@@ -832,7 +781,7 @@ export class MetaroomXRBackend {
 
         this.updateControllerState();
 
-        const gl = this._gl;
+        const gl = this.GPUCtx;
         vrDisplay.getFrameData(frame);
 
         this._animationHandle = vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
