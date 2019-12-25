@@ -25,6 +25,10 @@ export async function loadAPI_WebGPU() {
     return import("./webgpu_interface.js");
 }
 
+export const CTX_CREATE_STATUS_SUCCESS             = 0;
+export const CTX_CREATE_STATUS_FAILURE_UNKNOWN_API = 1;
+export const CTX_CREATE_STATUS_FAILURE_TO_INIT     = 2;
+
 export async function initWebGL(info, options, targetSurface) {
     const GPUAPI      = await loadAPI_WebGL();
     const GPUCtxInfo  = new GPUAPI.GPUCtxInfo();

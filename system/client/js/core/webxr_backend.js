@@ -294,12 +294,12 @@ export class MetaroomXRBackend {
                 "Unsupported GPU API, initialization should be done externally"
             );
 
-            return false;
+            return GPU.CTX_CREATE_STATUS_FAILURE_UNKNOWN_API;
         }
         }
 
         if (!GPUInterface.isValid) {
-            return false;
+            return GPU.CTX_CREATE_STATUS_FAILURE_TO_INIT;
         }
 
         this.GPUInterface = GPUInterface;
@@ -312,18 +312,18 @@ export class MetaroomXRBackend {
         if (options.doResourceTracking) {
             this.GPUInterface.GPUCtxInfo.enableResourceTracking();
         }
-        return true;
+        return GPU.CTX_CREATE_STATUS_SUCCESS;
     }
 
     async _init() {
         this._initCanvasOnParentElement();
         this._initCustomState();
 
-        const ok = await this.initGPUAPI(
+        const status = await this.initGPUAPI(
             this.options, 
             this._canvas
         );
-        console.assert(ok);
+        console.assert(status === GPU.CTX_CREATE_STATUS_SUCCESS);
 
         this.xrInfo = new XRInfo();
 
