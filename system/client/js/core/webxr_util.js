@@ -2,7 +2,8 @@
 
 export const XR_SESSION_MODE = {
     INLINE       : "inline",
-    IMMERSIVE_VR : "immersive-vr"
+    IMMERSIVE_VR : "immersive-vr",
+    IMMERSIVE_AR : "immersive-ar",
 };
 
 export const XR_REFERENCE_SPACE_TYPE = {

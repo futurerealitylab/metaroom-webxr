@@ -386,6 +386,8 @@ export class MetaroomXRBackend {
         if (this.GPUInterface.GPUAPI.XRIsSupported &&
             this.options.enableBellsAndWhistles) {
 
+            this._initButton();
+
             console.log("initializing XR");
             const ok = await this._initWebVR();
             if (!ok) {
@@ -398,8 +400,6 @@ export class MetaroomXRBackend {
                 console.log('Initializing PC window mode ...');
                 this._initWindow();
                 console.groupEnd();
-            } else {
-                this._initButton();
             }
         } else {
             console.warn("XR is unsupported");
