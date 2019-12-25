@@ -389,7 +389,7 @@ export class MetaroomXRBackend {
             this._initButton();
 
             console.log("initializing XR");
-            const ok = await this._initWebVR();
+            const ok = await this.XRDetectImmersiveVRSupport();
             if (!ok) {
                 console.log(
                     "%c%s", 
@@ -597,8 +597,6 @@ export class MetaroomXRBackend {
             });
         }
         modalCanvasInit();
-
-
     }
 
     _clearConfig() {
@@ -638,12 +636,13 @@ export class MetaroomXRBackend {
         }
     }
 
-    enableImmersiveVR(supported) {
+    enableImmersiveVREntry(supported) {
         this.xrButton.enabled = supported;
     }
 
-    async detectImmersiveVRSupport() {
+    async XRDetectImmersiveVRSupport() {
         if (!navigator.xr) {
+            console.log("WebXR unsupported");
             return false;
         }
 
@@ -653,13 +652,13 @@ export class MetaroomXRBackend {
             );
             if (supported) {
                 console.log("immersive-vr mode is supported");
-                this.enableImmersiveVR(true);
+                this.enableImmersiveVREntry(true);
                 return true;
             }
         } catch (err) {
             console.log("immersive-vr mode is unupported");
             console.error(err.message);
-            this.enableImmersiveVR(false);
+            this.enableImmersiveVREntry(false);
             return false;
         }
     }
@@ -673,11 +672,10 @@ export class MetaroomXRBackend {
                     XR_REFERENCE_SPACE_TYPE.BOUNDED_FLOOR
                 ]
             }
-        ).then(this.onSessionStarted).
-        catch((err) => {
-            console.error(err);
+        ).then(this.onSessionStarted).catch((err) => {
+            console.error(err.message);
             console.error("This should never happen because we check for support beforehand");
-            this.enableImmersiveVR(false);
+            this.enableImmersiveVREntry(false);
         });
     }
 
@@ -729,18 +727,20 @@ export class MetaroomXRBackend {
         session.end();
     }
     onSessionEnded(e) {
-        if (e.session.isImmersive) {
-            this._reset();
-            this.xrButton.setSession(null);
-            e.session.isImmersive   = false;
-            this.xrInfo.isImmersive = false;
-            this.xrInfo.session     = null;
-            this.xrInfo.type        = XR_REFERENCE_SPACE_TYPE.VIEWER;
-
-            this._VRIsActive = false;
-
-            this._animationHandle = window.requestAnimationFrame(this.config.onAnimationFrame);
+        if (!e.session.isImmersive) {
+            return;
         }
+
+        this._reset();
+        this.xrButton.setSession(null);
+        e.session.isImmersive   = false;
+        this.xrInfo.isImmersive = false;
+        this.xrInfo.session     = null;
+        this.xrInfo.type        = XR_REFERENCE_SPACE_TYPE.VIEWER;
+
+        this._VRIsActive = false;
+
+        this._animationHandle = window.requestAnimationFrame(this.config.onAnimationFrame);
     }
 
     // OLD
