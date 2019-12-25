@@ -4,6 +4,9 @@ import * as GPU from "./gpu/gpu.js";
 import {WebXRButton} from "./../lib/webxr-button.js";
 import {XRInfo, XR_REFERENCE_SPACE_TYPE, XR_SESSION_MODE} from "./../core/webxr_util.js";
 
+
+
+
 const mat4 = {};
 mat4.create = function() {
     return new Float32Array(16);
@@ -12,6 +15,31 @@ mat4.identity = function(t) {
     t.set([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
 }
 mat4.perspective = function perspective(t,e,n,r,a){var c=1/Math.tan(e/2),i=1/(r-a);return t[0]=c/n,t[1]=0,t[2]=0,t[3]=0,t[4]=0,t[5]=c,t[6]=0,t[7]=0,t[8]=0,t[9]=0,t[10]=(a+r)*i,t[11]=-1,t[12]=0,t[13]=0,t[14]=2*a*r*i,t[15]=0,t}
+
+
+// class TODO_FAKE_POSE {
+//     this.position 
+// }
+// class TODO_FAKE_FRAMEDATA {
+//     constructor() {
+//         this.leftProjectionMatrix = mat4.create();
+//         mat4.identity(this.leftProjectionMatrix);
+
+//         this.rightProjectionMatrix = mat4.create();
+//         mat4.identity(this.rightProjectionMatrix);
+
+//         this.leftViewMatrix = mat4.create();
+//         mat4.identity(this.leftViewMatrix);
+
+//         this.rightViewMatrix = mat4.create();
+//         mat4.identity(this.rightViewMatrix);
+
+//         this.timestamp = 0;
+
+//         this.pose = new TODO_FAKE_POSE();
+//     }
+// }
+// const new TODO_FAKE_FRAMEDATA();
 
 export class MetaroomXRBackend {
     // Empty constructor.
@@ -137,7 +165,8 @@ export class MetaroomXRBackend {
         this.xrInfo = null;
         
         this.frameData = () => {
-            return this._frameData;
+            //return this._frameData;
+            return null;
         }
         
         MR.frameData = this.frameData;
@@ -682,13 +711,15 @@ export class MetaroomXRBackend {
                 this.xrInfo.immersiveRefSpace = refSpace;
             })
         }).then(() => {;
-            const GPUAPILayer = new this.GPUAPI.WebXRLayer();
+            const GPUAPILayer = new this.GPUAPI.XRLayer;
 
             session.updateRenderState({
                 baseLayer : GPUAPILayer
             });
 
             this.start();
+
+            this._VRIsActive = true;
         });
 
 
@@ -705,6 +736,8 @@ export class MetaroomXRBackend {
             this.xrInfo.isImmersive = false;
             this.xrInfo.session     = null;
             this.xrInfo.type        = XR_REFERENCE_SPACE_TYPE.VIEWER;
+
+            this._VRIsActive = false;
 
             this._animationHandle = window.requestAnimationFrame(this.config.onAnimationFrame);
         }
