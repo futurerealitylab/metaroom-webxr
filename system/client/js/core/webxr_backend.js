@@ -721,6 +721,11 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
             return;
         }
 
+        const xrInfo = self.xrInfo;
+        const pose = frame.getViewerPose(xrInfo.immersiveRefSpace);
+
+        // TODO
+
         self.updateControllerState(self);
 
         const gl = self.GPUCtx;
