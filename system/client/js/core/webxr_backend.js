@@ -21,6 +21,7 @@
 // symbols into just one namespace
 import * as GPU from "./gpu/gpu.js";
 import {WebXRButton} from "./../lib/webxr-button.js";
+import {XRInfo} from "./../core/xr_info.js";
 //
 // other many ways of doing it:
 //
@@ -169,6 +170,7 @@ export class MetaroomXRBackend {
         this._version = null;
         this.xrButton = null;
         this._frameData = null;
+        this.xrInfo = null;
         
         this.frameData = () => {
             return this._frameData;
@@ -312,8 +314,9 @@ export class MetaroomXRBackend {
         switch (options.gpuAPI) {
         default: /* webgl2 */ {
             const api          = await GPU.loadAPI(GPU.GPU_API_TYPE.WEBGL);
-            this.gpuInterface  = new api.GPUInterface();
             this.gpuAPI        = api;
+            this.gpuInterface  = new api.GPUInterface();
+            
             break;
         }
         case 'webgpu': {
@@ -322,8 +325,8 @@ export class MetaroomXRBackend {
         }
         case 'webgl': {
             const api          = await GPU.loadAPI(GPU.GPU_API_TYPE.WEBGL);
-            this.gpuInterface  = new api.GPUInterface();
             this.gpuAPI        = api;
+            this.gpuInterface  = new api.GPUInterface();
             break;
         }
         }
@@ -362,7 +365,6 @@ export class MetaroomXRBackend {
     }
 
     async _init() {
-        this._initButton();
         this._initCanvasOnParentElement();
         this._initCustomState();
 
@@ -371,17 +373,22 @@ export class MetaroomXRBackend {
             this._canvas
         );
 
+        this.xrInfo = new XRInfo();
+
+        await this.main();
+
         if (this.options.enableBellsAndWhistles) {
             const ok = await this._initWebVR();
             if (!ok) {
                 console.log('Initializing PC window mode ...');
                 this._initWindow();
             }
+
+            this._initButton();
         } else {
             console.log('Initializing PC window mode ...');
             this._initWindow();        
         }
-        this.main();
     }
 
     _initButton() {
@@ -610,37 +617,69 @@ export class MetaroomXRBackend {
         this.xrButton.enabled = supported;
     }
 
-    initWebXR() {
+    async detectImmersiveVRSupport() {
         if (!navigator.xr) {
             return false;
         }
 
-        return navigator.xr.isSessionSupported('immersive-vr').
-        then((supported) => {
-            this.enableImmersiveVR(supported);
-        }).catch((err) => {
+        try {
+            const supported = await navigator.xr.isSessionSupported('immersive-vr');
+            if (supported) {
+                console.log("immersive-vr mode is supported");
+                this.enableImmersiveVR(true);
+                return true;
+            }
+        } catch (err) {
+            console.log("immersive-vr mode is unupported");
             console.error(err.message);
-        });
+            this.enableImmersiveVR(false);
+            return false;
+        }
     }
 
     onRequestSession() {
         console.log("requesting session");
-        return navigator.xr.requestSession('immersive-vr').then(
-            this.onSessionStarted
-        );
+        return navigator.xr.requestSession(
+            'immersive-vr',
+            {optionalFeatures : ['bounded-floor']}
+        ).then(this.onSessionStarted).
+        catch((err) => {
+            console.error(err);
+            console.error("This should never happen because we check for support beforehand");
+            this.enableImmersiveVR(false);
+        });
     }
+
     onSessionStarted(session) {
         console.log("session started");
+
+        this.xrInfo.session = session;
+
         this.xrButton.setSession(session);
 
-        session.addEventListener('end', onSessionEnded)
+        this.xrInfo.isImmersive = true;
+
+        session.addEventListener('end', onSessionEnded);
+
+        const gpuAPILayer = new this.gpuAPI.WebXRLayer();
+
+        session.updateRenderState({
+            baseLayer : gpuAPILayer
+        });
+
+
     }
     onEndSession(session) {
         console.log("session ended");
         session.end();
     }
     onSessionEnded(e) {
-        this.xrButton.setSession(null);
+        if (e.session.isImmersive) {
+            this.xrButton.setSession(null);
+            e.session.isImmersive   = false;
+            this.xrInfo.isImmersive = false;
+        }
+
     }
 
     // OLD
@@ -720,56 +759,47 @@ export class MetaroomXRBackend {
         this.config.onEndFrame(t, this.customState);
     }
 
-    _onAnimationFrame(t) {
-        this.time = t / 1000.0;
-        this.timeMS = t;
-
-        // For now, all VR gamepad button presses trigger a world transition.
+    // TODO(TR): WebXR has its own controller API that interfaces
+    // with the different reference spaces -- this may be necessary to use
+    updateControllerState() {
         MR.controllers = navigator.getGamepads();
         let gamepads = navigator.getGamepads();
         let vrGamepadCount = 0;
         let doTransition = false;
-        for (var i = 0; i < gamepads.length; ++i) {
-            var gamepad = gamepads[i];
-            if (gamepad) { // gamepads may contain null-valued entries (eek!)
+        for (let i = 0; i < gamepads.length; i += 1) {
+            const gamepad = gamepads[i];
+            if (gamepad) { // gamepads may contain null-valued entries
                 if (gamepad.pose || gamepad.displayId ) { // VR gamepads will have one or both of these properties.
-                    var cache = this.buttonsCache[vrGamepadCount] || [];
-                    for (var j = 0; j < gamepad.buttons.length; j++) {
-
+                    let cache = this.buttonsCache[vrGamepadCount] || [];
+                    for (let j = 0; j < gamepad.buttons.length; j += 1) {
                         // Check for any buttons that are pressed and previously were not.
-
                         if (cache[j] != null && !cache[j] && gamepad.buttons[j].pressed) {
                             console.log('pressed gamepad', i, 'button', j);
-                            //doTransition = true;
                         }
                         cache[j] = gamepad.buttons[j].pressed;
                     }
                     this.buttonsCache[vrGamepadCount] = cache;
-                    vrGamepadCount++;
+                    vrGamepadCount += 1;
                 }
             }
         }
+    }
 
-        // revert to windowed rendering if there is no VR display
-        // or if the VR display is not presenting
-        const vrDisplay = this._vrDisplay;
-        if (!vrDisplay) {
+    _onAnimationFrame(t, frame) {
+        this.time = t / 1000.0;
+        this.timeMS = t;
+
+        const doTransition = false;
+
+
+        if (!(frame && frame.session.isImmersive)) {
             this.config.onAnimationFrameWindow(t);
-            if (doTransition) {
-               this.doWorldTransition({direction : 1, broadcast : true});
-            }
             return;
         }
 
+        this.updateControllerState();
+
         const gl = this._gl;
-        const frame = this._frameData;
-        if (!vrDisplay.isPresenting) {
-           this.config.onAnimationFrameWindow(t);
-           if (this.options.enableMultipleWorlds && doTransition) {
-              this.doWorldTransition({direction : 1, broadcast : true});
-           }
-           return;
-        }
         vrDisplay.getFrameData(frame);
 
         this._animationHandle = vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
@@ -788,9 +818,8 @@ export class MetaroomXRBackend {
         this.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, this.customState);
 
         this.config.onEndFrameXR(t, this.customState);
-        if (doTransition) {
-           this.doWorldTransition({direction : 1, broadcast : true});
-        }
+
+
         vrDisplay.submitFrame();
     }
 };

@@ -164,7 +164,7 @@ async function setup(state) {
 
    let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
       { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true },
-      { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
+      // { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
    ]);
    if (! libSources)
       throw new Error("Could not load shader library");
