@@ -196,16 +196,7 @@ export class MetaroomXRBackend {
         conf.onAnimationFrameWindow = options.onAnimationFrameWindow || conf.onAnimationFrameWindow;
     }
 
-    async configure(options) {
-        if (this.config.onExit) {
-            this.config.onExit(this.customState);
-        }
-
-        this._clearConfig();
-        this._reset();
-
-        options = options || {};
-
+    initializeWorldCallbacks(options) {
         options.onStartFrame = options.onStartFrame || 
                                 (function(t, state) {});
         options.onStartFrameXR = options.onStartFrameXR || 
@@ -225,9 +216,9 @@ export class MetaroomXRBackend {
                             (function(t, p, v, state, eyeIdx) {});
         
         options.onAnimationFrame = options.onAnimationFrame || 
-                                this._onAnimationFrame.bind(this);
+                                this._onAnimationFrame;
         options.onAnimationFrameWindow = options.onAnimationFrameWindow || 
-                                this._onAnimationFrameWindow.bind(this);
+                                this._onAnimationFrameWindow;
         
         options.onSelectStart = options.onSelectStart || 
                                 function(t, state) {};
@@ -244,7 +235,20 @@ export class MetaroomXRBackend {
 
 
         options.onSelect = options.onSelect || (function(t, state) {});
-        options.onSelectEnd = options.selectEnd || (function(t, state) {});
+        options.onSelectEnd = options.selectEnd || (function(t, state) {});        
+    }
+
+    async configure(options) {
+        if (this.config.onExit) {
+            this.config.onExit(this.customState);
+        }
+
+        this._clearConfig();
+        this._reset();
+
+        options = options || {};
+
+        this.initializeWorldCallbacks(options);
 
         this.config = options;
         this.name = options.name || "unnamed";
@@ -536,8 +540,8 @@ export class MetaroomXRBackend {
         options.onEndFrameXR = (function(t, state) {});
         options.onDraw = (function(t, p, v, state, eyeIdx) {});
         options.onDrawXR = (function(t, p, v, state, eyeIdx) {});
-        options.onAnimationFrame = this._onAnimationFrame.bind(this);
-        options.onAnimationFrameWindow = this._onAnimationFrameWindow.bind(this);
+        options.onAnimationFrame = this._onAnimationFrame;
+        options.onAnimationFrameWindow = this._onAnimationFrameWindow;
         options.onReload   = function(state) {};
         options.onExit     = function(state) {};
         options.onExitXR   = function(state) {};
@@ -723,27 +727,29 @@ export class MetaroomXRBackend {
     //
 
     _onAnimationFrameWindow(t) {
-        this.time = t / 1000.0;
-        this.timeMS = t;
+        const self = MR.system;
 
-        this._animationHandle = window.requestAnimationFrame(this.config.onAnimationFrame);
+        self.time = t / 1000.0;
+        self.timeMS = t;
+
+        self._animationHandle = window.requestAnimationFrame(self.config.onAnimationFrame);
         gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-        mat4.identity(this._viewMatrix);
-        mat4.perspective(this._projectionMatrix, Math.PI/4,
+        mat4.identity(self._viewMatrix);
+        mat4.perspective(self._projectionMatrix, Math.PI/4,
             gl.canvas.width / gl.canvas.height,
             0.01, 1024);
 
         Input.updateKeyState();
-        this.config.onStartFrame(t, this.customState);
+        self.config.onStartFrame(t, self.customState);
 
         GFX.viewportXOffset = 0;
-        this.config.onDraw(t, this._projectionMatrix, this._viewMatrix, this.customState);
-        this.config.onEndFrame(t, this.customState);
+        self.config.onDraw(t, self._projectionMatrix, self._viewMatrix, self.customState);
+        self.config.onEndFrame(t, self.customState);
     }
 
     // TODO(TR): WebXR has its own controller API that interfaces
     // with the different reference spaces -- this may be necessary to use
-    updateControllerState() {
+    updateControllerState(self) {
         MR.controllers = navigator.getGamepads();
         let gamepads = navigator.getGamepads();
         let vrGamepadCount = 0;
@@ -752,7 +758,7 @@ export class MetaroomXRBackend {
             const gamepad = gamepads[i];
             if (gamepad) { // gamepads may contain null-valued entries
                 if (gamepad.pose || gamepad.displayId ) { // VR gamepads will have one or both of these properties.
-                    let cache = this.buttonsCache[vrGamepadCount] || [];
+                    let cache = self.buttonsCache[vrGamepadCount] || [];
                     for (let j = 0; j < gamepad.buttons.length; j += 1) {
                         // Check for any buttons that are pressed and previously were not.
                         if (cache[j] != null && !cache[j] && gamepad.buttons[j].pressed) {
@@ -760,7 +766,7 @@ export class MetaroomXRBackend {
                         }
                         cache[j] = gamepad.buttons[j].pressed;
                     }
-                    this.buttonsCache[vrGamepadCount] = cache;
+                    self.buttonsCache[vrGamepadCount] = cache;
                     vrGamepadCount += 1;
                 }
             }
@@ -768,38 +774,40 @@ export class MetaroomXRBackend {
     }
 
     _onAnimationFrame(t, frame) {
-        this.time = t / 1000.0;
-        this.timeMS = t;
+        const self = MR.system;
+
+        self.time = t / 1000.0;
+        self.timeMS = t;
 
         const doTransition = false;
 
 
         if (!(frame && frame.session.isImmersive)) {
-            this.config.onAnimationFrameWindow(t);
+            self.config.onAnimationFrameWindow(t);
             return;
         }
 
-        this.updateControllerState();
+        self.updateControllerState(self);
 
-        const gl = this.GPUCtx;
+        const gl = self.GPUCtx;
         vrDisplay.getFrameData(frame);
 
-        this._animationHandle = vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
+        self._animationHandle = vrDisplay.requestAnimationFrame(self.config.onAnimationFrame);
 
         Input.updateControllerState();
-        this.config.onStartFrameXR(t, this.customState);
+        self.config.onStartFrameXR(t, self.customState);
 
         // left eye
         gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
         GFX.viewportXOffset = 0;
-        this.config.onDrawXR(t, frame.leftProjectionMatrix, frame.leftViewMatrix, this.customState);
+        self.config.onDrawXR(t, frame.leftProjectionMatrix, frame.leftViewMatrix, self.customState);
                 
         // right eye
         gl.viewport(gl.canvas.width * 0.5, 0, gl.canvas.width * 0.5, gl.canvas.height);
         GFX.viewportXOffset = gl.canvas.width * 0.5;
-        this.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, this.customState);
+        self.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, self.customState);
 
-        this.config.onEndFrameXR(t, this.customState);
+        self.config.onEndFrameXR(t, self.customState);
 
 
         vrDisplay.submitFrame();
