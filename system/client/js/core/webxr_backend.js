@@ -298,6 +298,10 @@ export class MetaroomXRBackend {
         }
         }
 
+        if (!GPUInterface.isValid) {
+            return false;
+        }
+
         this.GPUInterface = GPUInterface;
         this.GPUAPI       = GPUInterface.GPUAPI;
         this.GPUCtx       = this.GPUInterface.GPUCtxInfo.ctx;
@@ -308,18 +312,18 @@ export class MetaroomXRBackend {
         if (options.doResourceTracking) {
             this.GPUInterface.GPUCtxInfo.enableResourceTracking();
         }
-
-        return GPUInterface;
+        return true;
     }
 
     async _init() {
         this._initCanvasOnParentElement();
         this._initCustomState();
 
-        await this.initGPUAPI(
+        const ok = await this.initGPUAPI(
             this.options, 
             this._canvas
         );
+        console.assert(ok);
 
         this.xrInfo = new XRInfo();
 

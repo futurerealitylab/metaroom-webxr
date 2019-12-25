@@ -35,9 +35,8 @@ export async function initWebGL(info, options, targetSurface) {
         contextOptions : options.contextOptions                
     });
 
-    console.assert(ok);
-
     return {
+        isValid    : ok,
         GPUAPI     : GPUAPI,
         GPUCtxInfo : GPUCtxInfo
     };
@@ -53,9 +52,8 @@ export async function initWebGPU(info, options, targetSurface) {
         contextOptions : options.contextOptions                
     });
 
-    console.assert(ok);
-
     return {
+        isValid    : ok,
         GPUAPI     : GPUAPI,
         GPUCtxInfo : GPUCtxInfo
     };

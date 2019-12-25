@@ -210,12 +210,13 @@ export function freeResources(args) {
     GL.deleteBuffer(tempBuf);
 
     GL.useProgram(null);
-    
+
     console.log("Done!");
     console.groupEnd();
 }
 
 
-export function getWebXRLayerConstructor() {
-    return window.XRWebGLLayer;
-}
+export const XRIsSupported = true;
+
+export const XRLayer = window.XRWebGLLayer;
+
