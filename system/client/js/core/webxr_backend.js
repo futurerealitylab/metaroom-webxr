@@ -692,8 +692,26 @@ export class MetaroomXRBackend {
 
         this.xrInfo.isImmersive = true;
 
+// TODO(TR): use something like this to reorient the world
+// if the user resets the tracking direction during the session
+/*
+xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
+  // Check for the transformation between the previous origin and the current origin
+  // This will not always be available, but if it is, developers may choose to use it
+  let transform = xrReferenceSpaceEvent.transform;
 
+  // For an app that allows artificial Yaw rotation, this would be a perfect
+  // time to reset that.
+  resetYawTransform(transform);
+
+  // For an app using a bounded reference space, this would be a perfect time to
+  // re-layout content intended to be reachable within the bounds
+  createBoundsMesh(transform);
+});
+*/
         // bounded-floor == (y == 0 at floor, assumes bounded tracking space)
+
+        // try for a bounded floor reference space, otherwise a local reference space
         session.requestReferenceSpace(
             XR_REFERENCE_SPACE_TYPE.BOUNDED_FLOOR
         ).then((refSpace) => {
@@ -707,20 +725,20 @@ export class MetaroomXRBackend {
             ).then((refSpace) => {
                 this.xrInfo.type = XR_REFERENCE_SPACE_TYPE.LOCAL;
                 this.xrInfo.immersiveRefSpace = refSpace;
-            })
-        }).then(() => {;
-            const GPUAPILayer = new this.GPUAPI.XRLayer;
+            }).then(onRequestReferenceSpaceSuccess);
 
-            session.updateRenderState({
-                baseLayer : GPUAPILayer
-            });
+        }).then(this.onRequestReferenceSpaceSuccess);
+    }
+    onRequestReferenceSpaceSuccess() {
+        const GPUAPILayer = new this.GPUAPI.XRLayer;
 
-            this.start();
-
-            this._VRIsActive = true;
+        session.updateRenderState({
+            baseLayer : GPUAPILayer
         });
 
+        this.start();
 
+        this._VRIsActive = true;        
     }
     onEndSession(session) {
         console.log("session ended");
