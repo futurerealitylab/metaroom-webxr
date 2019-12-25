@@ -125,8 +125,6 @@ export class MetaroomXRBackend {
         options.enableMultipleWorlds   = (options.enableMultipleWorlds !== undefined)   ? options.enableMultipleWorlds   : true;
         options.enableBellsAndWhistles = (options.enableBellsAndWhistles !== undefined) ? options.enableBellsAndWhistles : true;
         
-        options.GPUAPI = options.GPUAPI || "default";
-
         // Member variables.
         this.options = options;
         this.main = options.main;
@@ -668,6 +666,9 @@ export class MetaroomXRBackend {
         return navigator.xr.requestSession(
             XR_SESSION_MODE.IMMERSIVE_VR,
             {
+                requiredFeatures : [
+                    XR_REFERENCE_SPACE_TYPE.LOCAL_FLOOR
+                ],
                 optionalFeatures : [
                     XR_REFERENCE_SPACE_TYPE.BOUNDED_FLOOR
                 ]
@@ -679,7 +680,7 @@ export class MetaroomXRBackend {
         });
     }
 
-    async onSessionStarted(session) {
+    onSessionStarted(session) {
         console.log("session started");
 
         session.addEventListener('end', onSessionEnded);
@@ -691,6 +692,12 @@ export class MetaroomXRBackend {
         this.xrButton.setSession(session);
 
         this.xrInfo.isImmersive = true;
+
+        const GPUAPILayer = new this.GPUAPI.XRLayer;
+
+        session.updateRenderState({
+            baseLayer : GPUAPILayer
+        });
 
 // TODO(TR): use something like this to reorient the world
 // if the user resets the tracking direction during the session
@@ -730,12 +737,6 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         }).then(this.onRequestReferenceSpaceSuccess);
     }
     onRequestReferenceSpaceSuccess() {
-        const GPUAPILayer = new this.GPUAPI.XRLayer;
-
-        session.updateRenderState({
-            baseLayer : GPUAPILayer
-        });
-
         this.start();
 
         this._VRIsActive = true;        
