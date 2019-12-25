@@ -21,7 +21,7 @@
 // symbols into just one namespace
 import * as GPU from "./gpu/gpu.js";
 import {WebXRButton} from "./../lib/webxr-button.js";
-import {XRInfo} from "./../core/xr_info.js";
+import {XRInfo, XR_REFERENCE_SPACE_TYPE, XR_SESSION_MODE} from "./../core/webxr_util.js";
 //
 // other many ways of doing it:
 //
@@ -194,9 +194,9 @@ export class MetaroomXRBackend {
 
     start() {
         let target = null;
-        if (this._vrDisplay && this.options.enableBellsAndWhistles) {
-            this._vrDisplay.cancelAnimationFrame(this._animationHandle);
-            this._animationHandle = this._vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
+        if (this.options.enableBellsAndWhistles && this.xrInfo.session) {
+            this.xrInfo.session.cancelAnimationFrame(this._animationHandle);
+            this._animationHandle = this.xrInfo.session.requestAnimationFrame(this.config.onAnimationFrame);
         } else {
             window.cancelAnimationFrame(this._animationHandle);          
             this._animationHandle = window.requestAnimationFrame(this.config.onAnimationFrame);
@@ -606,8 +606,9 @@ export class MetaroomXRBackend {
     }
 
     _reset() {
-        if (this._vrDisplay) {
-            this._vrDisplay.cancelAnimationFrame(this._animationHandle);
+        if (this.xrInfo.session) {
+            console.log('resetting XR animation frame');
+            this.xrInfo.session.cancelAnimationFrame(this._animationHandle);
         } else {
             window.cancelAnimationFrame(this._animationHandle);
         }
@@ -623,7 +624,9 @@ export class MetaroomXRBackend {
         }
 
         try {
-            const supported = await navigator.xr.isSessionSupported('immersive-vr');
+            const supported = await navigator.xr.isSessionSupported(
+                XR_SESSION_MODE.IMMERSIVE_VR
+            );
             if (supported) {
                 console.log("immersive-vr mode is supported");
                 this.enableImmersiveVR(true);
@@ -640,8 +643,12 @@ export class MetaroomXRBackend {
     onRequestSession() {
         console.log("requesting session");
         return navigator.xr.requestSession(
-            'immersive-vr',
-            {optionalFeatures : ['bounded-floor']}
+            XR_SESSION_MODE.IMMERSIVE_VR,
+            {
+                optionalFeatures : [
+                    XR_REFERENCE_SPACE_TYPE.BOUNDED_FLOOR
+                ]
+            }
         ).then(this.onSessionStarted).
         catch((err) => {
             console.error(err);
@@ -650,8 +657,12 @@ export class MetaroomXRBackend {
         });
     }
 
-    onSessionStarted(session) {
+    async onSessionStarted(session) {
         console.log("session started");
+
+        session.addEventListener('end', onSessionEnded);
+
+        this._reset();
 
         this.xrInfo.session = session;
 
@@ -659,12 +670,30 @@ export class MetaroomXRBackend {
 
         this.xrInfo.isImmersive = true;
 
-        session.addEventListener('end', onSessionEnded);
 
-        const gpuAPILayer = new this.gpuAPI.WebXRLayer();
+        // bounded-floor == (y == 0 at floor, assumes bounded tracking space)
+        session.requestReferenceSpace(
+            XR_REFERENCE_SPACE_TYPE.BOUNDED_FLOOR
+        ).then((refSpace) => {
+            this.xrInfo.type = XR_REFERENCE_SPACE_TYPE.BOUNDED_FLOOR;
+            this.xrInfo.immersiveRefSpace = refSpace;
+        }).catch((err) => {
+            console.error(err.message);
+            // fall back to local (eye-level)
+            session.requestReferenceSpace(
+                XR_REFERENCE_SPACE_TYPE.LOCAL
+            ).then((refSpace) => {
+                this.xrInfo.type = XR_REFERENCE_SPACE_TYPE.LOCAL;
+                this.xrInfo.immersiveRefSpace = refSpace;
+            })
+        }).then(() => {;
+            const gpuAPILayer = new this.gpuAPI.WebXRLayer();
 
-        session.updateRenderState({
-            baseLayer : gpuAPILayer
+            session.updateRenderState({
+                baseLayer : gpuAPILayer
+            });
+
+            this.start();
         });
 
 
@@ -675,11 +704,15 @@ export class MetaroomXRBackend {
     }
     onSessionEnded(e) {
         if (e.session.isImmersive) {
+            this._reset();
             this.xrButton.setSession(null);
             e.session.isImmersive   = false;
             this.xrInfo.isImmersive = false;
-        }
+            this.xrInfo.session     = null;
+            this.xrInfo.type        = XR_REFERENCE_SPACE_TYPE.VIEWER;
 
+            this._animationHandle = window.requestAnimationFrame(this.config.onAnimationFrame);
+        }
     }
 
     // OLD
