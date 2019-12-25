@@ -331,9 +331,6 @@ case 2: {
                 });
 
             },
-            useExternalWindow : (
-                new URLSearchParams(window.location.search)
-            ).has('externWin')
         });
 
     }
