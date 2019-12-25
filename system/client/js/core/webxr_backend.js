@@ -357,16 +357,23 @@ export class MetaroomXRBackend {
         if (this.GPUInterface.GPUAPI.XRIsSupported &&
             this.options.enableBellsAndWhistles) {
 
-            console.warn("XR is unsupported");
-
+            console.log("initializing XR");
             const ok = await this._initWebVR();
             if (!ok) {
+                console.log(
+                    "%c%s", 
+                    'color: #ff0000',
+                    "XR initialization uncussessful"
+                );
+                console.group('');
                 console.log('Initializing PC window mode ...');
                 this._initWindow();
+                console.groupEnd();
+            } else {
+                this._initButton();
             }
-
-            this._initButton();
         } else {
+            console.warn("XR is unsupported");
             console.log('Initializing PC window mode ...');
             this._initWindow();        
         }
