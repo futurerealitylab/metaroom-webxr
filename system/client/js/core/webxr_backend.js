@@ -151,9 +151,14 @@ export class MetaroomXRBackend {
 
         this._clearConfig();
 
-        this._init();
+        const ok = this._init();
+        if (!ok) {
+            return false;
+        }
 
         Input.initKeyEvents(this._canvas);
+
+        return true;
     }
 
     start() {
@@ -315,21 +320,43 @@ export class MetaroomXRBackend {
         return GPU.CTX_CREATE_STATUS_SUCCESS;
     }
 
+    async tryGPUAPIFallbacks() {
+        console.warn(
+            "%s is unsupported, falling back to %s",
+            this.options.GPUAPIType, GPU.GPU_API_TYPE.WEBGL
+        );
+
+        this.options.GPUAPIType = GPU.GPU_API_TYPE.WEBGL;
+        
+        return this.initGPUAPI(
+            this.options, 
+            this._canvas
+        );
+    }
+
     async _init() {
         this._initCanvasOnParentElement();
         this._initCustomState();
 
-        const status = await this.initGPUAPI(
+        let status = await this.initGPUAPI(
             this.options, 
             this._canvas
         );
-        console.assert(status === GPU.CTX_CREATE_STATUS_SUCCESS);
+        if (status !== GPU.CTX_CREATE_STATUS_SUCCESS) {
+            status = await this.tryGPUAPIFallbacks();
+            if (status !== GPU.CTX_CREATE_STATUS_SUCCESS) {
+                console.error("failed to initialize a graphics context");
+                return false;
+            }
+        }
 
         this.xrInfo = new XRInfo();
 
         await this.main();
 
-        if (this.options.enableBellsAndWhistles) {
+        if (this.GPUInterface.GPUAPI.XRIsSupported &&
+            this.options.enableBellsAndWhistles) {
+
             const ok = await this._initWebVR();
             if (!ok) {
                 console.log('Initializing PC window mode ...');
@@ -341,6 +368,8 @@ export class MetaroomXRBackend {
             console.log('Initializing PC window mode ...');
             this._initWindow();        
         }
+
+        return true;
     }
 
     _initButton() {

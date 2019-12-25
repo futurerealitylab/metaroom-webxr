@@ -164,7 +164,7 @@ case 2: {
             enableBellsAndWhistles    : true,
             synchronizeTimeWithServer : false,
             GPUAPIProvidedContext     : null,
-            GPUAPIType                : GPU.GPU_API_TYPE.WEBGL,
+            GPUAPIType                : GPU.GPU_API_TYPE.WEBGPU,
 
             // main() is the system's entry point
             main : async () => {
