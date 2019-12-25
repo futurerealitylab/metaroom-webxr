@@ -87,7 +87,7 @@ export class MetaroomXRBackend {
         options.contextOptions = options.contextOptions || { xrCompatible: true };
         options.contextNames = options.contextNames || ['webgl2', 'webgl', 'experimental-webgl'];
         options.main = options.main || function() {};
-        options.doResourceTracking = options.doResourceTracking || true;
+        options.doGPUResourceTracking = options.doGPUResourceTracking || true;
         options.useGlobalContext = options.useGlobalContext || true;
         options.outputSurfaceName = options.outputSurfaceName || 'output-surface';
         options.outputWidth = options.outputWidth || 1280;
@@ -102,7 +102,7 @@ export class MetaroomXRBackend {
         // Member variables.
         this.options = options;
         this.main = options.main;
-        this.doResourceTracking   = options.doResourceTracking;
+        this.doGPUResourceTracking   = options.doGPUResourceTracking;
         this.useCustomState       = options.useCustomState;
         this._projectionMatrix    = mat4.create();
         this._viewMatrix          = mat4.create();
@@ -314,7 +314,7 @@ export class MetaroomXRBackend {
         if (options.useGlobalContext) {
             window.gl = this.GPUCtx;
         }
-        if (options.doResourceTracking) {
+        if (options.doGPUResourceTracking) {
             this.GPUInterface.GPUCtxInfo.enableResourceTracking();
         }
         return GPU.CTX_CREATE_STATUS_SUCCESS;
@@ -356,6 +356,8 @@ export class MetaroomXRBackend {
 
         if (this.GPUInterface.GPUAPI.XRIsSupported &&
             this.options.enableBellsAndWhistles) {
+
+            console.warn("XR is unsupported");
 
             const ok = await this._initWebVR();
             if (!ok) {

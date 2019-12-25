@@ -111,8 +111,8 @@ function initFailed(msg) {
 const VERSION = document.getElementById("version").getAttribute("value");
 MR.VERSION = parseInt(VERSION);
 console.log(
-    "%crunning version: %d, backend: %s",
-    'font-size: 15px color: #9f00ff',
+    "%crunning version=[%d], backend=[%s]",
+    'font-size: 15px; color: #9faaff',
     MR.VERSION, 
     Metaroom.TYPE_TO_NAME[MR.type]
 );
@@ -158,13 +158,12 @@ case 2: {
             outputHeight           : parseInt(RESOLUTION[1]),
             useGlobalContext       : true,
             // frees gpu resources upon world switch
-            doResourceTracking        : true,
-            glEnableEditorHook        : true,
+            doGPUResourceTracking        : true,
             enableEntryByButton       : true,
             enableBellsAndWhistles    : true,
             synchronizeTimeWithServer : false,
             GPUAPIProvidedContext     : null,
-            GPUAPIType                : GPU.GPU_API_TYPE.WEBGPU,
+            GPUAPIType                : GPU.GPU_API_TYPE.WEBGL,
 
             // main() is the system's entry point
             main : async () => {
