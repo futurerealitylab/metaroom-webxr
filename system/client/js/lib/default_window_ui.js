@@ -1,6 +1,6 @@
 "use strict";
 
-export class DefaultWindowUI {
+export class DefaultWindowMenuUI {
     constructor() {
         this.menu = new Menu();
 
@@ -155,4 +155,103 @@ export class DefaultWindowUI {
             MR.initServer
         );
     }
+}
+
+export function makeModalCanvas(targetSurface) {
+    const bodyWidth = document.body.getBoundingClientRect().width;
+    const parent = document.getElementById('output-container');
+    parent.float = 'right';
+    let P = parent;
+    P.style.left = (((P.style.left) + bodyWidth - targetSurface.width)) + "px";
+
+    const out = targetSurface;
+    out.style.position = 'relative';
+    out.style.float = 'right';
+
+    let shiftX = parseInt(P.style.left);
+    let shiftY = 0;
+
+    let shiftDown__ = false;
+    let mouseDown__ = false;
+    let altDown = false;
+    let clientX = 0;
+    let clientY = 0;
+
+    window.getClientX = () => {
+        return clientX;
+    }
+
+    window.getClientY = () => {
+        return clientY;
+    }
+
+    const mouseMoveHandler__ = function(event) {
+        const w = targetSurface.width;
+        const h = targetSurface.height;
+        P.style.left = (clientX - (w / 2.0)) + "px";
+        P.style.top = (clientY - (h / 2.0)) + "px";
+    };
+
+    let beforeW;
+    let beforeH;
+    let altInitDown = true;
+    let initialX = 0;
+
+    document.addEventListener('mousemove', (event) => {
+        clientX = event.clientX;
+        clientY = event.clientY;
+
+        if (altDown) {
+            const cursorX = clientX;
+            if (altInitDown) {
+                altInitDown = false;
+                beforeW = CanvasUtil.baseCanvasDimensions.width;
+                beforeH = CanvasUtil.baseCanvasDimensions.height;
+                initialX = cursorX;
+            }
+
+            const xDist = (cursorX - initialX);
+            targetSurface.width = Math.max(64, beforeW + xDist);
+            targetSurface.height = Math.floor(beforeH * ((targetSurface.width / beforeW)));
+            
+            CanvasUtil.baseCanvasDimensions.width = targetSurface.width;
+            CanvasUtil.baseCanvasDimensions.height = targetSurface.height;
+            CanvasUtil.handleResizeEvent(targetSurface, targetSurface.width, targetSurface.height);
+        }
+    });
+    document.addEventListener('mousedown', (event) => {
+        clientX = event.clientX;
+        clientY = event.clientY;
+    });
+    document.addEventListener('mouseup', (event) => {
+        clientX = event.clientX;
+        clientY = event.clientY;
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key == "`") {
+            window.addEventListener('mousemove', mouseMoveHandler__);
+            shiftDown__ = true;
+            mouseMoveHandler__({clientX : clientX, clientY : clientY});
+        } else if (event.key == 'Alt') {
+            if (window.navigator.userAgent.indexOf("Mac") != -1)
+                altDown = true;
+
+            event.preventDefault();
+        }
+    });
+    document.addEventListener('keyup', (event) => {
+        if (event.key == "`") {
+            window.removeEventListener('mousemove', mouseMoveHandler__);
+            shiftDown__ = false;
+        } else if (event.key == 'Alt') {
+            CanvasUtil.baseCanvasDimensions.width = targetSurface.width;
+            CanvasUtil.baseCanvasDimensions.height = targetSurface.height;
+            CanvasUtil.handleResizeEvent(targetSurface, targetSurface.width, targetSurface.height);
+
+            altInitDown = true;
+            altDown = false;
+
+            event.preventDefault();
+        }
+    });
 }

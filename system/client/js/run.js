@@ -168,10 +168,12 @@ case 2: {
             // main() is the system's entry point
             main : async () => {
                 {
-                    const ui      = await import("./lib/default_window_ui.js");
-                    MR.system.ui = new ui.DefaultWindowUI();
+                    const ui   = await import("./lib/default_window_ui.js");
+                    MR.system.ui = new ui.DefaultWindowMenuUI();
                     // temp hack
                     MR.system.menu = MR.system.ui.menu;
+
+                    ui.makeModalCanvas(MR.getCanvas());
                 }
 
                 MREditor.enable();
