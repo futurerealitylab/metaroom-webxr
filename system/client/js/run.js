@@ -152,6 +152,8 @@ case 2: {
             return;
         }
 
+
+
         MR.init({
             outputSurfaceName      : 'output-surface',
             outputWidth            : parseInt(RESOLUTION[0]),

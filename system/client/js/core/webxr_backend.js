@@ -89,6 +89,8 @@ export class MetaroomXRBackend {
         this.useCustomState       = options.useCustomState;
         this._projectionMatrix    = mat4.create();
         this._viewMatrix          = mat4.create();
+        this._identityMatrix      = mat4.create();
+        mat4.identity(this._identityMatrix);
         this._animationHandle     = 0;
 
         this.buttonsCache = [];
@@ -121,12 +123,14 @@ export class MetaroomXRBackend {
 
         this.systemArgs = new SystemArgs();
         
-        this.frameData = () => {
-            //return this._frameData;
-            return null;
+        MR.viewerPose = () => {
+            return this.xrInfo.viewerPose;
         }
-        
-        MR.frameData = this.frameData;
+        // alias
+        MR.headset = () => {
+            return this.xrInfo.viewerPose;
+        }
+
         MR.controllers = navigator.getGamepads();
 
         this.customState = null;
@@ -765,6 +769,8 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         const xrInfo  = self.xrInfo;
         const pose    = frame.getViewerPose(xrInfo.immersiveRefSpace);
 
+        xrInfo.viewerPose = pose;
+
         self.updateControllerState(self, null /*TODO*/, frame, pose);
 
         self._animationHandle = xrInfo.session.requestAnimationFrame(
@@ -773,8 +779,8 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
 
         Input.updateControllerHandedness();
 
-
-        self.systemArgs.pose = pose;
+        self.systemArgs.frame = frame;
+        self.systemArgs.pose  = pose;
 
         self.config.onStartFrameXR(t, self.customState, self.systemArgs);
 
@@ -794,13 +800,21 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
             for (let i = 0; i < viewCount; i += 1) {
                 self.systemArgs.viewIdx = i;
 
-                const viewport = layer.getViewport(views[i]);
+                const view     = views[i];
+                const viewport = layer.getViewport(view);
 
+                self.systemArgs.view     = view;
                 self.systemArgs.viewport = viewport;
 
                 gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
 
-                self.config.onDrawXR(t, null, null, self.customState, self.systemArgs);
+                self.config.onDrawXR(
+                    t, 
+                    view.projectionMatrix, 
+                    view.transform.matrix, 
+                    self.customState, 
+                    self.systemArgs
+                );
             }
         }
         // // left eye

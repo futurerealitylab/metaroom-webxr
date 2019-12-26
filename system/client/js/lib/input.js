@@ -134,15 +134,11 @@ window.Input.KEY_W = 87
 window.Input.KEY_D = 68;
 window.Input.KEY_S = 83;
 
-
 Input.updateControllerHandedness = () => {
-    if (MR.VRIsActive()) {
-        MR.headset = MR.frameData();
-        let left_is_0 = MR.controllers[0].id.indexOf('Left') > 0;
-        if (MR.controllers) {
-            MR.leftController  = MR.controllers[left_is_0 ? 0 : 1];
-            MR.rightController = MR.controllers[left_is_0 ? 1 : 0];
-        }
+    const left_is_0 = MR.controllers[0].id.indexOf('Left') > 0;
+    if (MR.controllers) {
+        MR.leftController  = MR.controllers[left_is_0 ? 0 : 1];
+        MR.rightController = MR.controllers[left_is_0 ? 1 : 0];
     }
 }
 
