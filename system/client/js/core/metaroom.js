@@ -37,7 +37,7 @@ function Metaroom_WebXR() {
     Metaroom.call(this);
     window.wrangler = this.wrangler;
     window.MR = this;
-    this.system = this.wrangler;
+    this.engine = this.wrangler;
 }
 Metaroom_WebXR.prototype = Object.create(
     Metaroom.prototype,
@@ -52,7 +52,7 @@ function Metaroom_WebVR() {
     Metaroom.call(this);
     window.wrangler = this.wrangler;
     window.MR = this;
-    this.system = this.wrangler;
+    this.engine = this.wrangler;
 }
 Metaroom_WebVR.prototype = Object.create(
     Metaroom.prototype,

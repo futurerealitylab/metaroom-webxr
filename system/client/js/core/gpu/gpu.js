@@ -61,4 +61,3 @@ export async function initWebGPU(info, options, targetSurface) {
         GPUCtxInfo : GPUCtxInfo
     };
 }
-

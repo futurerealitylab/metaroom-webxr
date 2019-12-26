@@ -41,6 +41,24 @@ mat4.perspective = function perspective(t,e,n,r,a){var c=1/Math.tan(e/2),i=1/(r-
 // }
 // const new TODO_FAKE_FRAMEDATA();
 
+export class Viewport {
+    constructor() {
+        this.x      = 0;
+        this.y      = 0;
+        this.width  = 0;
+        this.height = 0;
+    }
+}
+
+class SystemArgs {
+    constructor() {
+        this.viewport = new Viewport();
+        this.GPUCtx   = null;
+        this.xrInfo   = null;
+        this.viewIdx  = 0;
+    }
+}
+
 export class MetaroomXRBackend {
     // Empty constructor.
     constructor() {}
@@ -100,6 +118,8 @@ export class MetaroomXRBackend {
         this.xrButton = null;
         this._frameData = null;
         this.xrInfo = null;
+
+        this.systemArgs = new SystemArgs();
         
         this.frameData = () => {
             //return this._frameData;
@@ -181,10 +201,10 @@ export class MetaroomXRBackend {
                                 (function(t, state) {});
         
         options.onDraw = options.onDraw || 
-                            (function(t, p, v, state, eyeIdx) {});
+                            (function(t, p, v, state, args) {});
         options.onDrawXR = options.onDrawXR || 
                             options.onDraw ||
-                            (function(t, p, v, state, eyeIdx) {});
+                            (function(t, p, v, state, args) {});
         
         options.onAnimationFrame = options.onAnimationFrame || 
                                 this._onAnimationFrameWebGL;
@@ -319,6 +339,7 @@ export class MetaroomXRBackend {
         }
 
         this.xrInfo = new XRInfo();
+        this.systemArgs.xrInfo = this.xrInfo;
 
         await this.main();
 
@@ -447,8 +468,8 @@ export class MetaroomXRBackend {
         options.onStartFrameXR = (function(t, state) {});
         options.onEndFrame = (function(t, state) {});
         options.onEndFrameXR = (function(t, state) {});
-        options.onDraw = (function(t, p, v, state, eyeIdx) {});
-        options.onDrawXR = (function(t, p, v, state, eyeIdx) {});
+        options.onDraw = (function(t, p, v, state, args) {});
+        options.onDrawXR = (function(t, p, v, state, args) {});
         options.onAnimationFrame = function() {};
         options.onAnimationFrameWindow = function() {};
         options.onReload   = function(state) {};
@@ -667,7 +688,7 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
     }
 
     _onAnimationFrameWindowWebGL(t) {
-        const self = MR.system;
+        const self = MR.engine;
 
         self.time = t / 1000.0;
         self.timeMS = t;
@@ -676,17 +697,24 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
 
         self._animationHandle = window.requestAnimationFrame(self.config.onAnimationFrame);
         gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+        
+        const viewport = self.systemArgs.viewport;
+        viewport.x      = 0;
+        viewport.y      = 0;
+        viewport.width  = gl.drawingBufferWidth;
+        viewport.height = gl.drawingBufferHeight;
+        self.systemArgs.viewIdx = 0;
+
         mat4.identity(self._viewMatrix);
         mat4.perspective(self._projectionMatrix, Math.PI/4,
             self._canvas.width / self._canvas.height,
             0.01, 1024);
 
         Input.updateKeyState();
-        self.config.onStartFrame(t, self.customState, self.xrInfo);
+        self.config.onStartFrame(t, self.customState, self.systemArgs);
 
-        GFX.viewportXOffset = 0;
-        self.config.onDraw(t, self._projectionMatrix, self._viewMatrix, self.customState, self.xrInfo);
-        self.config.onEndFrame(t, self.customState, self.xrInfo);
+        self.config.onDraw(t, self._projectionMatrix, self._viewMatrix, self.customState, self.systemArgs);
+        self.config.onEndFrame(t, self.customState, self.systemArgs);
     }
 
     // TODO(TR): WebXR has its own controller API that interfaces
@@ -720,7 +748,7 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
     }
 
     _onAnimationFrameWebGL(t, frame) {
-        const self = MR.system;
+        const self = MR.engine;
 
         self.time = t / 1000.0;
         self.timeMS = t;
@@ -746,7 +774,9 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         Input.updateControllerHandedness();
 
 
-        self.config.onStartFrameXR(t, self.customState, self.xrInfo);
+        self.systemArgs.pose = pose;
+
+        self.config.onStartFrameXR(t, self.customState, self.systemArgs);
 
         // draw logic
         {
@@ -754,7 +784,24 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
             const glAPI     = self.gpuAPI;
             const glCtxInfo = self.gpuCtxInfo;
 
-            self.config.onDrawXR(t, null, null, self.customState, self.xrInfo);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+
+            const viewport = self.systemArgs.viewport;
+
+            const views     = pose.views;
+            const viewCount = views.count;
+
+            for (let i = 0; i < viewCount; i += 1) {
+                self.systemArgs.viewIdx = i;
+
+                const viewport = layer.getViewport(views[i]);
+
+                self.systemArgs.viewport = viewport;
+
+                gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+
+                self.config.onDrawXR(t, null, null, self.customState, self.systemArgs);
+            }
         }
         // // left eye
         // gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
@@ -766,7 +813,7 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         // GFX.viewportXOffset = gl.canvas.width * 0.5;
         // self.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, self.customState);
 
-        self.config.onEndFrameXR(t, self.customState, self.xrInfo);
+        self.config.onEndFrameXR(t, self.customState, self.systemArgs);
 
 
         vrDisplay.submitFrame();
