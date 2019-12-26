@@ -274,7 +274,7 @@ export class MetaroomXRBackend {
         }
 
         this.GPUInterface = GPUInterface;
-        this.GPUAPI       = GPUInterface.GPUAPI;
+        this.GPUAPI       = this.GPUInterface.GPUAPI;
         this.GPUCtx       = this.GPUInterface.GPUCtxInfo.ctx;
 
         if (options.useGlobalContext) {
@@ -670,7 +670,7 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
         mat4.identity(self._viewMatrix);
         mat4.perspective(self._projectionMatrix, Math.PI/4,
-            gl.canvas.width / gl.canvas.height,
+            self._canvas.width / self._canvas.height,
             0.01, 1024);
 
         Input.updateKeyState();
@@ -707,6 +707,10 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         }
     }
 
+    drawXRFrame(self, viewport, frame, pose) {
+
+    }
+
     _onAnimationFrame(t, frame) {
         const self = MR.system;
 
@@ -715,36 +719,37 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
 
         const doTransition = false;
 
-
         if (!(frame && frame.session.isImmersive)) {
             self.config.onAnimationFrameWindow(t);
             return;
         }
 
         const xrInfo = self.xrInfo;
-        const pose = frame.getViewerPose(xrInfo.immersiveRefSpace);
+        const pose   = frame.getViewerPose(xrInfo.immersiveRefSpace);
 
-        // TODO
+        self.updateControllerState(self, null /*TODO*/, frame, pose);
 
-        self.updateControllerState(self);
+        self._animationHandle = xrInfo.session.requestAnimationFrame(
+            self.config.onAnimationFrame
+        );
 
-        const gl = self.GPUCtx;
-        vrDisplay.getFrameData(frame);
+        const gl     = self.GPUCtx;
+        const gpuAPI = self.gpuAPI;
 
-        self._animationHandle = vrDisplay.requestAnimationFrame(self.config.onAnimationFrame);
 
-        Input.updateControllerState();
+        Input.updateControllerHandedness();
         self.config.onStartFrameXR(t, self.customState);
 
-        // left eye
-        gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
-        GFX.viewportXOffset = 0;
-        self.config.onDrawXR(t, frame.leftProjectionMatrix, frame.leftViewMatrix, self.customState);
+
+        // // left eye
+        // gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
+        // GFX.viewportXOffset = 0;
+        // self.config.onDrawXR(t, frame.leftProjectionMatrix, frame.leftViewMatrix, self.customState);
                 
-        // right eye
-        gl.viewport(gl.canvas.width * 0.5, 0, gl.canvas.width * 0.5, gl.canvas.height);
-        GFX.viewportXOffset = gl.canvas.width * 0.5;
-        self.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, self.customState);
+        // // right eye
+        // gl.viewport(gl.canvas.width * 0.5, 0, gl.canvas.width * 0.5, gl.canvas.height);
+        // GFX.viewportXOffset = gl.canvas.width * 0.5;
+        // self.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, self.customState);
 
         self.config.onEndFrameXR(t, self.customState);
 

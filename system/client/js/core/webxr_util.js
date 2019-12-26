@@ -21,5 +21,6 @@ export class XRInfo {
         this.immersiveRefSpace = null;
         this.inlineRefSpace    = null;
         this.type              = XR_REFERENCE_SPACE_TYPE.VIEWER;
+        this.viewport          = [0, 0, 0, 0];
     }
 }
