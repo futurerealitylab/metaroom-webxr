@@ -118,7 +118,6 @@ export class MetaroomXRBackend {
         this.GPUCtx = null;
         this._version = null;
         this.xrButton = null;
-        this._frameData = null;
         this.xrInfo = null;
 
         this.systemArgs = new SystemArgs();
