@@ -187,9 +187,9 @@ export class MetaroomXRBackend {
                             (function(t, p, v, state, eyeIdx) {});
         
         options.onAnimationFrame = options.onAnimationFrame || 
-                                this._onAnimationFrame;
+                                this._onAnimationFrameWebGL;
         options.onAnimationFrameWindow = options.onAnimationFrameWindow || 
-                                this._onAnimationFrameWindow;
+                                this._onAnimationFrameWindowWebGL;
         
         options.onSelectStart = options.onSelectStart || 
                                 function(t, state) {};
@@ -274,7 +274,9 @@ export class MetaroomXRBackend {
         }
 
         this.GPUInterface = GPUInterface;
+
         this.GPUAPI       = this.GPUInterface.GPUAPI;
+        this.GPUCtxInfo   = this.GPUInterface.GPUCtxInfo;
         this.GPUCtx       = this.GPUInterface.GPUCtxInfo.ctx;
 
         if (options.useGlobalContext) {
@@ -447,8 +449,8 @@ export class MetaroomXRBackend {
         options.onEndFrameXR = (function(t, state) {});
         options.onDraw = (function(t, p, v, state, eyeIdx) {});
         options.onDrawXR = (function(t, p, v, state, eyeIdx) {});
-        options.onAnimationFrame = this._onAnimationFrame;
-        options.onAnimationFrameWindow = this._onAnimationFrameWindow;
+        options.onAnimationFrame = function() {};
+        options.onAnimationFrameWindow = function() {};
         options.onReload   = function(state) {};
         options.onExit     = function(state) {};
         options.onExitXR   = function(state) {};
@@ -660,11 +662,17 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
 
     //
 
-    _onAnimationFrameWindow(t) {
+    _onAnimationFrameWindowWebGPU(t) {
+
+    }
+
+    _onAnimationFrameWindowWebGL(t) {
         const self = MR.system;
 
         self.time = t / 1000.0;
         self.timeMS = t;
+
+        const gl = self.GPUCtx; 
 
         self._animationHandle = window.requestAnimationFrame(self.config.onAnimationFrame);
         gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
@@ -674,11 +682,11 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
             0.01, 1024);
 
         Input.updateKeyState();
-        self.config.onStartFrame(t, self.customState);
+        self.config.onStartFrame(t, self.customState, self.xrInfo);
 
         GFX.viewportXOffset = 0;
-        self.config.onDraw(t, self._projectionMatrix, self._viewMatrix, self.customState);
-        self.config.onEndFrame(t, self.customState);
+        self.config.onDraw(t, self._projectionMatrix, self._viewMatrix, self.customState, self.xrInfo);
+        self.config.onEndFrame(t, self.customState, self.xrInfo);
     }
 
     // TODO(TR): WebXR has its own controller API that interfaces
@@ -707,11 +715,11 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         }
     }
 
-    drawXRFrame(self, viewport, frame, pose) {
+    _onAnimationFrameWebGPU(t, frame) {
 
     }
 
-    _onAnimationFrame(t, frame) {
+    _onAnimationFrameWebGL(t, frame) {
         const self = MR.system;
 
         self.time = t / 1000.0;
@@ -724,8 +732,10 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
             return;
         }
 
-        const xrInfo = self.xrInfo;
-        const pose   = frame.getViewerPose(xrInfo.immersiveRefSpace);
+        const session = frame.session;
+        const layer   = session.renderState.baseLayer;
+        const xrInfo  = self.xrInfo;
+        const pose    = frame.getViewerPose(xrInfo.immersiveRefSpace);
 
         self.updateControllerState(self, null /*TODO*/, frame, pose);
 
@@ -733,14 +743,19 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
             self.config.onAnimationFrame
         );
 
-        const gl     = self.GPUCtx;
-        const gpuAPI = self.gpuAPI;
-
-
         Input.updateControllerHandedness();
-        self.config.onStartFrameXR(t, self.customState);
 
 
+        self.config.onStartFrameXR(t, self.customState, self.xrInfo);
+
+        // draw logic
+        {
+            const gl        = self.GPUCtx;
+            const glAPI     = self.gpuAPI;
+            const glCtxInfo = self.gpuCtxInfo;
+
+            self.config.onDrawXR(t, null, null, self.customState, self.xrInfo);
+        }
         // // left eye
         // gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
         // GFX.viewportXOffset = 0;
@@ -751,7 +766,7 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         // GFX.viewportXOffset = gl.canvas.width * 0.5;
         // self.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, self.customState);
 
-        self.config.onEndFrameXR(t, self.customState);
+        self.config.onEndFrameXR(t, self.customState, self.xrInfo);
 
 
         vrDisplay.submitFrame();

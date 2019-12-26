@@ -538,7 +538,7 @@ function Obj(shape) {
    this.shape = shape;
 }
 
-function onDraw(t, projMat, viewMat, state, eyeIdx) {
+function onDraw(t, projMat, viewMat, state) {
    m.identity();
 
    m.rotateX(state.tiltAngle);
@@ -548,7 +548,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
    // FIRST DRAW THE SCENE FULL SIZE.
 
    m.save();
-      myDraw(t, projMat, viewMat, state, eyeIdx, false);
+      myDraw(t, projMat, viewMat, state, false);
    m.restore();
 
    // THEN DRAW THE ENTIRE SCENE IN MINIATURE ON THE TOP OF ONE OF THE TABLES.
@@ -557,11 +557,11 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
       m.translate(HALL_WIDTH/2 - TABLE_DEPTH/2, -TABLE_HEIGHT*1.048, TABLE_WIDTH/6.7);
       m.rotateY(Math.PI);
       m.scale(.1392);
-      myDraw(t, projMat, viewMat, state, eyeIdx, true);
+      myDraw(t, projMat, viewMat, state, true);
    m.restore();
 }
 
-function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
+function myDraw(t, projMat, viewMat, state, isMiniature) {
    viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
    gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
    gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
