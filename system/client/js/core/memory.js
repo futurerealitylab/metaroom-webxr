@@ -13,9 +13,14 @@ export class TypedScratchMemory {
     }
 
     getCountElements(count) {
-        if (this.idx === this.buf.length) {
+        if (this.idx + count >= this.buf.length) {
             console.warn("buffer length exceeded, resizing");
-            this.buf = new [this.type](this.buf.length * 2);
+            let newSize = (this.buf.length * 2);
+            while (newSize < this.idx + count) {
+                newSize *= 2;
+            }
+
+            this.buf = new [this.type](newSize);
         }
         
         this.idx += count;
