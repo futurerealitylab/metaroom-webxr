@@ -702,7 +702,7 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         xrInfo.viewerPose = pose;
         // calculates the transform as position, orientation, and does
         // any other extended things as necessary
-        xrInfo.viewerPoseEXT.update();
+        xrInfo.viewerPoseEXT.update(xrInfo.viewerPose);
 
         self._animationHandle = xrInfo.session.requestAnimationFrame(
             self.config.onAnimationFrame
