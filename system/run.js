@@ -4,6 +4,7 @@ import {Metaroom}               from "./core/metaroom.js";
 import {ServerPublishSubscribe} from "./core/server_publish_subscribe.js";
 import {MREditor}               from "./lib/mreditor.js";
 import * as GPU                 from "./core/gpu/gpu.js";
+import {WebXRButton}            from "./lib/webxr-button.js";
 
 window.MREditor = MREditor;
 

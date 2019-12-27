@@ -56,7 +56,6 @@ export class MetaroomXRBackend {
         options.outputWidth = options.outputWidth || 1280;
         options.outputHeight = options.outputHeight || 720;
         options.useCustomState = options.useCustomState || true;
-        options.enableEntryByButton    = (options.enableEntryByButton !== undefined)    ? options.enableEntryByButton    : true;
         options.enableMultipleWorlds   = (options.enableMultipleWorlds !== undefined)   ? options.enableMultipleWorlds   : true;
         options.enableBellsAndWhistles = (options.enableBellsAndWhistles !== undefined) ? options.enableBellsAndWhistles : true;
         
@@ -358,9 +357,9 @@ export class MetaroomXRBackend {
 
         return true;
     }
-
+    
     _initButton() {
-        if (this.options.enableBellsAndWhistles && this.options.enableEntryByButton) {
+        if (this.options.enableBellsAndWhistles) {
             this.xrButton = new WebXRButton({
                 onRequestSession : this.onRequestSession,
                 onEndSession     : this.onEndSession
