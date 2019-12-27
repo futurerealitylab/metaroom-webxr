@@ -1,10 +1,12 @@
-'use strict';
+"use strict";
 
-import * as GPU from "./gpu/gpu.js";
+import * as GPU      from "./gpu/gpu.js";
 import {WebXRButton} from "./../lib/webxr-button.js";
-import {XRInfo, XR_REFERENCE_SPACE_TYPE, XR_SESSION_MODE} from "./webxr_util.js";
-
-
+import {
+    XRInfo, 
+    XR_REFERENCE_SPACE_TYPE, 
+    XR_SESSION_MODE
+} from "./webxr_util.js";
 
 
 const mat4 = {};
@@ -95,13 +97,13 @@ export class MetaroomXRBackend {
 
         this.systemArgs = new SystemArgs();
         
-        MR.viewerPoseInfo = () => {
+        MR.getViewerPoseInfo = () => {
             return this.xrInfo.viewerPoseEXT;
-        }
+        };
         // alias
         MR.headsetInfo = () => {
             return this.xrInfo.viewerPoseEXT;
-        }
+        };
 
         MR.controllers = navigator.getGamepads();
 
@@ -357,7 +359,7 @@ export class MetaroomXRBackend {
 
         return true;
     }
-    
+
     _initButton() {
         if (this.options.enableBellsAndWhistles) {
             this.xrButton = new WebXRButton({

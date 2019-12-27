@@ -352,7 +352,7 @@ function onStartFrame(t, state) {
    MR.avatarMatrixInverse = state.avatarMatrixInverse;
 
    if (MR.VRIsActive()) {
-      if (!input.HS) input.HS = new HeadsetHandler(MR.headset());
+      if (!input.HS) input.HS = new HeadsetHandler(MR.headsetInfo());
       if (!input.LC) input.LC = new ControllerHandler(MR.leftController);
       if (!input.RC) input.RC = new ControllerHandler(MR.rightController);
 

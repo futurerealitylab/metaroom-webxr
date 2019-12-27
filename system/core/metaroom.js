@@ -1,6 +1,7 @@
 "use strict";
 
 import {MetaroomXRBackend} from "./webxr_backend.js";
+import {MetaroomVRBackend} from "./webvr_backend.js";
 import {ServerPublishSubscribe} from "./server_publish_subscribe.js";
 import {ViewpointController} from "./../lib/viewpoint_controller.js";
 import {Client} from "./client.js";
@@ -58,7 +59,7 @@ Metaroom_WebVR.prototype = Object.create(
     Metaroom.prototype,
     {
         type     : {value : Metaroom.BACKEND_TYPE.WEBVR},
-        wrangler : {value : new VRCanvasWrangler()},
+        wrangler : {value : new MetaroomVRBackend()},
     }
 );
 
@@ -78,18 +79,26 @@ Metaroom.create = function(type = Metaroom.BACKEND_TYPE.WEBXR) {
 }
 }
 
-// Argument defaults
-let type = Metaroom.BACKEND_TYPE.WEBXR;
 
-// Parse URL arguments
-var urlParams = new URLSearchParams(window.location.search);
+// TEMP way of selecting backend
+function selectBackend() {
+    const VERSION = parseInt(document.getElementById("version").getAttribute("value"));
 
-
-// mrBackend - specify the Metaroom backend type.  Valid options are
-// '0' for WebXR (default) and '1' for WebVR.
-if (urlParams.has('mrBackend')) {
-    type = parseInt(urlParams.get('mrBackend'))
+    let type = 0;
+    switch (VERSION) {
+    case 1: {
+        type = Metaroom.BACKEND_TYPE.WEBVR;
+        break;
+    }
+    case 2: {
+        type = Metaroom.BACKEND_TYPE.WEBXR;
+        break;
+    }
+    }
+    return type;
 }
+
+const type = selectBackend();
 
 window.MR = Metaroom.create(type);
 
