@@ -336,12 +336,12 @@ export class MetaroomXRBackend {
 
             this._initButton();
 
-            console.group("trying to initialize immersive XR");
+            console.log("trying to initialize immersive XR");
             const ok = await this.XRDetectImmersiveVRSupport();
             if (!ok) {
                 console.log(
                     "%c%s", 
-                    'color: #ff0000',
+                    'color: #ff0000;',
                     "immersive XR unsupported"
                 );
                 
@@ -349,7 +349,6 @@ export class MetaroomXRBackend {
                 this._initWindow();
                 
             }
-            console.groupEnd();
 
         } else {
             console.warn("XR is unsupported");
@@ -445,7 +444,11 @@ export class MetaroomXRBackend {
 
     async XRDetectImmersiveVRSupport() {
         if (!navigator.xr) {
-            console.log("WebXR unsupported");
+            console.log(
+                "%c%s", 
+                'font-weight: bold; color: #ff0000;',
+                "WebXR unsupported"
+            );
             return false;
         }
 
