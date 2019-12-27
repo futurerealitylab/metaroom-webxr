@@ -14,12 +14,12 @@ mat4.perspective = function perspective(t,e,n,r,a){var c=1/Math.tan(e/2),i=1/(r-
 
 export class MetaroomVRBackend {
     // Empty constructor.
-    constructor() {
-        console.warn("%cWebVR is deprecated", "color: #ff0000;");
-    }
+    constructor() { }
 
     // Initialization.
     init(options) {
+        console.warn("%cWebVR is deprecated", "color: #ff0000;");
+
         MR.perspective = mat4.perspective;
 
         if (options.useExternalWindow) {
@@ -499,7 +499,6 @@ export class MetaroomVRBackend {
 
         _initCustomState() {
             if (this.useCustomState) {
-                console.log('Initializing custom state');
                 this.customState = {};
                 this.persistentStateMap = new Map();
                 this.globalPersistent = {};
