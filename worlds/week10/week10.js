@@ -63,9 +63,9 @@ to see what the options are.
 
 --------------------------------------------------------------------------------*/
 
-function HeadsetHandler(headset) {
-   this.orientation = () => headset.pose.orientation;
-   this.position    = () => headset.pose.position;
+function HeadsetHandler(poseInfo) {
+   this.position    = () => poseInfo.positionAsArray;
+   this.orientation = () => poseInfo.orientationAsArray;
 }
 
 function ControllerHandler(controller) {
@@ -345,6 +345,7 @@ function onStartFrame(t, state) {
    
    if (! state.avatarMatrixForward) {
       state.avatarMatrixForward = CG.matrixIdentity();
+      // TODO(TR): WebXR gives us an inverse transform that we can use directly
       state.avatarMatrixInverse = CG.matrixIdentity();
    }
    MR.avatarMatrixForward = state.avatarMatrixForward;
@@ -563,8 +564,8 @@ function onDraw(t, projMat, viewMat, state) {
 
 function myDraw(t, projMat, viewMat, state, isMiniature) {
    viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
-   gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
-   gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
+   gl.uniformMatrix4fv(state.uViewLoc, false, viewMat);
+   gl.uniformMatrix4fv(state.uProjLoc, false, projMat);
 
    let prev_shape = null;
 

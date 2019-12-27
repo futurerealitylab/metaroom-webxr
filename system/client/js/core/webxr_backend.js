@@ -50,6 +50,8 @@ export class Viewport {
     }
 }
 
+// use this to send any system information
+// we want to the world code
 class SystemArgs {
     constructor() {
         this.viewport = new Viewport();
@@ -101,13 +103,9 @@ export class MetaroomXRBackend {
             return this._VRIsActive;
         };
 
+        // temp
         MR.VRIsActive = this.VRIsActive;
-        MR.XRIsActive = this.XRIsActive;
-
-        // Bound functions
-        this.onVRRequestPresent = this._onVRRequestPresent.bind(this);
-        this.onVRExitPresent    = this._onVRExitPresent.bind(this);
-        this.onVRPresentChange  = this._onVRPresentChange.bind(this);
+        MR.XRIsActive = this.VRIsActive;
 
         // Uninitialized member variables (see _init()).
         this._parent = null;
@@ -122,12 +120,12 @@ export class MetaroomXRBackend {
 
         this.systemArgs = new SystemArgs();
         
-        MR.viewerPose = () => {
-            return this.xrInfo.viewerPose;
+        MR.viewerPoseInfo = () => {
+            return this.xrInfo.viewerPoseEXT;
         }
         // alias
-        MR.headset = () => {
-            return this.xrInfo.viewerPose;
+        MR.headsetInfo = () => {
+            return this.xrInfo.viewerPoseEXT;
         }
 
         MR.controllers = navigator.getGamepads();
@@ -269,23 +267,27 @@ export class MetaroomXRBackend {
     }
 
     async initGPUAPI(options, targetSurface) {
-
         // note, initialization is the same for now,
         // but likely to change -- will keep separated for now
 
         let GPUInterface;
         switch (options.GPUAPIType) {
         case GPU.GPU_API_TYPE.WEBGL: {
+            console.log("WebGL");
             GPUInterface = await GPU.initWebGL(this, options, targetSurface);
             break;
         }
         case GPU.GPU_API_TYPE.WEBGPU: {
+            console.log("WebGPU")
             GPUInterface = await GPU.initWebGPU(this, options, targetSurface);
             break;
         }
         default: {
             console.error(
-                "Unsupported GPU API, initialization should be done externally"
+                "%s%s%s",
+                "Unsupported GPU API, ",
+                "User should initialize and provide a context, ",
+                "as well as animation loops using the context"
             );
 
             return GPU.CTX_CREATE_STATUS_FAILURE_UNKNOWN_API;
@@ -329,15 +331,21 @@ export class MetaroomXRBackend {
         this._initCanvasOnParentElement();
         this._initCustomState();
 
-        let status = await this.initGPUAPI(
-            this.options, 
-            this._canvas
-        );
-        if (status !== GPU.CTX_CREATE_STATUS_SUCCESS) {
-            status = await this.tryGPUAPIFallbacks();
+        if (this.options.GPUAPIProvidedContext) {
+            console.error("NOT IMPLEMENTED: developer-provided GPU API context");
+            return false;
+        } else {
+            console.log("initializing built-in GPU API");
+            let status = await this.initGPUAPI(
+                this.options, 
+                this._canvas
+            );
             if (status !== GPU.CTX_CREATE_STATUS_SUCCESS) {
-                console.error("failed to initialize a graphics context");
-                return false;
+                status = await this.tryGPUAPIFallbacks();
+                if (status !== GPU.CTX_CREATE_STATUS_SUCCESS) {
+                    console.error("failed to initialize a graphics context");
+                    return false;
+                }
             }
         }
 
@@ -351,19 +359,21 @@ export class MetaroomXRBackend {
 
             this._initButton();
 
-            console.log("initializing XR");
+            console.group("trying to initialize immersive XR");
             const ok = await this.XRDetectImmersiveVRSupport();
             if (!ok) {
                 console.log(
                     "%c%s", 
                     'color: #ff0000',
-                    "XR initialization uncussessful"
+                    "immersive XR unsupported"
                 );
-                console.group('');
-                console.log('Initializing PC window mode ...');
+                
+                console.log('initializing PC window mode instead ...');
                 this._initWindow();
-                console.groupEnd();
+                
             }
+            console.groupEnd();
+
         } else {
             console.warn("XR is unsupported");
             console.log('Initializing PC window mode ...');
@@ -400,59 +410,9 @@ export class MetaroomXRBackend {
 
     _initCustomState() {
         if (this.useCustomState) {
-            console.log('Initializing custom state');
             this.customState = {};
             this.persistentStateMap = new Map();
             this.globalPersistent = {};
-        }
-    }
-
-    _initWebVR() {
-        if (navigator.getVRDisplays) {
-            this._frameData = new VRFrameData();
-            const button = this.xrButton;
-            const me = this;
-            navigator.getVRDisplays().then(function(displays) {
-                if (displays.length > 0) {
-                const vrDisplay = displays[displays.length - 1]; // ?
-                me._vrDisplay = vrDisplay;
-
-                // It's highly recommended that you set the near and far planes to somethin
-                // appropriate for your scene so the projection matrices WebVR produces
-                // have a well-scaled depth buffer.
-                vrDisplay.depthNear = 0.1;
-                vrDisplay.depthFar = 1024.0;
-
-                // Generally, you want to wait until VR support is confirmed and you know the
-                // user has a VRDisplay capable of presenting connected before adding UI that
-                // advertizes VR features.
-                if (vrDisplay.capabilities.canPresent) {
-                    button.enabled = true;
-                }
-
-                // The UA may kick us out of VR present mode for any reason, so to ensure we
-                // always know when we gegin/end presenting we need to listen for events.
-                window.addEventListener('vrdisplaypresentchange', me.onVRPresentChange, false);
-
-                // These events fire when the user agent has had some indication that it would
-                // be appropriate to enter or exit VR presentation mode, such as the user putting
-                // on a headset and triggering a proximity sensor.
-                window.addEventListener('vrdisplayactivate', me.onVRRequestPresent, false);
-                window.addEventListener('vrdisplaydeactivate', me.onVRExitPresent, false);
-            } else {
-                console.warn('WebVR supported, but no displays found.');
-                // TODO route error modes to fallback display
-            }
-        }, function() {
-            console.warn('Your browser does not support WebVR.');
-            // TODO route error modes to fallback display
-        });
-            return true;
-        } else if (navigator.getVRDevices) {
-            console.warn('Your browser supports WebVR, but not the latest version.')
-            return false;
-        } else {
-            return false;
         }
     }
 
@@ -488,7 +448,9 @@ export class MetaroomXRBackend {
 
     clearWorld() {
         this._reset();
-        this.GPUInterface.GPUCtxInfo.freeResources();
+        if (this.options.doGPUResourceTracking) {
+            this.GPUInterface.GPUCtxInfo.freeResources();
+        }
     }
 
     _reset() {
@@ -628,29 +590,6 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         this._animationHandle = window.requestAnimationFrame(this.config.onAnimationFrame);
     }
 
-    // OLD
-
-    _onVRRequestPresent () {
-        // This can only be called in response to a user gesture.
-        this._vrDisplay.requestPresent([{ source: this._canvas }]).then(function () {
-            // Nothing to do because we're handling things in onVRPresentChange.
-        }, function (err) {
-            console.error(err);
-            console.log(err.name);
-            console.log(err.message);
-            console.log(err.code);
-        });
-    }
-    
-    _onVRExitPresent () {
-        if (!this._vrDisplay.isPresenting)
-            return;
-        this._vrDisplay.exitPresent().then(function () {
-        }, function (err) {
-            console.error(err);
-        });
-    }
-
     _onVRPresentChange() {
         if (this._vrDisplay == null) {
             return;
@@ -677,14 +616,7 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
             this._canvas.height = this._oldCanvasHeight;
         }
         this._VRIsActive = false;
-
-
     }
-
-    _onFrameXR(t) {
-    }
-
-    //
 
     _onAnimationFrameWindowWebGPU(t) {
 
@@ -767,15 +699,16 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         const layer   = session.renderState.baseLayer;
         const xrInfo  = self.xrInfo;
         const pose    = frame.getViewerPose(xrInfo.immersiveRefSpace);
-
         xrInfo.viewerPose = pose;
-
-        self.updateControllerState(self, null /*TODO*/, frame, pose);
+        // calculates the transform as position, orientation, and does
+        // any other extended things as necessary
+        xrInfo.viewerPoseEXT.update();
 
         self._animationHandle = xrInfo.session.requestAnimationFrame(
             self.config.onAnimationFrame
         );
 
+        self.updateControllerState(self);
         Input.updateControllerHandedness();
 
         self.systemArgs.frame = frame;
@@ -809,22 +742,15 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
 
                 self.config.onDrawXR(
                     t, 
-                    view.projectionMatrix, 
-                    view.transform.matrix, 
-                    self.customState, 
+                    view.projectionMatrix,
+                    // view.transform.matrix gives you the camera matrix
+                    view.transform.inverse.matrix, 
+                    self.customState,
+                    // optionally use system args to  
                     self.systemArgs
                 );
             }
         }
-        // // left eye
-        // gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
-        // GFX.viewportXOffset = 0;
-        // self.config.onDrawXR(t, frame.leftProjectionMatrix, frame.leftViewMatrix, self.customState);
-                
-        // // right eye
-        // gl.viewport(gl.canvas.width * 0.5, 0, gl.canvas.width * 0.5, gl.canvas.height);
-        // GFX.viewportXOffset = gl.canvas.width * 0.5;
-        // self.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, self.customState);
 
         self.config.onEndFrameXR(t, self.customState, self.systemArgs);
 

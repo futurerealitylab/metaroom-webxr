@@ -1,7 +1,5 @@
 "use strict";
 
-import * as mem from "./memory.js";
-
 function pollGrab(state) {
     let input = state.input;
     if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {
@@ -57,23 +55,28 @@ function releaseLocks(state) {
 window.releaseLocks = releaseLocks;
 
 
-
 function pollAvatarData() {
     if (MR.VRIsActive()) {
-        const pose = MR.getViewerPose();
-        if (pose == null)
+        const poseInfo = MR.getViewerPoseInfo();
+        if (poseInfo.isValid()) {
             return;
+        }
 
+        const pose        = poseInfo.pose;
+
+        // for record of what is available
         const xform       = pose.transform;
         const position    = xform.position;
         const orientation = xform.orientation;
         const matrix      = xform.matrix;
         const inverse     = xform.inverse;
 
-        const headsetPos       = frameData.pose.position;
-        const headsetRot       = frameData.pose.orientation;
+        // custom since otherwise would need to adapt to using {x:val, y:val, z:val, ...}
+        const headsetPos  = poseInfo.positionAsArray;
+        const headsetRot  = poseInfo.orientationAsArray;
 
-        if (MR.controllers[0] != null && MR.controllers[1] != null) {
+        if (MR.controllers[0] != null && 
+            MR.controllers[1] != null) {
             //Controllers
             const controllerRight = MR.rightController;
             const controllerRightPos = controllerRight.pose.position;
