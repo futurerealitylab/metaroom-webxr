@@ -17,30 +17,6 @@ mat4.identity = function(t) {
 mat4.perspective = function perspective(t,e,n,r,a){var c=1/Math.tan(e/2),i=1/(r-a);return t[0]=c/n,t[1]=0,t[2]=0,t[3]=0,t[4]=0,t[5]=c,t[6]=0,t[7]=0,t[8]=0,t[9]=0,t[10]=(a+r)*i,t[11]=-1,t[12]=0,t[13]=0,t[14]=2*a*r*i,t[15]=0,t}
 
 
-// class TODO_FAKE_POSE {
-//     this.position 
-// }
-// class TODO_FAKE_FRAMEDATA {
-//     constructor() {
-//         this.leftProjectionMatrix = mat4.create();
-//         mat4.identity(this.leftProjectionMatrix);
-
-//         this.rightProjectionMatrix = mat4.create();
-//         mat4.identity(this.rightProjectionMatrix);
-
-//         this.leftViewMatrix = mat4.create();
-//         mat4.identity(this.leftViewMatrix);
-
-//         this.rightViewMatrix = mat4.create();
-//         mat4.identity(this.rightViewMatrix);
-
-//         this.timestamp = 0;
-
-//         this.pose = new TODO_FAKE_POSE();
-//     }
-// }
-// const new TODO_FAKE_FRAMEDATA();
-
 export class Viewport {
     constructor() {
         this.x      = 0;
