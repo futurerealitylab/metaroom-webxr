@@ -2,7 +2,7 @@
 
 import * as GPU from "./gpu/gpu.js";
 import {WebXRButton} from "./../lib/webxr-button.js";
-import {XRInfo, XR_REFERENCE_SPACE_TYPE, XR_SESSION_MODE} from "./../core/webxr_util.js";
+import {XRInfo, XR_REFERENCE_SPACE_TYPE, XR_SESSION_MODE} from "./webxr_util.js";
 
 
 

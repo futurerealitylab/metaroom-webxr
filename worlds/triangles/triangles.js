@@ -321,7 +321,7 @@ async function setup(state) {
     // NOTE: we have created custom functions to hook into the system editor functionality
     // Beyond this class you may want to create your own system for creating, compiling, and updating shaders.
     // 
-    // For the curious, see system/client/js/lib/gfxutil.js for WebGL utility functions
+    // For the curious, see system/lib/gfxutil.js for WebGL utility functions
     // used by the editor. You can use these directly (e.g. for other projects), 
     // but they won't work with the editor
     //

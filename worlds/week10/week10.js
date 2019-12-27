@@ -1,6 +1,6 @@
 "use strict"
 
-import {Lock} from "/system/client/js/core/lock.js";
+import {Lock} from "/system/core/lock.js";
 
 /*--------------------------------------------------------------------------------
 

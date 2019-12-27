@@ -26,6 +26,9 @@ export class XRInfo {
     }
 }
 
+// this is a wrapper around XRViewerPose that provides additional
+// information, namely, pre-computed buffer versions of
+// position and orientation. Update with an explicit function call, per frame
 export class XRViewerPoseEXT {
     constructor() {
         this.viewerPose         = null;
