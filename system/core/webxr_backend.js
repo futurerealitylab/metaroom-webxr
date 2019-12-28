@@ -7,6 +7,7 @@ import {
     XR_REFERENCE_SPACE_TYPE, 
     XR_SESSION_MODE
 } from "./webxr_util.js";
+import {Viewport} from "./viewport.js";
 
 
 const mat4 = {};
@@ -17,16 +18,6 @@ mat4.identity = function(t) {
     t.set([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
 }
 mat4.perspective = function perspective(t,e,n,r,a){var c=1/Math.tan(e/2),i=1/(r-a);return t[0]=c/n,t[1]=0,t[2]=0,t[3]=0,t[4]=0,t[5]=c,t[6]=0,t[7]=0,t[8]=0,t[9]=0,t[10]=(a+r)*i,t[11]=-1,t[12]=0,t[13]=0,t[14]=2*a*r*i,t[15]=0,t}
-
-
-export class Viewport {
-    constructor() {
-        this.x      = 0;
-        this.y      = 0;
-        this.width  = 0;
-        this.height = 0;
-    }
-}
 
 // use this to send any system information
 // we want to the world code
