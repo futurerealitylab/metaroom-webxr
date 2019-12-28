@@ -157,6 +157,15 @@ export class DefaultWindowMenuUI {
     }
 }
 
+export class CanvasSet {
+    constructor() {
+        console.warn("TODO");
+        // TODO(TR): support multiple canvases for different graphics API
+        // contexts, allow each to be modal - will need to store each canvas
+        // and figure which is closest to the mouse cursor at a given time
+    }
+}
+
 export function makeModalCanvas(targetSurface) {
     const bodyWidth = document.body.getBoundingClientRect().width;
     const parent = document.getElementById('output-container');
