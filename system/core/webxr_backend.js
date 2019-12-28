@@ -532,6 +532,13 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         ).then((refSpace) => {
             this.xrInfo.type = XR_REFERENCE_SPACE_TYPE.BOUNDED_FLOOR;
             this.xrInfo.immersiveRefSpace = refSpace;
+
+            console.log(
+                "%c%s", 
+                "font-weight: bold; color: #00ff00;",
+                "using reference space=[bounded-floor]"
+            );
+
         }).catch((err) => {
             console.error(err.message);
             // fall back to local (eye-level)
@@ -540,6 +547,13 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
             ).then((refSpace) => {
                 this.xrInfo.type = XR_REFERENCE_SPACE_TYPE.LOCAL;
                 this.xrInfo.immersiveRefSpace = refSpace;
+
+                console.log(
+                    "%c%s", 
+                    "font-weight: bold; color: #ffa500;",
+                    "using fallback reference space=[local]"
+                );
+
             }).then(onRequestReferenceSpaceSuccess);
 
         }).then(this.onRequestReferenceSpaceSuccess);
@@ -638,7 +652,6 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         MR.controllers = navigator.getGamepads();
         let gamepads = navigator.getGamepads();
         let vrGamepadCount = 0;
-        let doTransition = false;
         for (let i = 0; i < gamepads.length; i += 1) {
             const gamepad = gamepads[i];
             if (gamepad) { // gamepads may contain null-valued entries
@@ -667,8 +680,6 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
 
         self.time = t / 1000.0;
         self.timeMS = t;
-
-        const doTransition = false;
 
         if (!(frame && frame.session.isImmersive)) {
             self.config.onAnimationFrameWindow(t);
