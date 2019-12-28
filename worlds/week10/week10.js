@@ -353,8 +353,8 @@ function onStartFrame(t, state) {
 
    if (MR.VRIsActive()) {
       if (!input.HS) input.HS = new HeadsetHandler(MR.headsetInfo());
-      if (!input.LC) input.LC = new ControllerHandler(MR.leftController);
-      if (!input.RC) input.RC = new ControllerHandler(MR.rightController);
+      if (!input.LC || Input.gamepadStateChanged) input.LC = new ControllerHandler(MR.leftController);
+      if (!input.RC || Input.gamepadStateChanged) input.RC = new ControllerHandler(MR.rightController);
 
       if (! state.calibrate) {
          m.identity();
@@ -1000,6 +1000,9 @@ function onEndFrame(t, state) {
 
    if (input.LC) input.LC.onEndFrame();
    if (input.RC) input.RC.onEndFrame();
+
+
+   Input.gamepadStateChanged = false;
 }
 
 export default function main() {

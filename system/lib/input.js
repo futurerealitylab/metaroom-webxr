@@ -135,12 +135,48 @@ window.Input.KEY_D = 68;
 window.Input.KEY_S = 83;
 
 Input.updateControllerHandedness = () => {
-    const left_is_0 = MR.controllers[0].id.indexOf('Left') > 0;
-    if (MR.controllers) {
-        MR.leftController  = MR.controllers[left_is_0 ? 0 : 1];
-        MR.rightController = MR.controllers[left_is_0 ? 1 : 0];
+    if (!MR.controllers) {
+        return;
     }
+
+    const controllerCount    = MR.controllers.length;
+    let leftControllerFound  = false;
+    let rightControllerFound = false;
+    for (let i = 0; 
+        i < controllerCount && (
+            !(leftControllerFound && rightControllerFound)
+        ); 
+        i += 1
+    ) {
+        const controller = MR.controllers[i];
+        if (!controller) {
+            continue;
+        }
+        if (controller.hand == "left") {
+            MR.leftController = controller;
+            leftControllerFound = true;
+        } else if (controller.hand == "right") {
+            MR.rightController = controller;
+            rightControllerFound = true;
+        }
+    }
+    // if (!(leftControllerFound && rightControllerFound)) {
+    //     console.warn("could not find controllers"); 
+    // }
 }
+
+Input.gamepadStateChanged = false;
+window.addEventListener('gamepadconnected', event => {
+
+    Input.gamepadStateChanged = true;
+
+});
+
+window.addEventListener('gamepaddisconnected', event => {
+    console.log('Lost connection with the gamepad.');
+
+    Input.gamepadStateChanged = true;
+});
 
 
 

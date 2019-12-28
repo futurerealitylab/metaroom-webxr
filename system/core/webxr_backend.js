@@ -93,11 +93,11 @@ export class MetaroomXRBackend {
         this.systemArgs = new SystemArgs();
         
         MR.getViewerPoseInfo = () => {
-            return this.xrInfo.viewerPoseEXT;
+            return this.xrInfo.poseEXT;
         };
         // alias
         MR.headsetInfo = () => {
-            return this.xrInfo.viewerPoseEXT;
+            return this.xrInfo.poseEXT;
         };
 
         MR.controllers = navigator.getGamepads();
@@ -822,10 +822,10 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         const layer   = session.renderState.baseLayer;
         const xrInfo  = self.xrInfo;
         const pose    = frame.getViewerPose(xrInfo.immersiveRefSpace);
-        xrInfo.viewerPose = pose;
+        xrInfo.pose = pose;
         // calculates the transform as position, orientation, and does
         // any other extended things as necessary
-        xrInfo.viewerPoseEXT.update(xrInfo.viewerPose);
+        xrInfo.poseEXT.update(xrInfo.pose);
 
         self._animationHandle = xrInfo.session.requestAnimationFrame(
             self.config.onAnimationFrame

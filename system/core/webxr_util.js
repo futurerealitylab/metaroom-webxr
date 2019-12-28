@@ -33,8 +33,8 @@ export class XRInfo {
         this.immersiveRefSpace = null;
         this.inlineRefSpace    = null;
         this.type              = XR_REFERENCE_SPACE_TYPE.VIEWER;
-        this.viewerPose        = null;
-        this.viewerPoseEXT     = new XRViewerPoseEXT();
+        this.pose        = null;
+        this.poseEXT     = new XRViewerPoseEXT();
     }
 }
 
@@ -43,21 +43,21 @@ export class XRInfo {
 // position and orientation. Update with an explicit function call, per frame
 export class XRViewerPoseEXT {
     constructor() {
-        this.viewerPose         = null;
+        this.pose         = null;
         this.positionAsArray    = new Float32Array(3);
         this.orientationAsArray = new Float32Array(4);
     }
     
-    update(viewerPose) {
-        this.viewerPose = viewerPose;
+    update(pose) {
+        this.pose = pose;
 
-        const xform = this.viewerPose.transform;
+        const xform = this.pose.transform;
         positionObjectToArray(xform.position, this.positionAsArray);
         orientationObjectToArray(xform.orientation, this.orientationAsArray);
     }
 
     isValid() {
-        return (this.viewerPose != null);
+        return (this.pose != null);
     }
 }
 

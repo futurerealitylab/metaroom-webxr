@@ -139,28 +139,35 @@ export class MetaroomVRBackend {
                     inverse     : [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1],
                 },
             },
-            positionAsArray    : null,
-            orientationAsArray : null,
+            positionAsArray    : new Float32Array(3),
+            orientationAsArray : new Float32Array(4),
             frameData : null,
         };
         this.fakeXRPoseInfoWrapper.isValid = () => {
             const info = this.fakeXRPoseInfoWrapper;
-            return (info.frameData != null);
+            return (info.frameData != null && info.frameData.pose != null);
         };
 
         MR.getViewerPoseInfo = () => {
             const info     = this.fakeXRPoseInfoWrapper;
             info.frameData = this._frameData;
 
-            info.positionAsArray    = info.frameData.pose.position;
-            info.orientationAsArray = info.frameData.pose.orientation;
+            if (!info.isValid()) {
+                return;
+            }
 
-            const posObj = pose.transform.position;
+            if (info.frameData.pose.position) {
+               info.positionAsArray    = info.frameData.pose.position;
+               info.orientationAsArray = info.frameData.pose.orientation;
+            }
+            
+
+            const posObj = info.pose.transform.position;
             posObj.x = info.positionAsArray[0];
             posObj.y = info.positionAsArray[1];
             posObj.z = info.positionAsArray[2];
             
-            const oriObj = pose.transform.orientation;
+            const oriObj = info.pose.transform.orientation;
             oriObj.x = info.orientationAsArray[0];
             oriObj.y = info.orientationAsArray[1];
             oriObj.z = info.orientationAsArray[2];
@@ -172,7 +179,6 @@ export class MetaroomVRBackend {
         MR.headsetInfo = () => {
             return MR.getViewerPoseInfo();
         };
-        MR.frameData = this.frameData;
         MR.controllers = navigator.getGamepads();
 
 
@@ -725,21 +731,16 @@ export class MetaroomVRBackend {
 
                 this._canvas.width  = Math.max(leftEye.renderWidth, rightEye.renderWidth) * 2;
                 this._canvas.height = Math.max(leftEye.renderHeight, rightEye.renderHeight);
-
-                this._vrDisplay.resetPose();
             }
             this._VRIsActive = true;
 
             return;
         }
         if (this._VRIsActive) {
-            this.canvas.width   = this._oldCanvasWidth;
+            this._canvas.width   = this._oldCanvasWidth;
             this._canvas.height = this._oldCanvasHeight;
         }
         this._VRIsActive = false;
-        this._frameData = null;
-
-
     }
 
     _onFrameXR(t) {
@@ -765,6 +766,7 @@ export class MetaroomVRBackend {
     }
 
     _onAnimationFrame(t) {
+
         this.time = t / 1000.0;
         this.timeMS = t;
 
@@ -814,11 +816,12 @@ export class MetaroomVRBackend {
            }
            return;
         }
+        
         vrDisplay.getFrameData(frame);
 
         this._animationHandle = vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
 
-        Input.updateControllerState();
+        Input.updateControllerHandedness();
         this.config.onStartFrame(t, this.customState);
 
         // left eye
