@@ -11,7 +11,19 @@ export const XR_REFERENCE_SPACE_TYPE = {
     LOCAL         : "local",
     LOCAL_FLOOR   : "local-floor",
     BOUNDED_FLOOR : "bounded-floor",
-    UNBOUNDED     : "unbounded"
+    UNBOUNDED     : "unbounded",
+};
+
+export const XR_HANDEDNESS = {
+    NONE  : "none",
+    LEFT  : "left",
+    RIGHT : "right",
+};
+
+export const XR_TARGET_RAY_MODE = {
+    GAZE            : "gaze",
+    TRACKED_POINTER : "tracked-pointer",
+    SCREEN          : "screen",
 };
 
 export class XRInfo {
@@ -46,6 +58,18 @@ export class XRViewerPoseEXT {
 
     isValid() {
         return (this.viewerPose != null);
+    }
+}
+
+export class XRRigidTransformEXT {
+    constructor() {
+        this.positionAsArray    = new Float32Array(3);
+        this.orientationAsArray = new Float32Array(4);        
+    }
+
+    update(xform) {
+        positionObjectToArray(xform.position, this.positionAsArray);
+        orientationObjectToArray(xform.orientation, this.orientationAsArray);        
     }
 }
 

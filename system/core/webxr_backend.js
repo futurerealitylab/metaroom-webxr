@@ -7,7 +7,9 @@ import {WebXRButton} from "./../lib/webxr-button.js";
 import {
     XRInfo, 
     XR_REFERENCE_SPACE_TYPE, 
-    XR_SESSION_MODE
+    XR_SESSION_MODE,
+    XR_HANDEDNESS,
+    XR_TARGET_RAY_MODE
 } from "./webxr_util.js";
 import {Viewport} from "./viewport.js";
 
@@ -493,8 +495,14 @@ export class MetaroomXRBackend {
 
         const self = MR.engine;
 
-        session.addEventListener('end', this.onSessionEnded);
+        session.addEventListener('end',    this.onSessionEnded);
         session.addEventListener('select', this.onSelect);
+        session.addEventListener('select', this.onSelectStart);
+        session.addEventListener('select', this.onSelectEnd);
+
+        session.addEventListener('inputsourceschange', () => {
+            console.warn("TODO: handle inputsourceschange event");
+        });
 
         this._reset();
 
@@ -661,7 +669,7 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
             const gamepad = gamepads[i];
             if (gamepad) { // gamepads may contain null-valued entries
                 if (gamepad.pose || gamepad.displayId ) { // VR gamepads will have one or both of these properties.
-                    let cache = self.buttonsCache[vrGamepadCount] || [];
+                    const cache = self.buttonsCache[vrGamepadCount] || [];
                     for (let j = 0; j < gamepad.buttons.length; j += 1) {
                         // Check for any buttons that are pressed and previously were not.
                         if (cache[j] != null && !cache[j] && gamepad.buttons[j].pressed) {
@@ -676,8 +684,14 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         }
     }
 
+    onSelectStart(e) {
+
+    }
+    onSelectEnd(e) {
+
+    }
     // TODO(???) modified version of: https://github.com/immersive-web/webxr-samples/blob/429aeb7cd46f1009d2e529e69854418a5a0903d5/input-selection.html#L181
-    onSelect(ev) {
+    onSelect(e) {
         const self = MR.engine;
         if (!ev.frame.session.isImmersive) {
             return;
@@ -685,7 +699,7 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
 
         const refSpace = self.xrInfo.immersiveRefSpace;
 
-        const targetRayPose = ev.frame.getPose(
+        const targetRayPose = e.frame.getPose(
             ev.inputSource.targetRaySpace, 
             refSpace
         );
@@ -708,12 +722,28 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         // }
     }
 
+    processGamepad(self, inputSource, pose) {
+        // this uses the gamepad API internally
+    }
+
     // TODO(???) integrate modified version of: https://github.com/immersive-web/webxr-samples/blob/429aeb7cd46f1009d2e529e69854418a5a0903d5/input-tracking.html#L166
     updateInputSources(self, session, frame, refSpace) {
         const inputSources = session.inputSources;
         for (let i = 0; i < inputSources; i += 1) {
             const inputSource = inputSources[i];
 
+
+            if (inputSource.gripSpace) {
+                const gripPose = frame.getPose(inputSource.gripSpace, refSpace);
+                if (gripPose) {
+                    // If we have a grip pose use it to render a mesh showing the
+                    // position of the controller.
+                    // NOTE: this contains a "handedness property". Wonderful!
+                    //scene.inputRenderer.addController(gripPose.transform.matrix, inputSource.handedness);
+                }
+            }
+
+            // this part assumes we care about pointing and raycasting (we will)
             const targetRayPose = frame.getPose(inputSource.targetRaySpace, refSpace);
 
             // We may not get a pose back in cases where the input source has lost
@@ -723,8 +753,8 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
                 continue;
             }
 
-            if (inputSource.targetRayMode == "tracked-pointer") {
-                // TODO(?): replacement for controller tip()
+            if (inputSource.targetRayMode == XR_TARGET_RAY_MODE.TRACKED_POINTER) {
+                // TODO(?): replacement for controller tip() ?
                 // If we have a pointer matrix and the pointer origin is the users
                 // hand (as opposed to their head or the screen) use it to render
                 // a ray coming out of the input device to indicate the pointer
@@ -768,15 +798,6 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
           //   // vec3.transformMat4(cursorPos, cursorPos, inputPose.targetRay);
           //   this.inputRenderer.addCursor(cursorPos);
           // }
-              
-            if (inputSource.gripSpace) {
-                const gripPose = frame.getPose(inputSource.gripSpace, refSpace);
-                if (gripPose) {
-                    // If we have a grip pose use it to render a mesh showing the
-                    // position of the controller.
-                    //scene.inputRenderer.addController(gripPose.transform.matrix, inputSource.handedness);
-                }
-            }
 
         }
     }
@@ -811,7 +832,7 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         );
 
         self.updateControllerState(self);
-        Input.updateControllerHandedness();
+        Input.updateControllerHandedness(); // information already given in WebXR Input API, TODO
 
         self.systemArgs.frame = frame;
         self.systemArgs.pose  = pose;
