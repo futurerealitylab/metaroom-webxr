@@ -431,7 +431,7 @@ export class MetaroomXRBackend {
         }
     }
 
-    enableImmersiveVREntry(supported) {
+    enableImmersiveVREntryAccess(supported) {
         this.xrButton.enabled = supported;
     }
 
@@ -439,7 +439,7 @@ export class MetaroomXRBackend {
         if (!navigator.xr) {
             console.log(
                 "%c%s", 
-                'font-weight: bold; color: #ff0000;',
+                "font-weight: bold; color: #ff0000;",
                 "WebXR unsupported"
             );
             return false;
@@ -451,13 +451,17 @@ export class MetaroomXRBackend {
             );
             if (supported) {
                 console.log("immersive-vr mode is supported");
-                this.enableImmersiveVREntry(true);
+                this.enableImmersiveVREntryAccess(true);
                 return true;
             }
         } catch (err) {
-            console.log("immersive-vr mode is unupported");
+            console.log(
+                "%c%s", 
+                "font-weight: bold; color: #ffa500;",
+                "WebXR immersive vr mode unsupported"
+            );
             console.error(err.message);
-            this.enableImmersiveVREntry(false);
+            this.enableImmersiveVREntryAccess(false);
             return false;
         }
     }
@@ -477,7 +481,7 @@ export class MetaroomXRBackend {
         ).then(this.onSessionStarted).catch((err) => {
             console.error(err.message);
             console.error("This should never happen because we check for support beforehand");
-            this.enableImmersiveVREntry(false);
+            this.enableImmersiveVREntryAccess(false);
         });
     }
 
