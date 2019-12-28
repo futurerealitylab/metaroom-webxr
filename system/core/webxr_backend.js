@@ -328,8 +328,11 @@ export class MetaroomXRBackend {
             this.options.enableBellsAndWhistles) {
 
             this._initButton();
-
-            console.log("trying to initialize immersive XR");
+            console.log(
+                "%c%s",
+                "color: #9faaff",
+                "trying to initialize immersive XR"
+            );
             const ok = await this.XRDetectImmersiveVRSupport();
             if (!ok) {
                 console.log(

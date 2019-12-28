@@ -46,6 +46,9 @@ window.watchFiles = function(arr, status = {}) {
 
 
 
+function rawURL(url) {
+    return url.split(/[?#]/)[0];
+}
 window.hotReloadFile = function(localPath) {
     const parentPath = getCurrentPath(window.location.pathname);
 
@@ -70,10 +73,6 @@ window.hotReloadFile = function(localPath) {
         }
 
         MR.engine.reloadGeneration += 1;
-
-        function rawURL(url) {
-            return url.split(/[?#]/)[0];
-        }
 
         const importName = rawURL(window.location.href) + 
                             filename + "?generation=" + 
@@ -113,7 +112,7 @@ const VERSION = document.getElementById("version").getAttribute("value");
 MR.VERSION = parseInt(VERSION);
 console.log(
     "%crunning version=[%d], backend=[%s]",
-    'font-size: 15px; color: #9faaff',
+    "font-size: 15px; color: #9faaff",
     MR.VERSION, 
     Metaroom.TYPE_TO_NAME[MR.type]
 );
