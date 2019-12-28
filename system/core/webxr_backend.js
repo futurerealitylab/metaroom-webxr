@@ -491,7 +491,10 @@ export class MetaroomXRBackend {
     onSessionStarted(session) {
         console.log("session started");
 
-        session.addEventListener('end', onSessionEnded);
+        const self = MR.engine;
+
+        session.addEventListener('end', this.onSessionEnded);
+        session.addEventListener('select', this.onSelect);
 
         this._reset();
 
@@ -576,8 +579,10 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         this.xrButton.setSession(null);
         e.session.isImmersive   = false;
         this.xrInfo.isImmersive = false;
+        this.xrInfo.immersiveRefSpace = null;
         this.xrInfo.session     = null;
         this.xrInfo.type        = XR_REFERENCE_SPACE_TYPE.VIEWER;
+
 
         this._VRIsActive = false;
 
@@ -671,10 +676,116 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         }
     }
 
-    _onAnimationFrameWebGPU(t, frame) {
+    // TODO(???) modified version of: https://github.com/immersive-web/webxr-samples/blob/429aeb7cd46f1009d2e529e69854418a5a0903d5/input-selection.html#L181
+    onSelect(ev) {
+        const self = MR.engine;
+        if (!ev.frame.session.isImmersive) {
+            return;
+        }
 
+        const refSpace = self.xrInfo.immersiveRefSpace;
+
+        const targetRayPose = ev.frame.getPose(
+            ev.inputSource.targetRaySpace, 
+            refSpace
+        );
+        if (!targetRayPose) {
+            return;
+        }
+
+        const hitResult = scene.hitTest(targetRayPose.transform);
+        if (!hitResult) {
+            return;
+        }
+        // the example raycasts against some boxes
+        // // Check to see if the hit result was one of our boxes.
+        // for (let box of boxes) {
+        //     if (hitResult.node == box.node) {
+        //         // Change the box color to something random.
+        //         let uniforms = box.renderPrimitive.uniforms;
+        //         uniforms.baseColorFactor.value = [Math.random(), Math.random(), Math.random(), 1.0];
+        //     }
+        // }
     }
 
+    // TODO(???) integrate modified version of: https://github.com/immersive-web/webxr-samples/blob/429aeb7cd46f1009d2e529e69854418a5a0903d5/input-tracking.html#L166
+    updateInputSources(self, session, frame, refSpace) {
+        const inputSources = session.inputSources;
+        for (let i = 0; i < inputSources; i += 1) {
+            const inputSource = inputSources[i];
+
+            const targetRayPose = frame.getPose(inputSource.targetRaySpace, refSpace);
+
+            // We may not get a pose back in cases where the input source has lost
+            // tracking or does not know where it is relative to the given frame
+            // of reference.
+            if (!targetRayPose) {
+                continue;
+            }
+
+            if (inputSource.targetRayMode == "tracked-pointer") {
+                // TODO(?): replacement for controller tip()
+                // If we have a pointer matrix and the pointer origin is the users
+                // hand (as opposed to their head or the screen) use it to render
+                // a ray coming out of the input device to indicate the pointer
+                // direction.
+                //scene.inputRenderer.addLaserPointer(targetRayPose.transform);                
+            }
+
+            // If we have a pointer matrix we can also use it to render a cursor
+            // for both handheld and gaze-based input sources.
+
+            // From example: (this gets the position of the cursor)
+
+          // // Check and see if the pointer is pointing at any selectable objects.
+          // let hitResult = this.hitTest(targetRayPose.transform);
+
+          // if (hitResult) {
+          //   // Render a cursor at the intersection point.
+          //   this.inputRenderer.addCursor(hitResult.intersection);
+
+          //   if (hitResult.node._hoverFrameId != lastHoverFrame) {
+          //     hitResult.node.onHoverStart();
+          //   }
+          //   hitResult.node._hoverFrameId = this._hoverFrame;
+          //   newHoveredNodes.push(hitResult.node);
+          // } else {
+          //   // Statically render the cursor 1 meters down the ray since we didn't
+          //   // hit anything selectable.
+          //   let targetRay = new Ray(targetRayPose.transform.matrix);
+          //   let cursorDistance = 1.0;
+          //   let cursorPos = vec3.fromValues(
+          //       targetRay.origin[0], //x
+          //       targetRay.origin[1], //y
+          //       targetRay.origin[2]  //z
+          //       );
+          //   vec3.add(cursorPos, cursorPos, [
+          //       targetRay.direction[0] * cursorDistance,
+          //       targetRay.direction[1] * cursorDistance,
+          //       targetRay.direction[2] * cursorDistance,
+          //       ]);
+          //   // let cursorPos = vec3.fromValues(0, 0, -1.0);
+          //   // vec3.transformMat4(cursorPos, cursorPos, inputPose.targetRay);
+          //   this.inputRenderer.addCursor(cursorPos);
+          // }
+              
+            if (inputSource.gripSpace) {
+                const gripPose = frame.getPose(inputSource.gripSpace, refSpace);
+                if (gripPose) {
+                    // If we have a grip pose use it to render a mesh showing the
+                    // position of the controller.
+                    //scene.inputRenderer.addController(gripPose.transform.matrix, inputSource.handedness);
+                }
+            }
+
+        }
+    }
+
+    _onAnimationFrameWebGPU(t, frame) {
+        // TODO(TR):
+    }
+
+    // default WebGL animation frame
     _onAnimationFrameWebGL(t, frame) {
         const self = MR.engine;
 
@@ -704,6 +815,8 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
 
         self.systemArgs.frame = frame;
         self.systemArgs.pose  = pose;
+        // contains depthFar, depthNear
+        self.systemArgs.renderState = session.renderState;
 
         self.config.onStartFrameXR(t, self.customState, self.systemArgs);
 
