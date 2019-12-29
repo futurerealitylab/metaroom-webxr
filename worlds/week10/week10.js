@@ -131,6 +131,16 @@ async function onExit(state) {
 
 async function setup(state) {
    hotReloadFile(getPath('week10.js'));
+
+    MR.server.subsLocal.subscribe("Log", (_, args) => {
+        if (MR.VRIsActive() || args.playerid == MR.playerid) {
+            return;
+        }
+
+        console.log("%c%o from pid=[%d]", "color: #00dd00;", args.msg, args.id);
+
+    }, null);
+
    // (New Info): Here I am loading the graphics module once
    // This is for the sake of example:
    // I'm making the arbitrary decision not to support
@@ -326,6 +336,13 @@ function sendSpawnMessage(object) {
 }
 
 function onStartFrame(t, state) {
+
+    if (MR.VRIsActive()) {
+        window.redirectConsole(5000);
+        console.log("WEE");
+        console.log("And now");
+        console.log("for");
+    }
 
    /*-----------------------------------------------------------------
 
@@ -1003,6 +1020,13 @@ function onEndFrame(t, state) {
 
 
    Input.gamepadStateChanged = false;
+
+    if (MR.VRIsActive()) {
+        console.log("something");
+        console.log("completely");
+        console.log("different");
+        window.flushAndRestoreConsole();
+    }
 }
 
 export default function main() {

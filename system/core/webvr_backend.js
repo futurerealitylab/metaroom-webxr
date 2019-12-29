@@ -224,7 +224,9 @@ export class MetaroomVRBackend {
         }
 
         conf.onStartFrame = options.onStartFrame || conf.onStartFrame;
+        conf.onStartFrameXR = options.onStartFrameXR || conf.onStartFrame;
         conf.onEndFrame = options.onEndFrame || conf.onEndFrame;
+        conf.onEndFrameXR = options.onEndFrameXR || conf.onEndFrame;
         conf.onDraw = options.onDraw || conf.onDraw;
         conf.onDrawXR = options.onDrawXR || conf.onDraw;
         conf.onExit = options.onExit || conf.onExit;
@@ -243,7 +245,9 @@ export class MetaroomVRBackend {
         options = options || {};
 
         options.onStartFrame = options.onStartFrame || (function(t, state) {});
+        options.onStartFrameXR = options.onStartFrameXR || options.onStartFrame;
         options.onEndFrame = options.onEndFrame || (function(t, state) {});
+        options.onEndFrameXR = options.onEndFrameXR || options.onEndFrame;
         options.onDraw = options.onDraw || (function(t, p, v, state, eyeIdx) {}); // projMat, viewMat
         options.onDrawXR = options.onDrawXR || options.onDraw;
         options.onAnimationFrame = options.onAnimationFrame || this._onAnimationFrame.bind(this);
@@ -673,7 +677,9 @@ export class MetaroomVRBackend {
             const options = this.config;
 
             options.onStartFrame = (function(t, state) {});
+            options.onStartFrameXR = (function(t, state) {});
             options.onEndFrame = (function(t, state) {});
+            options.onEndFrameXR = (function(t, state) {});
             options.onDraw = (function(t, p, v, state, eyeIdx) {});
             options.onDrawXR = (function(t, p, v, state, eyeIdx) {});
             options.onAnimationFrame = this._onAnimationFrame.bind(this);
@@ -816,13 +822,13 @@ export class MetaroomVRBackend {
            }
            return;
         }
-        
+
         vrDisplay.getFrameData(frame);
 
         this._animationHandle = vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
 
         Input.updateControllerHandedness();
-        this.config.onStartFrame(t, this.customState);
+        this.config.onStartFrameXR(t, this.customState);
 
         // left eye
         gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
@@ -834,7 +840,7 @@ export class MetaroomVRBackend {
         GFX.viewportXOffset = gl.canvas.width * 0.5;
         this.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, this.customState);
 
-        this.config.onEndFrame(t, this.customState);
+        this.config.onEndFrameXR(t, this.customState);
         if (this.options.enableMultipleWorlds && doTransition) {
            this.doWorldTransition({direction : 1, broadcast : true});
         }

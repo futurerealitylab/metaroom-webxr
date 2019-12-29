@@ -498,8 +498,19 @@ try {
 					}
 					break;
 				}
+                case "Log": {
+                    for (let sock__ of websocketMap.values()) {
+                        if (sock__.index == ws.index) {
+                            continue;
+                        }
+                        if (sock__.readyState === ws.OPEN) {
+                            sock__.send(data);
+                        }
+                    }                  
+                    break;
+                }
 				default: {
-
+                    break;
 				}
 				// case "Confirm_Connection": {
 				// 	toInit.delete(ws.index);
