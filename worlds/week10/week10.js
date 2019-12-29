@@ -793,7 +793,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    }
 
    //If you don't like the name feel free to change it, haha.
-   let drawFBAvatar = (data) => {
+   let drawSkeleton = (data) => {
       for(let i = 0; i < data.nodes.length; i++){
          m.save(); 
             //We need to swap axes.
@@ -899,7 +899,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       m.restore();
    }
 
-   drawFBAvatar(graph_data);
+   drawSkeleton(graph_data);
 
    /*-----------------------------------------------------------------
 
