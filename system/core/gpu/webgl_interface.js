@@ -8,8 +8,9 @@ export class GPUCtxInfo {
         this.ctx     = null;
 
         const target         = args.targetSurface;
-        const contextOptions = args.options;
+        const contextOptions = args.contextOptions;
         const contextNames   = args.contextNames;
+
         const len = contextNames.length;
         for (let i = 0; i < len; i += 1) {
             const ctx = target.getContext(contextNames[i], contextOptions);

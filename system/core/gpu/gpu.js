@@ -49,7 +49,7 @@ export async function initWebGL(info, options, targetSurface) {
 export async function initWebGPU(info, options, targetSurface) {
     const GPUAPI      = await loadAPI_WebGPU();
     const GPUCtxInfo  = new GPUAPI.GPUCtxInfo();
-    
+
     const ok = GPUCtxInfo.init({
         targetSurface  : targetSurface,
         contextOptions : options.contextOptions                

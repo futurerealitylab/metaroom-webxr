@@ -132,15 +132,6 @@ async function onExit(state) {
 async function setup(state) {
    hotReloadFile(getPath('week10.js'));
 
-    MR.server.subsLocal.subscribe("Log", (_, args) => {
-        if (MR.VRIsActive() || args.playerid == MR.playerid) {
-            return;
-        }
-
-        console.log("%c%o from pid=[%d]", "color: #00dd00;", args.msg, args.id);
-
-    }, null);
-
    // (New Info): Here I am loading the graphics module once
    // This is for the sake of example:
    // I'm making the arbitrary decision not to support
@@ -336,13 +327,12 @@ function sendSpawnMessage(object) {
 }
 
 function onStartFrame(t, state) {
-
-    if (MR.VRIsActive()) {
-        window.redirectConsole(5000);
-        console.log("WEE");
-        console.log("And now");
-        console.log("for");
-    }
+    // if (MR.VRIsActive()) {
+    //     window.redirectConsole(5000);
+    //     console.log("WEE");
+    //     console.log("And now");
+    //     console.log("for");
+    // }
 
    /*-----------------------------------------------------------------
 
@@ -1021,12 +1011,12 @@ function onEndFrame(t, state) {
 
    Input.gamepadStateChanged = false;
 
-    if (MR.VRIsActive()) {
-        console.log("something");
-        console.log("completely");
-        console.log("different");
-        window.flushAndRestoreConsole();
-    }
+    // if (MR.VRIsActive()) {
+    //     console.log("something");
+    //     console.log("completely");
+    //     console.log("different");
+    //     window.flushAndRestoreConsole();
+    // }
 }
 
 export default function main() {
@@ -1050,7 +1040,96 @@ export default function main() {
       onReload       : onReload,
       // call upon world exit
       onExit         : onExit,
-      onExitXR       : onExit
+      onExitXR       : onExit, /*
+      onAnimationFrame : function(t) {
+
+        redirectConsole(5000);
+        try {
+
+        //////////////////////////////
+        const self = MR.engine;
+
+        self.time = t / 1000.0;
+        self.timeMS = t;
+
+        // For now, all VR gamepad button presses trigger a world transition.
+        MR.controllers = navigator.getGamepads();
+        let gamepads = navigator.getGamepads();
+        let vrGamepadCount = 0;
+        let doTransition = false;
+        for (var i = 0; i < gamepads.length; ++i) {
+            var gamepad = gamepads[i];
+            if (gamepad) { // gamepads may contain null-valued entries (eek!)
+                if (gamepad.pose || gamepad.displayId ) { // VR gamepads will have one or both of these properties.
+                    var cache = self.buttonsCache[vrGamepadCount] || [];
+                    for (var j = 0; j < gamepad.buttons.length; j++) {
+
+                        // Check for any buttons that are pressed and previously were not.
+
+                        if (cache[j] != null && !cache[j] && gamepad.buttons[j].pressed) {
+                            console.log('pressed gamepad', i, 'button', j);
+                            //doTransition = true;
+                        }
+                        cache[j] = gamepad.buttons[j].pressed;
+                    }
+                    self.buttonsCache[vrGamepadCount] = cache;
+                    vrGamepadCount++;
+                }
+            }
+        }
+
+        // revert to windowed rendering if there is no VR display
+        // or if the VR display is not presenting
+        const vrDisplay = self._vrDisplay;
+        if (!vrDisplay) {
+            self.config.onAnimationFrameWindow(t);
+            if (self.options.enableMultipleWorlds && doTransition) {
+               self.doWorldTransition({direction : 1, broadcast : true});
+            }
+            return;
+        }
+
+        const gl = self._gl;
+        const frame = self._frameData;
+        if (!vrDisplay.isPresenting) {
+           self.config.onAnimationFrameWindow(t);
+           if (self.options.enableMultipleWorlds && doTransition) {
+              self.doWorldTransition({direction : 1, broadcast : true});
+           }
+           return;
+        }
+
+        vrDisplay.getFrameData(frame);
+
+        self._animationHandle = vrDisplay.requestAnimationFrame(self.config.onAnimationFrame);
+
+        Input.updateControllerHandedness();
+        self.config.onStartFrameXR(t, self.customState);
+
+        // left eye
+        gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
+        GFX.viewportXOffset = 0;
+        self.config.onDrawXR(t, frame.leftProjectionMatrix, frame.leftViewMatrix, self.customState);
+                
+        // right eye
+        gl.viewport(gl.canvas.width * 0.5, 0, gl.canvas.width * 0.5, gl.canvas.height);
+        GFX.viewportXOffset = gl.canvas.width * 0.5;
+        self.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, self.customState);
+
+        self.config.onEndFrameXR(t, self.customState);
+        if (self.options.enableMultipleWorlds && doTransition) {
+           self.doWorldTransition({direction : 1, broadcast : true});
+        }
+        vrDisplay.submitFrame();
+
+        ////////////////////////////////////////
+        } catch (err) {
+            console.error(err);
+        }
+
+        flushAndRestoreConsole();
+    } 
+    */
    };
 
    return def;

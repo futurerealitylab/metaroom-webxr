@@ -370,8 +370,8 @@ export class MetaroomXRBackend {
     _initButton() {
         if (this.options.enableBellsAndWhistles) {
             this.xrButton = new WebXRButton({
-                onRequestSession : this.onRequestSession,
-                onEndSession     : this.onEndSession,
+                onRequestSession : MR.engine.onRequestSession,
+                onEndSession     : MR.engine.onEndSession,
 
                 textEnterXRTitle    : "ENTER XR",
                 textXRNotFoundTitle : "XR UNAVAILABLE",
@@ -451,7 +451,7 @@ export class MetaroomXRBackend {
     }
 
     enableImmersiveVREntryAccess(supported) {
-        this.xrButton.enabled = supported;
+        MR.engine.xrButton.enabled = supported;
     }
 
     async XRDetectImmersiveVRSupport() {
@@ -470,7 +470,7 @@ export class MetaroomXRBackend {
             );
             if (supported) {
                 console.log("immersive-vr mode is supported");
-                this.enableImmersiveVREntryAccess(true);
+                MR.engine.enableImmersiveVREntryAccess(true);
                 return true;
             }
         } catch (err) {
@@ -480,7 +480,7 @@ export class MetaroomXRBackend {
                 "WebXR immersive vr mode unsupported"
             );
             console.error(err.message);
-            this.enableImmersiveVREntryAccess(false);
+            MR.engine.enableImmersiveVREntryAccess(false);
             return false;
         }
     }
@@ -491,16 +491,16 @@ export class MetaroomXRBackend {
             XR_SESSION_MODE.IMMERSIVE_VR,
             {
                 requiredFeatures : [
-                    XR_REFERENCE_SPACE_TYPE.LOCAL_FLOOR
+                    XR_REFERENCE_SPACE_TYPE.LOCAL
                 ],
                 optionalFeatures : [
                     XR_REFERENCE_SPACE_TYPE.BOUNDED_FLOOR
                 ]
             }
-        ).then(this.onSessionStarted).catch((err) => {
-            console.error(err.message);
+        ).then(MR.engine.onSessionStarted).catch((err) => {
+            console.error(err);
             console.error("This should never happen because we check for support beforehand");
-            this.enableImmersiveVREntryAccess(false);
+            MR.engine.enableImmersiveVREntryAccess(false);
         });
     }
 
@@ -509,24 +509,24 @@ export class MetaroomXRBackend {
 
         const self = MR.engine;
 
-        session.addEventListener('end',    this.onSessionEnded);
-        session.addEventListener('select', this.onSelect);
-        session.addEventListener('select', this.onSelectStart);
-        session.addEventListener('select', this.onSelectEnd);
+        session.addEventListener('end',    MR.engine.onSessionEnded);
+        session.addEventListener('select', MR.engine.onSelect);
+        session.addEventListener('select', MR.engine.onSelectStart);
+        session.addEventListener('select', MR.engine.onSelectEnd);
 
         session.addEventListener('inputsourceschange', () => {
             console.warn("TODO: handle inputsourceschange event");
         });
 
-        this._reset();
+        self._reset();
 
-        this.xrInfo.session = session;
+        self.xrInfo.session = session;
 
-        this.xrButton.setSession(session);
+        self.xrButton.setSession(session);
 
-        this.xrInfo.isImmersive = true;
+        self.xrInfo.isImmersive = true;
 
-        const GPUAPILayer = new this.GPUAPI.XRLayer;
+        const GPUAPILayer = new self.GPUAPI.XRLayer(session, self.GPUCtx);
 
         session.updateRenderState({
             baseLayer : GPUAPILayer
@@ -549,14 +549,16 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
   createBoundsMesh(transform);
 });
 */
+        console.log("requesting reference space");
         // bounded-floor == (y == 0 at floor, assumes bounded tracking space)
 
         // try for a bounded floor reference space, otherwise a local reference space
         session.requestReferenceSpace(
             XR_REFERENCE_SPACE_TYPE.BOUNDED_FLOOR
         ).then((refSpace) => {
-            this.xrInfo.type = XR_REFERENCE_SPACE_TYPE.BOUNDED_FLOOR;
-            this.xrInfo.immersiveRefSpace = refSpace;
+            self.xrInfo.type = XR_REFERENCE_SPACE_TYPE.BOUNDED_FLOOR;
+            self.xrInfo.immersiveRefSpace = refSpace;
+            console.log(refSpace);
 
             console.log(
                 "%c%s", 
@@ -565,13 +567,13 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
             );
 
         }).catch((err) => {
-            console.error(err.message);
+            console.error(err);
             // fall back to local (eye-level)
             session.requestReferenceSpace(
                 XR_REFERENCE_SPACE_TYPE.LOCAL
             ).then((refSpace) => {
-                this.xrInfo.type = XR_REFERENCE_SPACE_TYPE.LOCAL;
-                this.xrInfo.immersiveRefSpace = refSpace;
+                self.xrInfo.type = XR_REFERENCE_SPACE_TYPE.LOCAL;
+                self.xrInfo.immersiveRefSpace = refSpace;
 
                 console.log(
                     "%c%s", 
@@ -579,14 +581,16 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
                     "using fallback reference space=[local]"
                 );
 
-            }).then(onRequestReferenceSpaceSuccess);
+            }).then(self.onRequestReferenceSpaceSuccess);
 
-        }).then(this.onRequestReferenceSpaceSuccess);
+        }).then(self.onRequestReferenceSpaceSuccess);
     }
     onRequestReferenceSpaceSuccess() {
-        this.start();
+        const self = MR.engine;
 
-        this._VRIsActive = true;        
+        self.start();
+
+        self._VRIsActive = true;        
     }
     onEndSession(session) {
         console.log("session ended");
@@ -597,46 +601,19 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
             return;
         }
 
-        this._reset();
-        this.xrButton.setSession(null);
+        const self = MR.engine;
+        self._reset();
+        self.xrButton.setSession(null);
         e.session.isImmersive   = false;
-        this.xrInfo.isImmersive = false;
-        this.xrInfo.immersiveRefSpace = null;
-        this.xrInfo.session     = null;
-        this.xrInfo.type        = XR_REFERENCE_SPACE_TYPE.VIEWER;
+        self.xrInfo.isImmersive = false;
+        self.xrInfo.immersiveRefSpace = null;
+        self.xrInfo.session     = null;
+        self.xrInfo.type        = XR_REFERENCE_SPACE_TYPE.VIEWER;
 
 
-        this._VRIsActive = false;
+        self._VRIsActive = false;
 
-        this._animationHandle = window.requestAnimationFrame(this.config.onAnimationFrame);
-    }
-
-    _onVRPresentChange() {
-        if (this._vrDisplay == null) {
-            return;
-        }
-
-        if (this._vrDisplay.isPresenting) {
-            if (!this._VRIsActive) {
-                this._oldCanvasWidth = this._canvas.width;
-                this._oldCanvasHeight = this._canvas.height;
-                const leftEye = this._vrDisplay.getEyeParameters('left');
-                const rightEye = this._vrDisplay.getEyeParameters('right');
-
-                this._canvas.width  = Math.max(leftEye.renderWidth, rightEye.renderWidth) * 2;
-                this._canvas.height = Math.max(leftEye.renderHeight, rightEye.renderHeight);
-
-                this._vrDisplay.resetPose();
-            }
-            this._VRIsActive = true;
-
-            return;
-        }
-        if (this._VRIsActive) {
-            this.canvas.width   = this._oldCanvasWidth;
-            this._canvas.height = this._oldCanvasHeight;
-        }
-        this._VRIsActive = false;
+        self._animationHandle = window.requestAnimationFrame(self.config.onAnimationFrame);
     }
 
     _onAnimationFrameWindowWebGPU(t) {
@@ -822,28 +799,44 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
 
     // default WebGL animation frame
     _onAnimationFrameWebGL(t, frame) {
+        
         const self = MR.engine;
 
         self.time = t / 1000.0;
         self.timeMS = t;
 
-        if (!(frame && frame.session.isImmersive)) {
+        console.log("in animation frame:");
+        console.log(frame);
+        console.log(frame ? frame.session : null);
+
+        const xrInfo  = self.xrInfo;
+
+        console.log("is immersive", xrInfo.isImmersive);
+
+        if (!xrInfo.session) { return; }
+        self._animationHandle = xrInfo.session.requestAnimationFrame(
+            self.config.onAnimationFrame
+        );
+
+        if (!(frame && xrInfo.isImmersive)) {
             self.config.onAnimationFrameWindow(t);
             return;
         }
 
+        console.log(frame.session);
+        console.log(session.renderState.baseLayer);
+
+
         const session = frame.session;
         const layer   = session.renderState.baseLayer;
-        const xrInfo  = self.xrInfo;
+        console.log(xrInfo.immersiveRefSpace);
         const pose    = frame.getViewerPose(xrInfo.immersiveRefSpace);
         xrInfo.pose = pose;
         // calculates the transform as position, orientation, and does
         // any other extended things as necessary
         xrInfo.poseEXT.update(xrInfo.pose);
 
-        self._animationHandle = xrInfo.session.requestAnimationFrame(
-            self.config.onAnimationFrame
-        );
+
 
         self.updateControllerState(self);
         Input.updateControllerHandedness(); // information already given in WebXR Input API, TODO
@@ -892,8 +885,5 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         }
 
         self.config.onEndFrameXR(t, self.customState, self.systemArgs);
-
-
-        vrDisplay.submitFrame();
     }
 };

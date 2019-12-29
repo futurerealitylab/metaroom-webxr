@@ -773,8 +773,10 @@ export class MetaroomVRBackend {
 
     _onAnimationFrame(t) {
 
-        this.time = t / 1000.0;
-        this.timeMS = t;
+        const self = MR.engine;
+
+        self.time = t / 1000.0;
+        self.timeMS = t;
 
         // For now, all VR gamepad button presses trigger a world transition.
         MR.controllers = navigator.getGamepads();
@@ -785,7 +787,7 @@ export class MetaroomVRBackend {
             var gamepad = gamepads[i];
             if (gamepad) { // gamepads may contain null-valued entries (eek!)
                 if (gamepad.pose || gamepad.displayId ) { // VR gamepads will have one or both of these properties.
-                    var cache = this.buttonsCache[vrGamepadCount] || [];
+                    var cache = self.buttonsCache[vrGamepadCount] || [];
                     for (var j = 0; j < gamepad.buttons.length; j++) {
 
                         // Check for any buttons that are pressed and previously were not.
@@ -796,7 +798,7 @@ export class MetaroomVRBackend {
                         }
                         cache[j] = gamepad.buttons[j].pressed;
                     }
-                    this.buttonsCache[vrGamepadCount] = cache;
+                    self.buttonsCache[vrGamepadCount] = cache;
                     vrGamepadCount++;
                 }
             }
@@ -804,45 +806,45 @@ export class MetaroomVRBackend {
 
         // revert to windowed rendering if there is no VR display
         // or if the VR display is not presenting
-        const vrDisplay = this._vrDisplay;
+        const vrDisplay = self._vrDisplay;
         if (!vrDisplay) {
-            this.config.onAnimationFrameWindow(t);
-            if (this.options.enableMultipleWorlds && doTransition) {
-               this.doWorldTransition({direction : 1, broadcast : true});
+            self.config.onAnimationFrameWindow(t);
+            if (self.options.enableMultipleWorlds && doTransition) {
+               self.doWorldTransition({direction : 1, broadcast : true});
             }
             return;
         }
 
-        const gl = this._gl;
-        const frame = this._frameData;
+        const gl = self._gl;
+        const frame = self._frameData;
         if (!vrDisplay.isPresenting) {
-           this.config.onAnimationFrameWindow(t);
-           if (this.options.enableMultipleWorlds && doTransition) {
-              this.doWorldTransition({direction : 1, broadcast : true});
+           self.config.onAnimationFrameWindow(t);
+           if (self.options.enableMultipleWorlds && doTransition) {
+              self.doWorldTransition({direction : 1, broadcast : true});
            }
            return;
         }
 
         vrDisplay.getFrameData(frame);
 
-        this._animationHandle = vrDisplay.requestAnimationFrame(this.config.onAnimationFrame);
+        self._animationHandle = vrDisplay.requestAnimationFrame(self.config.onAnimationFrame);
 
         Input.updateControllerHandedness();
-        this.config.onStartFrameXR(t, this.customState);
+        self.config.onStartFrameXR(t, self.customState);
 
         // left eye
         gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
         GFX.viewportXOffset = 0;
-        this.config.onDrawXR(t, frame.leftProjectionMatrix, frame.leftViewMatrix, this.customState);
+        self.config.onDrawXR(t, frame.leftProjectionMatrix, frame.leftViewMatrix, self.customState);
                 
         // right eye
         gl.viewport(gl.canvas.width * 0.5, 0, gl.canvas.width * 0.5, gl.canvas.height);
         GFX.viewportXOffset = gl.canvas.width * 0.5;
-        this.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, this.customState);
+        self.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, self.customState);
 
-        this.config.onEndFrameXR(t, this.customState);
-        if (this.options.enableMultipleWorlds && doTransition) {
-           this.doWorldTransition({direction : 1, broadcast : true});
+        self.config.onEndFrameXR(t, self.customState);
+        if (self.options.enableMultipleWorlds && doTransition) {
+           self.doWorldTransition({direction : 1, broadcast : true});
         }
         vrDisplay.submitFrame();
     }

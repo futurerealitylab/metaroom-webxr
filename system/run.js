@@ -57,17 +57,36 @@ window.consoleProxy = function(msg, status = {}) {
     //window.remoteMsgBuffer.push({msg : msg, count : window.redirectCount});
     window.remoteMsgBuffer.push(msg);
 };
+window.consoleErrorProxy = function(msg, status = {}) {
+    if (MR.server.sock.readyState !== WebSocket.OPEN) {
+        status.message = "ERR_SERVER_UNAVAILABLE";
+        console.error("Server is unavailable");
+
+        return false;
+    }
+
+    //window.remoteMsgBuffer.push({msg : msg, count : window.redirectCount});
+    window.remoteMsgBuffer.push("ERROR: " + msg);
+};
 window.consoleOriginal = console.log;
 window.consoleErrorOriginal = console.error;
 window.redirectConsole = function(sendInterval) {
+    if (!MR.VRIsActive()) {
+        return;
+    }
+
     window.redirectSendInterval = Math.max(0, sendInterval);
 
     console.log = window.consoleProxy;
-    console.error = window.consoleProxy;
+    console.error = window.consoleErrorProxy;
 };
 window.redirectSendInterval = 1000;
 window.redirectTimePrev = Date.now();
 window.flushAndRestoreConsole = function() {
+    if (!MR.VRIsActive()) {
+        return;
+    }
+
     console.log = window.consoleOriginal;
     console.error = window.consoleErrorOriginal;
 
@@ -412,6 +431,18 @@ case 2: {
         MR.server.uid = args.uid;
     });
 
+    MR.server.subs.subscribe("Log", (_, args) => {
+        if (MR.VRIsActive() || args.playerid == MR.playerid) {
+            return;
+        }
+
+        console.groupCollapsed("%clogs from pid=[%d]", "color: #00dd00;", args.id);
+        const joined = args.msg.join('\n');
+        console.log(joined);
+        console.groupEnd();
+
+    }, null);
+
     MR.initServer();
 
     setTimeout(() => {
@@ -658,6 +689,18 @@ default: {
         MR.initialWorldIdx = args.key || 0;
         MR.server.uid = args.uid;
     });
+
+    MR.server.subs.subscribe("Log", (_, args) => {
+        if (MR.VRIsActive() || args.playerid == MR.playerid) {
+            return;
+        }
+
+        console.groupCollapsed("%clogs from pid=[%d]", "color: #00dd00;", args.id);
+        const joined = args.msg.join('\n');
+        console.log(joined);
+        console.groupEnd();
+
+    }, null);
 
     MR.initServer();
 
