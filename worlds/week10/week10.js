@@ -792,7 +792,6 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       drawShape(obj.shape, n==0 ? [1,.5,.5] : [1,1,1]);
    }
 
-   //If you don't like the name feel free to change it, haha.
    let drawSkeleton = (data) => {
       for(let i = 0; i < data.nodes.length; i++){
          m.save(); 
