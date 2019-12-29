@@ -1,4 +1,4 @@
-"use strict"
+"use strict";
 
 import {Lock} from "/system/core/lock.js";
 
