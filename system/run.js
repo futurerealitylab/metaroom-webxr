@@ -190,7 +190,37 @@ case 2: {
         }
 
 
-
+// TODO(TR): support switching between multiple GPU contexts depending on the world:
+// [
+//  {
+//      specify a global context object to use (e.g. gl, gpu), 
+//          may change how this is set-up
+//      useGlobalContext       : true, 
+//
+//      enable basic resource tracking 
+//          so resources can be freed upon world switch 
+//          (e.g. GPU memory, textures, etc.)
+//      doGPUResourceTracking  : true, 
+//
+//      possible to initialize the context yourself, 
+//          as long as you wrap it in an info object 
+//          containing the expected properties
+//      GPUAPIProvidedContext  : null,
+//
+//      type of GPU API, if the type you choose is not built-in, 
+//          you need to provide your own animation frame callbacks to 
+//          handle the specific API
+//      GPUAPIType             : GPU.GPU_API_TYPE.WEBGL, 
+//  },
+//  {
+//      ...
+//  }
+// ]
+//
+//
+// TODO(TR): multiple layered canvases 
+// (lower priority if possible to use different contexts on the same canvas without issues)
+//
         MR.init({
             outputSurfaceName      : 'output-surface',
             outputWidth            : parseInt(RESOLUTION[0]),
@@ -198,11 +228,11 @@ case 2: {
             useGlobalContext       : true,
             // frees gpu resources upon world switch
             doGPUResourceTracking     : true,
+            GPUAPIProvidedContext     : null,
+            GPUAPIType                : GPU.GPU_API_TYPE.WEBGL,
             enableEntryByButton       : true,
             enableBellsAndWhistles    : true,
             synchronizeTimeWithServer : false,
-            GPUAPIProvidedContext     : null,
-            GPUAPIType                : GPU.GPU_API_TYPE.WEBGL,
 
             // main() is the system's entry point
             main : async () => {
