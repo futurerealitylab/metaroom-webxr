@@ -22,7 +22,7 @@ mat4.identity = function(t) {
     t.set([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
 }
 mat4.perspective = function perspective(t,e,n,r,a){var c=1/Math.tan(e/2),i=1/(r-a);return t[0]=c/n,t[1]=0,t[2]=0,t[3]=0,t[4]=0,t[5]=c,t[6]=0,t[7]=0,t[8]=0,t[9]=0,t[10]=(a+r)*i,t[11]=-1,t[12]=0,t[13]=0,t[14]=2*a*r*i,t[15]=0,t}
-
+window.mat4 = mat4;
 // use this to send any system information
 // we want to the world code
 class SystemArgs {
@@ -122,12 +122,12 @@ export class MetaroomXRBackend {
 
     start() {
         let target = null;
-        if (this.options.enableBellsAndWhistles && this.xrInfo.session) {
+        if (this.xrInfo.session) {
             this.xrInfo.session.cancelAnimationFrame(this._animationHandle);
-            this._animationHandle = this.xrInfo.session.requestAnimationFrame(this.config.onAnimationFrame);
+            this._animationHandle = this.xrInfo.session.requestAnimationFrame(this.config.onAnimationFrameXR);
         } else {
             window.cancelAnimationFrame(this._animationHandle);          
-            this._animationHandle = window.requestAnimationFrame(this.config.onAnimationFrame);
+            this._animationHandle = window.requestAnimationFrame(this.config.onAnimationFrameWindow);
         }
     }
 
@@ -156,7 +156,8 @@ export class MetaroomXRBackend {
         conf.onDrawXR = options.onDrawXR || conf.onDraw;
         conf.onExit = options.onExit || conf.onExit;
         conf.onExitXR = options.onExitXR || conf.onExit;
-        conf.onAnimationFrame = options.onAnimationFrame || conf.onAnimationFrame;
+
+        conf.onAnimationFrameXR = options.onAnimationFrameXR || conf.onAnimationFrameXR;
         conf.onAnimationFrameWindow = options.onAnimationFrameWindow || conf.onAnimationFrameWindow;
     }
 
@@ -179,8 +180,8 @@ export class MetaroomXRBackend {
                             options.onDraw ||
                             (function(t, p, v, state, args) {});
         
-        options.onAnimationFrame = options.onAnimationFrame || 
-                                this._onAnimationFrameWebGL;
+        options.onAnimationFrameXR = options.onAnimationFrameXR || 
+                                this._onAnimationFrameXRWebGL;
         options.onAnimationFrameWindow = options.onAnimationFrameWindow || 
                                 this._onAnimationFrameWindowWebGL;
         
@@ -314,7 +315,7 @@ export class MetaroomXRBackend {
         this._initCustomState();
 
         if (this.options.GPUAPIProvidedContext) {
-            console.error("NOT IMPLEMENTED: developer-provided GPU API context");
+            console.error("NOT IMPLEMENTED YET: developer-provided GPU API context");
             return false;
         } else {
             console.log("initializing built-in GPU API");
@@ -339,28 +340,35 @@ export class MetaroomXRBackend {
         if (this.GPUInterface.GPUAPI.XRIsSupported &&
             this.options.enableBellsAndWhistles) {
 
-            this._initButton();
             console.log(
                 "%c%s",
                 "color: #9faaff",
                 "trying to initialize immersive XR"
             );
+
+            this._initButton();
+
             const ok = await this.XRDetectImmersiveVRSupport();
-            if (!ok) {
+            if (ok) {
+                this.enableImmersiveVREntryAccess(true);
+            } else {
                 console.log(
-                    "%c%s", 
+                    "%c%s",
                     'color: #ff0000;',
                     "immersive XR unsupported"
                 );
+
+                this.enableImmersiveVREntryAccess(false);
                 
-                console.log('initializing PC window mode instead ...');
+                console.log("initializing windowed mode instead ...");
                 this._initWindow();
-                
             }
 
         } else {
-            console.warn("XR is unsupported");
-            console.log('Initializing PC window mode ...');
+            if (this.options.enableBellsAndWhistles) {
+                console.warn("XR is unsupported");
+            }
+            console.log("initializing windowed mode");
             this._initWindow();        
         }
 
@@ -377,7 +385,8 @@ export class MetaroomXRBackend {
                 textXRNotFoundTitle : "XR UNAVAILABLE",
                 textExitXRTitle     : "EXIT XR",
             });
-            document.querySelector('body').prepend(this.xrButton.domElement);
+            //document.querySelector('body').prepend(this.xrButton.domElement);
+            this.ui.menu.el.prepend(this.xrButton.domElement);
         }
     }
 
@@ -421,12 +430,11 @@ export class MetaroomXRBackend {
         options.onEndFrameXR = (function(t, state) {});
         options.onDraw = (function(t, p, v, state, args) {});
         options.onDrawXR = (function(t, p, v, state, args) {});
-        options.onAnimationFrame = function() {};
+        options.onAnimationFrameXR = function() {};
         options.onAnimationFrameWindow = function() {};
         options.onReload   = function(state) {};
         options.onExit     = function(state) {};
         options.onExitXR   = function(state) {};
-        //options.onWindowFrame = this._onWindowFrame.bind(this);
 
         // selection
         options.onSelectStart = (function(t, state) {});
@@ -446,6 +454,7 @@ export class MetaroomXRBackend {
             console.log('resetting XR animation frame');
             this.xrInfo.session.cancelAnimationFrame(this._animationHandle);
         } else {
+            console.log('resetting window animation frame');
             window.cancelAnimationFrame(this._animationHandle);
         }
     }
@@ -470,7 +479,6 @@ export class MetaroomXRBackend {
             );
             if (supported) {
                 console.log("immersive-vr mode is supported");
-                MR.engine.enableImmersiveVREntryAccess(true);
                 return true;
             }
         } catch (err) {
@@ -480,7 +488,6 @@ export class MetaroomXRBackend {
                 "WebXR immersive vr mode unsupported"
             );
             console.error(err.message);
-            MR.engine.enableImmersiveVREntryAccess(false);
             return false;
         }
     }
@@ -501,6 +508,9 @@ export class MetaroomXRBackend {
             console.error(err);
             console.error("This should never happen because we check for support beforehand");
             MR.engine.enableImmersiveVREntryAccess(false);
+
+            console.log("initializing windowed mode instead ...");
+            MR.engine._initWindow();
         });
     }
 
@@ -508,17 +518,6 @@ export class MetaroomXRBackend {
         console.log("session started");
 
         const self = MR.engine;
-
-        session.addEventListener('end',    MR.engine.onSessionEnded);
-        session.addEventListener('select', MR.engine.onSelect);
-        session.addEventListener('select', MR.engine.onSelectStart);
-        session.addEventListener('select', MR.engine.onSelectEnd);
-
-        session.addEventListener('inputsourceschange', () => {
-            console.warn("TODO: handle inputsourceschange event");
-        });
-
-        self._reset();
 
         self.xrInfo.session = session;
 
@@ -568,7 +567,7 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
 
         }).catch((err) => {
             console.error(err);
-            // fall back to local (eye-level)
+            // fall back to local (eye-level), which should be guaranteed
             session.requestReferenceSpace(
                 XR_REFERENCE_SPACE_TYPE.LOCAL
             ).then((refSpace) => {
@@ -588,66 +587,51 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
     onRequestReferenceSpaceSuccess() {
         const self = MR.engine;
 
-        self.start();
+        self._reset();
+
+        const xrInfo = self.xrInfo;
+        const session = xrInfo.session;
+
+        console.warn("TODO: allow for end, select, selectstart, selectend custom callbacks ")
+        session.addEventListener('end',    self.onSessionEnded);
+        session.addEventListener('select', self.onSelect);
+        session.addEventListener('selectstart', self.onSelectStart);
+        session.addEventListener('selectend', self.onSelectEnd);
+
+        session.addEventListener('inputsourceschange', () => {
+            console.warn("TODO: handle inputsourceschange event");
+        });
 
         self._VRIsActive = true;        
+
+        self.start();
     }
     onEndSession(session) {
         console.log("session ended");
         session.end();
     }
     onSessionEnded(e) {
-        if (!e.session.isImmersive) {
+        const self = MR.engine;
+        const xrInfo = self.xrInfo;
+        if (!xrInfo.session.isImmersive) {
+            self._reset();
+            self.start();
             return;
         }
 
-        const self = MR.engine;
         self._reset();
-        self.xrButton.setSession(null);
-        e.session.isImmersive   = false;
-        self.xrInfo.isImmersive = false;
-        self.xrInfo.immersiveRefSpace = null;
-        self.xrInfo.session     = null;
-        self.xrInfo.type        = XR_REFERENCE_SPACE_TYPE.VIEWER;
 
+        self.xrButton.setSession(null);
+
+        xrInfo.isImmersive       = false;
+        xrInfo.immersiveRefSpace = null;
+        xrInfo.session           = null;
+        xrInfo.type              = XR_REFERENCE_SPACE_TYPE.VIEWER;
 
         self._VRIsActive = false;
 
-        self._animationHandle = window.requestAnimationFrame(self.config.onAnimationFrame);
-    }
-
-    _onAnimationFrameWindowWebGPU(t) {
-
-    }
-
-    _onAnimationFrameWindowWebGL(t) {
-        const self = MR.engine;
-
-        self.time = t / 1000.0;
-        self.timeMS = t;
-
-        const gl = self.GPUCtx; 
-
-        self._animationHandle = window.requestAnimationFrame(self.config.onAnimationFrame);
-        gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-        
-        const viewport = self.systemArgs.viewport;
-        viewport.x      = 0;
-        viewport.y      = 0;
-        viewport.width  = gl.drawingBufferWidth;
-        viewport.height = gl.drawingBufferHeight;
-        self.systemArgs.viewIdx = 0;
-
-        mat4.identity(self._viewMatrix);
-        mat4.perspective(self._projectionMatrix, Math.PI/4,
-            self._canvas.width / self._canvas.height,
-            0.01, 1024);
-
-        Input.updateKeyState();
-        self.config.onStartFrame(t, self.customState, self.systemArgs);
-
-        self.config.onDraw(t, self._projectionMatrix, self._viewMatrix, self.customState, self.systemArgs);
-        self.config.onEndFrame(t, self.customState, self.systemArgs);
+        // going back to windowed mode
+        self.start();
     }
 
     // TODO(TR): WebXR has its own controller API that interfaces
@@ -684,7 +668,7 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
     // TODO(???) modified version of: https://github.com/immersive-web/webxr-samples/blob/429aeb7cd46f1009d2e529e69854418a5a0903d5/input-selection.html#L181
     onSelect(e) {
         const self = MR.engine;
-        if (!ev.frame.session.isImmersive) {
+        if (!self.xrInfo.isImmersive) {
             return;
         }
 
@@ -793,16 +777,64 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         }
     }
 
-    _onAnimationFrameWebGPU(t, frame) {
-        // TODO(TR):
+    _onAnimationFrameWindowWebGPU(t) {
+        console.warn("WebGPU default animation frame not yet implemented");
+
+        self._animationHandle = window.requestAnimationFrame(self.config.onAnimationFrameWindow);
     }
 
-    // default WebGL animation frame
-    _onAnimationFrameWebGL(t, frame) {
-        
+    _onAnimationFrameWindowWebGL(t) {
         const self = MR.engine;
 
         self.time = t / 1000.0;
+        self.timeMS = t;
+
+        const gl = self.GPUCtx; 
+
+        self._animationHandle = window.requestAnimationFrame(self.config.onAnimationFrameWindow);
+        gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+        
+        const viewport = self.systemArgs.viewport;
+        viewport.x      = 0;
+        viewport.y      = 0;
+        viewport.width  = gl.drawingBufferWidth;
+        viewport.height = gl.drawingBufferHeight;
+        self.systemArgs.viewIdx = 0;
+
+        mat4.identity(self._viewMatrix);
+        
+        mat4.perspective(self._projectionMatrix, 
+            Math.PI / 4,
+            self._canvas.width / self._canvas.height,
+            0.01, 1024
+        );
+
+        Input.updateKeyState();
+        self.config.onStartFrame(t, self.customState, self.systemArgs);
+
+        self.config.onDraw(t, self._projectionMatrix, self._viewMatrix, self.customState, self.systemArgs);
+        self.config.onEndFrame(t, self.customState, self.systemArgs);
+    }
+
+    _onAnimationFrameXRWebGPU(t, frame) {
+        console.warn("WebGPU unsupported in WebXR for now");
+        self._animationHandle = xrInfo.session.requestAnimationFrame(
+            self.config.onAnimationFrameXR
+        );
+    }
+
+    // default WebGL animation frame
+    _onAnimationFrameXRWebGL(t, frame) {
+        /////////////////////////////////////
+        // temp debug
+        redirectConsole(4000);
+        try {
+        /////////////////////////////////////
+
+        const self = MR.engine;
+
+        // update time
+        self.time   = t / 1000.0;
         self.timeMS = t;
 
         console.log("in animation frame:");
@@ -813,42 +845,39 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
 
         console.log("is immersive", xrInfo.isImmersive);
 
-        if (!xrInfo.session) { return; }
+        // request next frame
         self._animationHandle = xrInfo.session.requestAnimationFrame(
-            self.config.onAnimationFrame
+            self.config.onAnimationFrameXR
         );
-
-        if (!(frame && xrInfo.isImmersive)) {
-            self.config.onAnimationFrameWindow(t);
-            return;
-        }
 
         console.log(frame.session);
         console.log(session.renderState.baseLayer);
 
-
+        // unpack session and pose information
         const session = frame.session;
         const layer   = session.renderState.baseLayer;
         console.log(xrInfo.immersiveRefSpace);
         const pose    = frame.getViewerPose(xrInfo.immersiveRefSpace);
         xrInfo.pose = pose;
-        // calculates the transform as position, orientation, and does
-        // any other extended things as necessary
+        // updates the extended pose data
+        // containing buffer representations of position, orientation
         xrInfo.poseEXT.update(xrInfo.pose);
 
-
+        // input updates (TODO use WebXR APIs)
 
         self.updateControllerState(self);
-        Input.updateControllerHandedness(); // information already given in WebXR Input API, TODO
+        // update left and right controllers, but WebXR already provides
+        // this information (TODO)
+        Input.updateControllerHandedness();
 
         self.systemArgs.frame = frame;
         self.systemArgs.pose  = pose;
-        // contains depthFar, depthNear
+        // renderState contains depthFar, depthNear
         self.systemArgs.renderState = session.renderState;
 
+        // begin frame
         self.config.onStartFrameXR(t, self.customState, self.systemArgs);
-
-        // draw logic
+        // draw
         {
             const gl        = self.GPUCtx;
             const glAPI     = self.gpuAPI;
@@ -861,6 +890,10 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
             const views     = pose.views;
             const viewCount = views.count;
 
+            // in this configuration of the animation loop,
+            // for each view, we re-draw the whole screne -
+            // other configurations possible 
+            // (for example, for each object, draw every view (to avoid repeated binding))
             for (let i = 0; i < viewCount; i += 1) {
                 self.systemArgs.viewIdx = i;
 
@@ -877,13 +910,23 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
                     view.projectionMatrix,
                     // view.transform.matrix gives you the camera matrix
                     view.transform.inverse.matrix, 
+                    // user state
                     self.customState,
-                    // optionally use system args to  
+                    // pass all API-specific information
+                    // (transforms, tracking, direct access to render state, etc.)
                     self.systemArgs
                 );
             }
         }
-
+        // end frame
         self.config.onEndFrameXR(t, self.customState, self.systemArgs);
+
+        ////////////////////////////////////////
+        // temp debug
+        } catch (err) {
+            console.error(err.message);
+        }
+        flushAndRestoreConsole();
+        ////////////////////////////////////////
     }
 };

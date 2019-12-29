@@ -1040,96 +1040,149 @@ export default function main() {
       onReload       : onReload,
       // call upon world exit
       onExit         : onExit,
-      onExitXR       : onExit, /*
-      onAnimationFrame : function(t) {
+      onExitXR       : onExit, 
 
-        redirectConsole(5000);
-        try {
-
-        //////////////////////////////
+    onAnimationFrameWindow : function(t) {
         const self = MR.engine;
 
         self.time = t / 1000.0;
         self.timeMS = t;
 
-        // For now, all VR gamepad button presses trigger a world transition.
+        const gl = self.GPUCtx; 
+
+        self._animationHandle = window.requestAnimationFrame(self.config.onAnimationFrameWindow);
+        gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+        
+        const viewport = self.systemArgs.viewport;
+        viewport.x      = 0;
+        viewport.y      = 0;
+        viewport.width  = gl.drawingBufferWidth;
+        viewport.height = gl.drawingBufferHeight;
+        self.systemArgs.viewIdx = 0;
+
+        mat4.identity(self._viewMatrix);
+        
+        mat4.perspective(self._projectionMatrix, 
+            Math.PI / 4,
+            self._canvas.width / self._canvas.height,
+            0.01, 1024
+        );
+
+        Input.updateKeyState();
+        self.config.onStartFrame(t, self.customState, self.systemArgs);
+
+        self.config.onDraw(t, self._projectionMatrix, self._viewMatrix, self.customState, self.systemArgs);
+        self.config.onEndFrame(t, self.customState, self.systemArgs);
+    },
+    onAnimationFrameXR : function(t, frame) {
+        /////////////////////////////////////
+        // temp debug
+        redirectConsole(2000);
+        try {
+        /////////////////////////////////////
+
+        const self = MR.engine;
+
+        // update time
+        self.time   = t / 1000.0;
+        self.timeMS = t;
+
+        //console.log("in animation frame:");
+        //console.log(frame ? true : false);
+
+        const xrInfo  = self.xrInfo;
+
+        //console.log("is immersive");
+        //console.log(xrInfo.isImmersive);
+
+        const session = frame.session;
+
+        // request next frame
+        self._animationHandle = xrInfo.session.requestAnimationFrame(
+            self.config.onAnimationFrameXR
+        );
+
+
+        // unpack session and pose information
+        const layer   = session.renderState.baseLayer;
+
+        const pose    = frame.getViewerPose(xrInfo.immersiveRefSpace);
+        xrInfo.pose = pose;
+        // updates the extended pose data
+        // containing buffer representations of position, orientation
+        xrInfo.poseEXT.update(xrInfo.pose);
+
+        // input updates (TODO use WebXR APIs)
+
+        //self.updateControllerState(self);
+
         MR.controllers = navigator.getGamepads();
-        let gamepads = navigator.getGamepads();
-        let vrGamepadCount = 0;
-        let doTransition = false;
-        for (var i = 0; i < gamepads.length; ++i) {
-            var gamepad = gamepads[i];
-            if (gamepad) { // gamepads may contain null-valued entries (eek!)
-                if (gamepad.pose || gamepad.displayId ) { // VR gamepads will have one or both of these properties.
-                    var cache = self.buttonsCache[vrGamepadCount] || [];
-                    for (var j = 0; j < gamepad.buttons.length; j++) {
 
-                        // Check for any buttons that are pressed and previously were not.
-
-                        if (cache[j] != null && !cache[j] && gamepad.buttons[j].pressed) {
-                            console.log('pressed gamepad', i, 'button', j);
-                            //doTransition = true;
-                        }
-                        cache[j] = gamepad.buttons[j].pressed;
-                    }
-                    self.buttonsCache[vrGamepadCount] = cache;
-                    vrGamepadCount++;
-                }
-            }
-        }
-
-        // revert to windowed rendering if there is no VR display
-        // or if the VR display is not presenting
-        const vrDisplay = self._vrDisplay;
-        if (!vrDisplay) {
-            self.config.onAnimationFrameWindow(t);
-            if (self.options.enableMultipleWorlds && doTransition) {
-               self.doWorldTransition({direction : 1, broadcast : true});
-            }
-            return;
-        }
-
-        const gl = self._gl;
-        const frame = self._frameData;
-        if (!vrDisplay.isPresenting) {
-           self.config.onAnimationFrameWindow(t);
-           if (self.options.enableMultipleWorlds && doTransition) {
-              self.doWorldTransition({direction : 1, broadcast : true});
-           }
-           return;
-        }
-
-        vrDisplay.getFrameData(frame);
-
-        self._animationHandle = vrDisplay.requestAnimationFrame(self.config.onAnimationFrame);
-
+        // update left and right controllers, but WebXR already provides
+        // this information (TODO)
         Input.updateControllerHandedness();
-        self.config.onStartFrameXR(t, self.customState);
 
-        // left eye
-        gl.viewport(0, 0, gl.canvas.width * 0.5, gl.canvas.height);
-        GFX.viewportXOffset = 0;
-        self.config.onDrawXR(t, frame.leftProjectionMatrix, frame.leftViewMatrix, self.customState);
-                
-        // right eye
-        gl.viewport(gl.canvas.width * 0.5, 0, gl.canvas.width * 0.5, gl.canvas.height);
-        GFX.viewportXOffset = gl.canvas.width * 0.5;
-        self.config.onDrawXR(t, frame.rightProjectionMatrix, frame.rightViewMatrix, self.customState);
+        self.systemArgs.frame = frame;
+        self.systemArgs.pose  = pose;
+        // renderState contains depthFar, depthNear
+        self.systemArgs.renderState = session.renderState;
 
-        self.config.onEndFrameXR(t, self.customState);
-        if (self.options.enableMultipleWorlds && doTransition) {
-           self.doWorldTransition({direction : 1, broadcast : true});
+        // begin frame
+        self.config.onStartFrameXR(t, self.customState, self.systemArgs);
+        // draw
+        {
+            const gl        = self.GPUCtx;
+            const glAPI     = self.gpuAPI;
+            const glCtxInfo = self.gpuCtxInfo;
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+
+            const viewport = self.systemArgs.viewport;
+
+            const views     = pose.views;
+            const viewCount = views.count;
+
+            // in this configuration of the animation loop,
+            // for each view, we re-draw the whole screne -
+            // other configurations possible 
+            // (for example, for each object, draw every view (to avoid repeated binding))
+            for (let i = 0; i < viewCount; i += 1) {
+                self.systemArgs.viewIdx = i;
+
+                const view     = views[i];
+                const viewport = layer.getViewport(view);
+
+                self.systemArgs.view     = view;
+                self.systemArgs.viewport = viewport;
+
+                gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+
+                self.config.onDrawXR(
+                    t, 
+                    view.projectionMatrix,
+                    // view.transform.matrix gives you the camera matrix
+                    view.transform.inverse.matrix, 
+                    // user state
+                    self.customState,
+                    // pass all API-specific information
+                    // (transforms, tracking, direct access to render state, etc.)
+                    self.systemArgs
+                );
+            }
         }
-        vrDisplay.submitFrame();
+        // end frame
+        self.config.onEndFrameXR(t, self.customState, self.systemArgs);
 
         ////////////////////////////////////////
+        // temp debug
         } catch (err) {
-            console.error(err);
+            //console.error(err.message);
+            console.error(err.stack);
         }
-
+        console.log();
         flushAndRestoreConsole();
-    } 
-    */
+        ////////////////////////////////////////
+    }
    };
 
    return def;
