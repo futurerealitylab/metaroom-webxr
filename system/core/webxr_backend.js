@@ -252,6 +252,16 @@ export class MetaroomXRBackend {
         case GPU.GPU_API_TYPE.WEBGPU: {
             console.log("WebGPU")
             GPUInterface = await GPU.initWebGPU(this, options, targetSurface);
+
+            if (GPUInterface != null) {
+                console.warn(
+                    "%c%s",
+                    "color: #00ff00",
+                    "WebGPU successfully initialized, but implementation incomplete, falling back to WebGL"
+                );
+                // TODO(TR): allow WebGPU to be used
+                GPUInterface.isValid = false;
+            }
             break;
         }
         default: {

@@ -197,7 +197,7 @@ case 2: {
             outputHeight           : parseInt(RESOLUTION[1]),
             useGlobalContext       : true,
             // frees gpu resources upon world switch
-            doGPUResourceTracking        : true,
+            doGPUResourceTracking     : true,
             enableEntryByButton       : true,
             enableBellsAndWhistles    : true,
             synchronizeTimeWithServer : false,

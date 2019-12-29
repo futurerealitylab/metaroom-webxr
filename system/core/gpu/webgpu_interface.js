@@ -2,14 +2,25 @@
 
 // highly experimental web graphics API for future experimentation
 class GPUCtxInfo {
-    init(args) {
-        console.warn("NOT IMPLEMENTED");
+    async init(args) {
 
-        this.version = 'webgpu';
+        try {
 
-        const target = args.targetSurface;
+            this.version = 'webgpu';
+
+            const target = args.targetSurface;
         
-        this.ctx = target.getContext("gpupresent");
+            const glslang = await import("https://unpkg.com/@webgpu/glslang@0.0.12/dist/web-devel/glslang.js");
+        
+            this.adapter = await navigator.gpu.requestAdapter();
+
+            this.ctx = target.getContext("gpupresent");
+        } catch (err) {
+            console.error(err.message);
+            return false;
+        }
+
+        return true;
     }
 }
 

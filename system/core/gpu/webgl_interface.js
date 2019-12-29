@@ -3,7 +3,7 @@
 // expose this class in the declaration
 export class GPUCtxInfo {
 
-    init(args) {
+    async init(args) {
         this.version = null;
         this.ctx     = null;
 
