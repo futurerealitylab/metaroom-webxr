@@ -361,7 +361,11 @@ export class MetaroomXRBackend {
         if (this.options.enableBellsAndWhistles) {
             this.xrButton = new WebXRButton({
                 onRequestSession : this.onRequestSession,
-                onEndSession     : this.onEndSession
+                onEndSession     : this.onEndSession,
+
+                textEnterXRTitle    : "ENTER XR",
+                textXRNotFoundTitle : "XR UNAVAILABLE",
+                textExitXRTitle     : "EXIT XR",
             });
             document.querySelector('body').prepend(this.xrButton.domElement);
         }
