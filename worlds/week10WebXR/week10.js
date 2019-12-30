@@ -572,7 +572,7 @@ function onDraw(t, projMat, viewMat, state, info) {
 }
 
 function myDraw(t, projMat, viewMat, state, info, isMiniature) {
-   //viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
+   viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
    gl.uniformMatrix4fv(state.uViewLoc, false, viewMat);
    gl.uniformMatrix4fv(state.uProjLoc, false, projMat);
 
