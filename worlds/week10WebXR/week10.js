@@ -12,6 +12,8 @@ Note that I measured everything in inches, and then converted to units of meters
 
 --------------------------------------------------------------------------------*/
 
+const ENABLE_CALIBRATION = true;
+
 const inchesToMeters = inches => inches * 0.0254;
 const metersToInches = meters => meters / 0.0254;
 
@@ -64,10 +66,6 @@ to see what the options are.
 --------------------------------------------------------------------------------*/
 
 function HeadsetHandler(poseInfo) {
-    console.log(poseInfo.positionAsArray[0]);
-    console.log(poseInfo.positionAsArray[1]);
-    console.log(poseInfo.positionAsArray[2]);
-
    this.position    = () => poseInfo.positionAsArray;
    this.orientation = () => poseInfo.orientationAsArray;
 }
@@ -367,7 +365,7 @@ function onStartFrame(t, state) {
       if (!input.LC || Input.gamepadStateChanged) input.LC = new ControllerHandler(MR.leftController);
       if (!input.RC || Input.gamepadStateChanged) input.RC = new ControllerHandler(MR.rightController);
 
-      if (! state.calibrate) {
+      if (ENABLE_CALIBRATION && ! state.calibrate) {
          m.identity();
          m.rotateY(Math.PI/2);
          m.translate(-2.01,.04,0);
@@ -475,7 +473,7 @@ function onStartFrame(t, state) {
       let lx = getX(input.LC);
       let rx = getX(input.RC);
       let sep = metersToInches(TABLE_DEPTH - 2 * RING_RADIUS);
-      if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
+      if (ENABLE_CALIBRATION && (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03)) {
          if (state.calibrationCount === undefined)
             state.calibrationCount = 0;
          if (++state.calibrationCount == 30) {
@@ -574,7 +572,7 @@ function onDraw(t, projMat, viewMat, state, info) {
 }
 
 function myDraw(t, projMat, viewMat, state, info, isMiniature) {
-   viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
+   //viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
    gl.uniformMatrix4fv(state.uViewLoc, false, viewMat);
    gl.uniformMatrix4fv(state.uProjLoc, false, projMat);
 
@@ -1045,7 +1043,10 @@ export default function main() {
       // call upon world exit
       onExit         : onExit,
       onExitXR       : onExit, 
-
+// for debugging engine-side or taking full control
+// over the system, you can override the "lower-level" wrapper functions
+// and edit them at runtime as well:
+/*
     onAnimationFrameWindow : function(t) {
         const self = MR.engine;
 
@@ -1073,6 +1074,8 @@ export default function main() {
         );
 
         Input.updateKeyState();
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         self.config.onStartFrame(t, self.customState, self.systemArgs);
 
         self.config.onDraw(t, self._projectionMatrix, self._viewMatrix, self.customState, self.systemArgs);
@@ -1081,7 +1084,7 @@ export default function main() {
     onAnimationFrameXR : function(t, frame) {
         /////////////////////////////////////
         // temp debug
-        redirectConsole(2000);
+        redirectConsole(1000);
         try {
         /////////////////////////////////////
 
@@ -1166,9 +1169,6 @@ export default function main() {
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
 
-                const poseInfo = MR.getViewerPoseInfo();
-        console.log("pose info is valid: " + poseInfo.isValid());
-
         // begin frame
         self.config.onStartFrameXR(t, self.customState, self.systemArgs);
         // draw
@@ -1176,7 +1176,7 @@ export default function main() {
             const viewport = self.systemArgs.viewport;
 
             const views     = pose.views;
-            const viewCount = views.count;
+            const viewCount = views.length;
 
             // in this configuration of the animation loop,
             // for each view, we re-draw the whole screne -
@@ -1192,7 +1192,7 @@ export default function main() {
                 self.systemArgs.viewport = viewport;
 
                 gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-console.log(view.projectionMatrix[0])
+
                 self.config.onDrawXR(
                     t, 
                     view.projectionMatrix,
@@ -1212,13 +1212,13 @@ console.log(view.projectionMatrix[0])
         ////////////////////////////////////////
         // temp debug
         } catch (err) {
-            //console.error(err.message);
             console.error(err.stack);
         }
         console.log();
         flushAndRestoreConsole();
         ////////////////////////////////////////
     }
+    */
    };
 
    return def;

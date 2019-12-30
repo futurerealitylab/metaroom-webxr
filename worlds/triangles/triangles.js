@@ -293,7 +293,7 @@ function onReload() {
 // for convenience, e.g. if you want to attach objects to a single package for organization
 // For simple programs, globals are fine.
 async function setup(state) {
-
+    hotReloadFile(getPath("triangles.js"));
     CanvasUtil.resize(MR.getCanvas(), 1280, 720);
 
     // MR.server.subsLocal.subscribe("Update_File", (filename, args) => {
@@ -489,7 +489,7 @@ async function setup(state) {
 // adjusted times locally)
 function onStartFrame(t, state) {
     // set start time if this is the first time
-    if (state.timeStartMS === -1) { // only occurs once at the beginning
+    if (!state.timeStartMS) { // only occurs once at the beginning
         state.timeStartMS = t;
         state.timeStart   = t / 1000.0;
 

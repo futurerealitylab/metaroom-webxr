@@ -55,8 +55,8 @@ export class MetaroomXRBackend {
         options.useCustomState = options.useCustomState || true;
         options.enableMultipleWorlds   = (options.enableMultipleWorlds !== undefined)   ? options.enableMultipleWorlds   : true;
         options.enableBellsAndWhistles = (options.enableBellsAndWhistles !== undefined) ? options.enableBellsAndWhistles : true;
-        
-        // Member variables.
+        options.useLocalSpace = options.useLocalSpace || false;
+
         this.options = options;
         this.main = options.main;
         this.doGPUResourceTracking   = options.doGPUResourceTracking;
@@ -79,7 +79,6 @@ export class MetaroomXRBackend {
         MR.VRIsActive = this.VRIsActive;
         MR.XRIsActive = this.VRIsActive;
 
-        // Uninitialized member variables (see _init()).
         this._parent = null;
         this._canvas = null;
         this.GPUCtxCanvas = null;
@@ -122,12 +121,15 @@ export class MetaroomXRBackend {
 
     start() {
         let target = null;
+        console.log("start animation");
         if (this.xrInfo.session) {
             this.xrInfo.session.cancelAnimationFrame(this._animationHandle);
             this._animationHandle = this.xrInfo.session.requestAnimationFrame(this.config.onAnimationFrameXR);
         } else {
+            console.log("canceling handle: " + this._animationHandle);
             window.cancelAnimationFrame(this._animationHandle);          
             this._animationHandle = window.requestAnimationFrame(this.config.onAnimationFrameWindow);
+            console.log("window animationFrame");
         }
     }
 
@@ -501,13 +503,9 @@ export class MetaroomXRBackend {
                     XR_REFERENCE_SPACE_TYPE.LOCAL
                 ],
                 optionalFeatures : [
-                    XR_REFERENCE_SPACE_TYPE.LOCAL
+                    (MR.engine.options.useLocalSpace) ? 
+                        XR_REFERENCE_SPACE_TYPE.LOCAL : XR_REFERENCE_SPACE_TYPE.BOUNDED_FLOOR
                 ]
-                /* TODO(TR): enable this once fully working with LOCAL
-                optionalFeatures : [
-                    XR_REFERENCE_SPACE_TYPE.BOUNDED_FLOOR
-                ]
-                */
             }
         ).then(MR.engine.onSessionStarted).catch((err) => {
             console.error(err);
@@ -612,7 +610,6 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         self.start();
     }
     onEndSession(session) {
-        console.log("session ended");
         session.end();
     }
     onSessionEnded(e) {
@@ -633,35 +630,14 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         xrInfo.session           = null;
         xrInfo.type              = XR_REFERENCE_SPACE_TYPE.VIEWER;
 
+        self.systemArgs.viewport = new Viewport();
+
+
         self._VRIsActive = false;
+
 
         // going back to windowed mode
         self.start();
-    }
-
-    // TODO(TR): WebXR has its own controller API that interfaces
-    // with the different reference spaces -- this may be necessary to use
-    updateControllerState(self) {
-        MR.controllers = navigator.getGamepads();
-        let gamepads = navigator.getGamepads();
-        let vrGamepadCount = 0;
-        for (let i = 0; i < gamepads.length; i += 1) {
-            const gamepad = gamepads[i];
-            if (gamepad) { // gamepads may contain null-valued entries
-                if (gamepad.pose || gamepad.displayId ) { // VR gamepads will have one or both of these properties.
-                    const cache = self.buttonsCache[vrGamepadCount] || [];
-                    for (let j = 0; j < gamepad.buttons.length; j += 1) {
-                        // Check for any buttons that are pressed and previously were not.
-                        if (cache[j] != null && !cache[j] && gamepad.buttons[j].pressed) {
-                            console.log('pressed gamepad', i, 'button', j);
-                        }
-                        cache[j] = gamepad.buttons[j].pressed;
-                    }
-                    self.buttonsCache[vrGamepadCount] = cache;
-                    vrGamepadCount += 1;
-                }
-            }
-        }
     }
 
     onSelectStart(e) {
@@ -815,6 +791,8 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         );
 
         Input.updateKeyState();
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         self.config.onStartFrame(t, self.customState, self.systemArgs);
 
         self.config.onDraw(t, self._projectionMatrix, self._viewMatrix, self.customState, self.systemArgs);
@@ -830,11 +808,6 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
 
     // default WebGL animation frame
     _onAnimationFrameXRWebGL(t, frame) {
-        /////////////////////////////////////
-        // temp debug
-        redirectConsole(4000);
-        try {
-        /////////////////////////////////////
 
         const self = MR.engine;
 
@@ -842,58 +815,89 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         self.time   = t / 1000.0;
         self.timeMS = t;
 
-        console.log("in animation frame:");
-        console.log(frame);
-        console.log(frame ? frame.session : null);
+        //console.log("in animation frame:");
+        //console.log(frame ? true : false);
 
         const xrInfo  = self.xrInfo;
 
-        console.log("is immersive", xrInfo.isImmersive);
+        //console.log("is immersive");
+        //console.log(xrInfo.isImmersive);
+
+        const session = frame.session;
 
         // request next frame
         self._animationHandle = xrInfo.session.requestAnimationFrame(
             self.config.onAnimationFrameXR
         );
 
-        console.log(frame.session);
-        console.log(session.renderState.baseLayer);
-
         // unpack session and pose information
-        const session = frame.session;
         const layer   = session.renderState.baseLayer;
-        console.log(xrInfo.immersiveRefSpace);
+
         const pose    = frame.getViewerPose(xrInfo.immersiveRefSpace);
         xrInfo.pose = pose;
         // updates the extended pose data
         // containing buffer representations of position, orientation
         xrInfo.poseEXT.update(xrInfo.pose);
 
-        // input updates (TODO use WebXR APIs)
 
-        self.updateControllerState(self);
-        // update left and right controllers, but WebXR already provides
-        // this information (TODO)
-        Input.updateControllerHandedness();
+        function TEMPGripControllerUpdate() {
+            const inputSources = session.inputSources;
+            for (let i = 0; i < inputSources.length; i += 1) {
+                const inputSource = inputSources[i];
+
+                //console.log("input source found=[" + i + "]");
+                //console.log("has grip: " + (inputSource.gripSpace ? true : false));
+
+                if (inputSource.gripSpace) {
+                    const gripPose = frame.getPose(inputSource.gripSpace, xrInfo.immersiveRefSpace);
+                    if (gripPose) {
+                        //console.log("handedness: " + inputSource.handedness);
+
+                        // TODO(TR): temporary "hack", 
+                        switch (inputSource.handedness) {
+                        case "left": {
+                            // TODO(TR): should use the transform matrices provided for position/orientation,
+                            // also provides a "pointer tip" transform
+                            MR.leftController = inputSource.gamepad;
+                            break;
+                        }
+                        case "right": {
+                            MR.rightController = inputSource.gamepad;
+                            break;
+                        }
+                        case "none": {
+                            break;
+                        }
+                        }
+                    // If we have a grip pose use it to render a mesh showing the
+                    // position of the controller.
+                    // NOTE: this contains a "handedness property". Wonderful!
+                    //scene.inputRenderer.addController(gripPose.transform.matrix, inputSource.handedness);
+                    }
+                }
+            }
+        }
+        TEMPGripControllerUpdate();
 
         self.systemArgs.frame = frame;
         self.systemArgs.pose  = pose;
         // renderState contains depthFar, depthNear
         self.systemArgs.renderState = session.renderState;
 
+        const gl        = self.GPUCtx;
+        const glAPI     = self.gpuAPI;
+        const glCtxInfo = self.gpuCtxInfo;
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+
         // begin frame
         self.config.onStartFrameXR(t, self.customState, self.systemArgs);
         // draw
         {
-            const gl        = self.GPUCtx;
-            const glAPI     = self.gpuAPI;
-            const glCtxInfo = self.gpuCtxInfo;
-
-            gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
-
             const viewport = self.systemArgs.viewport;
 
             const views     = pose.views;
-            const viewCount = views.count;
+            const viewCount = views.length;
 
             // in this configuration of the animation loop,
             // for each view, we re-draw the whole screne -
@@ -914,7 +918,7 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
                     t, 
                     view.projectionMatrix,
                     // view.transform.matrix gives you the camera matrix
-                    view.transform.inverse.matrix, 
+                    view.transform.inverse.matrix,
                     // user state
                     self.customState,
                     // pass all API-specific information
@@ -925,13 +929,5 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
         }
         // end frame
         self.config.onEndFrameXR(t, self.customState, self.systemArgs);
-
-        ////////////////////////////////////////
-        // temp debug
-        } catch (err) {
-            console.error(err.message);
-        }
-        flushAndRestoreConsole();
-        ////////////////////////////////////////
     }
 };

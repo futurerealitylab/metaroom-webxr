@@ -252,6 +252,9 @@ case 2: {
             enableEntryByButton       : true,
             enableBellsAndWhistles    : true,
             synchronizeTimeWithServer : false,
+            // comment "useLocalSpace" out when/if we start using coordinates
+            // with respect to the floor
+            useLocalSpace             : true,
 
             // main() is the system's entry point
             main : async () => {

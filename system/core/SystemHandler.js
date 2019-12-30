@@ -58,7 +58,6 @@ window.releaseLocks = releaseLocks;
 function pollAvatarData() {
     if (MR.VRIsActive()) {
         const poseInfo = MR.getViewerPoseInfo();
-        console.log("pose info is valid: " + poseInfo.isValid())
         if (!poseInfo.isValid()) {
             return;
         }
