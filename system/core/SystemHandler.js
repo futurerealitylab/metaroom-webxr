@@ -58,6 +58,7 @@ window.releaseLocks = releaseLocks;
 function pollAvatarData() {
     if (MR.VRIsActive()) {
         const poseInfo = MR.getViewerPoseInfo();
+        console.log("pose info is valid: " + poseInfo.isValid())
         if (!poseInfo.isValid()) {
             return;
         }
@@ -75,8 +76,8 @@ function pollAvatarData() {
         const headsetPos  = poseInfo.positionAsArray;
         const headsetRot  = poseInfo.orientationAsArray;
 
-        if (MR.controllers[0] != null && 
-            MR.controllers[1] != null) {
+        if (MR.leftController != null && 
+            MR.rightController != null) {
             //Controllers
             const controllerRight = MR.rightController;
             const controllerRightPos = controllerRight.pose.position;

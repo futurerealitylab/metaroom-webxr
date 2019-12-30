@@ -1025,7 +1025,7 @@ function onEndFrame(t, state) {
 
 export default function main() {
    const def = {
-      name: 'week10 WebVR',
+      name: 'week10 WebXR',
       setup        : setup,
       onStartFrame : onStartFrame,
       onDraw       : onDraw,
@@ -1044,7 +1044,181 @@ export default function main() {
       onReload       : onReload,
       // call upon world exit
       onExit         : onExit,
-      onExitXR       : onExit,
+      onExitXR       : onExit, 
+
+    onAnimationFrameWindow : function(t) {
+        const self = MR.engine;
+
+        self.time = t / 1000.0;
+        self.timeMS = t;
+
+        const gl = self.GPUCtx; 
+
+        self._animationHandle = window.requestAnimationFrame(self.config.onAnimationFrameWindow);
+        gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+        
+        const viewport = self.systemArgs.viewport;
+        viewport.x      = 0;
+        viewport.y      = 0;
+        viewport.width  = gl.drawingBufferWidth;
+        viewport.height = gl.drawingBufferHeight;
+        self.systemArgs.viewIdx = 0;
+
+        mat4.identity(self._viewMatrix);
+        
+        mat4.perspective(self._projectionMatrix, 
+            Math.PI / 4,
+            self._canvas.width / self._canvas.height,
+            0.01, 1024
+        );
+
+        Input.updateKeyState();
+        self.config.onStartFrame(t, self.customState, self.systemArgs);
+
+        self.config.onDraw(t, self._projectionMatrix, self._viewMatrix, self.customState, self.systemArgs);
+        self.config.onEndFrame(t, self.customState, self.systemArgs);
+    },
+    onAnimationFrameXR : function(t, frame) {
+        /////////////////////////////////////
+        // temp debug
+        redirectConsole(2000);
+        try {
+        /////////////////////////////////////
+
+        const self = MR.engine;
+
+        // update time
+        self.time   = t / 1000.0;
+        self.timeMS = t;
+
+        //console.log("in animation frame:");
+        //console.log(frame ? true : false);
+
+        const xrInfo  = self.xrInfo;
+
+        //console.log("is immersive");
+        //console.log(xrInfo.isImmersive);
+
+        const session = frame.session;
+
+        // request next frame
+        self._animationHandle = xrInfo.session.requestAnimationFrame(
+            self.config.onAnimationFrameXR
+        );
+
+        // unpack session and pose information
+        const layer   = session.renderState.baseLayer;
+
+        const pose    = frame.getViewerPose(xrInfo.immersiveRefSpace);
+        xrInfo.pose = pose;
+        // updates the extended pose data
+        // containing buffer representations of position, orientation
+        xrInfo.poseEXT.update(xrInfo.pose);
+
+
+        function TEMPGripControllerUpdate() {
+            const inputSources = session.inputSources;
+            for (let i = 0; i < inputSources.length; i += 1) {
+                const inputSource = inputSources[i];
+
+                //console.log("input source found=[" + i + "]");
+                //console.log("has grip: " + (inputSource.gripSpace ? true : false));
+
+                if (inputSource.gripSpace) {
+                    const gripPose = frame.getPose(inputSource.gripSpace, xrInfo.immersiveRefSpace);
+                    if (gripPose) {
+                        //console.log("handedness: " + inputSource.handedness);
+
+                        // TODO(TR): temporary "hack", 
+                        switch (inputSource.handedness) {
+                        case "left": {
+                            // TODO(TR): should use the transform matrices provided for position/orientation,
+                            // also provides a "pointer tip" transform
+                            MR.leftController = inputSource.gamepad;
+                            break;
+                        }
+                        case "right": {
+                            MR.rightController = inputSource.gamepad;
+                            break;
+                        }
+                        case "none": {
+                            break;
+                        }
+                        }
+                    // If we have a grip pose use it to render a mesh showing the
+                    // position of the controller.
+                    // NOTE: this contains a "handedness property". Wonderful!
+                    //scene.inputRenderer.addController(gripPose.transform.matrix, inputSource.handedness);
+                    }
+                }
+            }
+        }
+        TEMPGripControllerUpdate();
+
+        self.systemArgs.frame = frame;
+        self.systemArgs.pose  = pose;
+        // renderState contains depthFar, depthNear
+        self.systemArgs.renderState = session.renderState;
+
+        const gl        = self.GPUCtx;
+        const glAPI     = self.gpuAPI;
+        const glCtxInfo = self.gpuCtxInfo;
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+
+                const poseInfo = MR.getViewerPoseInfo();
+        console.log("pose info is valid: " + poseInfo.isValid());
+
+        // begin frame
+        self.config.onStartFrameXR(t, self.customState, self.systemArgs);
+        // draw
+        {
+            const viewport = self.systemArgs.viewport;
+
+            const views     = pose.views;
+            const viewCount = views.count;
+
+            // in this configuration of the animation loop,
+            // for each view, we re-draw the whole screne -
+            // other configurations possible 
+            // (for example, for each object, draw every view (to avoid repeated binding))
+            for (let i = 0; i < viewCount; i += 1) {
+                self.systemArgs.viewIdx = i;
+
+                const view     = views[i];
+                const viewport = layer.getViewport(view);
+
+                self.systemArgs.view     = view;
+                self.systemArgs.viewport = viewport;
+
+                gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+console.log(view.projectionMatrix[0])
+                self.config.onDrawXR(
+                    t, 
+                    view.projectionMatrix,
+                    // view.transform.matrix gives you the camera matrix
+                    view.transform.inverse.matrix,
+                    // user state
+                    self.customState,
+                    // pass all API-specific information
+                    // (transforms, tracking, direct access to render state, etc.)
+                    self.systemArgs
+                );
+            }
+        }
+        // end frame
+        self.config.onEndFrameXR(t, self.customState, self.systemArgs);
+
+        ////////////////////////////////////////
+        // temp debug
+        } catch (err) {
+            //console.error(err.message);
+            console.error(err.stack);
+        }
+        console.log();
+        flushAndRestoreConsole();
+        ////////////////////////////////////////
+    }
    };
 
    return def;

@@ -501,8 +501,13 @@ export class MetaroomXRBackend {
                     XR_REFERENCE_SPACE_TYPE.LOCAL
                 ],
                 optionalFeatures : [
+                    XR_REFERENCE_SPACE_TYPE.LOCAL
+                ]
+                /* TODO(TR): enable this once fully working with LOCAL
+                optionalFeatures : [
                     XR_REFERENCE_SPACE_TYPE.BOUNDED_FLOOR
                 ]
+                */
             }
         ).then(MR.engine.onSessionStarted).catch((err) => {
             console.error(err);
@@ -613,11 +618,11 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
     onSessionEnded(e) {
         const self = MR.engine;
         const xrInfo = self.xrInfo;
-        if (!xrInfo.session.isImmersive) {
-            self._reset();
-            self.start();
-            return;
-        }
+        // if (!xrInfo.isImmersive) {
+        //     self._reset();
+        //     self.start();
+        //     return;
+        // }
 
         self._reset();
 
@@ -704,7 +709,7 @@ xrReferenceSpace.addEventListener('reset', xrReferenceSpaceEvent => {
     // TODO(???) integrate modified version of: https://github.com/immersive-web/webxr-samples/blob/429aeb7cd46f1009d2e529e69854418a5a0903d5/input-tracking.html#L166
     updateInputSources(self, session, frame, refSpace) {
         const inputSources = session.inputSources;
-        for (let i = 0; i < inputSources; i += 1) {
+        for (let i = 0; i < inputSources.length; i += 1) {
             const inputSource = inputSources[i];
 
 

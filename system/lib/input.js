@@ -160,9 +160,9 @@ Input.updateControllerHandedness = () => {
             rightControllerFound = true;
         }
     }
-    // if (!(leftControllerFound && rightControllerFound)) {
-    //     console.warn("could not find controllers"); 
-    // }
+    if (!(leftControllerFound && rightControllerFound)) {
+        console.log("could not find controllers"); 
+    }
 }
 
 Input.gamepadStateChanged = false;

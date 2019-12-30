@@ -66,7 +66,7 @@ window.consoleErrorProxy = function(msg, status = {}) {
     }
 
     //window.remoteMsgBuffer.push({msg : msg, count : window.redirectCount});
-    window.remoteMsgBuffer.push("ERROR: " + msg);
+    window.remoteMsgBuffer.push(msg);
 };
 window.consoleOriginal = console.log;
 window.consoleErrorOriginal = console.error;
