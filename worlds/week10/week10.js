@@ -27,6 +27,7 @@ const LEG_THICKNESS    = inchesToMeters(  2.5);
 
 let enableModeler = true;
 
+let payload_skeleton = null;
 axios.get('assets/skeleton.json').then((response) => {
    payload_skeleton = response.data;
 });
@@ -953,6 +954,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
       state.isToon = false;
    m.restore();
+
+   drawSkeleton(payload_skeleton);
 
    /*-----------------------------------------------------------------
       Here is where we draw avatars and controllers.
