@@ -27,6 +27,12 @@ const LEG_THICKNESS    = inchesToMeters(  2.5);
 
 let enableModeler = true;
 
+axios.get('assets/skeleton.json').then((response) => {
+   payload_skeleton = response.data;
+});
+
+let frame = 0;
+
 /*Example Grabble Object*/
 let grabbableCube = new Obj(CG.torus);
 
