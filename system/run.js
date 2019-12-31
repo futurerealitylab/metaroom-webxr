@@ -248,7 +248,7 @@ case 2: {
             // frees gpu resources upon world switch
             doGPUResourceTracking     : true,
             GPUAPIProvidedContext     : null,
-            GPUAPIType                : GPU.GPU_API_TYPE.WEBGL,
+            GPUAPIType                : GPU.GPU_API_TYPE.WEBGPU,
             enableEntryByButton       : true,
             enableBellsAndWhistles    : true,
             synchronizeTimeWithServer : false,
