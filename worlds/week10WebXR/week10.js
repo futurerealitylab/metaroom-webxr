@@ -12,8 +12,6 @@ Note that I measured everything in inches, and then converted to units of meters
 
 --------------------------------------------------------------------------------*/
 
-const ENABLE_CALIBRATION = true;
-
 const inchesToMeters = inches => inches * 0.0254;
 const metersToInches = meters => meters / 0.0254;
 
@@ -28,6 +26,8 @@ const TABLE_HEIGHT     = inchesToMeters( 29);
 const TABLE_WIDTH      = inchesToMeters( 60);
 const TABLE_THICKNESS  = inchesToMeters( 11/8);
 const LEG_THICKNESS    = inchesToMeters(  2.5);
+
+const ENABLE_BRIGHTNESS_CHECK = false;
 
 let enableModeler = true;
 
@@ -66,6 +66,10 @@ to see what the options are.
 --------------------------------------------------------------------------------*/
 
 function HeadsetHandler(poseInfo) {
+    console.log(poseInfo.positionAsArray[0]);
+    console.log(poseInfo.positionAsArray[1]);
+    console.log(poseInfo.positionAsArray[2]);
+
    this.position    = () => poseInfo.positionAsArray;
    this.orientation = () => poseInfo.orientationAsArray;
 }
@@ -220,6 +224,8 @@ async function setup(state) {
                         state.uTexLoc[n] = gl.getUniformLocation(program, 'uTex' + n);
                         gl.uniform1i(state.uTexLoc[n], n);
                      }
+
+               gl.uniform1f(state.uBrightnessLoc, 1.0);
          } 
       },
       {
@@ -301,7 +307,7 @@ async function setup(state) {
    ************************************************************************/
 
    MR.objs.push(grabbableCube);
-   grabbableCube.position    = [0,-.5,-.5];
+   grabbableCube.position    = [0,0,-.5];
    grabbableCube.orientation = [0,0,0,1];
    grabbableCube.uid = 0;
    grabbableCube.lock = new Lock();
@@ -329,12 +335,6 @@ function sendSpawnMessage(object) {
 }
 
 function onStartFrame(t, state) {
-    // if (MR.VRIsActive()) {
-    //     window.redirectConsole(5000);
-    //     console.log("WEE");
-    //     console.log("And now");
-    //     console.log("for");
-    // }
 
    /*-----------------------------------------------------------------
 
@@ -365,7 +365,7 @@ function onStartFrame(t, state) {
       if (!input.LC || Input.gamepadStateChanged) input.LC = new ControllerHandler(MR.leftController);
       if (!input.RC || Input.gamepadStateChanged) input.RC = new ControllerHandler(MR.rightController);
 
-      if (ENABLE_CALIBRATION && ! state.calibrate) {
+      if (! state.calibrate) {
          m.identity();
          m.rotateY(Math.PI/2);
          m.translate(-2.01,.04,0);
@@ -413,7 +413,7 @@ function onStartFrame(t, state) {
 // SET UNIFORMS AND GRAPHICAL STATE BEFORE DRAWING.
 
    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-   gl.clearColor(0.0, 0.0, 0.7, 1.0);
+   gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
    gl.uniform3fv(state.uCursorLoc, cursorXYZ);
    gl.uniform1f (state.uTimeLoc  , state.time);
@@ -473,7 +473,7 @@ function onStartFrame(t, state) {
       let lx = getX(input.LC);
       let rx = getX(input.RC);
       let sep = metersToInches(TABLE_DEPTH - 2 * RING_RADIUS);
-      if (ENABLE_CALIBRATION && (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03)) {
+      if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
          if (state.calibrationCount === undefined)
             state.calibrationCount = 0;
          if (++state.calibrationCount == 30) {
@@ -483,7 +483,7 @@ function onStartFrame(t, state) {
                m.rotateY(Math.atan2(D[0], D[2]) + Math.PI/2);
                m.translate(-2.35,1.00,-.72);
                state.avatarMatrixInverse = m.value();
-	       m.invert();
+          m.invert();
                state.avatarMatrixForward = m.value();
             m.restore();
             state.calibrationCount = 0;
@@ -549,6 +549,14 @@ function Obj(shape) {
 }
 
 function onDraw(t, projMat, viewMat, state, info) {
+
+   // IF THE HEADSET IS JUST SITTING IDLE, DON'T DRAW ANYTHING.
+
+   if (ENABLE_BRIGHTNESS_CHECK) {
+      if (state.input.brightness == 0)
+         return;
+   }
+
    m.identity();
 
    m.rotateX(state.tiltAngle);
@@ -593,7 +601,11 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
    -----------------------------------------------------------------*/
 
    let drawShape = (shape, color, texture, textureScale) => {
-      gl.uniform1f(state.uBrightnessLoc, input.brightness === undefined ? 1 : input.brightness);
+      let drawArrays = () => gl.drawArrays(shape == CG.cube ||
+                                           shape == CG.quad ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+      if (ENABLE_BRIGHTNESS_CHECK) {
+         gl.uniform1f(state.uBrightnessLoc, input.brightness === undefined ? 1 : input.brightness);
+      }
       gl.uniform4fv(state.uColorLoc, color.length == 4 ? color : color.concat([1]));
       gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
       gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
@@ -603,12 +615,13 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
       if (state.isToon) {
          gl.uniform1f (state.uToonLoc, .3 * CG.norm(m.value().slice(0,3)));
          gl.cullFace(gl.FRONT);
-         gl.drawArrays(shape == CG.cube ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+         drawArrays();
          gl.cullFace(gl.BACK);
          gl.uniform1f (state.uToonLoc, 0);
       }
-      gl.drawArrays(shape == CG.cube ||
-                    shape == CG.quad ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+      if (state.isMirror) gl.cullFace(gl.FRONT);
+      drawArrays();
+      gl.cullFace(gl.BACK);
       prev_shape = shape;
    }
 
@@ -635,7 +648,7 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
          m.save();
             m.multiply(state.avatarMatrixForward);
             m.translate(p);
-	    m.rotateQ(input.RC.orientation());
+       m.rotateQ(input.RC.orientation());
             m.translate(menuX[n], menuY[n], 0);
             m.scale(.03, .03, .03);
             drawShape(menuShape[n], n == menuChoice ? [1,.5,.5] : [1,1,1]);
@@ -758,8 +771,15 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
       m.restore();
    }
 
-   if (input.brightness == 0)
-      return;
+   let drawInMirror = (z, drawProc) => {
+      m.save();
+         m.translate(0,0,2 * z);
+         m.scale(1,1,-1);
+         state.isMirror = true;
+         drawProc();
+         state.isMirror = false;
+      m.restore();
+   }
 
    if (input.LC) {
       if (isMiniature){
@@ -822,6 +842,32 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
       m.scale(-HALL_WIDTH/2, -dy, -HALL_LENGTH/2);
       drawShape(CG.cube, [1,1,1], 1,4, 2,4);
    m.restore();
+
+   /*-----------------------------------------------------------------
+
+   Demonstration of how to render the mirror reflection of an object.
+
+   -----------------------------------------------------------------*/
+
+   let drawTestShape = () => {
+      m.save();
+         m.rotateY(state.time).scale(.1);
+         drawShape(CG.cube, [.5,1,1]);
+    m.translate(1.5,.5,.5).scale(.5);
+         drawShape(CG.cube, [.5,1,1]);
+      m.restore();
+   }
+   m.save();
+      m.translate(0,EYE_HEIGHT-.2,-2).rotateY(Math.PI/2).translate(0,0,.4);
+      drawTestShape();
+      drawInMirror(-.4, drawTestShape);
+   m.restore();
+
+   /*-----------------------------------------------------------------
+
+   Draw the two tables in the room.
+
+   -----------------------------------------------------------------*/
 
    m.save();
       m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, 0);
@@ -921,25 +967,12 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
 
       else {
          m.save();
-	    m.translate(headsetPos);
-	    m.rotateQ(headsetRot);
-	    drawCamera();
+       m.translate(headsetPos);
+       m.rotateQ(headsetRot);
+       drawCamera();
          m.restore();
       }
    }
-
-/*
-   // THIS IS JUST CODE FOR A PRELIMINARY TEST OF VOLUMETRIC NOISE
-
-   let nn = 16;
-   for (let n = 0 ; n < nn ; n++) {
-      let alpha = 1 - Math.abs(n - (nn-1)/2) / (nn/2);
-      m.save();
-         m.translate(0,EYE_HEIGHT,-.2 + .01 * n).scale(.05);
-         drawShape(CG.quad, [1,1,1,alpha]);
-      m.restore();
-   }
-*/
 }
 
 function onEndFrame(t, state) {
@@ -959,7 +992,7 @@ function onEndFrame(t, state) {
 
       // If headset doesn't move at all for 10 seconds, set scene brightness to zero.
 
-      {
+      if (ENABLE_BRIGHTNESS_CHECK) {
          let P = input.HS.position();
          let Q = input.HS.orientation();
 
@@ -1012,13 +1045,6 @@ function onEndFrame(t, state) {
 
 
    Input.gamepadStateChanged = false;
-
-    // if (MR.VRIsActive()) {
-    //     console.log("something");
-    //     console.log("completely");
-    //     console.log("different");
-    //     window.flushAndRestoreConsole();
-    // }
 }
 
 export default function main() {
@@ -1042,7 +1068,9 @@ export default function main() {
       onReload       : onReload,
       // call upon world exit
       onExit         : onExit,
-      onExitXR       : onExit, 
+      onExitXR       : onExit,
+
+// Note: only uncomment if using WebXR
 // for debugging engine-side or taking full control
 // over the system, you can override the "lower-level" wrapper functions
 // and edit them at runtime as well:
