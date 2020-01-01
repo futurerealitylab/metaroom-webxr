@@ -19,11 +19,11 @@ class MyUniformBufferObject {
     constructor() {}
 
     make(Api) {
-        this.data = new Float32Array(2);
+        this.data = new Float32Array(3);
 
         // https://gpuweb.github.io/gpuweb/#dictdef-gpubufferdescriptor
         this.buf = Api.device.createBuffer({
-            size  : 8, // in bytes
+            size  : 12, // in bytes
             usage : GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 
@@ -34,17 +34,17 @@ class MyUniformBufferObject {
 
         // Layout is for the shader.
         // https://gpuweb.github.io/gpuweb/#dom-gpudevice-createbindgrouplayout
-        this.bind_layout = Api.device.createBindGroupLayout({ bindings:[
-            { binding: 0, visibility: GPUShaderStage.VERTEX, type: "uniform-buffer" }
+        this.bind_layout = Api.device.createBindGroupLayout({bindings : [
+            {binding : 0, visibility : GPUShaderStage.VERTEX, type : "uniform-buffer"}
         ]});
 
         // But When rendering, we need a bind group that links the layout
         // to the actual data buffer.
         // https://gpuweb.github.io/gpuweb/#bind-groups
         this.bind_group = Api.device.createBindGroup({
-            layout      : this.bind_layout,
-            bindings    : [
-                { binding:0, resource:{ buffer:this.buf } }
+            layout   : this.bind_layout,
+            bindings : [
+                {binding : 0, resource : {buffer : this.buf}}
             ]
         });
     }
@@ -52,12 +52,12 @@ class MyUniformBufferObject {
         firstUpload() {
             this.buf.setSubData(0, this.data);
         }
-        update( v ){
-            this.data[ 0 ] = v;
-            this.buf.setSubData( 0, this.data, 0, 8);
+        update(i, v) {
+            this.data[i] = v;
+            this.buf.setSubData(i * 4, this.data, i * 4, 4);
         }
         updateAll() {
-            this.buf.setSubData( 0, this.data );
+            this.buf.setSubData(0, this.data);
         }
 }
 
@@ -117,8 +117,15 @@ class Shader {
             // This is like the draw mode from WEBGL
             primitiveTopology   : "triangle-list",
 
+            // cull mode
+            rasterizationState : {cullMode : "back"},
             // How to save the pixels to the frame buffer
-            colorStates         : [{format : Api.tex_format}],
+            colorStates         : [{
+                format    : Api.tex_format,
+                srcFactor : "src-alpha",
+                dstFactor : "one-minus-src-alpha",
+                operation : "add"
+            }],
 
             // Tell Pipeline to Use the depth buffer
             depthStencilState   : {
@@ -175,15 +182,15 @@ class Mesh {
         this.elm_cnt    = 0;        // How many Vertices in buffer
     }
 
-    static make(Api, vert_ary, elm_len=2 ){
+    static make(Api, vert_ary, elm_len = 2) {
         let mesh = new Mesh();
 
         mesh.buf_vert = Api.device.createBuffer({
-            size    : vert_ary.byteLength,
-            usage   : GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+            size  : vert_ary.byteLength,
+            usage : GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
         });
 
-        mesh.buf_vert.setSubData( 0, vert_ary );
+        mesh.buf_vert.setSubData(0, vert_ary);
         mesh.elm_cnt = vert_ary.length / elm_len;   // How Many Vertices
 
         return mesh;
@@ -197,9 +204,9 @@ function initGPUState(info, canvas) {
         adapter : info.gpuCtxInfo.adapter,
         device  : info.gpuCtxInfo.device,
 
-        tex_format  : "bgra8unorm",
+        tex_format   : "bgra8unorm",
         depth_format : "depth24plus-stencil8",
-        sampleCount : 4,
+        sampleCount  : 4,
         depth_buffer : null,
 
         clearColor : {r : 0.0, g : 0.0, b : 0.0, a : 1.0},
@@ -241,12 +248,12 @@ function initGPUState(info, canvas) {
 }
 
 // Steps to take before rendering a frame
-function renderBegin(Api){
+function renderBegin(Api, info){
     // https://developer.apple.com/documentation/metal/mtlcommandencoder
     // https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers
     // Get a Command Buffer, This is where we create all the commands we want to
     // execute on the gpu.
-    Api.cmd_encoder = Api.device.createCommandEncoder( {} ); // Create Command Buffer
+    Api.cmd_encoder = Api.device.createCommandEncoder({}); // Create Command Buffer
 
     // Get the next frame buffer that we can use to render
     // the next frame
@@ -256,10 +263,16 @@ function renderBegin(Api){
     
     // Start a Shader Command
     Api.pass_encoder = Api.cmd_encoder.beginRenderPass( Api.render_pass_descriptor ); // Kinda like setting up a single Shader Excution Command
+    const viewport = info.viewport;
+    Api.pass_encoder.setViewport(
+        viewport.x, viewport.y, 
+        viewport.width, viewport.height, 
+        viewport.minDepth, viewport.maxDepth
+    );
 }
 
 // Steps to take after rendering a frame
-function renderEnd(Api){
+function renderEnd(Api, info){
     // End a Shader Command
     Api.pass_encoder.endPass();
 
@@ -296,6 +309,7 @@ async function setup(state, info) {
         state.gpuInfo.ubo = ubo;
         ubo.data[0] = 0;
         ubo.data[1] = canvas.height / canvas.width;
+        ubo.data[2] = 0;
         ubo.updateAll();
 
 
@@ -334,8 +348,9 @@ function onStartFrame(t, state, info) {
 
     const ubo = gpuInfo.ubo;
 
-    state.ANGLE += 0.01
-    ubo.update(state.ANGLE);
+    state.ANGLE += 0.01;
+    ubo.update(0, state.ANGLE);
+    ubo.update(2, t / 1000.0);
 }
 function onDraw(t, projMat, viewMat, state, info) {
     const gpuInfo = state.gpuInfo;
@@ -344,7 +359,7 @@ function onDraw(t, projMat, viewMat, state, info) {
     const mesh = state.mesh;
 
     {
-        renderBegin(gpuInfo);
+        renderBegin(gpuInfo, info);
 
         gpuInfo.pass_encoder.setPipeline(gpuInfo.shader.pipe_line );
         gpuInfo.pass_encoder.setBindGroup(gpuInfo.UNIFORM_BIND, ubo.bind_group );
@@ -352,7 +367,7 @@ function onDraw(t, projMat, viewMat, state, info) {
         
         gpuInfo.pass_encoder.draw(mesh.elm_cnt, 1, 0, 0 );
 
-        renderEnd(gpuInfo);
+        renderEnd(gpuInfo, info);
     }
 }
 
@@ -380,18 +395,21 @@ export default function main() {
         onAnimationFrameWindow : function(t) {
             const self = MR.engine;
 
-            self.time = t / 1000.0;
+            self._animationHandle = window.requestAnimationFrame(self.config.onAnimationFrameWindow);
+
             self.timeMS = t;
+            self.time = t / 1000.0;
 
             const gpu = self.GPUCtx; 
 
-            self._animationHandle = window.requestAnimationFrame(self.config.onAnimationFrameWindow);
-            
-            // const viewport = self.systemArgs.viewport;
-            // viewport.x      = 0;
-            // viewport.y      = 0;
-            // viewport.width  = gl.drawingBufferWidth;
-            // viewport.height = gl.drawingBufferHeight;
+            const viewport = self.systemArgs.viewport;
+            const extent    = MR.getCanvas();
+            viewport.x      = 0;
+            viewport.y      = 0;
+            viewport.width  = extent.width;
+            viewport.height = extent.height;
+            viewport.minDepth = 0.0;
+            viewport.maxDepth = 1.0;
             
             self.systemArgs.viewIdx = 0;
 
@@ -399,7 +417,7 @@ export default function main() {
             
             mat4.perspective(self._projectionMatrix, 
                 Math.PI / 4,
-                self._canvas.width / self._canvas.height,
+                extent.width / extent.height,
                 0.01, 1.0
             );
 
