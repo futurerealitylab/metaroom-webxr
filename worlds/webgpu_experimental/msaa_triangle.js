@@ -51,7 +51,12 @@ class MyUniformBufferObject {
         // Layout is for the shader.
         // https://gpuweb.github.io/gpuweb/#dom-gpudevice-createbindgrouplayout
         this.bind_layout = Api.device.createBindGroupLayout({bindings : [
-            {binding : 0, visibility : GPUShaderStage.VERTEX, type : "uniform-buffer"}
+            {
+                binding    : 0, 
+                visibility : GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, 
+                type       : "uniform-buffer",
+                multisampled : false
+            },
         ]});
 
         // But When rendering, we need a bind group that links the layout
