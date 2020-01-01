@@ -89,6 +89,7 @@ function pollAvatarData() {
             const avatar_message = {
             type: "avatar",
             user: MR.playerid,
+            timestamp: Date.now(),
             state: {
                 mode: MR.UserType.vr,
                 matrix: MR.avatarMatrixForward,

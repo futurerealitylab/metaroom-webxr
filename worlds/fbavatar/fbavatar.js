@@ -510,23 +510,27 @@ function onStartFrame(t, state) {
         MR.syncClient.send(response);
 
         if (d >= sep - 1 && d <= sep + 1) {
-            if (state.calibrationCount === undefined)
-               state.calibrationCount = 0;
-            if (++state.calibrationCount == 30) {
-               m.save();
-                  m.identity();
-                  m.translate(CG.mix(LP, RP, .5));
-                  m.rotateY(Math.atan2(D[0], D[2]) + Math.PI/2);
-                  m.translate(-2.35,1.00,-.72);
-                  state.avatarMatrixInverse = m.value();
-              m.invert();
-                  state.avatarMatrixForward = m.value();
-               m.restore();
-               state.calibrationCount = 0;
+            MR.isCalibratorHint = true;
+            if (Math.abs(lx) < 0.03) {
+                MR.isCalibratorHint = false;
+                if (state.calibrationCount === undefined)              state.calibrationCount = 0;
+                if (++state.calibrationCount == 300) {
+                    m.save();
+                        m.identity();
+                        m.translate(CG.mix(LP, RP, 0.5));
+                        m.rotateY(Math.atan2(D[0], D[2]) + Math.PI / 2);
+                        m.translate(-2.35, 1.0, -0.72);
+                        state.avatarMatrixInverse = m.value();
+                        m.invert();
+                        state.avatarMatrixForward = m.value();
+                    m.restore();
+                    state.calibrationCount = 0;
+                }
             }
-         }
-         else
+        } else {
+            MR.isCalibratorHint = false;
             state.calibrationCount = 0;
+        }
     }
 
      /*-----------------------------------------------------------------
@@ -775,7 +779,10 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             m.restore();
             m.save();
                 m.translate(0,0,-.01).scale(.04,.04,.13);
-                drawShape(CG.torus1, [0,0,0]);
+                if(hand == 0 && MR.isCalibratorHint)
+                  drawShape(CG.torus1, MR.calibratorColor);
+               else
+                  drawShape(CG.torus1, [0,0,0]);
             m.restore();
             m.save();
                 m.translate(0,-.0135,-.008).scale(.04,.0235,.0015);
@@ -825,31 +832,60 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
     // w: 0.82 h:1.8 margin:0.095
     let drawFloorSensorArea = (pos, rot, color) => {
         m.save();
-        m.multiply(state.avatarMatrixForward);
-        m.translate(pos[0], 0.5, pos[2]);
-        m.rotateY(toEulerAngles(rot)[1]);
-            m.save();
-                m.scale(0.095, 1, 0.095);
-                m.rotateX(Math.PI/2);            
-                drawShape(CG.cylinder, color);
+            m.multiply(state.avatarMatrixForward);
+            m.save();        
+                m.translate(pos[0], 1.5, pos[2]);
+                m.rotateY(toEulerAngles(rot)[1]);
+                m.save();
+                    m.scale(0.095, 2, 0.095);
+                    m.rotateX(Math.PI/2);            
+                    drawShape(CG.cylinder, color);
+                m.restore();
+                m.save();
+                    m.translate(0.82+0.19, 0, 0);
+                    m.scale(0.095, 2, 0.095);
+                    m.rotateX(Math.PI/2);            
+                    drawShape(CG.cylinder, color);
+                m.restore();
+                m.save();
+                m.translate(0.82+0.19, 0, 1.2);
+                    m.scale(0.095, 2, 0.095);
+                    m.rotateX(Math.PI/2);            
+                    drawShape(CG.cylinder, color);
+                m.restore();
+                m.save();
+                m.translate(0, 0, 1.2);
+                    m.scale(0.095, 2, 0.095);                
+                    m.rotateX(Math.PI/2);    
+                    drawShape(CG.cylinder, color);
+                m.restore();
             m.restore();
-            m.save();
-                m.translate(0.82+0.19, 0, 0);
-                m.scale(0.095, 1, 0.095);
-                m.rotateX(Math.PI/2);            
-                drawShape(CG.cylinder, color);
-            m.restore();
-            m.save();
-            m.translate(0.82+0.19, 0, 1.8);
-                m.scale(0.095, 1, 0.095);
-                m.rotateX(Math.PI/2);            
-                drawShape(CG.cylinder, color);
-            m.restore();
-            m.save();
-            m.translate(0, 0, 1.8);
-                m.scale(0.095, 1, 0.095);                
-                m.rotateX(Math.PI/2);    
-                drawShape(CG.cylinder, color);
+            m.save();        
+                m.translate(pos[0], -1.5, pos[2]);
+                m.rotateY(toEulerAngles(rot)[1]);
+                m.save();
+                    m.scale(0.095, 2, 0.095);
+                    m.rotateX(Math.PI/2);            
+                    drawShape(CG.cylinder, color);
+                m.restore();
+                m.save();
+                    m.translate(0.82+0.19, 0, 0);
+                    m.scale(0.095, 2, 0.095);
+                    m.rotateX(Math.PI/2);            
+                    drawShape(CG.cylinder, color);
+                m.restore();
+                m.save();
+                m.translate(0.82+0.19, 0, 1.2);
+                    m.scale(0.095, 2, 0.095);
+                    m.rotateX(Math.PI/2);            
+                    drawShape(CG.cylinder, color);
+                m.restore();
+                m.save();
+                m.translate(0, 0, 1.2);
+                    m.scale(0.095, 2, 0.095);                
+                    m.rotateX(Math.PI/2);    
+                    drawShape(CG.cylinder, color);
+                m.restore();
             m.restore();
         m.restore();
     }
