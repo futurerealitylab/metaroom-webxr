@@ -1,6 +1,6 @@
 "use strict"
 
-import {Lock} from "/system/core/lock.js";
+import {Lock} from "../lock.js";
 
 // TODO: add ping pong heartbeart to keep connections alive
 // TODO: finish automatic reconnection

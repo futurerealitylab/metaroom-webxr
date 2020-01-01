@@ -1,6 +1,6 @@
 "use strict";
 
-import {Lock} from "/system/core/lock.js";
+import {Lock} from "../../server/lock.js";
 
 /*--------------------------------------------------------------------------------
 
@@ -171,9 +171,9 @@ async function setup(state) {
 
    // I propose adding a dictionary mapping texture strings to locations, so that drawShapes becomes clearer
    const images = await imgutil.loadImagesPromise([
-      getPath("textures/wood.png"),
-      getPath("textures/tiles.jpg"),
-      getPath("textures/noisy_bump.jpg")
+      getPath("./../../assets/textures/wood.png"),
+      getPath("./../../assets/textures/tiles.jpg"),
+      getPath("./../../assets/textures/noisy_bump.jpg")
    ]);
 
    let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [

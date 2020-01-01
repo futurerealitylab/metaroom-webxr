@@ -14,8 +14,8 @@ async function setup(state) {
     hotReloadFile(getPath('week8.js'));
 
     const images = await imgutil.loadImagesPromise([
-       getPath("textures/brick.png"),
-       getPath("textures/tiles.jpg"),
+       getPath("./../../assets/textures/brick.png"),
+       getPath("./../../assets/textures/tiles.jpg"),
     ]);
 
     let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [

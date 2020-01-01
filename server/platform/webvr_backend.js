@@ -1,6 +1,6 @@
 "use strict";
 
-import {WebXRButton} from "./../lib/webxr-button.js";
+import {WebXRButton} from "./webxr-button.js";
 
 // temporary hard-coded shim for matrix operations
 const mat4 = {};

@@ -3,7 +3,7 @@
 import * as GPU      from "./gpu/gpu.js";
 // TODO pass-in any user-provided object to act as an entry into an XR
 // so WebXRButton doesn't need to be part of the core
-import {WebXRButton} from "./../lib/webxr-button.js";
+import {WebXRButton} from "./webxr-button.js";
 import {
     XRInfo, 
     XR_REFERENCE_SPACE_TYPE, 
@@ -11,7 +11,7 @@ import {
     XR_HANDEDNESS,
     XR_TARGET_RAY_MODE
 } from "./webxr_util.js";
-import {Viewport} from "./viewport.js";
+import {Viewport} from "../graphics/viewport.js";
 
 
 const mat4 = {};

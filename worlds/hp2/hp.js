@@ -374,9 +374,9 @@ async function setup(state) {
 
     // load initial images, then continue setup after waiting is done
     const images = await imgutil.loadImagesPromise([
-        getPath("resources/textures/brick.png"),
-        getPath("resources/textures/polkadots_transparent.png"),
-        getPath("resources/textures/wood.png")
+        getPath("assets/textures/brick.png"),
+        getPath("assets/textures/polkadots_transparent.png"),
+        getPath("assets/textures/wood.png")
     ]);
 
     state.videoTexture = GFX.initVideoTexture(gl, gl.TEXTURE3);

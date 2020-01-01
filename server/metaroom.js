@@ -1,11 +1,12 @@
 "use strict";
 
-import {MetaroomXRBackend} from "./webxr_backend.js";
-import {MetaroomVRBackend} from "./webvr_backend.js";
-import {ServerPublishSubscribe} from "./server_publish_subscribe.js";
-import {ViewpointController} from "./../lib/viewpoint_controller.js";
-import {Client} from "./client.js";
-import {EventBus} from "./EventBus.js";
+import {MetaroomXRBackend} from "./platform/webxr_backend.js";
+import {MetaroomVRBackend} from "./platform/webvr_backend.js";
+
+import {ServerPublishSubscribe} from "./websocket/server_publish_subscribe.js";
+import {ViewpointController} from "./graphics/viewpoint_controller.js";
+import {Client} from "./websocket/client.js";
+import {EventBus} from "./websocket/EventBus.js";
 
 // the "base" type
 export function Metaroom() {

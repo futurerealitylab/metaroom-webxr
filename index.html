@@ -1,37 +1,44 @@
 <!DOCTYPE html>
 <head>
-  <link   rel="icon" href="favicon.ico" type="image/x-icon">
+  <link   rel="icon" href="assets/favicon.ico" type="image/x-icon">
   <link   rel="stylesheet" href="assets/css/main.css">
   <link   rel="stylesheet" href="assets/css/glslEditor/glslEditor.css">
 
   <script type="module" src="lib/input/queue.js"></script>
   <script type="module" src="lib/input/input_nonVR.js"></script>
-  <script src="system/lib/ImprovedNoise.js"></script>
-  <script src="system/lib/pathutil.js"></script>
-  <script src="system/lib/cursor.js"></script>
-  <script src="system/lib/canvasutil.js"></script>
-  <script src="system/lib/ui.js"></script>
-  <script src="system/lib/debugutil.js"></script>
-  <script src="system/lib/htmlutil.js"></script>
-  <script src="system/third-party/FileSaver.min.js"></script>
-  <script src="system/third-party/axios.min.js"></script>
-  <script src="system/lib/assetutil.js"></script>
-  <script src="system/lib/gfxutil.js"></script>
-  <script src="system/lib/imageutil.js"></script>
-  <script src="system/lib/audio.js"></script>
-  <script type="module" src="system/lib/viewpoint_controller.js"></script>
+  <script src="lib/input/cursor.js"></script>
+  <script src="lib/media/audio.js"></script>
+
+  <script src="lib/util/canvasutil.js"></script>
+  <script src="lib/util/assetutil.js"></script>
+  <script src="lib/util/debugutil.js"></script>
+  <script src="lib/util/pathutil.js"></script>
+  <script src="lib/util/htmlutil.js"></script>
+  <script src="lib/util/gfxutil.js"></script>
+  <script src="lib/util/imageutil.js"></script>
+
+  <script src="lib/primitive/CG.js"></script>
+  <script src="lib/primitive/ui.js"></script>
+  <script src="lib/primitive/ImprovedNoise.js"></script>
+  <script src="lib/primitive/avatar.js"></script>  
+  
+  <script src="lib/third-party/FileSaver.min.js"></script>
+  <script src="lib/third-party/axios.min.js"></script>  
+  
+  <!-- system backends -->
+  <script type="module" src="server/platform/webvr_backend.js"></script>
+  <script type="module" src="server/platform/webxr_backend.js"></script>
+
+  <script type="module" src="server/graphics/viewpoint_controller.js"></script>
 
   <!-- Server and Client. -->
-  <script type="module" src="system/core/client.js"></script>
-  <script src="system/core/avatar.js"></script>
-  <script type="module" src="system/core/EventBus.js"></script>
-  <script type="module" src="system/core/SystemHandler.js"></script>
-  <script type="module" src="system/core/lock.js"></script>
-  <script type="module" src="system/core/server_publish_subscribe.js"></script>
-  <!-- system backends -->
-  <script type="module" src="system/core/webvr_backend.js"></script>
-  <script type="module" src="system/core/webxr_backend.js"></script>
-  <script src=lib/CG.js></script>
+  <script type="module" src="server/websocket/client.js"></script>
+  
+  <script type="module" src="server/websocket/EventBus.js"></script>
+  <script type="module" src="server/SystemHandler.js"></script>
+  <script type="module" src="server/websocket/server_publish_subscribe.js"></script>
+  <script type="module" src="server/lock.js"></script>
+   
 
   <!--   System Initialization -->
   <!-- System Version Number -->
@@ -40,10 +47,10 @@
   <div id='server-comm-port' value='3001'></div>
   <!-- <div id='server-ip'        value='192.168.1.104'></div> -->
   <div id='server-sync-port' value='11235'></div>
-  <script type="module" src="system/core/metaroom.js"></script>
-  <script type="module" src="system/core/callback.js"></script>  
+  <script type="module" src="server/metaroom.js"></script>
+  <script type="module" src="server/websocket/callback.js"></script>  
   <!-- Shader Editor -->
-  <script type="module" src="system/lib/mreditor.js"></script>
+  <script type="module" src="server/mreditor.js"></script>
 
 
 </head>
@@ -67,5 +74,5 @@
     <script type="module" src=worlds/triangles/triangles.js></script>
   </div>
   <!-- Program Entry-point -->
-  <script type="module" src="system/run.js"></script>
+  <script type="module" src="server/run.js"></script>
 </body>

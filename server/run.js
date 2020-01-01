@@ -1,10 +1,10 @@
 "use strict";
 
-import {Metaroom}               from "./core/metaroom.js";
-import {ServerPublishSubscribe} from "./core/server_publish_subscribe.js";
-import {MREditor}               from "./lib/mreditor.js";
-import * as GPU                 from "./core/gpu/gpu.js";
-import {WebXRButton}            from "./lib/webxr-button.js";
+import {Metaroom}               from "../server/metaroom.js";
+import {ServerPublishSubscribe} from "../server/websocket/server_publish_subscribe.js";
+import {MREditor}               from "../server/mreditor.js";
+import * as GPU                 from "../server/platform/gpu/gpu.js";
+import {WebXRButton}            from "../server/platform/webxr-button.js";
 
 window.MREditor = MREditor;
 
@@ -259,7 +259,7 @@ case 2: {
             // main() is the system's entry point
             main : async () => {
                 {
-                    const ui   = await import("./lib/default_window_ui.js");
+                    const ui   = await import("./default_window_ui.js");
                     MR.engine.ui = new ui.DefaultWindowMenuUI();
                     // temp hack
                     MR.engine.menu = MR.engine.ui.menu;
