@@ -365,6 +365,36 @@ async function setup(state, info) {
     CanvasUtil.setOnResizeEventHandler((target, width, height, oldWidth, oldHeight) => {
         console.error("TODO need to reconstruct properly after resize");
 
+        const gpuInfo = state.gpuInfo;
+        
+        const Api = gpuInfo;
+        const canvas = target;
+        
+        gpuInfo.texture.destroy();
+        gpuInfo.depth_buffer.destroy();
+
+
+        const texture = Api.device.createTexture({
+            size : {
+                width  : canvas.width,
+                height : canvas.height,
+                depth  : 1,
+            },
+            sampleCount : Api.sampleCount,
+            format      : Api.tex_format,
+            usage       : GPUTextureUsage.OUTPUT_ATTACHMENT,
+        });
+        gpuInfo.texture     = texture;
+        gpuInfo.textureView = texture.createView();
+
+        const depth_buffer = gpuInfo.device.createTexture({
+            size   : {width : canvas.width, height : canvas.height, depth : 1},
+            format : gpuInfo.depth_format,
+            usage  : GPUTextureUsage.OUTPUT_ATTACHMENT,
+            sampleCount : gpuInfo.sampleCount        
+        });
+        gpuInfo.depth_buffer      = depth_buffer;
+        gpuInfo.depth_buffer_view = depth_buffer.createView();
     });
 
     state.ANGLE = 0.0;
