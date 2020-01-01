@@ -14,6 +14,22 @@ async function onExit(state) {
 
 let gpu;
 
+// taken from https://trac.webkit.org/changeset/246217/webkit/
+function createBufferWithData(device, descriptor, data, offset = 0) {
+    const mappedBuffer = device.createBufferMapped(descriptor);
+    const dataArray = new Uint8Array(mappedBuffer[1]);
+    dataArray.set(new Uint8Array(data), offset);
+    mappedBuffer[0].unmap();
+    return mappedBuffer[0];
+}
+
+async function mapWriteDataToBuffer(buffer, data, offset = 0) {
+    const arrayBuffer = await buffer.mapWriteAsync();
+    const writeArray = new Uint8Array(arrayBuffer);
+    writeArray.set(new Uint8Array(data), offset);
+    buffer.unmap();
+}
+
 // super hard-coded version assuming 2 floats
 class MyUniformBufferObject {
     constructor() {}
@@ -183,6 +199,7 @@ class Mesh {
     }
 
     static make(Api, vert_ary, elm_len = 2) {
+        /* old
         let mesh = new Mesh();
 
         mesh.buf_vert = Api.device.createBuffer({
@@ -192,6 +209,19 @@ class Mesh {
 
         mesh.buf_vert.setSubData(0, vert_ary);
         mesh.elm_cnt = vert_ary.length / elm_len;   // How Many Vertices
+
+        */
+
+
+        let mesh = new Mesh();
+
+        mesh.buf_vert = createBufferWithData(
+            Api.device, 
+            {size : vert_ary.byteLength, usage : GPUBufferUsage.VERTEX}, 
+            vert_ary.buffer
+        );
+
+        mesh.elm_cnt = vert_ary.length / elm_len;
 
         return mesh;
     }
