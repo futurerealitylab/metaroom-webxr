@@ -1,0 +1,6 @@
+#!/bin/bash
+
+./build.sh
+
+killall node
+node ./server.js
