@@ -53,7 +53,7 @@ class MyUniformBufferObject {
             this.buf.setSubData(0, this.data);
         }
         update(i, v) {
-            this.data[i] = v;
+            this.data[i] = v; // dstOffset, data, srcOffset, byteLength
             this.buf.setSubData(i * 4, this.data, i * 4, 4);
         }
         updateAll() {
@@ -297,7 +297,6 @@ async function setup(state, info) {
     //  swap chain, 
     //  depth buffer
     const canvas = MR.getCanvas();
-
     state.gpuInfo = initGPUState(info, canvas);
     // load a shader compiler (in this case, for GLSL)
     await loadShaderCompiler(state.gpuInfo);
@@ -365,7 +364,7 @@ function onDraw(t, projMat, viewMat, state, info) {
         gpuInfo.pass_encoder.setBindGroup(gpuInfo.UNIFORM_BIND, ubo.bind_group );
         gpuInfo.pass_encoder.setVertexBuffer(gpuInfo.POSITION_LOC, mesh.buf_vert );
         
-        gpuInfo.pass_encoder.draw(mesh.elm_cnt, 1, 0, 0 );
+        gpuInfo.pass_encoder.draw(mesh.elm_cnt, 1, 0, 0);
 
         renderEnd(gpuInfo, info);
     }
