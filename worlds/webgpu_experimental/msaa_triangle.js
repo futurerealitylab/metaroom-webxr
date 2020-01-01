@@ -363,8 +363,6 @@ async function setup(state, info) {
 
 
     CanvasUtil.setOnResizeEventHandler((target, width, height, oldWidth, oldHeight) => {
-        console.error("TODO need to reconstruct properly after resize");
-
         const gpuInfo = state.gpuInfo;
         
         const Api = gpuInfo;
