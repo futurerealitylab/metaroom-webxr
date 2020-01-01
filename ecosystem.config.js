@@ -1,7 +1,7 @@
 module.exports = {
   apps : [{
     name: 'Front End',
-    script: './system/server/main.js',
+    script: './main.js',
 
     // Options reference: https://pm2.keymetrics.io/docs/usage/application-declaration/
     // args: 'one two',
