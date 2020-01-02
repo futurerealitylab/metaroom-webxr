@@ -18,8 +18,14 @@
         try {
           const imports = {};
 
+          const TOTAL_MEMORY   = 16777216;
+          const WASM_PAGE_SIZE = 65536;
+
           // Build the WebAssembly instance.
-          let memory = new WebAssembly.Memory({ initial: 129}); // old: 2
+          let memory = new WebAssembly.Memory({ 
+            initial : TOTAL_MEMORY / WASM_PAGE_SIZE,
+            maximum : TOTAL_MEMORY / WASM_PAGE_SIZE
+          }); // old: 2
           // const response = await fetch('./library.wasm');
           // const bytes = await response.arrayBuffer();
           // const { instance } = await WebAssembly.instantiate(bytes, {

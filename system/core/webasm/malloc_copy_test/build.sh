@@ -20,7 +20,7 @@ library.c
 
 # clang \
 # -cc1 \
-# -O3 \
+# -Ofast \
 # -emit-llvm-bc \
 # -triple=wasm32-unknown-unknown-wasm \
 # -std=c11 \
@@ -32,6 +32,6 @@ library.c
 
 # wasm-ld --no-entry \
 # wasm.o -o \
-# binary.wasm --strip-all \
+# binary.wasm --export-all \
 # -allow-undefined-file wasm.syms \
 # --import-memory
