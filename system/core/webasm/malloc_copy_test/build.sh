@@ -2,9 +2,9 @@
 
 echo "building wasm module"
 
-clang++ \
+clang \
 --target=wasm32-unknown-wasi \
---std=c++17 \
+--std=c11 \
 -O3 \
 -flto \
 --sysroot /tmp/wasi-libc \
