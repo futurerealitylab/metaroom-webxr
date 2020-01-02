@@ -1,13 +1,15 @@
 #include "common_header.h"
 
 char* malloc_copy(char* input)
-{
-    char* result = (char*)malloc(1024);
+{   
+    usize len = strlen(input) + 1;
+
+    char* result = (char*)malloc(len);
     if (result == NULL) {
         return NULL;
     }
 
-    strncpy(result, input, strlen(input));
+    strncpy(result, input, len);
 
     return result;
 }
@@ -17,7 +19,7 @@ void malloc_free(char* input)
     free(input);
 }
 
-float my_sin(float val) 
+float32 my_sin(float32 val) 
 {
     return sinf(val);
 }
