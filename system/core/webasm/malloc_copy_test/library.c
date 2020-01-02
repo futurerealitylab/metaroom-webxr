@@ -32,4 +32,9 @@ float32 my_sin(float32 val)
     return result;
 }
 
+void set_char(char* input)
+{
+    input[0] = '\'';
+}
+
 

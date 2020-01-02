@@ -43,6 +43,11 @@
             {env : imports}
           );
 
+          const wasm2 = await WebAssembly.instantiateStreaming(
+            fetch("./library.wasm"),
+            {env : imports}
+          );
+
           // Text to copy.
           const text = 'Hello from JavaScript!';
 
@@ -57,6 +62,10 @@
           let outputPtr = wasm.instance.exports.malloc_copy(inputPtr, text.length);
 
           console.log('copy=[%s]', decode(view2, outputPtr));
+
+          wasm2.instance.exports.set_char(outputPtr);
+
+          console.log('copy after set char in second wasm module', decode(view2, outputPtr));
 
           console.log("sin(180)=[%f]", wasm.instance.exports.my_sin(180.0));
 
