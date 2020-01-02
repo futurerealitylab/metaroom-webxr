@@ -17,4 +17,6 @@ git clone https://github.com/CraneStation/wasi-libc.git
 cd wasi-libc
 
 export PATH=/usr/local/opt/llvm/bin:$PATH
-make install INSTALL_DIR=/tmp/wasi-libc
+
+mkdir /Users/Shared/wasi-libc-root
+make install INSTALL_DIR=/Users/Shared/wasi-libc-root

@@ -7,7 +7,7 @@ clang \
 --std=c11 \
 -O3 \
 -flto \
---sysroot /tmp/wasi-libc \
+--sysroot /Users/Shared/wasi-libc-root \
 -nostartfiles \
 -Wl,-allow-undefined-file wasm.syms \
 -Wl,--import-memory \
