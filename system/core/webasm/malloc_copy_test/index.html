@@ -35,6 +35,8 @@
 
           console.log('copy=[%s]', decode(view2, pOutput));
 
+          console.log("sin(180)=[%f]", wasm.instance.exports.my_sin(180.0));
+
           wasm.instance.exports.malloc_free(pInput);
           wasm.instance.exports.malloc_free(pOutput);
           pInput = null;

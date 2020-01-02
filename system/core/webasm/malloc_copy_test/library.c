@@ -1,5 +1,4 @@
-#include <string.h>
-#include <stdlib.h>
+#include "common_header.h"
 
 char* malloc_copy(char* input)
 {
@@ -16,4 +15,9 @@ char* malloc_copy(char* input)
 void malloc_free(char* input)
 {
     free(input);
+}
+
+float my_sin(float val) 
+{
+    return sinf(val);
 }
