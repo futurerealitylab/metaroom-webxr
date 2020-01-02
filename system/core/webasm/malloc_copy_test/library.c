@@ -19,7 +19,17 @@ void malloc_free(char* input)
     free(input);
 }
 
+float32 print_num(float val);
+
 float32 my_sin(float32 val) 
-{
-    return sinf(val);
+{   
+    float32 result = sinf(val);
+
+    float32 result_times_2 = print_num(result);
+
+    print_num(result_times_2);
+
+    return result;
 }
+
+

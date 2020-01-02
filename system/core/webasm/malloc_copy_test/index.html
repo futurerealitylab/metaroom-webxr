@@ -7,6 +7,8 @@
       // allow use of async/await
       (async () => {
         try {
+          const imports = {};
+
           // Build the WebAssembly instance.
           let memory = new WebAssembly.Memory({ initial: 129}); // old: 2
           // const response = await fetch('./library.wasm');
@@ -15,9 +17,15 @@
           //   env: { memory }
           // }); const wasm = {instance : instance};
 
+          imports.memory = memory;
+          imports.print_num = function(val) {
+            console.log("Number received from WebASM: ", val);
+            return val * 2;
+          }
+
           const wasm = await WebAssembly.instantiateStreaming(
-              fetch("./library.wasm"),
-              {env : {memory : memory}}
+            fetch("./library.wasm"),
+            {env : imports}
           );
 
           // Text to copy.
@@ -25,41 +33,41 @@
 
           // Configure shared memory.
           const view1 = new Uint8Array(memory.buffer);
-          let pInput = wasm.instance.exports.malloc(1024);
+          let inputPtr = wasm.instance.exports.malloc(1024);
           // malloc causes memory to grow, invalidating old view
           const view2 = new Uint8Array(memory.buffer);
 
-          encode(view2, pInput, text);
+          encode(view2, inputPtr, text);
 
-          let pOutput = wasm.instance.exports.malloc_copy(pInput, text.length);
+          let outputPtr = wasm.instance.exports.malloc_copy(inputPtr, text.length);
 
-          console.log('copy=[%s]', decode(view2, pOutput));
+          console.log('copy=[%s]', decode(view2, outputPtr));
 
           console.log("sin(180)=[%f]", wasm.instance.exports.my_sin(180.0));
 
-          wasm.instance.exports.malloc_free(pInput);
-          wasm.instance.exports.malloc_free(pOutput);
-          pInput = null;
-          pOutput = null;
+          wasm.instance.exports.malloc_free(inputPtr);
+          wasm.instance.exports.malloc_free(outputPtr);
+          inputPtr = null;
+          outputPtr = null;
 
         } catch (err) {
           console.error(err);
         }
-        // Should free pOutput and pInput
+        // Should free outputPtr and inputPtr
       })();
 
-      // Encode string into memory starting at address base.
-      const encode = (memory, base, string) => {
+      // Encode string into memory starting at address baseAddr.
+      const encode = (memory, baseAddr, string) => {
         for (let i = 0; i < string.length; i++) {
-          memory[base + i] = string.charCodeAt(i);
+          memory[baseAddr + i] = string.charCodeAt(i);
         }
 
-        memory[base + string.length] = 0;
+        memory[baseAddr + string.length] = 0;
       };
 
-      // Decode a string from memory starting at address base.
-      const decode = (memory, base) => {
-        let cursor = base;
+      // Decode a string from memory starting at address baseAddr.
+      const decode = (memory, baseAddr) => {
+        let cursor = baseAddr;
         let result = '';
 
         while (memory[cursor] !== 0) {
