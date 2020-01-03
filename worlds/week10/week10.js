@@ -31,6 +31,13 @@ const ENABLE_BRIGHTNESS_CHECK = false;
 
 let enableModeler = true;
 
+let payload_skeleton = null;
+axios.get('assets/skeleton.json').then((response) => {
+   payload_skeleton = response.data;
+});
+
+let frame = 0;
+
 /*Example Grabble Object*/
 let grabbableCube = new Obj(CG.torus);
 
@@ -728,6 +735,40 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
       m.restore();
    }
 
+   let drawLimb = (A, C) => {
+      m.save();
+
+         let diff = CG.subtract(A,C);
+         let dist = CG.norm(diff);
+
+         m.translate(CG.mix(A,C,.5)).aimZ(CG.subtract(A,C)).scale(.02,.02, .5*dist);
+         const lime = [1,1,.3];
+         drawShape(CG.cylinder, lime, -1,1, 2,1);
+      m.restore();
+   }
+
+   let drawSkeleton = (data) => {
+      const frameData = data.frames[frame++%4504];
+      for (let i = 0; i < frameData.length; i++){
+         m.save(); 
+            let current = [frameData[i].x, frameData[i].y, frameData[i].z];
+            m.translate(current);
+            m.scale(.03,.03,.03);
+            const lime = [1,1,.3];
+            drawShape(CG.sphere, lime);
+         m.restore();
+      }
+      
+      for(let i = 0; i < data.links.length; i++){
+         m.save();
+            let first = [frameData[data.links[i][0]].x, frameData[data.links[i][0]].y, frameData[data.links[i][0]].z];
+            let second = [frameData[data.links[i][1]].x, frameData[data.links[i][1]].y, frameData[data.links[i][1]].z];
+            drawLimb(first, second);
+         m.restore();
+      }
+   }
+
+
    /*-----------------------------------------------------------------
 
    The below is just my particular visual design for the size and
@@ -929,6 +970,8 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
 
       state.isToon = false;
    m.restore();
+
+   drawSkeleton(payload_skeleton);
 
    /*-----------------------------------------------------------------
       Here is where we draw avatars and controllers.
