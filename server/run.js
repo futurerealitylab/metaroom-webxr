@@ -100,8 +100,6 @@ window.flushAndRestoreConsole = function() {
     window.redirectCount += 1;
 };
 
-
-
 function rawURL(url) {
     return url.split(/[?#]/)[0];
 }
@@ -174,494 +172,236 @@ console.log(
 );
 
 switch (MR.VERSION) {
-case 2: {
-    async function run() {
-        let deferredActions = [];
+    case 2: {
+        async function run() {
+            let deferredActions = [];
 
-        const RESOLUTION = document.getElementById("resolution").getAttribute("value").split(',');
-        
-        // load worlds first
-        async function loadWorlds() {
-            const sourceFiles = document.getElementsByClassName("worlds");
+            const RESOLUTION = document.getElementById("resolution").getAttribute("value").split(',');
+            
+            // load worlds first
+            async function loadWorlds() {
+                const sourceFiles = document.getElementsByClassName("worlds");
 
-            let worldIt = sourceFiles[0].firstElementChild;
-            while (worldIt !== null) {
-                const src = worldIt.src;
-                console.log("loading world: %s", src);
-                const world     = await import(src);
-                const localPath = getCurrentPath(src)
+                let worldIt = sourceFiles[0].firstElementChild;
+                while (worldIt !== null) {
+                    const src = worldIt.src;
+                    console.log("loading world: %s", src);
+                    const world     = await import(src);
+                    const localPath = getCurrentPath(src)
 
-                MR.registerWorld({
-                    world     : world, 
-                    localPath : localPath
-                });
-
-                worldIt = worldIt.nextElementSibling;
-            }
-        }
-
-        try {
-            await loadWorlds();
-        } catch (err) {
-            console.error(err);
-            initFailed(err.message);
-            return;
-        }
-
-
-// TODO(TR): support switching between multiple GPU contexts depending on the world:
-// [
-//  {
-//      specify a global context object to use (e.g. gl, gpu), 
-//          may change how this is set-up
-//      useGlobalContext       : true, 
-//
-//      enable basic resource tracking 
-//          so resources can be freed upon world switch 
-//          (e.g. GPU memory, textures, etc.)
-//      doGPUResourceTracking  : true, 
-//
-//      possible to initialize the context yourself, 
-//          as long as you wrap it in an info object 
-//          containing the expected properties
-//      GPUAPIProvidedContext  : null,
-//
-//      type of GPU API, if the type you choose is not built-in, 
-//          you need to provide your own animation frame callbacks to 
-//          handle the specific API
-//      GPUAPIType             : GPU.GPU_API_TYPE.WEBGL, 
-//  },
-//  {
-//      ...
-//  }
-// ]
-//
-//
-// TODO(TR): multiple layered canvases 
-// (lower priority if possible to use different contexts on the same canvas without issues)
-//
-        MR.init({
-            outputSurfaceName      : 'output-surface',
-            outputWidth            : parseInt(RESOLUTION[0]),
-            outputHeight           : parseInt(RESOLUTION[1]),
-            useGlobalContext       : true,
-            // frees gpu resources upon world switch
-            doGPUResourceTracking     : true,
-            GPUAPIProvidedContext     : null,
-            GPUAPIType                : GPU.GPU_API_TYPE.WEBGL,
-            enableEntryByButton       : true,
-            enableBellsAndWhistles    : true,
-            synchronizeTimeWithServer : false,
-            // comment "useLocalSpace" out when/if we start using coordinates
-            // with respect to the floor
-            useLocalSpace             : true,
-
-            // main() is the system's entry point
-            main : async () => {
-                {
-                    const ui   = await import("./default_window_ui.js");
-                    MR.engine.ui = new ui.DefaultWindowMenuUI();
-                    // temp hack
-                    MR.engine.menu = MR.engine.ui.menu;
-
-                    ui.makeModalCanvas(MR.getCanvas());
-                }
-
-                MREditor.enable();
-
-                MREditor.init({
-                    defaultShaderCompilationFunction : MREditor.onNeedsCompilationDefault,
-                });
-
-                MREditor.detectFeatures();
-
-                MR.engine.isTransitioning = false;
-
-                try {
-                    const worldInfo = MR.worlds[MR.worldIdx];
-                    setPath(worldInfo.localPath);
-                    wrangler.isTransitioning = true;
-                    MR.engine.beginSetup(worldInfo.world.default()).catch(err => {
-                        console.error(err);
-                        MR.engine.doWorldTransition({direction : 1, broadcast : true});
-                    }).then(() => { wrangler.isTransitioning = false;               
-                        for (let d = 0; d < deferredActions.length; d += 1) {
-                            deferredActions[d]();
-                        }
-                        deferredActions = [];
-
-                        CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
-
-                        window.DISABLEMENUFORWORLDSEXCEPT(MR.worldIdx);
+                    MR.registerWorld({
+                        world     : world, 
+                        localPath : localPath
                     });
 
-                } catch (err) {
-                    console.error(err);
+                    worldIt = worldIt.nextElementSibling;
                 }
+            }
 
-                MR.initWorldsScroll();
-                MR.initPlayerViewSelectionScroll();
-
-                MR.syncClient.connect(window.IP, window.PORT_SYNC);
-
-                window.COUNT = 0;
-
-                
-                MR.engine.defineWorldTransitionProcedure(function(args) {
-                    //console.trace();
-                    let ok = false;
-                    COUNT += 1;
-                    //console.log(COUNT, args);
-                    // try to transition to the next world
-                    while (!ok) {
-                        if (args.direction) {
-                            //console.log(COUNT, "has direction");
-                            MR.worldIdx = (MR.worldIdx + args.direction) % MR.worlds.length;
-                            if (MR.worldIdx < 0) {
-                                MR.worldIdx = MR.worlds.length - 1;
-                            }
-                        } else if (args.key !== null) {
-                            //console.log(COUNT, "key exists", args.key, "worldidx", MR.worldIdx);
-                            if (args.key == MR.worldIdx) {
-                                ok = true;
-                                continue;
-                            }
-                            MR.worldIdx = parseInt(args.key);
-                            //console.log(COUNT, "WORLDIDX",  MR.worldIdx);
-                        }
+            try {
+                await loadWorlds();
+            } catch (err) {
+                console.error(err);
+                initFailed(err.message);
+                return;
+            }
 
 
-                        MR.engine.isTransitioning = true;
+    // TODO(TR): support switching between multiple GPU contexts depending on the world:
+    // [
+    //  {
+    //      specify a global context object to use (e.g. gl, gpu), 
+    //          may change how this is set-up
+    //      useGlobalContext       : true, 
+    //
+    //      enable basic resource tracking 
+    //          so resources can be freed upon world switch 
+    //          (e.g. GPU memory, textures, etc.)
+    //      doGPUResourceTracking  : true, 
+    //
+    //      possible to initialize the context yourself, 
+    //          as long as you wrap it in an info object 
+    //          containing the expected properties
+    //      GPUAPIProvidedContext  : null,
+    //
+    //      type of GPU API, if the type you choose is not built-in, 
+    //          you need to provide your own animation frame callbacks to 
+    //          handle the specific API
+    //      GPUAPIType             : GPU.GPU_API_TYPE.WEBGL, 
+    //  },
+    //  {
+    //      ...
+    //  }
+    // ]
+    //
+    //
+    // TODO(TR): multiple layered canvases 
+    // (lower priority if possible to use different contexts on the same canvas without issues)
+    //
+            MR.init({
+                outputSurfaceName      : 'output-surface',
+                outputWidth            : parseInt(RESOLUTION[0]),
+                outputHeight           : parseInt(RESOLUTION[1]),
+                useGlobalContext       : true,
+                // frees gpu resources upon world switch
+                doGPUResourceTracking     : true,
+                GPUAPIProvidedContext     : null,
+                GPUAPIType                : GPU.GPU_API_TYPE.WEBGL,
+                enableEntryByButton       : true,
+                enableBellsAndWhistles    : true,
+                synchronizeTimeWithServer : false,
+                // comment "useLocalSpace" out when/if we start using coordinates
+                // with respect to the floor
+                useLocalSpace             : true,
 
-                        //console.log(COUNT, "transitioning to world: [" + MR.worldIdx + "]");
-                        //console.log(COUNT, "broadcast", args.broadcast, "direction: ", args.direction, "key", args.key);
+                // main() is the system's entry point
+                main : async () => {
+                    {
+                        const ui   = await import("./default_window_ui.js");
+                        MR.engine.ui = new ui.DefaultWindowMenuUI();
+                        // temp hack
+                        MR.engine.menu = MR.engine.ui.menu;
 
-                        CanvasUtil.setOnResizeEventHandler(null);
-                        CanvasUtil.resize(MR.getCanvas(), 
-                            MR.engine.options.outputWidth, 
-                            MR.engine.options.outputHeight
-                        );
-
-                        MR.engine.clearWorld();
-                        ScreenCursor.clearTargetEvents();
-                        Input.deregisterKeyHandlers();
-
-                        try {
-                            // call the main function of the selected world
-                            MR.server.subsLocal = new ServerPublishSubscribe();
-                            MREditor.resetState();
-                            
-                            let hadError = false;
-
-                            const worldInfo = MR.worlds[MR.worldIdx];
-                            setPath(worldInfo.localPath);
-
-                            MR.engine.beginSetup(worldInfo.world.default()).catch((e) => {
-                                console.error(e);
-                                setTimeout(function(){ 
-                                    console.log("Trying another world");
-                                    wrangler.doWorldTransition({direction : 1, broadcast : true});
-                                }, 500);  
-                            }).then(() => {
-                                MR.engine.isTransitioning = false;
-
-                                //console.log("now we should do deferred actions");
-                                //console.log("ready");
-
-                                for (let d = 0; d < deferredActions.length; d += 1) {
-                                    deferredActions[d]();
-                                }
-                                deferredActions = [];
-
-                                CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
-
-                                window.DISABLEMENUFORWORLDSEXCEPT(MR.worldIdx);
-
-                            });
-
-                            ok = true;
-
-                        } catch (e) {
-                            console.error(e);
-
-
-                            setTimeout(function(){ 
-                                console.log(COUNT, "Trying another world");
-                            }, 500);
-                        }
+                        ui.makeModalCanvas(MR.getCanvas());
                     }
 
-                    if (args.broadcast && MR.server.sock.readyState == WebSocket.OPEN) {
-                        //console.log(COUNT, "broadcasting");
-                        try {
-                            MR.server.sock.send(JSON.stringify({
-                                "MR_Message" : "Load_World", "key" : MR.worldIdx, "content" : "TODO", "count" : COUNT})
-                            );
-                        } catch (e) {
-                            console.error(e);
-                        }
-                    }
-                });
-        
-                MR.server.subs.subscribe("Load_World", (_, args) => {
-                    if (args.key === MR.worldIdx) {
-                        return;
-                    }
+                    MREditor.enable();
 
-                    //console.log("loading world", args);
-                    if (wrangler.isTransitioning) {
-                        //console.log("is deferring transition");
-                        deferredActions = [];
-                        deferredActions.push(() => { 
-                            MR.engine.doWorldTransition({direction : null, key : args.key, broadcast : false});
-                        });
-                        return;
-                    }
-                    //console.log("not deferring transition");
-                    MR.engine.doWorldTransition({direction : null, key : args.key, broadcast : false});
-                });
+                    MREditor.init({
+                        defaultShaderCompilationFunction : MREditor.onNeedsCompilationDefault,
+                    });
 
-            },
-        });
+                    MREditor.detectFeatures();
 
-    }
-    
-    // TODO initialization order revision
-    MR.initialWorldIdx = 0;
-    MR.server.subs.subscribe("Init", (_, args) => {
-        MR.worldIdx = args.key || 0;
-        MR.initialWorldIdx = args.key || 0;
-        MR.server.uid = args.uid;
-    });
-
-    MR.server.subs.subscribe("Log", (_, args) => {
-        if (MR.VRIsActive() || args.playerid == MR.playerid) {
-            return;
-        }
-
-        console.groupCollapsed("%clogs from pid=[%d]", "color: #00dd00;", args.id);
-        const joined = args.msg.join('\n');
-        console.log(joined);
-        console.groupEnd();
-
-    }, null);
-
-    MR.initServer();
-
-    setTimeout(() => {
-        run();
-    }, 100);
-    break;
-}
-case 1: {
-}
-default: {
-    function run() {
-
-        let deferredActions = [];
-
-        const RESOLUTION = document.getElementById("resolution").getAttribute("value").split(',');
-        MR.init({
-            outputSurfaceName      : 'output-surface',
-            outputWidth            : parseInt(RESOLUTION[0]),
-            outputHeight           : parseInt(RESOLUTION[1]),
-            glUseGlobalContext     : true,
-            // frees gl resources upon world switch
-            glDoResourceTracking   : true,
-            glEnableEditorHook     : true,
-            enableMultipleWorlds   : true,
-            enableEntryByButton    : true,
-            enableBellsAndWhistles : true,
-            synchronizeTimeWithServer : false,
-            // main() is the system's entry point
-            main : async () => {
-
-
-                MREditor.enable();
-
-                MREditor.init({
-                    defaultShaderCompilationFunction : MREditor.onNeedsCompilationDefault,
-                    //externalWindowGetter : function() { return MR.engine.externalWindow; }
-                });
-
-                MREditor.detectFeatures();
-
-                wrangler.isTransitioning = false;
-
-                let sourceFiles = document.getElementsByClassName("worlds");
-                
-                // call the main function of the selected world
-                if (MR.engine.options.enableMultipleWorlds) {
+                    MR.engine.isTransitioning = false;
 
                     try {
-
-                        let worldIt = sourceFiles[0].firstElementChild;
-
-                        while (worldIt !== null) {
-                            const src = worldIt.src;
-                            console.log("loading world:", src);
-                            const world     = await import(src);
-                            const localPath = getCurrentPath(src)
-
-
-                            MR.worlds.push({world : world, localPath : localPath});
-
-                            worldIt = worldIt.nextElementSibling;
-                        }
-
                         const worldInfo = MR.worlds[MR.worldIdx];
                         setPath(worldInfo.localPath);
                         wrangler.isTransitioning = true;
                         MR.engine.beginSetup(worldInfo.world.default()).catch(err => {
-                                //console.trace();
-                                console.error(err);
-                                MR.engine.doWorldTransition({direction : 1, broadcast : true});
+                            console.error(err);
+                            MR.engine.doWorldTransition({direction : 1, broadcast : true});
                         }).then(() => { wrangler.isTransitioning = false;               
-                                for (let d = 0; d < deferredActions.length; d += 1) {
-                                    deferredActions[d]();
+                            for (let d = 0; d < deferredActions.length; d += 1) {
+                                deferredActions[d]();
+                            }
+                            deferredActions = [];
+
+                            CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
+
+                            window.DISABLEMENUFORWORLDSEXCEPT(MR.worldIdx);
+                        });
+
+                    } catch (err) {
+                        console.error(err);
+                    }
+
+                    MR.initWorldsScroll();
+                    MR.initPlayerViewSelectionScroll();
+
+                    MR.syncClient.connect(window.IP, window.PORT_SYNC);
+
+                    window.COUNT = 0;
+
+                    
+                    MR.engine.defineWorldTransitionProcedure(function(args) {
+                        //console.trace();
+                        let ok = false;
+                        COUNT += 1;
+                        //console.log(COUNT, args);
+                        // try to transition to the next world
+                        while (!ok) {
+                            if (args.direction) {
+                                //console.log(COUNT, "has direction");
+                                MR.worldIdx = (MR.worldIdx + args.direction) % MR.worlds.length;
+                                if (MR.worldIdx < 0) {
+                                    MR.worldIdx = MR.worlds.length - 1;
                                 }
-                                deferredActions = [];
-
-                                CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
-
-                                window.DISABLEMENUFORWORLDSEXCEPT(MR.worldIdx);
-                        });
-
-                    } catch (err) {
-                        console.error(err);
-                    }
-
-                } else {
-                    try {
-                        
-                        const src  = sourceFiles[0].firstElementChild.src;
-                        setPath(getCurrentPath(src));
-
-                        const world = await import(src);
-                        MR.engine.beginSetup(world.default()).catch(err => {
-                                console.trace();
-                                console.error(err);
-
-                                CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
-                        });
-                    } catch (err) {
-                        console.error(err);
-                    }
-                }
-
-                MR.initWorldsScroll();
-                MR.initPlayerViewSelectionScroll();
-
-                MR.syncClient.connect(window.IP, window.PORT_SYNC);
-
-                window.COUNT = 0;
-
-                
-                wrangler.defineWorldTransitionProcedure(function(args) {
-                    //console.trace();
-                    let ok = false;
-                    COUNT += 1;
-                    //console.log(COUNT, args);
-                    // try to transition to the next world
-                    while (!ok) {
-                        if (args.direction) {
-                            //console.log(COUNT, "has direction");
-                            MR.worldIdx = (MR.worldIdx + args.direction) % MR.worlds.length;
-                            if (MR.worldIdx < 0) {
-                                MR.worldIdx = MR.worlds.length - 1;
+                            } else if (args.key !== null) {
+                                //console.log(COUNT, "key exists", args.key, "worldidx", MR.worldIdx);
+                                if (args.key == MR.worldIdx) {
+                                    ok = true;
+                                    continue;
+                                }
+                                MR.worldIdx = parseInt(args.key);
+                                //console.log(COUNT, "WORLDIDX",  MR.worldIdx);
                             }
-                        } else if (args.key !== null) {
-                            //console.log(COUNT, "key exists", args.key, "worldidx", MR.worldIdx);
-                            if (args.key == MR.worldIdx) {
-                                ok = true;
-                                continue;
-                            }
-                            MR.worldIdx = parseInt(args.key);
-                            //console.log(COUNT, "WORLDIDX",  MR.worldIdx);
-                        }
 
 
-                        wrangler.isTransitioning = true;
+                            MR.engine.isTransitioning = true;
 
-                        //console.log(COUNT, "transitioning to world: [" + MR.worldIdx + "]");
-                        //console.log(COUNT, "broadcast", args.broadcast, "direction: ", args.direction, "key", args.key);
+                            //console.log(COUNT, "transitioning to world: [" + MR.worldIdx + "]");
+                            //console.log(COUNT, "broadcast", args.broadcast, "direction: ", args.direction, "key", args.key);
 
-                        CanvasUtil.setOnResizeEventHandler(null);
-                        CanvasUtil.resize(MR.getCanvas(), 
-                            MR.engine.options.outputWidth, 
-                            MR.engine.options.outputHeight
-                        );
+                            CanvasUtil.setOnResizeEventHandler(null);
+                            CanvasUtil.resize(MR.getCanvas(), 
+                                MR.engine.options.outputWidth, 
+                                MR.engine.options.outputHeight
+                            );
 
-                        MR.engine._gl.useProgram(null);
-                        MR.engine._reset();
-                        MR.engine._glFreeResources();
-                        ScreenCursor.clearTargetEvents();
-                        Input.deregisterKeyHandlers();
+                            MR.engine.clearWorld();
+                            ScreenCursor.clearTargetEvents();
+                            Input.deregisterKeyHandlers();
 
-                        //console.log(COUNT, "SWITCH");
+                            try {
+                                // call the main function of the selected world
+                                MR.server.subsLocal = new ServerPublishSubscribe();
+                                MREditor.resetState();
+                                
+                                let hadError = false;
 
-                        try {
-                            // call the main function of the selected world
-                            MR.server.subsLocal = new ServerPublishSubscribe();
-                            MREditor.resetState();
-                            
+                                const worldInfo = MR.worlds[MR.worldIdx];
+                                setPath(worldInfo.localPath);
 
-                            let hadError = false;
-
-                            const worldInfo = MR.worlds[MR.worldIdx];
-                            setPath(worldInfo.localPath);
-
-                            MR.engine.beginSetup(worldInfo.world.default()).catch((e) => {
+                                MR.engine.beginSetup(worldInfo.world.default()).catch((e) => {
                                     console.error(e);
                                     setTimeout(function(){ 
-                                            console.log("Trying another world");
-                                            wrangler.doWorldTransition({direction : 1, broadcast : true});
+                                        console.log("Trying another world");
+                                        wrangler.doWorldTransition({direction : 1, broadcast : true});
                                     }, 500);  
-                            }).then(() => {
-                                wrangler.isTransitioning = false;
+                                }).then(() => {
+                                    MR.engine.isTransitioning = false;
 
-                                //console.log("now we should do deferred actions");
-                                //console.log("ready");
+                                    //console.log("now we should do deferred actions");
+                                    //console.log("ready");
 
-                                for (let d = 0; d < deferredActions.length; d += 1) {
-                                    deferredActions[d]();
-                                }
-                                deferredActions = [];
+                                    for (let d = 0; d < deferredActions.length; d += 1) {
+                                        deferredActions[d]();
+                                    }
+                                    deferredActions = [];
 
-                                CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
+                                    CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
 
-                                window.DISABLEMENUFORWORLDSEXCEPT(MR.worldIdx);
+                                    window.DISABLEMENUFORWORLDSEXCEPT(MR.worldIdx);
 
-                            });
+                                });
 
-                            ok = true;
+                                ok = true;
 
-                        } catch (e) {
-                            console.error(e);
+                            } catch (e) {
+                                console.error(e);
 
 
-                            setTimeout(function(){ 
-                                console.log(COUNT, "Trying another world");
-                            }, 500);
+                                setTimeout(function(){ 
+                                    console.log(COUNT, "Trying another world");
+                                }, 500);
+                            }
                         }
-                    }
 
-
-
-
-                    if (args.broadcast && MR.server.sock.readyState == WebSocket.OPEN) {
-                        //console.log(COUNT, "broadcasting");
-                        try {
-                            MR.server.sock.send(JSON.stringify({
-                                "MR_Message" : "Load_World", "key" : MR.worldIdx, "content" : "TODO", "count" : COUNT})
-                            );
-                        } catch (e) {
-                            console.error(e);
+                        if (args.broadcast && MR.server.sock.readyState == WebSocket.OPEN) {
+                            //console.log(COUNT, "broadcasting");
+                            try {
+                                MR.server.sock.send(JSON.stringify({
+                                    "MR_Message" : "Load_World", "key" : MR.worldIdx, "content" : "TODO", "count" : COUNT})
+                                );
+                            } catch (e) {
+                                console.error(e);
+                            }
                         }
-                    }
-                });
-        
-                MR.server.subs.subscribe("Load_World", (_, args) => {
+                    });
+            
+                    MR.server.subs.subscribe("Load_World", (_, args) => {
                         if (args.key === MR.worldIdx) {
                             return;
                         }
@@ -677,41 +417,297 @@ default: {
                         }
                         //console.log("not deferring transition");
                         MR.engine.doWorldTransition({direction : null, key : args.key, broadcast : false});
-                });
-
-            },
-            useExternalWindow : (new URLSearchParams(window.location.search)).has('externWin')
+                    });
+                },
+            });
+        }
+        
+        // TODO initialization order revision
+        MR.initialWorldIdx = 0;
+        MR.server.subs.subscribe("Init", (_, args) => {
+            MR.worldIdx = args.key || 0;
+            MR.initialWorldIdx = args.key || 0;
+            MR.server.uid = args.uid;
         });
 
+        MR.server.subs.subscribe("Log", (_, args) => {
+            if (MR.VRIsActive() || args.playerid == MR.playerid) {
+                return;
+            }
+
+            console.groupCollapsed("%clogs from pid=[%d]", "color: #00dd00;", args.id);
+            const joined = args.msg.join('\n');
+            console.log(joined);
+            console.groupEnd();
+
+        }, null);
+
+        MR.initServer();
+
+        setTimeout(() => {
+            run();
+        }, 100);
+        break;
     }
-    
-    // TODO initialization order revision
-    MR.initialWorldIdx = 0;
-    MR.server.subs.subscribe("Init", (_, args) => {
-        MR.worldIdx = args.key || 0;
-        MR.initialWorldIdx = args.key || 0;
-        MR.server.uid = args.uid;
-    });
+    case 1: {
+    }
+    default: {
+        function run() {
 
-    MR.server.subs.subscribe("Log", (_, args) => {
-        if (MR.VRIsActive() || args.playerid == MR.playerid) {
-            return;
+            let deferredActions = [];
+
+            const RESOLUTION = document.getElementById("resolution").getAttribute("value").split(',');
+            MR.init({
+                outputSurfaceName      : 'output-surface',
+                outputWidth            : parseInt(RESOLUTION[0]),
+                outputHeight           : parseInt(RESOLUTION[1]),
+                glUseGlobalContext     : true,
+                // frees gl resources upon world switch
+                glDoResourceTracking   : true,
+                glEnableEditorHook     : true,
+                enableMultipleWorlds   : true,
+                enableEntryByButton    : true,
+                enableBellsAndWhistles : true,
+                synchronizeTimeWithServer : false,
+                // main() is the system's entry point
+                main : async () => {
+
+
+                    MREditor.enable();
+
+                    MREditor.init({
+                        defaultShaderCompilationFunction : MREditor.onNeedsCompilationDefault,
+                        //externalWindowGetter : function() { return MR.engine.externalWindow; }
+                    });
+
+                    MREditor.detectFeatures();
+
+                    wrangler.isTransitioning = false;
+
+                    let sourceFiles = document.getElementsByClassName("worlds");
+                    
+                    // call the main function of the selected world
+                    if (MR.engine.options.enableMultipleWorlds) {
+
+                        try {
+
+                            let worldIt = sourceFiles[0].firstElementChild;
+
+                            while (worldIt !== null) {
+                                const src = worldIt.src;
+                                console.log("loading world:", src);
+                                const world     = await import(src);
+                                const localPath = getCurrentPath(src)
+
+
+                                MR.worlds.push({world : world, localPath : localPath});
+
+                                worldIt = worldIt.nextElementSibling;
+                            }
+
+                            const worldInfo = MR.worlds[MR.worldIdx];
+                            setPath(worldInfo.localPath);
+                            wrangler.isTransitioning = true;
+                            MR.engine.beginSetup(worldInfo.world.default()).catch(err => {
+                                    //console.trace();
+                                    console.error(err);
+                                    MR.engine.doWorldTransition({direction : 1, broadcast : true});
+                            }).then(() => { wrangler.isTransitioning = false;               
+                                    for (let d = 0; d < deferredActions.length; d += 1) {
+                                        deferredActions[d]();
+                                    }
+                                    deferredActions = [];
+
+                                    CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
+
+                                    window.DISABLEMENUFORWORLDSEXCEPT(MR.worldIdx);
+                            });
+
+                        } catch (err) {
+                            console.error(err);
+                        }
+
+                    } else {
+                        try {
+                            
+                            const src  = sourceFiles[0].firstElementChild.src;
+                            setPath(getCurrentPath(src));
+
+                            const world = await import(src);
+                            MR.engine.beginSetup(world.default()).catch(err => {
+                                    console.trace();
+                                    console.error(err);
+
+                                    CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
+                            });
+                        } catch (err) {
+                            console.error(err);
+                        }
+                    }
+
+                    MR.initWorldsScroll();
+                    MR.initPlayerViewSelectionScroll();
+
+                    MR.syncClient.connect(window.IP, window.PORT_SYNC);
+
+                    window.COUNT = 0;
+
+                    
+                    wrangler.defineWorldTransitionProcedure(function(args) {
+                        //console.trace();
+                        let ok = false;
+                        COUNT += 1;
+                        //console.log(COUNT, args);
+                        // try to transition to the next world
+                        while (!ok) {
+                            if (args.direction) {
+                                //console.log(COUNT, "has direction");
+                                MR.worldIdx = (MR.worldIdx + args.direction) % MR.worlds.length;
+                                if (MR.worldIdx < 0) {
+                                    MR.worldIdx = MR.worlds.length - 1;
+                                }
+                            } else if (args.key !== null) {
+                                //console.log(COUNT, "key exists", args.key, "worldidx", MR.worldIdx);
+                                if (args.key == MR.worldIdx) {
+                                    ok = true;
+                                    continue;
+                                }
+                                MR.worldIdx = parseInt(args.key);
+                                //console.log(COUNT, "WORLDIDX",  MR.worldIdx);
+                            }
+
+
+                            wrangler.isTransitioning = true;
+
+                            //console.log(COUNT, "transitioning to world: [" + MR.worldIdx + "]");
+                            //console.log(COUNT, "broadcast", args.broadcast, "direction: ", args.direction, "key", args.key);
+
+                            CanvasUtil.setOnResizeEventHandler(null);
+                            CanvasUtil.resize(MR.getCanvas(), 
+                                MR.engine.options.outputWidth, 
+                                MR.engine.options.outputHeight
+                            );
+
+                            MR.engine._gl.useProgram(null);
+                            MR.engine._reset();
+                            MR.engine._glFreeResources();
+                            ScreenCursor.clearTargetEvents();
+                            Input.deregisterKeyHandlers();
+
+                            //console.log(COUNT, "SWITCH");
+
+                            try {
+                                // call the main function of the selected world
+                                MR.server.subsLocal = new ServerPublishSubscribe();
+                                MREditor.resetState();
+                                
+
+                                let hadError = false;
+
+                                const worldInfo = MR.worlds[MR.worldIdx];
+                                setPath(worldInfo.localPath);
+
+                                MR.engine.beginSetup(worldInfo.world.default()).catch((e) => {
+                                        console.error(e);
+                                        setTimeout(function(){ 
+                                                console.log("Trying another world");
+                                                wrangler.doWorldTransition({direction : 1, broadcast : true});
+                                        }, 500);  
+                                }).then(() => {
+                                    wrangler.isTransitioning = false;
+
+                                    //console.log("now we should do deferred actions");
+                                    //console.log("ready");
+
+                                    for (let d = 0; d < deferredActions.length; d += 1) {
+                                        deferredActions[d]();
+                                    }
+                                    deferredActions = [];
+
+                                    CanvasUtil.rightAlignCanvasContainer(MR.getCanvas());
+
+                                    window.DISABLEMENUFORWORLDSEXCEPT(MR.worldIdx);
+
+                                });
+
+                                ok = true;
+
+                            } catch (e) {
+                                console.error(e);
+
+
+                                setTimeout(function(){ 
+                                    console.log(COUNT, "Trying another world");
+                                }, 500);
+                            }
+                        }
+
+
+
+
+                        if (args.broadcast && MR.server.sock.readyState == WebSocket.OPEN) {
+                            //console.log(COUNT, "broadcasting");
+                            try {
+                                MR.server.sock.send(JSON.stringify({
+                                    "MR_Message" : "Load_World", "key" : MR.worldIdx, "content" : "TODO", "count" : COUNT})
+                                );
+                            } catch (e) {
+                                console.error(e);
+                            }
+                        }
+                    });
+            
+                    MR.server.subs.subscribe("Load_World", (_, args) => {
+                            if (args.key === MR.worldIdx) {
+                                return;
+                            }
+
+                            //console.log("loading world", args);
+                            if (wrangler.isTransitioning) {
+                                //console.log("is deferring transition");
+                                deferredActions = [];
+                                deferredActions.push(() => { 
+                                    MR.engine.doWorldTransition({direction : null, key : args.key, broadcast : false});
+                                });
+                                return;
+                            }
+                            //console.log("not deferring transition");
+                            MR.engine.doWorldTransition({direction : null, key : args.key, broadcast : false});
+                    });
+
+                },
+                useExternalWindow : (new URLSearchParams(window.location.search)).has('externWin')
+            });
+
         }
+        
+        // TODO initialization order revision
+        MR.initialWorldIdx = 0;
+        MR.server.subs.subscribe("Init", (_, args) => {
+            MR.worldIdx = args.key || 0;
+            MR.initialWorldIdx = args.key || 0;
+            MR.server.uid = args.uid;
+        });
 
-        console.groupCollapsed("%clogs from pid=[%d]", "color: #00dd00;", args.id);
-        const joined = args.msg.join('\n');
-        console.log(joined);
-        console.groupEnd();
+        MR.server.subs.subscribe("Log", (_, args) => {
+            if (MR.VRIsActive() || args.playerid == MR.playerid) {
+                return;
+            }
 
-    }, null);
+            console.groupCollapsed("%clogs from pid=[%d]", "color: #00dd00;", args.id);
+            const joined = args.msg.join('\n');
+            console.log(joined);
+            console.groupEnd();
 
-    MR.initServer();
+        }, null);
 
-    setTimeout(() => {
-        run();
-    }, 100);
+        MR.initServer();
 
-    break;
-}
+        setTimeout(() => {
+            run();
+        }, 100);
+
+        break;
+    }
 }
 

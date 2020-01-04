@@ -2,11 +2,42 @@
 
 import {Lock} from "/server/lock.js";
 
+export default function main() {
+   const def = {
+      // the customized name of this world
+      // TODO: automatic assign the name from the file name, and move this default module outside of the world file since they are the same
+      name: 'week10 WebXR',   
+      setup        : setup,
+      onStartFrame : onStartFrame,
+      onDraw       : onDraw,
+      onEndFrame   : onEndFrame,
+
+      // (New Info): New callbacks:
+
+      // VR-specific drawing callbacks
+      // e.g. for when the UI must be different in VR than on desktop, currently setting to the same callback as on desktop
+      onStartFrameXR : onStartFrame,
+      onDrawXR       : onDraw,
+      onEndFrameXR   : onEndFrame,
+      onReload       : onReload,
+      onExit         : onExit,
+      onExitXR       : onExit,
+
+      // Note: only uncomment if using WebXR
+      // for debugging engine-side or taking full control
+      // over the system, you can override the "lower-level" wrapper functions
+      // and edit them at runtime as well:
+
+      // onAnimationFrameWindow : AnimationFrameWindow,
+      // onAnimationFrameXR : AnimationFrameXR,
+   };
+   return def;   
+}
+
 function initVar(){
+
    const ENABLE_BRIGHTNESS_CHECK = false;
-
    let enableModeler = true;
-
    let enableCalibrator = true;
    
    /*Example Grabble Object*/
@@ -31,10 +62,14 @@ function initVar(){
 
 async function onReload(state) {
    await defaultReload(state);
+   // customized operation here
+   // ...
 }
 
 async function onExit(state) {
    await defaultExit(state);
+   // customized operation here
+   // ...
 }
 
 async function setup(state) {
@@ -44,6 +79,7 @@ async function setup(state) {
 
    await defaultSetup(state);
 
+   // customized operation here
    // I propose adding a dictionary mapping texture strings to locations, so that drawShapes becomes clearer
    const images = await imgutil.loadImagesPromise([
       getPath("./../../assets/textures/wood.png"),
@@ -73,26 +109,6 @@ async function setup(state) {
    sendSpawnMessage(grabbableCube);
 
    initVar();
-}
-
-/************************************************************************
-
-This is an example of a spawn message we send to the server.
-
-************************************************************************/
-
-function sendSpawnMessage(object) {
-   const response = 
-      {
-         type: "spawn",
-         uid: object.uid,
-         lockid: -1,
-         state: {
-            position: object.position,
-            orientation: object.orientation,
-         }
-      };
-   MR.syncClient.send(response);
 }
 
 function onStartFrame(t, state) {
@@ -154,6 +170,31 @@ function onStartFrame(t, state) {
     pollGrab(state);
 }
 
+function onEndFrame(t, state) {   
+   pollAvatarData();
+   defaultEndFrame(t, state);
+}
+
+/************************************************************************
+
+This is an example of a spawn message we send to the server.
+
+************************************************************************/
+
+function sendSpawnMessage(object) {
+   const response = 
+      {
+         type: "spawn",
+         uid: object.uid,
+         lockid: -1,
+         state: {
+            position: object.position,
+            orientation: object.orientation,
+         }
+      };
+   MR.syncClient.send(response);
+}
+
 /*-----------------------------------------------------------------
 
 If the controller tip is near to a menu item, return the index
@@ -181,10 +222,6 @@ let findInMenu = (mp, mq, p) => {
          return n;
    }
    return -1;
-}
-
-function Obj(shape) {
-   this.shape = shape;
 }
 
 function onDraw(t, projMat, viewMat, state, info) {
@@ -380,255 +417,7 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
       Here is where we draw avatars and controllers.
    -----------------------------------------------------------------*/
    
-   for (let id in MR.avatars) {
-      
-      const avatar = MR.avatars[id];
-      if (MR.playerid == avatar.playerid)
-         continue;
-
-      let headsetPos = avatar.headset.position;
-      let headsetRot = avatar.headset.orientation;
-      if(headsetPos == null || headsetRot == null)
-         continue;
-      if (typeof headsetPos == 'undefined') {
-         console.log(id);
-         console.log("not defined");
-      }
-
-      if (avatar.mode == MR.UserType.vr) {
-         const rcontroller = avatar.rightController;
-         const lcontroller = avatar.leftController;
-         
-         let hpos = headsetPos.slice();
-         hpos[1] += EYE_HEIGHT;
-         let lpos = lcontroller.position.slice();
-         lpos[1] += EYE_HEIGHT;
-         let rpos = rcontroller.position.slice();
-         rpos[1] += EYE_HEIGHT;
-
-         drawHeadset(hpos, headsetRot);
-         drawController(rpos, rcontroller.orientation, 0);
-         drawController(lpos, lcontroller.orientation, 1);
-      }
-
-      else {
-         m.save();
-       m.translate(headsetPos);
-       m.rotateQ(headsetRot);
-       drawCamera();
-         m.restore();
-      }
+   for (let id in MR.avatars) {      
+      drawPlayer(MR.avatars[id]);
    }
 }
-
-function onEndFrame(t, state) {
-   pollAvatarData();
-
-   defaultEndFrame(t, state);
-}
-
-export default function main() {
-   const def = {
-      name: 'week10 WebXR',
-      setup        : setup,
-      onStartFrame : onStartFrame,
-      onDraw       : onDraw,
-      onEndFrame   : onEndFrame,
-
-      // (New Info): New callbacks:
-
-      // VR-specific drawing callbacks
-      // e.g. for when the UI must be different 
-      //      in VR than on desktop
-      //      currently setting to the same callback as on desktop
-      onStartFrameXR : onStartFrame,
-      onDrawXR       : onDraw,
-      onEndFrameXR   : onEndFrame,
-      // call upon reload
-      onReload       : onReload,
-      // call upon world exit
-      onExit         : onExit,
-      onExitXR       : onExit,
-
-// Note: only uncomment if using WebXR
-// for debugging engine-side or taking full control
-// over the system, you can override the "lower-level" wrapper functions
-// and edit them at runtime as well:
-/*
-    onAnimationFrameWindow : function(t) {
-        const self = MR.engine;
-
-        self.time = t / 1000.0;
-        self.timeMS = t;
-
-        const gl = self.GPUCtx; 
-
-        self._animationHandle = window.requestAnimationFrame(self.config.onAnimationFrameWindow);
-        gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-        
-        const viewport = self.systemArgs.viewport;
-        viewport.x      = 0;
-        viewport.y      = 0;
-        viewport.width  = gl.drawingBufferWidth;
-        viewport.height = gl.drawingBufferHeight;
-        self.systemArgs.viewIdx = 0;
-
-        mat4.identity(self._viewMatrix);
-        
-        mat4.perspective(self._projectionMatrix, 
-            Math.PI / 4,
-            self._canvas.width / self._canvas.height,
-            0.01, 1024
-        );
-
-        Input.updateKeyState();
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        self.config.onStartFrame(t, self.customState, self.systemArgs);
-
-        self.config.onDraw(t, self._projectionMatrix, self._viewMatrix, self.customState, self.systemArgs);
-        self.config.onEndFrame(t, self.customState, self.systemArgs);
-    },
-    onAnimationFrameXR : function(t, frame) {
-        /////////////////////////////////////
-        // temp debug
-        redirectConsole(1000);
-        try {
-        /////////////////////////////////////
-
-        const self = MR.engine;
-
-        // update time
-        self.time   = t / 1000.0;
-        self.timeMS = t;
-
-        //console.log("in animation frame:");
-        //console.log(frame ? true : false);
-
-        const xrInfo  = self.xrInfo;
-
-        //console.log("is immersive");
-        //console.log(xrInfo.isImmersive);
-
-        const session = frame.session;
-
-        // request next frame
-        self._animationHandle = xrInfo.session.requestAnimationFrame(
-            self.config.onAnimationFrameXR
-        );
-
-        // unpack session and pose information
-        const layer   = session.renderState.baseLayer;
-
-        const pose    = frame.getViewerPose(xrInfo.immersiveRefSpace);
-        xrInfo.pose = pose;
-        // updates the extended pose data
-        // containing buffer representations of position, orientation
-        xrInfo.poseEXT.update(xrInfo.pose);
-
-
-        function TEMPGripControllerUpdate() {
-            const inputSources = session.inputSources;
-            for (let i = 0; i < inputSources.length; i += 1) {
-                const inputSource = inputSources[i];
-
-                //console.log("input source found=[" + i + "]");
-                //console.log("has grip: " + (inputSource.gripSpace ? true : false));
-
-                if (inputSource.gripSpace) {
-                    const gripPose = frame.getPose(inputSource.gripSpace, xrInfo.immersiveRefSpace);
-                    if (gripPose) {
-                        //console.log("handedness: " + inputSource.handedness);
-
-                        // TODO(TR): temporary "hack", 
-                        switch (inputSource.handedness) {
-                        case "left": {
-                            // TODO(TR): should use the transform matrices provided for position/orientation,
-                            // also provides a "pointer tip" transform
-                            MR.leftController = inputSource.gamepad;
-                            break;
-                        }
-                        case "right": {
-                            MR.rightController = inputSource.gamepad;
-                            break;
-                        }
-                        case "none": {
-                            break;
-                        }
-                        }
-                    // If we have a grip pose use it to render a mesh showing the
-                    // position of the controller.
-                    // NOTE: this contains a "handedness property". Wonderful!
-                    //scene.inputRenderer.addController(gripPose.transform.matrix, inputSource.handedness);
-                    }
-                }
-            }
-        }
-        TEMPGripControllerUpdate();
-
-        self.systemArgs.frame = frame;
-        self.systemArgs.pose  = pose;
-        // renderState contains depthFar, depthNear
-        self.systemArgs.renderState = session.renderState;
-
-        const gl        = self.GPUCtx;
-        const glAPI     = self.gpuAPI;
-        const glCtxInfo = self.gpuCtxInfo;
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
-
-        // begin frame
-        self.config.onStartFrameXR(t, self.customState, self.systemArgs);
-        // draw
-        {
-            const viewport = self.systemArgs.viewport;
-
-            const views     = pose.views;
-            const viewCount = views.length;
-
-            // in this configuration of the animation loop,
-            // for each view, we re-draw the whole screne -
-            // other configurations possible 
-            // (for example, for each object, draw every view (to avoid repeated binding))
-            for (let i = 0; i < viewCount; i += 1) {
-                self.systemArgs.viewIdx = i;
-
-                const view     = views[i];
-                const viewport = layer.getViewport(view);
-
-                self.systemArgs.view     = view;
-                self.systemArgs.viewport = viewport;
-
-                gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-
-                self.config.onDrawXR(
-                    t, 
-                    view.projectionMatrix,
-                    // view.transform.matrix gives you the camera matrix
-                    view.transform.inverse.matrix,
-                    // user state
-                    self.customState,
-                    // pass all API-specific information
-                    // (transforms, tracking, direct access to render state, etc.)
-                    self.systemArgs
-                );
-            }
-        }
-        // end frame
-        self.config.onEndFrameXR(t, self.customState, self.systemArgs);
-
-        ////////////////////////////////////////
-        // temp debug
-        } catch (err) {
-            console.error(err.stack);
-        }
-        console.log();
-        flushAndRestoreConsole();
-        ////////////////////////////////////////
-    }
-    */
-   };
-
-   return def;
-}
-
