@@ -18,5 +18,5 @@ cd wasi-libc
 
 export PATH=/usr/local/opt/llvm/bin:$PATH
 
-mkdir /Users/Shared/wasi-libc-root
-make install INSTALL_DIR=/Users/Shared/wasi-libc-root
+mkdir /usr/local/opt/wasi-libc
+make install INSTALL_DIR=/usr/local/opt/wasi-libc

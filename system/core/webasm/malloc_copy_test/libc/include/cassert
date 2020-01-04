@@ -1,0 +1,14 @@
+#ifndef _CASSERT_H
+#define _CASSERT_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <assert.h>
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

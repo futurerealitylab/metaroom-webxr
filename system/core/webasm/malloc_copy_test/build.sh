@@ -2,21 +2,33 @@
 
 echo "building wasm module"
 
-clang \
+clang++ \
 --target=wasm32-unknown-wasi \
---std=c11 \
+--std=c++11 \
+-stdlib=libc++ \
 -O3 \
 -flto \
---sysroot /Users/Shared/wasi-libc-root \
+-fno-exceptions \
+-D WASM_BUILD \
+-D _LIBCPP_HAS_NO_THREADS \
+--sysroot /usr/local/opt/wasi-libc \
+-I/usr/local/opt/wasi-libc/include \
+-I/usr/local/opt/glm/include \
+-I./libcxx/ \
+-L./ \
+-lc++ \
+-lc++abi \
 -nostartfiles \
 -Wl,-allow-undefined-file wasm.syms \
 -Wl,--import-memory \
 -Wl,--no-entry \
 -Wl,--export-all \
 -Wl,--lto-O3 \
--Wl,-z,stack-size=$[8 * 1024 * 1024] \
+-Wl,-lc++, \
+-Wl,-lc++abi, \
+-Wl,-z,stack-size=$[1024 * 1024] \
 -o library.wasm \
-library.c
+library.cpp
 
 # clang \
 # -cc1 \

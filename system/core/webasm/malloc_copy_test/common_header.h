@@ -52,7 +52,23 @@ typedef float64  f64;
 typedef u64      usize;
 typedef i64      isize;
 
-#define EXPORT __attribute__( ( visibility( "default" ) ) 
+
+
+
+#ifdef WASM_BUILD
+    #define EXPORT_WASM __attribute__((visibility("default"))) extern "C"
+    #define __EMSCRIPTEN__ 
+#else
+    #define EXPORT_WASM
+#endif
+
+#ifdef __cplusplus
+    #define extern_c_begin extern "C" {
+    #define extern_c_end }
+#else
+    #define extern_c_begin
+    #define extern_c_end
+#endif
 
 
 #endif

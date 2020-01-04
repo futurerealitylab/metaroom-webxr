@@ -1,0 +1,14 @@
+#ifndef _CMATH_H
+#define _CMATH_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <math.h>
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
