@@ -64,6 +64,8 @@ long fibonacci(unsigned n) {
     return fibonacci(n-1) + fibonacci(n-2);
 }
 
+namespace gmath = glm;
+
 void set_char(char* input)
 {
     input[0] = '\'';
@@ -76,9 +78,9 @@ void set_char(char* input)
     auto WEE = make_BLA<int>();
     WEE.x = 18;
 
-    glm::vec4 v(100.0f, 200.0f, 300.0f, 1.0f);
+    gmath::vec4 v(100.0f, 200.0f, 300.0f, 1.0f);
 
-    glm::vec4 v_out = glm::mat4(1.0f) * v;
+    gmath::vec4 v_out = gmath::mat4(1.0f) * v;
 
     input[0] = 5 + static_cast<int>(v_out.x) * input[1];
 
