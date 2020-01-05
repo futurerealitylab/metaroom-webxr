@@ -12,6 +12,17 @@ namespace gmath = glm;
 
 #include <vector>
 #include <type_traits>
+#include <new>
+#include <memory>
+
+#include <assert.h>
+
+#define when if constexpr
+
+//try -Clink-arg=--export=__heap_base
+
+extern unsigned char __heap_base;
+extern unsigned char __data_end;
 
 
 template <typename T>
@@ -29,7 +40,6 @@ struct Bla_C {
     float y;
     Bla_C(int x_, float y_) : x(x_), y(y_) {}
 };
-
 
 extern_c_begin()
 
@@ -93,10 +103,17 @@ void set_char(char* input)
 
     auto X = new BLA<uint8>();
 
-    std::vector<int> v2;
     //v2.push_back(2);
 
-    delete X;
+    //delete X;
+
+    const bool branch_a = true;
+
+    when (branch_a) {
+
+    } else {
+
+    }
 }
 
 extern_c_end()

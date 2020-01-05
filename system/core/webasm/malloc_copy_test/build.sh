@@ -16,6 +16,7 @@ clang++ \
 -I/usr/local/opt/glm/include \
 -I./libcxx/ \
 -L./ \
+-Wl,--export=malloc \
 -lc++ \
 -lc++abi \
 -nostartfiles \
