@@ -1,10 +1,11 @@
 #include "common_header.h"
 
+#define GLM_FORCE_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
-#include <unordered_map>
-#include <vector>
-#include <string>
-#include <chrono>
+#include <limits>
+#include <time.h>
+#define POSITIVE_INFINITY (std::numeric_limits<f64>::infinity())
+#define NEGATIVE_INFINITY (-POSITIVE_INFINITY)
 
 template <typename T>
 struct BLA {
@@ -13,19 +14,11 @@ struct BLA {
 template <typename T>
 BLA<T> make_BLA() {
     BLA<T> bla;
-
-    std::unordered_map<T, T> map;
-    std::vector<T> bla2;
-
-    std::string str = "WEE";
-    //str = str.substr(0, 2);
     return bla;
 }
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+extern_c_begin()
 
 char* malloc_copy(char* input)
 {   
@@ -84,21 +77,7 @@ void set_char(char* input)
 
     input[0] = 5 + static_cast<int>(v_out.x) * input[1];
 
-    /*
-
-     auto start = std::chrono::system_clock::now();
-    long out = fibonacci(42);
-    auto end = std::chrono::system_clock::now();
- 
-    std::chrono::duration<double> elapsed_seconds = end-start;
-    std::time_t end_time = std::chrono::system_clock::to_time_t(end);
- 
-              auto elapsed = elapsed_seconds.count();
-
-              */
 }
 
-#ifdef __cplusplus
-}
-#endif
+extern_c_end()
 

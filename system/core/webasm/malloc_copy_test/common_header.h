@@ -63,11 +63,11 @@ typedef i64      isize;
 #endif
 
 #ifdef __cplusplus
-    #define extern_c_begin extern "C" {
-    #define extern_c_end }
+    #define extern_c_begin() extern "C" {
+    #define extern_c_end() }
 #else
-    #define extern_c_begin
-    #define extern_c_end
+    #define extern_c_begin()
+    #define extern_c_end()
 #endif
 
 

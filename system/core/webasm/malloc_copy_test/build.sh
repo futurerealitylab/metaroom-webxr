@@ -4,8 +4,8 @@ echo "building wasm module"
 
 clang++ \
 --target=wasm32-unknown-wasi \
---std=c++11 \
--stdlib=libc++ \
+--std=c++17 \
+-nostdlib++ \
 -O3 \
 -flto \
 -fno-exceptions \
