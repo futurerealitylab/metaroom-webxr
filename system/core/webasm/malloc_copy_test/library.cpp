@@ -2,10 +2,17 @@
 
 #define GLM_FORCE_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
+
+namespace gmath = glm;
+
 #include <limits>
 #include <time.h>
 #define POSITIVE_INFINITY (std::numeric_limits<f64>::infinity())
 #define NEGATIVE_INFINITY (-POSITIVE_INFINITY)
+
+#include <vector>
+#include <type_traits>
+
 
 template <typename T>
 struct BLA {
@@ -16,6 +23,12 @@ BLA<T> make_BLA() {
     BLA<T> bla;
     return bla;
 }
+
+struct Bla_C {
+    int x;
+    float y;
+    Bla_C(int x_, float y_) : x(x_), y(y_) {}
+};
 
 
 extern_c_begin()
@@ -57,7 +70,6 @@ long fibonacci(unsigned n) {
     return fibonacci(n-1) + fibonacci(n-2);
 }
 
-namespace gmath = glm;
 
 void set_char(char* input)
 {
@@ -75,8 +87,16 @@ void set_char(char* input)
 
     gmath::vec4 v_out = gmath::mat4(1.0f) * v;
 
-    input[0] = 5 + static_cast<int>(v_out.x) * input[1];
+    Bla_C Y = Bla_C(input[1], (float)input[2]);
 
+    input[0] = (int)std::is_pod<BLA<int>>::value + Y.x + 5 + static_cast<int>(v_out.x) * input[1];
+
+    auto X = new BLA<uint8>();
+
+    std::vector<int> v2;
+    //v2.push_back(2);
+
+    delete X;
 }
 
 extern_c_end()

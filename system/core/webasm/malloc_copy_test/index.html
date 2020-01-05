@@ -5,6 +5,8 @@
   <body>
     <script type="module">
 
+      import * as WASM from "./wasm.js";
+
       // very helpful tutorials:
       //
       // https://depth-first.com/articles/2019/10/16/compiling-c-to-webassembly-and-running-it-without-emscripten/
@@ -19,12 +21,11 @@
           const imports = {};
 
           const TOTAL_MEMORY   = 16777216;
-          const WASM_PAGE_SIZE = 65536;
 
           // Build the WebAssembly instance.
           let memory = new WebAssembly.Memory({ 
-            initial : TOTAL_MEMORY / WASM_PAGE_SIZE,
-            maximum : TOTAL_MEMORY / WASM_PAGE_SIZE
+            initial : TOTAL_MEMORY / WASM.PAGE_SIZE,
+            maximum : TOTAL_MEMORY / WASM.PAGE_SIZE
           }); // old: 2
           // const response = await fetch('./library.wasm');
           // const bytes = await response.arrayBuffer();
@@ -32,11 +33,16 @@
           //   env: { memory }
           // }); const wasm = {instance : instance};
 
+          const outsideObj = {x : "hi", y : "there!"};
+
           imports.memory = memory;
           imports.print_num = function(val) {
             console.log("Number received from WebASM: ", val);
+
             return val * 2;
           }
+
+          
 
           const wasm = await WebAssembly.instantiateStreaming(
             fetch("./library.wasm"),
