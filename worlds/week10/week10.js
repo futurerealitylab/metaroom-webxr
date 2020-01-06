@@ -962,12 +962,13 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    m.restore();
 
    const offsetTrack = [0, 0, -1];
-
+   state.isToon = true;
    drawSkeleton(payload_skeleton, [1, 0, 0]);
    m.save();
       m.translate(offsetTrack);
       drawSkeleton(payload_skeleton2, [0, 0, 1]);
    m.restore();
+   state.isToon = false;
 
    /*-----------------------------------------------------------------
       Here is where we draw avatars and controllers.
