@@ -1,5 +1,23 @@
 "use strict";
 
+
+export const COMMAND_TYPE_CLEAR_RECT    = 0;
+export const COMMAND_TYPE_FILL_COLOR    = 1;
+export const COMMAND_TYPE_FILL_RECT     = 2;
+export const COMMAND_TYPE_SUBMIT_BUFFER = 3;
+export const COMMAND_TYPE_SAVE          = 4;
+export const COMMAND_TYPE_RESTORE       = 5;
+export const COMMAND_TYPE_TRANSLATE     = 6;
+export const COMMAND_TYPE_LINE_WIDTH    = 7;
+export const COMMAND_TYPE_STROKE_RECT   = 8;
+export const COMMAND_TYPE_MOVE_TO       = 9;
+export const COMMAND_TYPE_LINE_TO       = 10;
+export const COMMAND_TYPE_CLOSE_PATH    = 11;
+export const COMMAND_TYPE_STROKE        = 12;
+export const COMMAND_TYPE_BEGIN_PATH    = 13;
+export const COMMAND_TYPE_COMMAND_COUNT = 14;
+
+
 export function attachBindings(imports, ctx) {
     imports.global_alpha = function(a) {
       //console.log("global_alpha()", a)

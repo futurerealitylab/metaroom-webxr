@@ -15,13 +15,14 @@
       // https://aransentin.github.io/cwasm/
       //
       const state = {};
+      window.state = state;
 
       function setup(state) {
         const canvas = document.createElement('canvas');
         state.cvs = canvas;
         canvas.id             = "WEE";
-        canvas.width          = 1280;
-        canvas.height         = 720;
+        canvas.width          = 256;
+        canvas.height         = 256;
         canvas.style.zIndex   = 8;
 
         document.body.appendChild(canvas);
@@ -30,6 +31,7 @@
         window.ctx = ctx;
 
         ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+        ctx.strokeStyle = 'rgba(0, 0, 0, 1)';
 
         // ctx.fillRect(0, 0, canvas.width, canvas.height);
         
@@ -45,6 +47,8 @@
               initial : TOTAL_MEMORY / WASM.PAGE_SIZE,
               maximum : TOTAL_MEMORY / WASM.PAGE_SIZE
             }); // old: 2
+
+            state.memory = new Float32Array(memory.buffer);
             // const response = await fetch('./library.wasm');
             // const bytes = await response.arrayBuffer();
             // const { instance } = await WebAssembly.instantiate(bytes, {
@@ -54,6 +58,9 @@
             const outsideObj = {x : "hi", y : "there!"};
 
             imports.memory = memory;
+
+            state.imports = imports;
+
             imports.print_num = function(val) {
               console.log("Number received from WebASM: ", val);
 
@@ -87,6 +94,8 @@
               {env : imports}
             );
 
+            state.exports = wasm.instance.exports;
+
             // Text to copy.
             const text = 'Hello from JavaScript!';
 
@@ -114,20 +123,189 @@
             outputPtr = null;
 
 
-            const worldStatePtr = wasm.instance.exports.setup(state.cvs.width, state.cvs.height);
+            const byteView = new Uint8Array(memory.buffer);
+            const commandsBytePtr = wasm.instance.exports.setup(state.cvs.width, state.cvs.height);
+
+            const f32View = new Float32Array(memory.buffer);
+            const commandsF32Ptr = commandsBytePtr / Float32Array.BYTES_PER_ELEMENT;
+
+            console.log(commandsBytePtr, commandsF32Ptr);
 
             let tPrev = 0;
             let onDraw = wasm.instance.exports.on_draw;
 
-            function animationFrameProc(t) {
-                window.requestAnimationFrame(animationFrameProc);
+            function sin01(val) {
+              return (Math.sin(val) + 1) / 2.0;
+            }
+
+            function animationFrameProcLocal(t) {
+                requestAnimationFrame(animationFrameProcLocal);
 
                 window.DIFF = t - tPrev;
                 tPrev = t;
+                
+                ctx.clearRect(0.0, 0.0, canvas.width, canvas.height);
+
+                    const time_s = t / 1000.0;
+
+                ctx.fillStyle = "rgba(" + (20) + "," + (127) + "," + 178 + "," + (sin01(time_s)) + ")";
+    
+                ctx.save();
+                {
+                    ctx.beginPath();
+
+                    ctx.translate(canvas.width * sin01(time_s), 0.0);
+                    // Set line width
+                    ctx.lineWidth = 10;
+
+                    // Wall
+                    ctx.strokeRect(75, 140, 150, 110);
+
+                    // Door
+                    ctx.fillRect(130, 190, 40, 60);
+
+                    // Roof
+                    
+                    ctx.moveTo(50, 140);
+                    ctx.lineTo(150, 60);
+                    ctx.lineTo(250, 140);
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+                ctx.restore();              
+            }
+            function animationFrameProc(t) {
+                requestAnimationFrame(animationFrameProc);
+
+                window.DIFF = t - tPrev;
+                tPrev = t;
+                
                 onDraw(t);
+
+                {
+                  // execute commands in the command buffer
+                  for (let i = commandsF32Ptr; ; ) {
+                    const cmd = f32View[i];
+                    switch (cmd) {
+                    case WASM_Canvas2D.COMMAND_TYPE_CLEAR_RECT: {
+                      // console.log("clear rect");
+                      // console.log(
+                      //   f32View[i + 1], 
+                      //   f32View[i + 2], 
+                      //   f32View[i + 3], 
+                      //   f32View[i + 4]
+                      // );
+                      ctx.clearRect(
+                        f32View[i + 1], 
+                        f32View[i + 2], 
+                        f32View[i + 3], 
+                        f32View[i + 4]
+                      );
+                      i += 5;
+                      break;
+                    }
+                    case WASM_Canvas2D.COMMAND_TYPE_FILL_COLOR: {
+                      // console.log("fill color");
+                      // console.log(
+                      //   f32View[i + 1], 
+                      //   f32View[i + 2], 
+                      //   f32View[i + 3], 
+                      //   f32View[i + 4]);
+                      ctx.fillStyle = 'rgba(' + 
+                        (f32View[i + 1]) + ',' + 
+                        (f32View[i + 2]) + ',' + 
+                        (f32View[i + 3]) + ',' + 
+                        (f32View[i + 4]) + ')';
+
+                      i += 5;
+                      break;
+                    }
+                    case WASM_Canvas2D.COMMAND_TYPE_FILL_RECT: {
+                      // console.log("fill rect");
+                      // console.log(
+                      //   f32View[i + 1], 
+                      //   f32View[i + 2], 
+                      //   f32View[i + 3], 
+                      //   f32View[i + 4]);
+                      ctx.fillRect(
+                        f32View[i + 1], 
+                        f32View[i + 2], 
+                        f32View[i + 3], 
+                        f32View[i + 4]
+                      );
+                      i += 5;
+                      break;
+                    }
+                    case WASM_Canvas2D.COMMAND_TYPE_SAVE: {
+                      ctx.save();
+                      i += 1;
+                      break;
+                    }
+                    case WASM_Canvas2D.COMMAND_TYPE_RESTORE: {
+                      ctx.restore();
+                      i += 1;
+                      break;
+                    }
+                    case WASM_Canvas2D.COMMAND_TYPE_TRANSLATE: {
+                      ctx.translate(f32View[i + 1], f32View[i + 2]);
+                      i += 3;
+                      break;
+                    }
+                    case WASM_Canvas2D.COMMAND_TYPE_LINE_WIDTH: {
+                      ctx.lineWidth = f32View[i + 1];
+                      i += 2;
+                      break;
+                    }                    
+                    case WASM_Canvas2D.COMMAND_TYPE_STROKE_RECT: {
+                      ctx.strokeRect(
+                        f32View[i + 1], 
+                        f32View[i + 2], 
+                        f32View[i + 3], 
+                        f32View[i + 4]
+                      );
+                      i += 5;
+                      break;
+                    }
+                    case WASM_Canvas2D.COMMAND_TYPE_MOVE_TO: {
+                      ctx.moveTo(f32View[i + 1], f32View[i + 2]);
+                      i += 3;
+                      break;
+                    }
+                    case WASM_Canvas2D.COMMAND_TYPE_LINE_TO: {
+                      ctx.lineTo(f32View[i + 1], f32View[i + 2]);
+                      i += 3;
+                      break;
+                    }
+                    case WASM_Canvas2D.COMMAND_TYPE_BEGIN_PATH: {
+                      ctx.beginPath();
+                      i += 1;
+                      break;
+                    }                    
+                    case WASM_Canvas2D.COMMAND_TYPE_CLOSE_PATH: {
+                      ctx.closePath();
+                      i += 1;
+                      break;
+                    }
+                    case WASM_Canvas2D.COMMAND_TYPE_STROKE: {
+                      ctx.stroke();
+                      i += 1;
+                      break;
+                    }                                                        
+                    case WASM_Canvas2D.COMMAND_TYPE_SUBMIT_BUFFER: {
+                      //console.log("submit buffer");
+                      // end
+                      return;
+                    }
+                    default: {
+                      console.error("Invalid command");
+                      break;
+                    }
+                    }
+                  }
+                }
             }
 
-            window.requestAnimationFrame(animationFrameProc);
+            requestAnimationFrame(animationFrameProc);
 
           } catch (err) {
             console.error(err);

@@ -29,3 +29,5 @@ stroke_rect
 fill_rect
 draw_rect
 clear_rect
+commit
+c2d_commands
