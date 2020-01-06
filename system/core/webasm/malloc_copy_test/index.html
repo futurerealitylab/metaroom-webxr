@@ -117,12 +117,14 @@
             const worldStatePtr = wasm.instance.exports.setup(state.cvs.width, state.cvs.height);
 
             let tPrev = 0;
+            let onDraw = wasm.instance.exports.on_draw;
+
             function animationFrameProc(t) {
                 window.requestAnimationFrame(animationFrameProc);
 
                 window.DIFF = t - tPrev;
                 tPrev = t;
-                wasm.instance.exports.on_draw(t);
+                onDraw(t);
             }
 
             window.requestAnimationFrame(animationFrameProc);
