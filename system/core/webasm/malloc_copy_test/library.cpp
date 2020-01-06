@@ -24,97 +24,77 @@ namespace gmath = glm;
 extern unsigned char __heap_base;
 extern unsigned char __data_end;
 
-
-template <typename T>
-struct BLA {
-    T x;
-};
-template <typename T>
-BLA<T> make_BLA() {
-    BLA<T> bla;
-    return bla;
-}
-
-struct Bla_C {
-    int x;
-    float y;
-    Bla_C(int x_, float y_) : x(x_), y(y_) {}
-};
+#include "testing_playground.cpp"
 
 extern_c_begin()
 
-char* malloc_copy(char* input)
-{   
-    usize len = strlen(input) + 1;
+#include "canvas2d_interface.cpp"
 
-    char* result = (char*)malloc(len);
-    if (result == NULL) {
-        return NULL;
-    }
+struct My_State {
+    float64 time_ms;
+    float64 time_s;
 
-    strncpy(result, input, len);
+    gmath::vec2 cvs_size;
+};
+My_State state;
 
-    return result;
-}
 
-void malloc_free(char* input)
+My_State* setup(f32 w, f32 h) 
 {
-    free(input);
-}
+    state.time_ms = 0.0;
+    state.time_s  = 0.0;
 
-float32 print_num(float val);
+    state.cvs_size.x = w;
+    state.cvs_size.y = h;
 
-float32 my_sin(float32 val) 
-{   
-    float32 result = sinf(val);
-
-    float32 result_times_2 = print_num(result);
-
-    print_num(result_times_2);
-
-    return result;
-}
-
-long fibonacci(unsigned n) {
-    if (n < 2) return n;
-    return fibonacci(n-1) + fibonacci(n-2);
+    return &state;
 }
 
 
-void set_char(char* input)
+void on_draw(float64 t) 
 {
-    input[0] = '\'';
+    const f64 time_s = (f64)t / 1000.0;
 
-    uint8 fibonacci_series[] = { 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89 };
-    for (uint8 number : fibonacci_series) {
-        input[0] = number;
-    }
+    state.time_ms = t;
+    state.time_s  = time_s;
 
-    auto WEE = make_BLA<int>();
-    WEE.x = 18;
+    c2d::clear_rect(0.0, 0.0, state.cvs_size.x, state.cvs_size.y);
 
-    gmath::vec4 v(100.0f, 200.0f, 300.0f, 1.0f);
 
-    gmath::vec4 v_out = gmath::mat4(1.0f) * v;
+    c2d::fill_color_i(20, 127, 178, sin01(time_s));
+    c2d::fill_rect(0.0 + sin01(time_s), 0.0 + sin01(time_s), state.cvs_size.x, state.cvs_size.y);
+    
+    // c2d::save();
+    // {
+    //     //c2d::translate();
+    //     // Set line width
+    //     c2d::line_width(10);
 
-    Bla_C Y = Bla_C(input[1], (float)input[2]);
+    //     // Wall
+    //     c2d::stroke_rect(75, 140, 150, 110);
 
-    input[0] = (int)std::is_pod<BLA<int>>::value + Y.x + 5 + static_cast<int>(v_out.x) * input[1];
+    //     // Door
+    //     c2d::fill_rect(130, 190, 40, 60);
 
-    auto X = new BLA<uint8>();
-
-    //v2.push_back(2);
-
-    //delete X;
-
-    const bool branch_a = true;
-
-    when (branch_a) {
-
-    } else {
-
-    }
+    //     // Roof
+    //     c2d::move_to(50, 140);
+    //     c2d::line_to(150, 60);
+    //     c2d::line_to(250, 140);
+    //     c2d::close_path();
+    //     c2d::stroke();
+    // }
+    // c2d::restore();
 }
+
+void on_exit()
+{
+
+}
+
+
+///////////////////////////////////////////////////////////
+#define EXTERN_C
+#include "testing_playground.cpp"
 
 extern_c_end()
 

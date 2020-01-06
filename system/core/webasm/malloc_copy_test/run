@@ -2,5 +2,5 @@
 
 ./build.sh
 
-killall node
+./stop
 node ./server.js

@@ -6,6 +6,7 @@
     <script type="module">
 
       import * as WASM from "./wasm.js";
+      import * as WASM_Canvas2D from "./wasm_canvas2d.js"
 
       // very helpful tutorials:
       //
@@ -13,99 +14,148 @@
       //
       // https://aransentin.github.io/cwasm/
       //
+      const state = {};
 
-      
-      // allow use of async/await
-      (async () => {
-        try {
-          const imports = {};
+      function setup(state) {
+        const canvas = document.createElement('canvas');
+        state.cvs = canvas;
+        canvas.id             = "WEE";
+        canvas.width          = 1280;
+        canvas.height         = 720;
+        canvas.style.zIndex   = 8;
 
-          const TOTAL_MEMORY   = 16777216;
+        document.body.appendChild(canvas);
 
-          // Build the WebAssembly instance.
-          let memory = new WebAssembly.Memory({ 
-            initial : TOTAL_MEMORY / WASM.PAGE_SIZE,
-            maximum : TOTAL_MEMORY / WASM.PAGE_SIZE
-          }); // old: 2
-          // const response = await fetch('./library.wasm');
-          // const bytes = await response.arrayBuffer();
-          // const { instance } = await WebAssembly.instantiate(bytes, {
-          //   env: { memory }
-          // }); const wasm = {instance : instance};
+        const ctx  = canvas.getContext('2d');
+        window.ctx = ctx;
 
-          const outsideObj = {x : "hi", y : "there!"};
+        ctx.fillStyle = 'rgba(0, 0, 0, 1)';
 
-          imports.memory = memory;
-          imports.print_num = function(val) {
-            console.log("Number received from WebASM: ", val);
+        // ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // allow use of async/await
+        (async () => {
+          try {
+            const imports = {};
 
-            return val * 2;
+            const TOTAL_MEMORY   = 16777216;
+
+            // Build the WebAssembly instance.
+            let memory = new WebAssembly.Memory({ 
+              initial : TOTAL_MEMORY / WASM.PAGE_SIZE,
+              maximum : TOTAL_MEMORY / WASM.PAGE_SIZE
+            }); // old: 2
+            // const response = await fetch('./library.wasm');
+            // const bytes = await response.arrayBuffer();
+            // const { instance } = await WebAssembly.instantiate(bytes, {
+            //   env: { memory }
+            // }); const wasm = {instance : instance};
+
+            const outsideObj = {x : "hi", y : "there!"};
+
+            imports.memory = memory;
+            imports.print_num = function(val) {
+              console.log("Number received from WebASM: ", val);
+
+              return val * 2;
+            }
+
+            imports.print_str = function(str) {
+              // const decode = (memory, baseAddr) => {
+              //   let cursor = baseAddr;
+              //   let result = '';
+
+              //   while (memory[cursor] !== 0) {
+              //     result += String.fromCharCode(memory[cursor++]);
+              //   }
+
+              //   return result;
+              // };
+
+              console.log(memory, str);
+            }
+
+            WASM_Canvas2D.attachBindings(imports, ctx);
+
+            const wasm = await WebAssembly.instantiateStreaming(
+              fetch("./library.wasm"),
+              {env : imports}
+            );
+
+            const wasm2 = await WebAssembly.instantiateStreaming(
+              fetch("./library.wasm"),
+              {env : imports}
+            );
+
+            // Text to copy.
+            const text = 'Hello from JavaScript!';
+
+            // Configure shared memory.
+            const view1 = new Uint8Array(memory.buffer);
+            let inputPtr = wasm.instance.exports.malloc(1024);
+            // malloc causes memory to grow, invalidating old view
+            const view2 = new Uint8Array(memory.buffer);
+
+            encode(view2, inputPtr, text);
+
+            let outputPtr = wasm.instance.exports.malloc_copy(inputPtr, text.length);
+
+            console.log('copy=[%s]', decode(view2, outputPtr));
+
+            wasm2.instance.exports.set_char(outputPtr);
+
+            console.log('copy after set char in second wasm module', decode(view2, outputPtr));
+
+            console.log("sin(180)=[%f]", wasm.instance.exports.my_sin(180.0));
+
+            wasm.instance.exports.malloc_free(inputPtr);
+            wasm.instance.exports.malloc_free(outputPtr);
+            inputPtr = null;
+            outputPtr = null;
+
+
+            const worldStatePtr = wasm.instance.exports.setup(state.cvs.width, state.cvs.height);
+
+            let tPrev = 0;
+            function animationFrameProc(t) {
+                window.requestAnimationFrame(animationFrameProc);
+
+                window.DIFF = t - tPrev;
+                tPrev = t;
+                wasm.instance.exports.on_draw(t);
+            }
+
+            window.requestAnimationFrame(animationFrameProc);
+
+          } catch (err) {
+            console.error(err);
+          }
+          // Should free outputPtr and inputPtr
+        })();
+
+        // Encode string into memory starting at address baseAddr.
+        const encode = (memory, baseAddr, string) => {
+          for (let i = 0; i < string.length; i++) {
+            memory[baseAddr + i] = string.charCodeAt(i);
           }
 
-          
+          memory[baseAddr + string.length] = 0;
+        };
 
-          const wasm = await WebAssembly.instantiateStreaming(
-            fetch("./library.wasm"),
-            {env : imports}
-          );
+        // Decode a string from memory starting at address baseAddr.
+        const decode = (memory, baseAddr) => {
+          let cursor = baseAddr;
+          let result = '';
 
-          const wasm2 = await WebAssembly.instantiateStreaming(
-            fetch("./library.wasm"),
-            {env : imports}
-          );
+          while (memory[cursor] !== 0) {
+            result += String.fromCharCode(memory[cursor++]);
+          }
 
-          // Text to copy.
-          const text = 'Hello from JavaScript!';
-
-          // Configure shared memory.
-          const view1 = new Uint8Array(memory.buffer);
-          let inputPtr = wasm.instance.exports.malloc(1024);
-          // malloc causes memory to grow, invalidating old view
-          const view2 = new Uint8Array(memory.buffer);
-
-          encode(view2, inputPtr, text);
-
-          let outputPtr = wasm.instance.exports.malloc_copy(inputPtr, text.length);
-
-          console.log('copy=[%s]', decode(view2, outputPtr));
-
-          wasm2.instance.exports.set_char(outputPtr);
-
-          console.log('copy after set char in second wasm module', decode(view2, outputPtr));
-
-          console.log("sin(180)=[%f]", wasm.instance.exports.my_sin(180.0));
-
-          wasm.instance.exports.malloc_free(inputPtr);
-          wasm.instance.exports.malloc_free(outputPtr);
-          inputPtr = null;
-          outputPtr = null;
-
-        } catch (err) {
-          console.error(err);
-        }
-        // Should free outputPtr and inputPtr
-      })();
-
-      // Encode string into memory starting at address baseAddr.
-      const encode = (memory, baseAddr, string) => {
-        for (let i = 0; i < string.length; i++) {
-          memory[baseAddr + i] = string.charCodeAt(i);
-        }
-
-        memory[baseAddr + string.length] = 0;
-      };
-
-      // Decode a string from memory starting at address baseAddr.
-      const decode = (memory, baseAddr) => {
-        let cursor = baseAddr;
-        let result = '';
-
-        while (memory[cursor] !== 0) {
-          result += String.fromCharCode(memory[cursor++]);
-        }
-
-        return result;
-      };
+          return result;
+        };
+      }
+      setup(state);
     </script>
+
   </body>
 </html>
