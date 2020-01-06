@@ -736,7 +736,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
       const frameData = data.frames[ frame++ % payload_skeleton['frames'].length ];
 
-      if (mode = 'all' || mode == 'joints') {
+      if (mode == 'all' || mode == 'joints') {
          for (let i = 0; i < frameData.length; i++){
             m.save(); 
                let current = frameData[i];
@@ -747,7 +747,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          }
       }
 
-      if (mode = 'all' || mode == 'bones') {
+      if (mode == 'all' || mode == 'bones') {
          for(let i = 0; i < data.links.length; i++){
             m.save();
                let first = frameData[data.links[i][0]];
@@ -961,8 +961,13 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       state.isToon = false;
    m.restore();
 
+   const offsetTrack = [0, 0, -1];
+
    drawSkeleton(payload_skeleton, [1, 0, 0]);
-   drawSkeleton(payload_skeleton2, [0, 0, 1]);
+   m.save();
+      m.translate(offsetTrack);
+      drawSkeleton(payload_skeleton2, [0, 0, 1]);
+   m.restore();
 
    /*-----------------------------------------------------------------
       Here is where we draw avatars and controllers.
