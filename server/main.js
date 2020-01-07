@@ -73,7 +73,7 @@ let   interval = args.interval;
 const multiuser = args.multiuser;
 
 if (parser.version) {
-	console.log("Version:", 1.0);
+	console.log("Metaroom Version:", 1.0);
 }
 console.log(process.cwd(), __dirname);
 
