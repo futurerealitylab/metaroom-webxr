@@ -15,3 +15,6 @@
 
 * * If you want the server to run on system startup (tested on Unix based OS) type:
 ```$./persist```
+
+* * Make sure the submodule is up-ot-date
+```$git submodule foreach git pull origin master```
