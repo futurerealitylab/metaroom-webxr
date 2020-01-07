@@ -4,12 +4,12 @@
   <link   rel="stylesheet" href="assets/css/main.css">
   <link   rel="stylesheet" href="assets/css/glslEditor/glslEditor.css">
 
-  <script type="module" src="lib/input/queue.js"></script>
+  <script type="module" src="lib/core/queue.js"></script>
   <script type="module" src="lib/input/input_nonVR.js"></script>
   <script src="lib/input/input_VR.js"></script>
   <script src="lib/input/cursor.js"></script>
   <script src="lib/media/audio.js"></script>
-  <script src="server/graphics/world_prepare.js"></script>
+  <script src="lib/core/world_template.js"></script>
 
   <script src="lib/util/canvasutil.js"></script>
   <script src="lib/util/assetutil.js"></script>
@@ -26,24 +26,27 @@
   <script src="lib/primitive/ImprovedNoise.js"></script>
   <script src="lib/primitive/avatar.js"></script>  
   <script src="lib/primitive/draw.js"></script>
+  <script src="lib/primitive/drawMenu.js"></script>
+  <script src="lib/primitive/drawFurniture.js"></script>
+  <script src="lib/primitive/drawVRtoys.js"></script>
   <script src="lib/primitive/Obj.js"></script>
   
   <script src="lib/third-party/FileSaver.min.js"></script>
   <script src="lib/third-party/axios.min.js"></script>  
   
   <!-- system backends -->
-  <script type="module" src="server/platform/webvr_backend.js"></script>
-  <script type="module" src="server/platform/webxr_backend.js"></script>
+  <script type="module" src="lib/core/webvr_backend.js"></script>
+  <script type="module" src="lib/core/webxr_backend.js"></script>
 
-  <script type="module" src="server/graphics/viewpoint_controller.js"></script>
+  <script type="module" src="lib/core/viewpoint_controller.js"></script>
 
   <!-- Server and Client. -->
-  <script type="module" src="server/websocket/client.js"></script>
+  <script type="module" src="lib/core/websocket_client.js"></script>
   
-  <script type="module" src="server/websocket/EventBus.js"></script>
-  <script type="module" src="server/SystemHandler.js"></script>
-  <script type="module" src="server/websocket/server_publish_subscribe.js"></script>
-  <script type="module" src="server/lock.js"></script>
+  <script type="module" src="lib/core/eventbus.js"></script>
+  <script type="module" src="locallib/SystemHandler.js"></script>
+  <script type="module" src="lib/core/event_pubsub.js"></script>
+  <script type="module" src="lib/core/lock.js"></script>
    
 
   <!--   System Initialization -->
@@ -53,10 +56,10 @@
   <div id='server-comm-port' value='3001'></div>
   <!-- <div id='server-ip'        value='192.168.1.104'></div> -->
   <div id='server-sync-port' value='11235'></div>
-  <script type="module" src="server/metaroom.js"></script>
-  <script type="module" src="server/websocket/callback.js"></script>  
+  <script type="module" src="lib/core/metaroom.js"></script>
+  <script type="module" src="lib/core/event_callback.js"></script>  
   <!-- Shader Editor -->
-  <script type="module" src="server/mreditor.js"></script>
+  <script type="module" src="lib/core/mreditor.js"></script>
 
 
 </head>
@@ -80,5 +83,5 @@
     <script type="module" src=worlds/triangles/triangles.js></script>
   </div>
   <!-- Program Entry-point -->
-  <script type="module" src="server/run.js"></script>
+  <script type="module" src="lib/core/run.js"></script>
 </body>

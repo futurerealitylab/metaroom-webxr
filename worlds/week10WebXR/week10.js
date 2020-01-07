@@ -1,6 +1,6 @@
 "use strict";
 
-import {Lock} from "/server/lock.js";
+import {Lock} from "/lib/core/lock.js";
 
 export default function main() {
    const def = {
