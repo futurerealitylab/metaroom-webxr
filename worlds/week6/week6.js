@@ -246,9 +246,9 @@ async function setup(state) {
 
     // load initial images, then continue setup after waiting is done
     const images = await imgutil.loadImagesPromise([
-        getPath("resources/textures/brick.png"),
-        getPath("resources/textures/polkadots_transparent.png"),
-        getPath("resources/textures/wood.png")
+        getPath("./../../assets/textures/brick.png"),
+        getPath("./../../assets/textures/polkadots_transparent.png"),
+        getPath("./../../assets/textures/wood.png")
     ]);
 
     // this line only executes after the images are loaded asynchronously
@@ -261,7 +261,7 @@ async function setup(state) {
     // non-Meta_Room-controlled state. 
     state.images = images;
 
-    let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+    let libSources = await ShaderTextEditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
         { 
             key : "pnoise", path : "shaders/noise.glsl", foldDefault : true
         },     
@@ -270,7 +270,7 @@ async function setup(state) {
         throw new Error("Could not load shader library");
     }
 
-        let shaderSource = await MREditor.loadAndRegisterShaderForLiveEditing(
+        let shaderSource = await ShaderTextEditor.loadAndRegisterShaderForLiveEditing(
             // gl context
             gl,
             // name of shader as it should appear in the editor
@@ -282,7 +282,7 @@ async function setup(state) {
 
                     const implicitNoiseInclude = true;
                     if (implicitNoiseInclude) {
-                        let libCode = MREditor.libMap.get("pnoise");
+                        let libCode = ShaderTextEditor.libMap.get("pnoise");
 
                         for (let i = 0; i < 2; i += 1) {
                             const stageCode = stages[i];
@@ -304,7 +304,7 @@ async function setup(state) {
                     }
 
                     // uses a preprocessor for custom extensions to GLSL
-                    MREditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+                    ShaderTextEditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
                         output[0],
                         output[1],
                         libMap

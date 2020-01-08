@@ -1,1 +1,1 @@
-pm2 reload ecosystem.config.js
+pm2 reload server/ecosystem.config.js
