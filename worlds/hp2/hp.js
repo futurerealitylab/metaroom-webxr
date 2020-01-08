@@ -383,7 +383,7 @@ async function setup(state) {
     state.video = GFX.setupVideo(getPath("resources/textures/bla2.mp4"));
     state.images = images;
 
-    let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+    let libSources = await ShaderTextEditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
         { 
             key : "pnoise", path : "shaders/noise.glsl", foldDefault : true
         },     
@@ -392,7 +392,7 @@ async function setup(state) {
         throw new Error("Could not load shader library");
     }
 
-        let shaderSource = await MREditor.loadAndRegisterShaderForLiveEditing(
+        let shaderSource = await ShaderTextEditor.loadAndRegisterShaderForLiveEditing(
             // gl context
             gl,
             // name of shader as it should appear in the editor
@@ -404,7 +404,7 @@ async function setup(state) {
 
                     const implicitNoiseInclude = true;
                     if (implicitNoiseInclude) {
-                        let libCode = MREditor.libMap.get("pnoise");
+                        let libCode = ShaderTextEditor.libMap.get("pnoise");
 
                         for (let i = 0; i < 2; i += 1) {
                             const stageCode = stages[i];
@@ -418,7 +418,7 @@ async function setup(state) {
                     }
 
                     // uses a preprocessor for custom extensions to GLSL
-                    MREditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+                    ShaderTextEditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
                         output[0],
                         output[1],
                         libMap

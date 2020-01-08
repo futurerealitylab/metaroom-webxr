@@ -18,14 +18,14 @@ async function setup(state) {
        getPath("./../../assets/textures/tiles.jpg"),
     ]);
 
-    let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+    let libSources = await ShaderTextEditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
         { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true }, 
     ]);
     if (! libSources)
         throw new Error("Could not load shader library");
 
     // load vertex and fragment shaders from the server, register with the editor
-    let shaderSource = await MREditor.loadAndRegisterShaderForLiveEditing(
+    let shaderSource = await ShaderTextEditor.loadAndRegisterShaderForLiveEditing(
         gl,
         "mainShader",
         { 
@@ -34,7 +34,7 @@ async function setup(state) {
                 const output = [args.vertex, args.fragment];
                 const implicitNoiseInclude = true;
                 if (implicitNoiseInclude) {
-                    let libCode = MREditor.libMap.get('pnoise');
+                    let libCode = ShaderTextEditor.libMap.get('pnoise');
                     for (let i = 0; i < 2; i++) {
                         const stageCode = stages[i];
                         const hdrEndIdx = stageCode.indexOf(';');
@@ -44,7 +44,7 @@ async function setup(state) {
                                     stageCode.substring(hdrEndIdx + 1);
                     }
                 }
-                MREditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+                ShaderTextEditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
                     output[0],
                     output[1],
                     libMap
