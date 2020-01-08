@@ -18,12 +18,7 @@ const ENABLE_BRIGHTNESS_CHECK = false;
 
 let enableModeler = true;
 
-let payload_skeleton = null;
-axios.get('assets/skeleton.json').then((response) => {
-   payload_skeleton = response.data;
-});
 
-let frame = 0;
 
 /*Example Grabble Object*/
 let grabbableCube = new Obj(CG.torus);
@@ -162,6 +157,13 @@ async function setup(state) {
       getPath("./../../assets/textures/tiles.jpg"),
       getPath("./../../assets/textures/noisy_bump.jpg")
    ]);
+
+   state.payload_skeleton = null;
+   axios.get('assets/skeleton.json').then((response) => {
+      state.payload_skeleton = response.data;
+   });
+
+   state.frame = 0;
 
    let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
       { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true },
@@ -735,7 +737,11 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
    }
 
    let drawSkeleton = (data) => {
-      const frameData = data.frames[frame++%4504];
+      if (data == null) {
+         return;
+      }
+      
+      const frameData = data.frames[state.frame++%4504];
       for (let i = 0; i < frameData.length; i++){
          m.save(); 
             let current = [frameData[i].x, frameData[i].y, frameData[i].z];
@@ -958,7 +964,7 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
       state.isToon = false;
    m.restore();
 
-   drawSkeleton(payload_skeleton);
+   drawSkeleton(state.payload_skeleton);
 
    /*-----------------------------------------------------------------
       Here is where we draw avatars and controllers.
