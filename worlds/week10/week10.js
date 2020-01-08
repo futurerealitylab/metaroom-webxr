@@ -1,4 +1,4 @@
-"use strict";
+"use strict"
 
 import {Lock} from "../../lib/core/lock.js";
 
@@ -13,12 +13,22 @@ Note that I measured everything in inches, and then converted to units of meters
 
 --------------------------------------------------------------------------------*/
 
+const inchesToMeters = inches => inches * 0.0254;
+const metersToInches = meters => meters / 0.0254;
 
-const ENABLE_BRIGHTNESS_CHECK = false;
+const EYE_HEIGHT       = inchesToMeters( 69);
+const HALL_LENGTH      = inchesToMeters(306);
+const HALL_WIDTH       = inchesToMeters(215);
+const RING_RADIUS      = 0.0425;
+const STOOL_HEIGHT     = inchesToMeters( 18);
+const STOOL_RADIUS     = inchesToMeters( 10);
+const TABLE_DEPTH      = inchesToMeters( 30);
+const TABLE_HEIGHT     = inchesToMeters( 29);
+const TABLE_WIDTH      = inchesToMeters( 60);
+const TABLE_THICKNESS  = inchesToMeters( 11/8);
+const LEG_THICKNESS    = inchesToMeters(  2.5);
 
 let enableModeler = true;
-
-
 
 /*Example Grabble Object*/
 let grabbableCube = new Obj(CG.torus);
@@ -54,13 +64,9 @@ to see what the options are.
 
 --------------------------------------------------------------------------------*/
 
-function HeadsetHandler(poseInfo) {
-    console.log(poseInfo.positionAsArray[0]);
-    console.log(poseInfo.positionAsArray[1]);
-    console.log(poseInfo.positionAsArray[2]);
-
-   this.position    = () => poseInfo.positionAsArray;
-   this.orientation = () => poseInfo.orientationAsArray;
+function HeadsetHandler(headset) {
+   this.orientation = () => headset.pose.orientation;
+   this.position    = () => headset.pose.position;
 }
 
 function ControllerHandler(controller) {
@@ -126,7 +132,6 @@ async function onExit(state) {
 
 async function setup(state) {
    hotReloadFile(getPath('week10.js'));
-
    // (New Info): Here I am loading the graphics module once
    // This is for the sake of example:
    // I'm making the arbitrary decision not to support
@@ -153,21 +158,14 @@ async function setup(state) {
 
    // I propose adding a dictionary mapping texture strings to locations, so that drawShapes becomes clearer
    const images = await imgutil.loadImagesPromise([
-      getPath("./../../assets/textures/wood.png"),
-      getPath("./../../assets/textures/tiles.jpg"),
-      getPath("./../../assets/textures/noisy_bump.jpg")
+      getPath("../../assets/textures/wood.png"),
+      getPath("../../assets/textures/tiles.jpg"),
+      getPath("../../assets/textures/noisy_bump.jpg")
    ]);
-
-   state.payload_skeleton = null;
-   axios.get('assets/skeleton.json').then((response) => {
-      state.payload_skeleton = response.data;
-   });
-
-   state.frame = 0;
 
    let libSources = await ShaderTextEditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
       { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true },
-      // { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
+      { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
    ]);
    if (! libSources)
       throw new Error("Could not load shader library");
@@ -220,8 +218,6 @@ async function setup(state) {
                         state.uTexLoc[n] = gl.getUniformLocation(program, 'uTex' + n);
                         gl.uniform1i(state.uTexLoc[n], n);
                      }
-
-               gl.uniform1f(state.uBrightnessLoc, 1.0);
          } 
       },
       {
@@ -331,7 +327,7 @@ function sendSpawnMessage(object) {
 }
 
 function onStartFrame(t, state) {
-   
+
    /*-----------------------------------------------------------------
 
    Whenever the user enters VR Mode, create the left and right
@@ -350,16 +346,15 @@ function onStartFrame(t, state) {
    
    if (! state.avatarMatrixForward) {
       state.avatarMatrixForward = CG.matrixIdentity();
-      // TODO(TR): WebXR gives us an inverse transform that we can use directly
       state.avatarMatrixInverse = CG.matrixIdentity();
    }
    MR.avatarMatrixForward = state.avatarMatrixForward;
    MR.avatarMatrixInverse = state.avatarMatrixInverse;
 
    if (MR.VRIsActive()) {
-      input.HS = new HeadsetHandler(MR.headsetInfo());
-      if (!input.LC || Input.gamepadStateChanged) input.LC = new ControllerHandler(MR.leftController);
-      if (!input.RC || Input.gamepadStateChanged) input.RC = new ControllerHandler(MR.rightController);
+      if (!input.HS) input.HS = new HeadsetHandler(MR.headset);
+      if (!input.LC) input.LC = new ControllerHandler(MR.leftController);
+      if (!input.RC) input.RC = new ControllerHandler(MR.rightController);
 
       if (! state.calibrate) {
          m.identity();
@@ -479,7 +474,7 @@ function onStartFrame(t, state) {
                m.rotateY(Math.atan2(D[0], D[2]) + Math.PI/2);
                m.translate(-2.35,1.00,-.72);
                state.avatarMatrixInverse = m.value();
-          m.invert();
+	       m.invert();
                state.avatarMatrixForward = m.value();
             m.restore();
             state.calibrationCount = 0;
@@ -544,14 +539,12 @@ function Obj(shape) {
    this.shape = shape;
 }
 
-function onDraw(t, projMat, viewMat, state, info) {
+function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
    // IF THE HEADSET IS JUST SITTING IDLE, DON'T DRAW ANYTHING.
 
-   if (ENABLE_BRIGHTNESS_CHECK) {
-      if (state.input.brightness == 0)
-         return;
-   }
+   if (state.input.brightness == 0)
+      return;
 
    m.identity();
 
@@ -562,7 +555,7 @@ function onDraw(t, projMat, viewMat, state, info) {
    // FIRST DRAW THE SCENE FULL SIZE.
 
    m.save();
-      myDraw(t, projMat, viewMat, state, info, false);
+      myDraw(t, projMat, viewMat, state, eyeIdx, false);
    m.restore();
 
    // THEN DRAW THE ENTIRE SCENE IN MINIATURE ON THE TOP OF ONE OF THE TABLES.
@@ -571,14 +564,14 @@ function onDraw(t, projMat, viewMat, state, info) {
       m.translate(HALL_WIDTH/2 - TABLE_DEPTH/2, -TABLE_HEIGHT*1.048, TABLE_WIDTH/6.7);
       m.rotateY(Math.PI);
       m.scale(.1392);
-      myDraw(t, projMat, viewMat, state, info, true);
+      myDraw(t, projMat, viewMat, state, eyeIdx, true);
    m.restore();
 }
 
-function myDraw(t, projMat, viewMat, state, info, isMiniature) {
+function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
-   gl.uniformMatrix4fv(state.uViewLoc, false, viewMat);
-   gl.uniformMatrix4fv(state.uProjLoc, false, projMat);
+   gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
+   gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
 
    let prev_shape = null;
 
@@ -599,9 +592,7 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
    let drawShape = (shape, color, texture, textureScale) => {
       let drawArrays = () => gl.drawArrays(shape == CG.cube ||
                                            shape == CG.quad ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
-      if (ENABLE_BRIGHTNESS_CHECK) {
-         gl.uniform1f(state.uBrightnessLoc, input.brightness === undefined ? 1 : input.brightness);
-      }
+      gl.uniform1f(state.uBrightnessLoc, input.brightness === undefined ? 1 : input.brightness);
       gl.uniform4fv(state.uColorLoc, color.length == 4 ? color : color.concat([1]));
       gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
       gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
@@ -621,30 +612,21 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
       prev_shape = shape;
    }
 
-   let drawAvatar = (avatar, pos, rot, scale, state) => {
-      m.save();
-         m.translate(pos);
-         m.rotateQ(rot);
-         m.scale(scale,scale,scale);
-         drawShape(avatar.headset.vertices, [1,1,1], 0);
-      m.restore();
-   }
+   /*-----------------------------------------------------------------
 
-    /*-----------------------------------------------------------------
+   In my little toy geometric modeler, the pop-up menu of objects only
+   appears while the right controller trigger is pressed. This is just
+   an example. Feel free to change things, depending on what you are
+   trying to do in your homework.
 
-    In my little toy geometric modeler, the pop-up menu of objects only
-    appears while the right controller trigger is pressed. This is just
-    an example. Feel free to change things, depending on what you are
-    trying to do in your homework.
-
-    -----------------------------------------------------------------*/
+   -----------------------------------------------------------------*/
 
    let showMenu = p => {
       for (let n = 0 ; n < 4 ; n++) {
          m.save();
             m.multiply(state.avatarMatrixForward);
             m.translate(p);
-       m.rotateQ(input.RC.orientation());
+	    m.rotateQ(input.RC.orientation());
             m.translate(menuX[n], menuY[n], 0);
             m.scale(.03, .03, .03);
             drawShape(menuShape[n], n == menuChoice ? [1,.5,.5] : [1,1,1]);
@@ -724,44 +706,6 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
       m.restore();
    }
 
-   let drawLimb = (A, C) => {
-      m.save();
-
-         let diff = CG.subtract(A,C);
-         let dist = CG.norm(diff);
-
-         m.translate(CG.mix(A,C,.5)).aimZ(CG.subtract(A,C)).scale(.02,.02, .5*dist);
-         const lime = [1,1,.3];
-         drawShape(CG.cylinder, lime, -1,1, 2,1);
-      m.restore();
-   }
-
-   let drawSkeleton = (data) => {
-      if (data == null) {
-         return;
-      }
-      
-      const frameData = data.frames[state.frame++%4504];
-      for (let i = 0; i < frameData.length; i++){
-         m.save(); 
-            let current = [frameData[i].x, frameData[i].y, frameData[i].z];
-            m.translate(current);
-            m.scale(.03,.03,.03);
-            const lime = [1,1,.3];
-            drawShape(CG.sphere, lime);
-         m.restore();
-      }
-      
-      for(let i = 0; i < data.links.length; i++){
-         m.save();
-            let first = [frameData[data.links[i][0]].x, frameData[data.links[i][0]].y, frameData[data.links[i][0]].z];
-            let second = [frameData[data.links[i][1]].x, frameData[data.links[i][1]].y, frameData[data.links[i][1]].z];
-            drawLimb(first, second);
-         m.restore();
-      }
-   }
-
-
    /*-----------------------------------------------------------------
 
    The below is just my particular visual design for the size and
@@ -815,20 +759,39 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
       m.restore();
    }
 
+   let drawAvatar = () => {
+      m.save();
+         m.multiply(state.avatarMatrixForward);
+         drawHeadset(input.HS.position(), input.HS.orientation());
+      m.restore();
+      m.save();
+         let P = state.position;
+         m.translate(-P[0],-P[1],-P[2]);
+         m.rotateY(-state.turnAngle);
+         m.rotateX(-state.tiltAngle);
+         m.save();
+            m.multiply(state.avatarMatrixForward);
+            drawController(input.LC.position(), input.LC.orientation(), 0, input.LC.isDown());
+            drawController(input.RC.position(), input.RC.orientation(), 1, input.RC.isDown());
+         m.restore();
+      m.restore();
+   }
+
    if (input.LC) {
-      if (isMiniature){
+      drawInMirror(-1, drawAvatar);
+
+      if (isMiniature) {
          m.save();
             m.multiply(state.avatarMatrixForward);
             drawHeadset(input.HS.position(), input.HS.orientation());
          m.restore();
       }         
-      m.save();
 
+      m.save();
          let P = state.position;
          m.translate(-P[0],-P[1],-P[2]);
          m.rotateY(-state.turnAngle);
          m.rotateX(-state.tiltAngle);
-
          m.save();
             m.multiply(state.avatarMatrixForward);
             drawController(input.LC.position(), input.LC.orientation(), 0, input.LC.isDown());
@@ -887,7 +850,7 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
       m.save();
          m.rotateY(state.time).scale(.1);
          drawShape(CG.cube, [.5,1,1]);
-    m.translate(1.5,.5,.5).scale(.5);
+	 m.translate(1.5,.5,.5).scale(.5);
          drawShape(CG.cube, [.5,1,1]);
       m.restore();
    }
@@ -964,8 +927,6 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
       state.isToon = false;
    m.restore();
 
-   drawSkeleton(state.payload_skeleton);
-
    /*-----------------------------------------------------------------
       Here is where we draw avatars and controllers.
    -----------------------------------------------------------------*/
@@ -1003,12 +964,20 @@ function myDraw(t, projMat, viewMat, state, info, isMiniature) {
 
       else {
          m.save();
-       m.translate(headsetPos);
-       m.rotateQ(headsetRot);
-       drawCamera();
+	    m.translate(headsetPos);
+	    m.rotateQ(headsetRot);
+	    drawCamera();
          m.restore();
       }
    }
+/*
+   m.save();
+      m.translate(0,EYE_HEIGHT,-2);
+      m.rotateX(-.01);
+      m.scale(1.9);
+      drawShape(CG.sphere, [.5,1,.5]);
+   m.restore();
+*/
 }
 
 function onEndFrame(t, state) {
@@ -1028,7 +997,7 @@ function onEndFrame(t, state) {
 
       // If headset doesn't move at all for 10 seconds, set scene brightness to zero.
 
-      if (ENABLE_BRIGHTNESS_CHECK) {
+      {
          let P = input.HS.position();
          let Q = input.HS.orientation();
 
@@ -1078,33 +1047,27 @@ function onEndFrame(t, state) {
 
    if (input.LC) input.LC.onEndFrame();
    if (input.RC) input.RC.onEndFrame();
-
-
-   Input.gamepadStateChanged = false;
 }
 
 export default function main() {
    const def = {
-      name: 'week10 WebVR',
-      setup        : setup,
-      onStartFrame : onStartFrame,
-      onDraw       : onDraw,
-      onEndFrame   : onEndFrame,
+      name: 'YOUR_NAME_HERE week10',
+      setup: setup,
+      onStartFrame: onStartFrame,
+      onEndFrame: onEndFrame,
+      onDraw: onDraw,
 
       // (New Info): New callbacks:
 
-      // VR-specific drawing callbacks
+      // VR-specific drawing callback
       // e.g. for when the UI must be different 
       //      in VR than on desktop
       //      currently setting to the same callback as on desktop
-      onStartFrameXR : onStartFrame,
-      onDrawXR       : onDraw,
-      onEndFrameXR   : onEndFrame,
+      onDrawXR: onDraw,
       // call upon reload
-      onReload       : onReload,
+      onReload: onReload,
       // call upon world exit
-      onExit         : onExit,
-      onExitXR       : onExit,
+      onExit: onExit
    };
 
    return def;
