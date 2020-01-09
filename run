@@ -1,7 +1,3 @@
 #!/bin/bash
 
-#!node server/main.js "$*"
-
-./stop
-
-pm2 start server/ecosystem.config.js && pm2 logs
+pm2 startOrReload server/ecosystem.config.js && pm2 logs
