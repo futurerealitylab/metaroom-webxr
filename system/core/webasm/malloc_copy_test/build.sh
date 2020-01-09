@@ -31,6 +31,7 @@ echo "building wasm module"
 # -o library.wasm \
 # library.cpp
 
+# get the toolchain from: https://github.com/CraneStation/wasi-sdk
 /Users/tobyrosenberg/Downloads/wasi-sdk-8.0/bin/clang++ \
 --std=c++17 -O3 library.cpp -flto -fno-exceptions -nostartfiles -D WASM_BUILD -I/usr/local/opt/glm/include --sysroot /Users/tobyrosenberg/Downloads/wasi-sdk-8.0/share/wasi-sysroot -o library.wasm \
  -Wl,--import-memory -Wl,--no-entry -Wl,--export-all -Wl,-z,stack-size=1048576 -Wl,--lto-O3 -Wl,-allow-undefined-file wasm.syms 
