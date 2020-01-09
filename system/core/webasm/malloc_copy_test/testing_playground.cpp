@@ -25,8 +25,6 @@ void malloc_free(char* input)
     free(input);
 }
 
-float32 print_num(float val);
-
 float32 my_sin(float32 val) 
 {   
     float32 result = sinf(val);
@@ -42,7 +40,6 @@ long fibonacci(unsigned n) {
     if (n < 2) return n;
     return fibonacci(n-1) + fibonacci(n-2);
 }
-
 
 void set_char(char* input)
 {
@@ -69,6 +66,8 @@ void set_char(char* input)
     //v2.push_back(2);
 
     //delete X;
+
+
 
     const bool branch_a = true;
 
@@ -101,9 +100,12 @@ float32 sin01(float32 val)
 {
     return (sinf(val) + 1.0) / 2.0;
 }
+#include <vector>
+
 float64 sin01(float64 val)
 {
     return (sin(val) + 1.0) / 2.0;
 }
+
 
 #endif

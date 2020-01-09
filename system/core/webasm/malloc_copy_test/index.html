@@ -42,10 +42,11 @@
 
             const TOTAL_MEMORY   = 16777216;
 
+            console.log(32767 * WASM.PAGE_SIZE);
             // Build the WebAssembly instance.
             let memory = new WebAssembly.Memory({ 
-              initial : TOTAL_MEMORY / WASM.PAGE_SIZE,
-              maximum : TOTAL_MEMORY / WASM.PAGE_SIZE
+              initial : 32767, //  TOTAL_MEMORY / WASM.PAGE_SIZE,
+              maximum : 32767
             }); // old: 2
 
             state.memory = new Float32Array(memory.buffer);
