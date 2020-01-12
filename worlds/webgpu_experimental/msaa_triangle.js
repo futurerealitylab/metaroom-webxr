@@ -30,6 +30,7 @@ async function mapWriteDataToBuffer(buffer, data, offset = 0) {
     buffer.unmap();
 }
 
+// https://github.com/gpuweb/gpuweb/blob/master/design/BufferOperations.md
 function bufferSubData(device, destBuffer, destOffset, srcArrayBuffer) {
     const byteCount = srcArrayBuffer.byteLength;
     const [srcBuffer, arrayBuffer] = device.createBufferMapped({
