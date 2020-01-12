@@ -30,6 +30,24 @@ async function mapWriteDataToBuffer(buffer, data, offset = 0) {
     buffer.unmap();
 }
 
+function bufferSubData(device, destBuffer, destOffset, srcArrayBuffer) {
+    const byteCount = srcArrayBuffer.byteLength;
+    const [srcBuffer, arrayBuffer] = device.createBufferMapped({
+        size: byteCount,
+        usage: GPUBufferUsage.COPY_SRC
+    });
+    new Uint8Array(arrayBuffer).set(new Uint8Array(srcArrayBuffer)); // memcpy
+    srcBuffer.unmap();
+
+    const encoder = device.createCommandEncoder();
+    encoder.copyBufferToBuffer(srcBuffer, 0, destBuffer, destOffset, byteCount);
+    const commandBuffer = encoder.finish();
+    const queue = device.defaultQueue;
+    queue.submit([commandBuffer]);
+
+    srcBuffer.destroy();
+}
+
 // super hard-coded version assuming 2 floats
 class MyUniformBufferObject {
     constructor() {}
@@ -70,15 +88,17 @@ class MyUniformBufferObject {
         });
     }
 
-        firstUpload() {
-            this.buf.setSubData(0, this.data);
-        }
         update(i, v) {
             this.data[i] = v; // dstOffset, data, srcOffset, byteLength
-            this.buf.setSubData(i * 4, this.data, i * 4, 4);
+        //     //this.buf.setSubData(i * 4, this.data, i * 4, 4);
         }
-        updateAll() {
-            this.buf.setSubData(0, this.data);
+        upload(Api) {
+
+            const buf  = this.buf;
+            const data = this.data;
+
+            bufferSubData(Api.device, buf, 0, data.buffer);
+            //this.buf.setSubData(0, this.data);
         }
 }
 
@@ -344,7 +364,6 @@ async function setup(state, info) {
         ubo.data[0] = 0;
         ubo.data[1] = canvas.height / canvas.width;
         ubo.data[2] = 0;
-        ubo.updateAll();
 
 
         const vsrc = await assetutil.loadText("shaders/vertex.vert.glsl");
@@ -413,6 +432,7 @@ function onStartFrame(t, state, info) {
     state.ANGLE += 0.01;
     ubo.update(0, state.ANGLE);
     ubo.update(2, t / 1000.0);
+    ubo.upload(gpuInfo);
 }
 function onDraw(t, projMat, viewMat, state, info) {
     const gpuInfo = state.gpuInfo;
