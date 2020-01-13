@@ -19,7 +19,7 @@ async function onExit(state) {
 let gpu;
 
 // taken from https://trac.webkit.org/changeset/246217/webkit/
-function createBufferWithData(device, descriptor, data, offset = 0) {
+function createBufferMappedWithData(device, descriptor, data, offset = 0) {
     const mappedBuffer = device.createBufferMapped(descriptor);
     const dataArray = new Uint8Array(mappedBuffer[1]);
     dataArray.set(new Uint8Array(data), offset);
@@ -35,7 +35,7 @@ async function mapWriteDataToBuffer(buffer, data, offset = 0) {
 }
 
 // https://github.com/gpuweb/gpuweb/blob/master/design/BufferOperations.md
-function bufferSubData(device, destBuffer, destOffset, srcArrayBuffer) {
+function bufferMappedSubData(device, destBuffer, destOffset, srcArrayBuffer) {
     const byteCount = srcArrayBuffer.byteLength;
     const [srcBuffer, arrayBuffer] = device.createBufferMapped({
         size: byteCount,
@@ -102,7 +102,7 @@ class MyUniformBufferObject {
             const buf  = this.buf;
             const data = this.data;
 
-            bufferSubData(Api.device, buf, 0, data.buffer);
+            bufferMappedSubData(Api.device, buf, 0, data.buffer);
             //this.buf.setSubData(0, this.data);
         }
 }
@@ -245,7 +245,7 @@ class Mesh {
 
         let mesh = new Mesh();
 
-        mesh.buf_vert = createBufferWithData(
+        mesh.buf_vert = createBufferMappedWithData(
             Api.device, 
             {size : vert_ary.byteLength, usage : GPUBufferUsage.VERTEX}, 
             vert_ary.buffer
