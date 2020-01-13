@@ -1,8 +1,9 @@
 "use strict";
 
-//import * as geo from    "./mesh.js"
-//import * as gpulib from "./gpu_lib.js";
-//import * as render from "./render.js"
+import {GPU_API_TYPE} from "/lib/core/gpu/gpu.js";
+import * as geo       from "./geometry.js";
+import * as gpulib    from "./gpu_lib.js";
+import * as render    from "./render.js";
 
 // up-to-date as of January 13, 2020
 // Note: setSubData temporarily broken due to dawn regression, to-be-fixed
@@ -19,42 +20,7 @@ async function onExit(state) {
 
 let gpu;
 
-// taken from https://trac.webkit.org/changeset/246217/webkit/
-function createBufferMappedWithData(device, descriptor, data, offset = 0) {
-    const mappedBuffer = device.createBufferMapped(descriptor);
-    const dataArray = new Uint8Array(mappedBuffer[1]);
-    dataArray.set(new Uint8Array(data), offset);
-    mappedBuffer[0].unmap();
-    return mappedBuffer[0];
-}
-
-async function mapWriteDataToBuffer(buffer, data, offset = 0) {
-    const arrayBuffer = await buffer.mapWriteAsync();
-    const writeArray = new Uint8Array(arrayBuffer);
-    writeArray.set(new Uint8Array(data), offset);
-    buffer.unmap();
-}
-
-// https://github.com/gpuweb/gpuweb/blob/master/design/BufferOperations.md
-function bufferMappedSubData(device, destBuffer, destOffset, srcArrayBuffer) {
-    const byteCount = srcArrayBuffer.byteLength;
-    const [srcBuffer, arrayBuffer] = device.createBufferMapped({
-        size: byteCount,
-        usage: GPUBufferUsage.COPY_SRC
-    });
-    new Uint8Array(arrayBuffer).set(new Uint8Array(srcArrayBuffer)); // memcpy
-    srcBuffer.unmap();
-
-    const encoder = device.createCommandEncoder();
-    encoder.copyBufferToBuffer(srcBuffer, 0, destBuffer, destOffset, byteCount);
-    const commandBuffer = encoder.finish();
-    const queue = device.defaultQueue;
-    queue.submit([commandBuffer]);
-
-    srcBuffer.destroy();
-}
-
-// super hard-coded version assuming 2 floats
+// super hard-coded version assuming 3 floats
 class MyUniformBufferObject {
     constructor() {}
 
@@ -96,254 +62,16 @@ class MyUniformBufferObject {
 
         update(i, v) {
             this.data[i] = v; // dstOffset, data, srcOffset, byteLength
-        //     //this.buf.setSubData(i * 4, this.data, i * 4, 4);
+             //this.buf.setSubData(i * 4, this.data, i * 4, 4);
         }
         upload(Api) {
 
             const buf  = this.buf;
             const data = this.data;
 
-            bufferMappedSubData(Api.device, buf, 0, data.buffer);
+            gpulib.bufferMappedSubData(Api.device, buf, 0, data.buffer);
             //this.buf.setSubData(0, this.data);
         }
-}
-
-async function loadShaderCompiler(state) {
-    state.shaderCompilerModule = await import(
-        "https://unpkg.com/@webgpu/glslang@0.0.12/dist/web-devel/glslang.js"
-    );
-    state.shaderCompiler = await state.shaderCompilerModule.default();
-}
-
-class Shader {
-    constructor(){
-        this.pipe_line          = null;
-        this.bind_grp_layout    = null;
-    }
-
-    static make(Api, vert_src, frag_src, ubo, compiler) {
-        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        // Compile and Create Shader Modules
-
-        // TODO(TR): compilation can be done in another thread
-        // to keep animation running uninterrupted during shader reload
-
-        let byte_vert   = compiler.compileGLSL( vert_src, "vertex" );
-        let byte_frag   = compiler.compileGLSL( frag_src, "fragment" );
-        
-        // Shaders are setup as Modules, Just pass in Byte Code.
-        let mod_vert = {
-            module      : Api.device.createShaderModule({ code:byte_vert }),
-            entryPoint  : "main"
-        };
-
-        let mod_frag = {
-            module      : Api.device.createShaderModule({ code:byte_frag }),
-            entryPoint  : "main"
-        };
-
-
-        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        // Define the Render Pipeline
-        // https://gpuweb.github.io/gpuweb/#primitive-topology
-
-        // The layout of Uniform data that will be bound to the shader
-        let pl_layout = Api.device.createPipelineLayout({ 
-            bindGroupLayouts : [ubo.bind_layout] 
-        });
-
-        // This is how a shader is put together.
-        // Define all the Attributes & Uniforms, Draw Mode and Linking the
-        // Shader Modules together.
-        // https://gpuweb.github.io/gpuweb/#gpurenderpipeline
-        let pipe_line = Api.device.createRenderPipeline({
-            layout              : pl_layout, //Required
-            vertexStage         : mod_vert,
-            fragmentStage       : mod_frag,
-
-            // This is like the draw mode from WEBGL
-            primitiveTopology   : "triangle-list",
-
-            // cull mode
-            rasterizationState : {cullMode : "back"},
-            // How to save the pixels to the frame buffer
-            colorStates         : [{
-                format    : Api.tex_format,
-                srcFactor : "src-alpha",
-                dstFactor : "one-minus-src-alpha",
-                operation : "add"
-            }],
-
-            // Tell Pipeline to Use the depth buffer
-            depthStencilState   : {
-                depthWriteEnabled   : true,
-                depthCompare        : "less",
-                format              : Api.depth_format,
-            },
-
-            // Setting up Vertex Attributes
-            vertexState : {
-                vertexBuffers : [
-                {   
-                    arrayStride : 24, // Vertex data Length in Bytes, 6 floats * 4 Bytes
-                    attributes  : [ 
-                        {shaderLocation : 0, offset : 0, format : "float2"},
-                        {shaderLocation : 1, offset : 8, format : "float4"} 
-                    ]
-                }
-                ]
-            },
-            sampleCount : Api.sampleCount
-        });
-
-        const canvas = MR.getCanvas();
-
-        const texture = Api.device.createTexture({
-            size : {
-                width  : canvas.width,
-                height : canvas.height,
-                depth  : 1,
-            },
-            sampleCount : Api.sampleCount,
-            format      : Api.tex_format,
-            usage       : GPUTextureUsage.OUTPUT_ATTACHMENT,
-        });
-
-        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        const shader = new Shader();
-        shader.pipe_line = pipe_line;
-        Api.texture = texture;
-        Api.textureView = texture.createView();
-        return shader;        
-    }
-}
-
-//##########################################################
-// Creating a Mesh is the same concept, Get a Typed Array of
-// Flat Vertex/Index data, create a buffer, pass data to it.
-// Keep Track of how many ELEMENTS in the buffer, not the byte size.
-// Like How many Vertices exist in this float32array
-class Mesh {
-    constructor(){
-        this.buf_vert   = null;     // Reference to GPU Buffer
-        this.elm_cnt    = 0;        // How many Vertices in buffer
-    }
-
-    static make(Api, vert_ary, elm_len = 2) {
-        /* old
-        let mesh = new Mesh();
-
-        mesh.buf_vert = Api.device.createBuffer({
-            size  : vert_ary.byteLength,
-            usage : GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-        });
-
-        mesh.buf_vert.setSubData(0, vert_ary);
-        mesh.elm_cnt = vert_ary.length / elm_len;   // How Many Vertices
-
-        */
-
-
-        let mesh = new Mesh();
-
-        mesh.buf_vert = createBufferMappedWithData(
-            Api.device, 
-            {size : vert_ary.byteLength, usage : GPUBufferUsage.VERTEX}, 
-            vert_ary.buffer
-        );
-
-        mesh.elm_cnt = vert_ary.length / elm_len;
-
-        return mesh;
-    }
-}
-
-
-function initGPUState(info, canvas) {
-    // initialize main structure holding GPU state info
-    const gpuInfo = {
-        adapter : info.gpuCtxInfo.adapter,
-        device  : info.gpuCtxInfo.device,
-
-        tex_format   : "bgra8unorm",
-        depth_format : "depth24plus-stencil8",
-        sampleCount  : 4,
-        depth_buffer : null,
-
-        clearColor : {r : 0.0, g : 0.0, b : 0.0, a : 1.0},
-
-        POSITION_LOC : 0, // Shader Attribute Location
-        UNIFORM_BIND : 0, // Uniform Buffer Binding Point
-    };
-    // describes the render pass (color and depth attachments for now)
-    gpuInfo.render_pass_descriptor = {
-        colorAttachments: [{
-            attachment : null,              // reference to color buffer
-            loadValue  : gpuInfo.clearColor // initial clear color       
-        }],
-
-        // depth view
-        depthStencilAttachment:{
-            attachment        : null,       
-            depthLoadValue    : 1.0,
-            depthStoreOp      : "store",
-            stencilLoadValue  : 0,
-            stencilStoreOp    : "store"
-        }
-    }
-    // swap chain
-    gpuInfo.swap_chain = gpu.configureSwapChain({
-        device  : gpuInfo.device,
-        format  : gpuInfo.tex_format,
-    });
-    // depth buffer
-    gpuInfo.depth_buffer = gpuInfo.device.createTexture({
-        size   : {width : canvas.width, height : canvas.height, depth : 1},
-        format : gpuInfo.depth_format,
-        usage  : GPUTextureUsage.OUTPUT_ATTACHMENT,
-        sampleCount : gpuInfo.sampleCount        
-    });
-    gpuInfo.depth_buffer_view = gpuInfo.depth_buffer.createView();
-    
-    return gpuInfo;
-}
-
-// Steps to take before rendering a frame
-function renderBegin(Api, info){
-    // https://developer.apple.com/documentation/metal/mtlcommandencoder
-    // https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers
-    // Get a Command Buffer, This is where we create all the commands we want to
-    // execute on the gpu.
-    Api.cmd_encoder = Api.device.createCommandEncoder({}); // Create Command Buffer
-
-    // Get the next frame buffer that we can use to render
-    // the next frame
-    Api.render_pass_descriptor.colorAttachments[0].attachment = Api.textureView; // or texture.createView();
-    Api.render_pass_descriptor.colorAttachments[0].resolveTarget = Api.swap_chain.getCurrentTexture().createView();
-    Api.render_pass_descriptor.depthStencilAttachment.attachment = Api.depth_buffer_view; // or depth_buffer.createView()
-    
-    // Start a Shader Command
-    Api.pass_encoder = Api.cmd_encoder.beginRenderPass( Api.render_pass_descriptor ); // Kinda like setting up a single Shader Excution Command
-    const viewport = info.viewport;
-    Api.pass_encoder.setViewport(
-        viewport.x, viewport.y, 
-        viewport.width, viewport.height, 
-        viewport.minDepth, viewport.maxDepth
-    );
-}
-
-// Steps to take after rendering a frame
-function renderEnd(Api, info){
-    // End a Shader Command
-    Api.pass_encoder.endPass();
-
-    // Close our command buffer, then send it to the queue
-    // to execute all the commands we created.
-    Api.device.defaultQueue
-        .submit([Api.cmd_encoder.finish()]); // Send Command Buffer to execute
-    
-    Api.cmd_encoder    = null;
-    Api.pass_encoder   = null;
 }
 
 async function setup(state, info) {
@@ -358,9 +86,9 @@ async function setup(state, info) {
     //  swap chain, 
     //  depth buffer
     const canvas = MR.getCanvas();
-    state.gpuInfo = initGPUState(info, canvas);
+    state.gpuInfo = gpulib.defaultInitGPUState(gpu, info, canvas);
     // load a shader compiler (in this case, for GLSL)
-    await loadShaderCompiler(state.gpuInfo);
+    await gpulib.loadShaderCompiler(state.gpuInfo);
 
     {
         const ubo = new MyUniformBufferObject();
@@ -372,17 +100,17 @@ async function setup(state, info) {
         ubo.data[2] = 0;
 
 
-        const vsrc = await assetutil.loadText("shaders/vertex.vert.glsl");
-        const fsrc = await assetutil.loadText("shaders/fragment.frag.glsl");
+        const vsrc = await asset.loadText("shaders/vertex.vert.glsl");
+        const fsrc = await asset.loadText("shaders/fragment.frag.glsl");
 
-        const shader = Shader.make(
+        const shader = gpulib.Shader.make(
             state.gpuInfo,
             vsrc, fsrc, ubo, 
             state.gpuInfo.shaderCompiler
         );
         state.gpuInfo.shader = shader;
 
-        const mesh = Mesh.make(state.gpuInfo, new Float32Array([
+        const mesh = geo.Mesh.make(state.gpuInfo, new Float32Array([
              0.0,  0.5,   1.0, 0.0, 0.0, 1.0,
             -0.5, -0.5,   0.0, 1.0, 0.0, 1.0,
              0.5, -0.5,   0.0, 0.0, 1.0, 1.0
@@ -448,15 +176,15 @@ function onDraw(t, projMat, viewMat, state, info) {
     const mesh = state.mesh;
 
     {
-        renderBegin(gpuInfo, info);
+        render.begin(gpuInfo, info);
 
-        gpuInfo.pass_encoder.setPipeline(gpuInfo.shader.pipe_line );
-        gpuInfo.pass_encoder.setBindGroup(gpuInfo.UNIFORM_BIND, ubo.bind_group );
-        gpuInfo.pass_encoder.setVertexBuffer(gpuInfo.POSITION_LOC, mesh.buf_vert );
+        gpuInfo.pass_encoder.setPipeline(gpuInfo.shader.pipe_line);
+        gpuInfo.pass_encoder.setBindGroup(gpuInfo.UNIFORM_BIND, ubo.bind_group);
+        gpuInfo.pass_encoder.setVertexBuffer(gpuInfo.POSITION_LOC, mesh.buf_vert);
         
         gpuInfo.pass_encoder.draw(mesh.elm_cnt, 1, 0, 0);
 
-        renderEnd(gpuInfo, info);
+        render.end(gpuInfo, info);
     }
 }
 
