@@ -5,6 +5,7 @@
 //import * as render from "./render.js"
 
 // up-to-date as of January 13, 2020
+// Note: setSubData temporarily broken due to dawn regression, to-be-fixed
 
 async function initCommon(state) {
 }
