@@ -30,10 +30,14 @@ let enableModeler = true;
 let payload_skeleton = null;
 let payload_skeleton2 = null;
 
-axios.get('assets/pressurepose-data.json').then((response) => {
-   payload_skeleton = response.data['skeletons']['truth'];
-   payload_skeleton2 = response.data['skeletons']['predicted'];
+axios.get('assets/data-output.json').then((response) => {
+   payload_skeleton = response.data['skeletons']['connor'];
 });
+
+// axios.get('assets/pressurepose-data.json').then((response) => {
+//    payload_skeleton = response.data['skeletons']['truth'];
+//    payload_skeleton2 = response.data['skeletons']['predicted'];
+// });
 
 let frame = 0;
 
@@ -737,11 +741,11 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       const frameData = data.frames[ frame++ % payload_skeleton['frames'].length ];
 
       if (mode == 'all' || mode == 'joints') {
-         for (let i = 0; i < frameData.length; i++){
+         for (let i = 0; i < frameData.length; i++) {
             m.save(); 
                let current = frameData[i];
                m.translate(current);
-               m.scale(.03,.03,.03);
+               m.scale(.05,.05,.05);
                drawShape(CG.sphere, color);
             m.restore();
          }
@@ -756,6 +760,51 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             m.restore();
          }
       }
+   }
+
+   let drawFivePoints = (data, color) => {
+      const f = payload_skeleton.frames[ frame++ % payload_skeleton['frames'].length ];
+   
+      m.translate([0,-5,0]);
+      m.save();
+         let current = f["Head"];
+         let pos = current.p;
+         m.translate(pos);
+         // m.scale(0.056444,0.056444,0.056444);
+         drawShape(CG.sphere, color);
+      m.restore();
+   
+      m.save();
+         current = f["LeftHand"];
+         pos = current.p;
+         m.translate(pos);
+         // m.scale(0.056444,0.056444,0.056444);
+         drawShape(CG.sphere, color);
+      m.restore();
+   
+      m.save();
+         current = f["RightHand"];
+         pos = current.p;
+         m.translate(pos);
+         // m.scale(0.056444,0.056444,0.056444);
+         drawShape(CG.sphere, color);
+      m.restore();
+   
+      m.save();
+         current = f["LeftFoot"];
+         pos = current.p;
+         m.translate(pos);
+         // m.scale(0.056444,0.056444,0.056444);
+         drawShape(CG.sphere, color);
+      m.restore();
+      m.save();
+         current = f["RightFoot"];
+         pos = current.p;
+         m.translate(pos);
+         // m.scale(0.056444,0.056444,0.056444);
+         drawShape(CG.sphere, color);
+      m.restore();
+      
    }
 
 
@@ -962,12 +1011,13 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    m.restore();
 
    const offsetTrack = [0, 0, -1];
+   // drawFivePoints(payload_skeleton, [1,0,0]);
    state.isToon = true;
    drawSkeleton(payload_skeleton, [1, 0, 0]);
-   m.save();
-      m.translate(offsetTrack);
-      drawSkeleton(payload_skeleton2, [0, 0, 1]);
-   m.restore();
+   // m.save();
+   //    m.translate(offsetTrack);
+   //    drawSkeleton(payload_skeleton2, [0, 0, 1]);
+   // m.restore();
    state.isToon = false;
 
    /*-----------------------------------------------------------------
