@@ -346,7 +346,6 @@ function renderEnd(Api, info){
 }
 
 async function setup(state, info) {
-    console.log(info);
     hotReloadFile(getPath('main.js'));
 
     CanvasUtil.resize(MR.getCanvas(), 1280, 720);
@@ -401,6 +400,7 @@ async function setup(state, info) {
         gpuInfo.texture.destroy();
         gpuInfo.depth_buffer.destroy();
 
+        gpuInfo.ubo.update(1, height / width);
 
         const texture = Api.device.createTexture({
             size : {
