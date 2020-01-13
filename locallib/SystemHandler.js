@@ -1,6 +1,6 @@
 "use strict";
 
-function pollGrab(state) {
+export function pollGrab(state) {
     let input = state.input;
     if ((input.LC && input.LC.isDown()) || (input.RC && input.RC.isDown())) {
         let controller = input.LC.isDown() ? input.LC : input.RC;
@@ -25,7 +25,7 @@ function pollGrab(state) {
 // temp
 window.pollGrab = pollGrab;
 
-function checkIntersection(P, verts) {
+export function checkIntersection(P, verts) {
     const lo = [ 10000, 10000, 10000 ],
           hi = [-10000,-10000,-10000 ];
 
@@ -40,7 +40,7 @@ function checkIntersection(P, verts) {
            P[2] > lo[2] && P[2] < hi[2] ;
 }
 
-function releaseLocks(state) {
+export function releaseLocks(state) {
     let input = state.input;
     if (input.LC && !input.LC.isDown() && input.RC && !input.RC.isDown()) {
         for (let i = 0; i < MR.objs.length; i++) {
@@ -55,7 +55,7 @@ function releaseLocks(state) {
 window.releaseLocks = releaseLocks;
 
 
-function pollAvatarData() {
+export function pollAvatarData() {
     if (MR.VRIsActive()) {
         const poseInfo = MR.getViewerPoseInfo();
         if (!poseInfo.isValid()) {

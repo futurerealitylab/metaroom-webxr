@@ -4,8 +4,7 @@
   <link   rel="stylesheet" href="assets/css/main.css">
   <link   rel="stylesheet" href="assets/css/glslEditor/glslEditor.css">
 
-  <script type="module" src="lib/core/queue.js"></script>
-  <script type="module" src="lib/input/input_nonVR.js"></script>
+  <script type="module" src="lib/input/input_keyboard.js"></script>
   <script type="module" src="lib/input/input_VR.js"></script>
   <script src="lib/input/cursor.js"></script>
   <script src="lib/media/audio.js"></script>
@@ -21,7 +20,6 @@
   <script src="lib/util/calibration.js"></script>
 
   <script src="lib/primitive/CG.js"></script>
-  <script src="lib/primitive/ui.js"></script>
   <script src="lib/primitive/ImprovedNoise.js"></script>
   <script src="lib/primitive/avatar.js"></script>  
   <script type="module" src="lib/primitive/draw.js"></script>
@@ -31,37 +29,22 @@
   <script src="lib/primitive/Obj.js"></script>
   
   <script src="lib/third-party/FileSaver.min.js"></script>
-  <script src="lib/third-party/axios.min.js"></script>  
-  
-  <!-- system backends -->
-  <script type="module" src="lib/core/webvr_backend.js"></script>
-  <script type="module" src="lib/core/webxr_backend.js"></script>
+  <script src="lib/third-party/axios.min.js"></script>
 
-  <script type="module" src="lib/core/viewpoint_controller.js"></script>
-
-  <!-- Server and Client. -->
-  <script type="module" src="lib/core/websocket_client.js"></script>
-  
-  <script type="module" src="lib/core/eventbus.js"></script>
+  <!-- Server and Client. -->  
   <script type="module" src="locallib/SystemHandler.js"></script>
-  <script type="module" src="lib/core/event_pubsub.js"></script>
-  <script type="module" src="lib/core/lock.js"></script>    
 
   <!--   System Initialization -->
   <!-- System Version Number -->
   <div id='version' value='1'></div>
   <div id='resolution'       value='640,640'></div>
   <div id='server-comm-port' value='3001'></div>
-  <!-- <div id='server-ip'        value='192.168.1.104'></div> -->
   <div id='server-sync-port' value='11235'></div>
+  
   <script type="module" src="lib/core/metaroom.js"></script>
   <script type="module" src="lib/core/event_callback.js"></script>  
-  <!-- Shader Editor -->
-  <script type="module" src="lib/core/watchfile.js"></script>
-  <script src="lib/core/console_handler.js"></script>
-  <script src="lib/core/error_handler.js"></script>
-  <script type="module" src="lib/core/shadertexteditor.js"></script>
 
+  <script src="lib/core/error_handler.js"></script>
 
 </head>
 <body style="background-color: black; color: white; text-emphasis-color: white;">
