@@ -5,8 +5,7 @@ import * as geo       from "./geometry.js";
 import * as gpulib    from "./gpu_lib.js";
 import * as render    from "./render.js";
 
-// up-to-date as of January 13, 2020
-// Note: setSubData temporarily broken due to dawn regression, to-be-fixed
+// up-to-date as of January 14, 2020
 
 async function initCommon(state) {
 }
@@ -69,8 +68,8 @@ class MyUniformBufferObject {
             const buf  = this.buf;
             const data = this.data;
 
-            gpulib.bufferMappedSubData(Api.device, buf, 0, data.buffer);
-            //this.buf.setSubData(0, this.data);
+            //gpulib.bufferMappedSubData(Api.device, buf, 0, data.buffer);
+            this.buf.setSubData(0, this.data);
         }
 }
 
