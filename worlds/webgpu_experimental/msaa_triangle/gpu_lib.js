@@ -198,3 +198,84 @@ export function bufferMappedSubData(device, destBuffer, destOffset, srcArrayBuff
 
     srcBuffer.destroy();
 }
+
+// taken from:
+// https://github.com/gpuweb/gpuweb/blob/master/design/BufferOperations.md
+export function AutoRingBuffer(device, chunkSize) {
+    const queue = device.defaultQueue;
+    let availChunks = [];
+
+    function Chunk() {
+        const size = chunkSize;
+        const [buf, initialMap] = this.device.createBufferMapped({
+            size: size,
+            usage: GPUBufferUsage.MAP_WRITE | GPUBufferUsage.COPY_SRC,
+        });
+
+        let mapTyped;
+        let pos;
+        let enc;
+        this.reset = function(mappedArrayBuffer) {
+            mapTyped = new Uint8Array(mappedArrayBuffer);
+            pos = 0;
+            enc = device.createCommandEncoder({});
+            if (size == chunkSize) {
+                availChunks.push(this);
+            }
+        };
+        this.reset(initialMap);
+
+        this.push = function(destBuffer, destOffset, srcArrayBuffer) {
+            const byteCount = srcArrayBuffer.byteLength;
+            const end = pos + byteCount;
+            if (end > size)
+                return false;
+            mapTyped.set(new Uint8Array(srcArrayBuffer), pos);
+            enc.copyBufferToBuffer(buf, pos, destBuffer, destOffset, byteCount);
+            pos = end;
+            return true;
+        };
+
+        this.flush = async function() {
+            const cb = enc.finish();
+            queue.submit([cb]);
+            const newMap = await buf.mapWriteAsync();
+            this.reset(newMap);
+        };
+
+        this.destroy = function() {
+            buf.destroy();
+        };
+    };
+
+    this.push = function(destBuffer, destOffset, srcArrayBuffer) {
+        if (availChunks.length) {
+            const chunk = availChunks[0];
+            if (chunk.push(destBuffer, destOffset, srcArrayBuffer))
+                return;
+            chunk.flush();
+            this.destroy();
+
+            while (true) {
+                chunkSize *= 2;
+                if (chunkSize >= srcArrayBuffer.byteLength)
+                    break;
+            }
+        }
+
+        new Chunk();
+        availChunks[0].push(destBuffer, destOffset, srcArrayBuffer);
+    };
+
+    this.flush = function() {
+        if (availChunks.length) {
+            availChunks[0].flush();
+            availChunks.shift();
+        }
+    };
+
+    this.destroy = function() {
+        availChunks.forEach(x => x.destroy());
+        availChunks = [];
+    };
+};
