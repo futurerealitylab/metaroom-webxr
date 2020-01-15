@@ -754,6 +754,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       m.restore();
    }
 
+   // DRAW AN OBJECT AS THOUGH IT IS REFLECTED IN AN MIRROR ALIGNED WITH THE XY PLANE AT Z==z.
+
    let drawInMirror = (z, drawProc) => {
       m.save();
          m.translate(0,0,2 * z);
