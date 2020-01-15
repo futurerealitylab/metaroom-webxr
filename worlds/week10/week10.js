@@ -468,21 +468,25 @@ function onStartFrame(t, state) {
       }
       let lx = getX(input.LC);
       let rx = getX(input.RC);
-      let sep = metersToInches(TABLE_DEPTH - 2 * RING_RADIUS);
-      if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
-         if (state.calibrationCount === undefined)
-            state.calibrationCount = 0;
-         if (++state.calibrationCount == 30) {
-            m.save();
-               m.identity();
-               m.translate(CG.mix(LP, RP, .5));
-               m.rotateY(Math.atan2(D[0], D[2]) + Math.PI/2);
-               m.translate(-2.35,1.00,-.72);
-               state.avatarMatrixInverse = m.value();
-               m.invert();
-               state.avatarMatrixForward = m.value();
-            m.restore();
-            state.calibrationCount = 0;
+      let sep = [metersToInches(TABLE_DEPTH   - 2 * RING_RADIUS),
+                 metersToInches(TABLE_DEPTH/2 - 2 * RING_RADIUS)];
+      for (let n = 0 ; n < 2 ; n++) {
+         let sgn = n == 0 ? -1 : 1;
+         if (d >= sep[n] - 1 && d <= sep[n] + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
+            if (state.calibrationCount === undefined)
+               state.calibrationCount = 0;
+            if (++state.calibrationCount == 30) {
+               m.save();
+                  m.identity();
+                  m.translate(CG.mix(LP, RP, .5));
+                  m.rotateY(Math.atan2(D[0], D[2]) - sgn * Math.PI/2);
+                  m.translate(-2.35, 1.00, sgn * .72);
+                  state.avatarMatrixInverse = m.value();
+                  m.invert();
+                  state.avatarMatrixForward = m.value();
+               m.restore();
+               state.calibrationCount = 0;
+            }
          }
       }
    }
