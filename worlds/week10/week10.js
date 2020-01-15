@@ -28,6 +28,9 @@ const TABLE_WIDTH      = inchesToMeters( 60);
 const TABLE_THICKNESS  = inchesToMeters( 11/8);
 const LEG_THICKNESS    = inchesToMeters(  2.5);
 
+const HYPERCUBE_POSITION = [0,EYE_HEIGHT,-1];
+const HYPERCUBE_SCALE    = 0.2;
+
 let enableModeler = true;
 
 /*Example Grabble Object*/
@@ -45,6 +48,8 @@ const WOOD = 0,
 
 let noise = new ImprovedNoise();
 let m = new Matrix();
+
+let rot4 = new Rot4();
 
 /*--------------------------------------------------------------------------------
 
@@ -474,7 +479,7 @@ function onStartFrame(t, state) {
                m.rotateY(Math.atan2(D[0], D[2]) + Math.PI/2);
                m.translate(-2.35,1.00,-.72);
                state.avatarMatrixInverse = m.value();
-	       m.invert();
+               m.invert();
                state.avatarMatrixForward = m.value();
             m.restore();
             state.calibrationCount = 0;
@@ -626,7 +631,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          m.save();
             m.multiply(state.avatarMatrixForward);
             m.translate(p);
-	    m.rotateQ(input.RC.orientation());
+            m.rotateQ(input.RC.orientation());
             m.translate(menuX[n], menuY[n], 0);
             m.scale(.03, .03, .03);
             drawShape(menuShape[n], n == menuChoice ? [1,.5,.5] : [1,1,1]);
@@ -845,12 +850,12 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    Demonstration of how to render the mirror reflection of an object.
 
    -----------------------------------------------------------------*/
-
+/*
    let drawTestShape = () => {
       m.save();
          m.rotateY(state.time).scale(.1);
          drawShape(CG.cube, [.5,1,1]);
-	 m.translate(1.5,.5,.5).scale(.5);
+         m.translate(1.5,.5,.5).scale(.5);
          drawShape(CG.cube, [.5,1,1]);
       m.restore();
    }
@@ -859,7 +864,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       drawTestShape();
       drawInMirror(-.4, drawTestShape);
    m.restore();
-
+*/
    /*-----------------------------------------------------------------
 
    Draw the two tables in the room.
@@ -964,19 +969,51 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
       else {
          m.save();
-	    m.translate(headsetPos);
-	    m.rotateQ(headsetRot);
-	    drawCamera();
+            m.translate(headsetPos);
+            m.rotateQ(headsetRot);
+            drawCamera();
          m.restore();
       }
    }
+
 /*
-   m.save();
-      m.translate(0,EYE_HEIGHT,-2);
-      m.rotateX(-.01);
-      m.scale(1.9);
-      drawShape(CG.sphere, [.5,1,.5]);
-   m.restore();
+   // HYPERCUBE IN A 4D TRACKBALL
+
+   {
+      if (input.LC && input.LC.isDown()) {
+         let D = CG.scale(CG.subtract(input.LC.tip(), HYPERCUBE_POSITION), 1 / HYPERCUBE_SCALE);
+         if (norm(D) > 1) {
+            if (input.D !== undefined)
+               rot4.rotate(input.D, D);
+            input.D = D;
+         }
+         else
+            delete input.D;
+      }
+
+      rot4.rotate([0,-.5,0],[0,-.499,0]);
+      let U = rot4.hypercube();
+      let H = rot4.transformedHypercube();
+
+      m.save();
+         m.translate(HYPERCUBE_POSITION);
+         //m.rotateY(state.time);
+         m.scale(HYPERCUBE_SCALE);
+         for (let n = 0 ; n < H.vertices.length ; n++) {
+            let u = U.vertices[n];
+            let v = H.vertices[n];
+            m.save();
+               let s = 1 + .2 * v[3];
+               m.scale(s);
+               s = Math.pow(s + .1, 3);
+               m.translate([v[0],v[1],v[2]]).scale(.1);
+               drawShape(CG.cube, [s * (.5 + .4 * u[0]),
+                                   s * (.5 + .4 * u[1]),
+                                   s * (.5 + .4 * u[2])]);
+            m.restore();
+         }
+      m.restore();
+   }
 */
 }
 
