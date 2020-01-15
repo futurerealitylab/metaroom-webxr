@@ -28,6 +28,9 @@ const TABLE_WIDTH      = inchesToMeters( 60);
 const TABLE_THICKNESS  = inchesToMeters( 11/8);
 const LEG_THICKNESS    = inchesToMeters(  2.5);
 
+const HYPERCUBE_POSITION = [0,EYE_HEIGHT,-1];
+const HYPERCUBE_SCALE    = 0.2;
+
 let enableModeler = true;
 
 /*Example Grabble Object*/
@@ -45,6 +48,8 @@ const WOOD = 0,
 
 let noise = new ImprovedNoise();
 let m = new Matrix();
+
+let rot4 = new Rot4();
 
 /*--------------------------------------------------------------------------------
 
@@ -463,21 +468,25 @@ function onStartFrame(t, state) {
       }
       let lx = getX(input.LC);
       let rx = getX(input.RC);
-      let sep = metersToInches(TABLE_DEPTH - 2 * RING_RADIUS);
-      if (d >= sep - 1 && d <= sep + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
-         if (state.calibrationCount === undefined)
-            state.calibrationCount = 0;
-         if (++state.calibrationCount == 30) {
-            m.save();
-               m.identity();
-               m.translate(CG.mix(LP, RP, .5));
-               m.rotateY(Math.atan2(D[0], D[2]) + Math.PI/2);
-               m.translate(-2.35,1.00,-.72);
-               state.avatarMatrixInverse = m.value();
-	       m.invert();
-               state.avatarMatrixForward = m.value();
-            m.restore();
-            state.calibrationCount = 0;
+      let sep = [metersToInches(TABLE_DEPTH   - 2 * RING_RADIUS),
+                 metersToInches(TABLE_DEPTH/2 - 2 * RING_RADIUS)];
+      for (let n = 0 ; n < 2 ; n++) {
+         let sgn = n == 0 ? -1 : 1;
+         if (d >= sep[n] - 1 && d <= sep[n] + 1 && Math.abs(lx) < .03 && Math.abs(rx) < .03) {
+            if (state.calibrationCount === undefined)
+               state.calibrationCount = 0;
+            if (++state.calibrationCount == 30) {
+               m.save();
+                  m.identity();
+                  m.translate(CG.mix(LP, RP, .5));
+                  m.rotateY(Math.atan2(D[0], D[2]) - sgn * Math.PI/2);
+                  m.translate(-2.35, 1.00, sgn * .72);
+                  state.avatarMatrixInverse = m.value();
+                  m.invert();
+                  state.avatarMatrixForward = m.value();
+               m.restore();
+               state.calibrationCount = 0;
+            }
          }
       }
    }
@@ -626,7 +635,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          m.save();
             m.multiply(state.avatarMatrixForward);
             m.translate(p);
-	    m.rotateQ(input.RC.orientation());
+            m.rotateQ(input.RC.orientation());
             m.translate(menuX[n], menuY[n], 0);
             m.scale(.03, .03, .03);
             drawShape(menuShape[n], n == menuChoice ? [1,.5,.5] : [1,1,1]);
@@ -749,6 +758,8 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       m.restore();
    }
 
+   // DRAW AN OBJECT AS THOUGH IT IS REFLECTED IN AN MIRROR ALIGNED WITH THE XY PLANE AT Z==z.
+
    let drawInMirror = (z, drawProc) => {
       m.save();
          m.translate(0,0,2 * z);
@@ -845,12 +856,12 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    Demonstration of how to render the mirror reflection of an object.
 
    -----------------------------------------------------------------*/
-
+/*
    let drawTestShape = () => {
       m.save();
          m.rotateY(state.time).scale(.1);
          drawShape(CG.cube, [.5,1,1]);
-	 m.translate(1.5,.5,.5).scale(.5);
+         m.translate(1.5,.5,.5).scale(.5);
          drawShape(CG.cube, [.5,1,1]);
       m.restore();
    }
@@ -859,7 +870,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       drawTestShape();
       drawInMirror(-.4, drawTestShape);
    m.restore();
-
+*/
    /*-----------------------------------------------------------------
 
    Draw the two tables in the room.
@@ -964,19 +975,51 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
       else {
          m.save();
-	    m.translate(headsetPos);
-	    m.rotateQ(headsetRot);
-	    drawCamera();
+            m.translate(headsetPos);
+            m.rotateQ(headsetRot);
+            drawCamera();
          m.restore();
       }
    }
+
 /*
-   m.save();
-      m.translate(0,EYE_HEIGHT,-2);
-      m.rotateX(-.01);
-      m.scale(1.9);
-      drawShape(CG.sphere, [.5,1,.5]);
-   m.restore();
+   // HYPERCUBE IN A 4D TRACKBALL
+
+   {
+      if (input.LC && input.LC.isDown()) {
+         let D = CG.scale(CG.subtract(input.LC.tip(), HYPERCUBE_POSITION), 1 / HYPERCUBE_SCALE);
+         if (norm(D) > 1) {
+            if (input.D !== undefined)
+               rot4.rotate(input.D, D);
+            input.D = D;
+         }
+         else
+            delete input.D;
+      }
+
+      rot4.rotate([0,-.5,0],[0,-.499,0]);
+      let U = rot4.hypercube();
+      let H = rot4.transformedHypercube();
+
+      m.save();
+         m.translate(HYPERCUBE_POSITION);
+         //m.rotateY(state.time);
+         m.scale(HYPERCUBE_SCALE);
+         for (let n = 0 ; n < H.vertices.length ; n++) {
+            let u = U.vertices[n];
+            let v = H.vertices[n];
+            m.save();
+               let s = 1 + .2 * v[3];
+               m.scale(s);
+               s = Math.pow(s + .1, 3);
+               m.translate([v[0],v[1],v[2]]).scale(.1);
+               drawShape(CG.cube, [s * (.5 + .4 * u[0]),
+                                   s * (.5 + .4 * u[1]),
+                                   s * (.5 + .4 * u[2])]);
+            m.restore();
+         }
+      m.restore();
+   }
 */
 }
 
