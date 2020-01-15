@@ -2,9 +2,9 @@
 
 git submodule init
 git submodule update --recursive
-cd system/server
+cd server
 npm install
-cd ../..
+cd ..
 cd webxr-server
 npm install
 cd ..
