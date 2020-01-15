@@ -56,6 +56,7 @@ const WOOD = 0,
 
 let noise = new ImprovedNoise();
 let m = new Matrix();
+let prevTime = 0.0;
 
 /*--------------------------------------------------------------------------------
 
@@ -736,15 +737,33 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       m.restore();
    }
 
+   Math.fmod = function (a,b) { return Number((a - (Math.floor(a / b) * b)).toPrecision(8)); };
+
    let drawSkeleton = (data, color, mode = 'all') => {
 
-      const frameData = data.frames[ frame++ % payload_skeleton['frames'].length ];
+      const totalFrames = payload_skeleton['frames'].length;
+      const targetFrameRate = 30;
+      const originalFrameRate = 30;
+
+      const currFrame = Math.floor(frame * targetFrameRate / originalFrameRate) % totalFrames;
+      const nextFrame = Math.floor(frame * targetFrameRate / originalFrameRate + 1) % totalFrames;
+      frame++;
+      // const duration = ticksPerSecond * totalFrames;
+      // const frame5 = Math.floor(Math.fmod(t, duration));
+      prevTime = t;
+      const deltaTime = t - prevTime;
+
+      const frameData = data.frames[currFrame];
+      const nextFrameData = data.frames[nextFrame];
 
       if (mode == 'all' || mode == 'joints') {
          for (let i = 0; i < frameData.length; i++) {
             m.save(); 
                let current = frameData[i];
+               let next = nextFrameData[i];
+               CG.mix(current, next, deltaTime);
                m.translate(current);
+
                m.scale(.05,.05,.05);
                drawShape(CG.sphere, color);
             m.restore();
@@ -1012,13 +1031,13 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    const offsetTrack = [0, 0, -1];
    // drawFivePoints(payload_skeleton, [1,0,0]);
-   state.isToon = true;
+   // state.isToon = true;
    drawSkeleton(payload_skeleton, [1, 0, 0]);
    // m.save();
    //    m.translate(offsetTrack);
    //    drawSkeleton(payload_skeleton2, [0, 0, 1]);
    // m.restore();
-   state.isToon = false;
+   // state.isToon = false;
 
    /*-----------------------------------------------------------------
       Here is where we draw avatars and controllers.
