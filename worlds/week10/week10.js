@@ -740,9 +740,14 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
       const frameData = data.frames[ frame++ % payload_skeleton['frames'].length ];
 
+      // if (frameData == null) {
+      //    return;
+      // }
+
       if (mode == 'all' || mode == 'joints') {
          for (let i = 0; i < frameData.length; i++) {
-            m.save(); 
+            m.save();
+               m.translate([0,1,0]);
                let current = frameData[i];
                m.translate(current);
                m.scale(.05,.05,.05);
