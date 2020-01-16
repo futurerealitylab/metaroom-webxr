@@ -293,7 +293,7 @@ function onReload() {
 // for convenience, e.g. if you want to attach objects to a single package for organization
 // For simple programs, globals are fine.
 async function setup(state) {
-
+    hotReloadFile(getPath("triangles.js"));
     CanvasUtil.resize(MR.getCanvas(), 1280, 720);
 
     // MR.server.subsLocal.subscribe("Update_File", (filename, args) => {
@@ -321,7 +321,7 @@ async function setup(state) {
     // NOTE: we have created custom functions to hook into the system editor functionality
     // Beyond this class you may want to create your own system for creating, compiling, and updating shaders.
     // 
-    // For the curious, see system/client/js/lib/gfxutil.js for WebGL utility functions
+    // For the curious, see lib/gfxutil.js for WebGL utility functions
     // used by the editor. You can use these directly (e.g. for other projects), 
     // but they won't work with the editor
     //
@@ -332,7 +332,7 @@ async function setup(state) {
 
     // Editor Specific:
     // editor library function for loading shader snippets from files on disk
-    let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+    let libSources = await ShaderTextEditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
         { 
             key : "pnoise", path : "shaders/noise.glsl", foldDefault : true
         },     
@@ -346,9 +346,9 @@ async function setup(state) {
 
     // Editor Specific:
     // load vertex and fragment shaders from disk, register with the editor
-    // (You can also use MREditor.registerShaderForLiveEditing to load a shader string
+    // (You can also use ShaderTextEditor.registerShaderForLiveEditing to load a shader string
     // created in the program
-    let shaderSource = await MREditor.loadAndRegisterShaderForLiveEditing(
+    let shaderSource = await ShaderTextEditor.loadAndRegisterShaderForLiveEditing(
         // gl context
         gl,
         // name of shader as it should appear in the editor
@@ -361,7 +361,7 @@ async function setup(state) {
 
                 const implicitNoiseInclude = true;
                 if (implicitNoiseInclude) {
-                    let libCode = MREditor.libMap.get("pnoise");
+                    let libCode = ShaderTextEditor.libMap.get("pnoise");
 
                     for (let i = 0; i < 2; i += 1) {
                         const stageCode = stages[i];
@@ -383,7 +383,7 @@ async function setup(state) {
                 }
 
                 // uses a preprocessor for custom extensions to GLSL
-                MREditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+                ShaderTextEditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
                     output[0],
                     output[1],
                     libMap
@@ -489,7 +489,7 @@ async function setup(state) {
 // adjusted times locally)
 function onStartFrame(t, state) {
     // set start time if this is the first time
-    if (state.timeStartMS === -1) { // only occurs once at the beginning
+    if (!state.timeStartMS) { // only occurs once at the beginning
         state.timeStartMS = t;
         state.timeStart   = t / 1000.0;
 

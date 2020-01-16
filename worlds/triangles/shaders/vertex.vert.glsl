@@ -8,7 +8,7 @@ out     vec3 vPos;
 uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProj;
-
+//
 // window resolution
 uniform vec2  uResolution;
 uniform float uAspect; // width / height
@@ -21,8 +21,8 @@ uniform float uTime;
 
 
 void main() {
-    gl_Position = uProj * uView * uModel * vec4(aPos, 1.0);
-    vPos = aPos;
+    gl_Position = uProj * uView * uModel * vec4(aPos + vec3(sin(uTime), 0.0, 0.0), 1.0);
+    vPos = aPos + 0.5 * + vec3(sin(uTime));
 
     // correct aspect ratio
     vPos.x *= uAspect;
