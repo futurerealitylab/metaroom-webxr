@@ -1,41 +1,30 @@
 #version 300 es
 precision highp float;
 
+// debug line shader
+
 // input vertex
-in  vec3 aPos;
-in  vec3 aNor;
-in  vec3 aTan;
-in  vec2 aUV;
+layout(location = 0) in  vec3 aPos;
+layout(location = 1) in  vec4 aColor;
 
-// interpolated vertex
-out vec3 vP;
+// interpolated vertex position
 out vec3 vPos;
-out vec3 vNor;
-out vec3 vTan;
-out vec3 vBin;
-out vec2 vUV;
-
-// interpolated cursor
-out vec3 vCursor;
-
-out vec2 vXY;
+out vec3 vWorldPos;
+out vec4 vColor;
 
 // matrices
 uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProj;
 
-uniform float uTime; // time in seconds
-uniform float uToon; // control toon shading
+void main(void) 
+{
+    vec4 worldPos = uModel * vec4(aPos, 1.0);
+    vec4 pos      = uProj * uView * uModel * vec4(aPos, 1.0);
+    
+    vPos      = pos.xyz;
+    vWorldPos = worldPos.xyz;
+    vColor    = aColor;
 
-void main(void) {
-    vec4 pos = uProj * uView * uModel * vec4(aPos, 1.);
-    vXY = pos.xy / pos.z;
-    vP = pos.xyz;
-    vPos = aPos;
-    vNor = (vec4(aNor, 0.) * inverse(uModel)).xyz;
-    vTan = (vec4(aTan, 0.) * inverse(uModel)).xyz;
-    vBin = cross(vNor, vTan);
-    vUV = aUV * vec2(1.,-1.) + vec2(0.,1.);
-    gl_Position = pos + uToon * vec4(normalize(vNor).xy, 0.,0.);
+    gl_Position = vec4(aPos.xyz, 1.0);
 }
