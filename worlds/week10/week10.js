@@ -152,6 +152,7 @@ async function onExit(state) {
 
 async function setup(state) {
    hotReloadFile(getPath('week10.js'));
+   CanvasUtil.resize(MR.getCanvas(), 1430, 1200);
    // (New Info): Here I am loading the graphics module once
    // This is for the sake of example:
    // I'm making the arbitrary decision not to support
@@ -247,7 +248,7 @@ async function setup(state) {
          },
          foldDefault : {
                vertex   : true,
-               fragment : false
+               fragment : true
          }
       }
    );
@@ -759,17 +760,18 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       const frameData = data.frames[currFrame];
       const nextFrameData = data.frames[nextFrame];
 
-      // if (frameData == null) {
-      //    return;
-      // }
+      if (frameData == null) {
+         return;
+      }
 
       if (mode == 'all' || mode == 'joints') {
          for (let i = 0; i < frameData.length; i++) {
             m.save();
-               m.translate([0,1,0]);
                let current = frameData[i];
-               let next = nextFrameData[i];
-               CG.mix(current, next, deltaTime);
+               if (current == null)
+                  continue;
+               // let next = nextFrameData[i];
+               // CG.mix(current, next, deltaTime);
                m.translate(current);
 
                m.scale(.05,.05,.05);
@@ -1060,13 +1062,14 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    const offsetTrack = [0, 0, -1];
    // drawFivePoints(payload_skeleton, [1,0,0]);
-   // state.isToon = true;
+   state.isToon = true;
+   m.translate([0,0,-2]);
    drawSkeleton(payload_skeleton, [1, 0, 0]);
    // m.save();
    //    m.translate(offsetTrack);
    //    drawSkeleton(payload_skeleton2, [0, 0, 1]);
    // m.restore();
-   // state.isToon = false;
+   state.isToon = false;
 
    /*-----------------------------------------------------------------
       Here is where we draw avatars and controllers.
