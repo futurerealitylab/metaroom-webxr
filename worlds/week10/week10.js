@@ -48,7 +48,7 @@ axios.get('assets/data-output.json').then((response) => {
 let frame = 0;
 
 /*Example Grabble Object*/
-let grabbableCube = new Obj(CG.torus);
+// let grabbableCube = new Obj(CG.torus);
 
 let lathe = CG.createMeshVertices(10, 16, CG.uvToLathe,
              [ CG.bezierToCubic([-1.0,-1.0,-0.7,-0.3,-0.1 , 0.1, 0.3 , 0.7 , 1.0 ,1.0]),
@@ -319,12 +319,12 @@ async function setup(state) {
 
    ************************************************************************/
 
-   MR.objs.push(grabbableCube);
-   grabbableCube.position    = [0,0,-.5];
-   grabbableCube.orientation = [0,0,0,1];
-   grabbableCube.uid = 0;
-   grabbableCube.lock = new Lock();
-   sendSpawnMessage(grabbableCube);
+   // MR.objs.push(grabbableCube);
+   // grabbableCube.position    = [0,0,-.5];
+   // grabbableCube.orientation = [0,0,0,1];
+   // grabbableCube.uid = 0;
+   // grabbableCube.lock = new Lock();
+   // sendSpawnMessage(grabbableCube);
 }
 
 /************************************************************************
@@ -410,7 +410,7 @@ function onStartFrame(t, state) {
    state.cursorPrev = cursorXYZ;
 
    if (state.position === undefined)
-      state.position = [0,0,0];
+      state.position = [0,-1,-2];
    let fx = -.01 * Math.sin(state.turnAngle),
        fz =  .01 * Math.cos(state.turnAngle);
    let moveBy = (dx,dz) => {
@@ -585,12 +585,12 @@ function onDraw(t, projMat, viewMat, state, info) {
 
    // THEN DRAW THE ENTIRE SCENE IN MINIATURE ON THE TOP OF ONE OF THE TABLES.
 
-   m.save();
-      m.translate(HALL_WIDTH/2 - TABLE_DEPTH/2, -TABLE_HEIGHT*1.048, TABLE_WIDTH/6.7);
-      m.rotateY(Math.PI);
-      m.scale(.1392);
-      myDraw(t, projMat, viewMat, state, info, true);
-   m.restore();
+   // m.save();
+   //    m.translate(HALL_WIDTH/2 - TABLE_DEPTH/2, -TABLE_HEIGHT*1.048, TABLE_WIDTH/6.7);
+   //    m.rotateY(Math.PI);
+   //    m.scale(.1392);
+   //    // myDraw(t, projMat, viewMat, state, info, true);
+   // m.restore();
 }
 
 function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
@@ -751,13 +751,14 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
       const currFrame = Math.floor(frame * targetFrameRate / originalFrameRate) % totalFrames;
       const nextFrame = Math.floor(frame * targetFrameRate / originalFrameRate + 1) % totalFrames;
-      frame++;
+      // frame++;
       // const duration = ticksPerSecond * totalFrames;
       // const frame5 = Math.floor(Math.fmod(t, duration));
       prevTime = t;
       const deltaTime = t - prevTime;
 
-      const frameData = data.frames[currFrame];
+      const frameData = data.frames[frame++ % totalFrames];
+      frame++;
       const nextFrameData = data.frames[nextFrame];
 
       if (frameData == null) {
@@ -774,8 +775,12 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
                // CG.mix(current, next, deltaTime);
                m.translate(current);
 
-               m.scale(.05,.05,.05);
-               drawShape(CG.sphere, color);
+               m.scale(.045,.045,.045);
+
+               if (i < 5)
+                  drawShape(CG.sphere, [0,1,0]);
+               else
+                  drawShape(CG.sphere, [0,0,1]);
             m.restore();
          }
       }
@@ -968,9 +973,15 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    m.save();
       let dy = isMiniature ? 0 : HALL_WIDTH/2;
-      m.translate(0, dy, 0);
-      m.scale(-HALL_WIDTH/2, -dy, -HALL_LENGTH/2);
-      drawShape(CG.cube, [1,1,1], 1,4, 2,4);
+      
+      // m.translate(0, dy, 0);
+      m.rotateX(-Math.PI / 2);
+      m.scale(5,5,5);
+      // m.scale(-HALL_WIDTH/2, -dy, -HALL_LENGTH/2);
+      
+
+      
+      drawShape(CG.quad, [1,1,1], 1,4, 2,4);
    m.restore();
 
    /*-----------------------------------------------------------------
@@ -999,15 +1010,15 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    -----------------------------------------------------------------*/
 
-   m.save();
-      m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, 0);
-      drawTable(0);
-   m.restore();
+   // m.save();
+   //    m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, 0);
+   //    drawTable(0);
+   // m.restore();
 
-   m.save();
-      m.translate((TABLE_DEPTH - HALL_WIDTH) / 2, 0, 0);
-      drawTable(1);
-   m.restore();
+   // m.save();
+   //    m.translate((TABLE_DEPTH - HALL_WIDTH) / 2, 0, 0);
+   //    drawTable(1);
+   // m.restore();
 
    /*-----------------------------------------------------------------
 
@@ -1018,10 +1029,10 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    -----------------------------------------------------------------*/
 
-   m.save();
-      m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, TABLE_WIDTH / 2 + STOOL_RADIUS * 1.5);
-      drawStool(0);
-   m.restore();
+   // m.save();
+   //    m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, TABLE_WIDTH / 2 + STOOL_RADIUS * 1.5);
+   //    drawStool(0);
+   // m.restore();
 
    /*-----------------------------------------------------------------
 
@@ -1038,27 +1049,27 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    -----------------------------------------------------------------*/
 
-   let A = [0,0,0];
-   let B = [1+.4*Math.sin(2 * state.time),.4*Math.cos(2 * state.time),0];
-   let C = CG.ik(.7,.7,B,[0,-1,-2]);
+   // let A = [0,0,0];
+   // let B = [1+.4*Math.sin(2 * state.time),.4*Math.cos(2 * state.time),0];
+   // let C = CG.ik(.7,.7,B,[0,-1,-2]);
 
-   m.save();
-      m.translate(-.5, 2.5 * TABLE_HEIGHT, (TABLE_DEPTH - HALL_WIDTH) / 2);
-      let skinColor = [1,.5,.3], D;
-      state.isToon = true;
+   // m.save();
+   //    m.translate(-.5, 2.5 * TABLE_HEIGHT, (TABLE_DEPTH - HALL_WIDTH) / 2);
+   //    let skinColor = [1,.5,.3], D;
+   //    state.isToon = true;
 
-      m.save();
-         m.translate(CG.mix(A,C,.5)).aimZ(CG.subtract(A,C)).scale(.05,.05,.37);
-         drawShape(lathe, skinColor, -1,1, 2,1);
-      m.restore();
+   //    m.save();
+   //       m.translate(CG.mix(A,C,.5)).aimZ(CG.subtract(A,C)).scale(.05,.05,.37);
+   //       drawShape(lathe, skinColor, -1,1, 2,1);
+   //    m.restore();
 
-      m.save();
-         m.translate(CG.mix(C,B,.5)).aimZ(CG.subtract(C,B)).scale(.03,.03,.37);
-         drawShape(lathe, skinColor, -1,1, 2,1);
-      m.restore();
+   //    m.save();
+   //       m.translate(CG.mix(C,B,.5)).aimZ(CG.subtract(C,B)).scale(.03,.03,.37);
+   //       drawShape(lathe, skinColor, -1,1, 2,1);
+   //    m.restore();
 
-      state.isToon = false;
-   m.restore();
+   //    state.isToon = false;
+   // m.restore();
 
    const offsetTrack = [0, 0, -1];
    // drawFivePoints(payload_skeleton, [1,0,0]);
