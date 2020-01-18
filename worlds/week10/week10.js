@@ -35,14 +35,15 @@ let enableModeler = true;
 
 let payload_skeleton = null;
 let payload_skeleton2 = null;
-
+let payload_skeleton3 = null;
 axios.get('assets/data-output.json').then((response) => {
    payload_skeleton = response.data['skeletons']['connor'];
 });
 
-// axios.get('assets/pressurepose-data.json').then((response) => {
+// axios.get('assets/pressurepose-data2.json').then((response) => {
 //    payload_skeleton = response.data['skeletons']['truth'];
 //    payload_skeleton2 = response.data['skeletons']['predicted'];
+//    payload_skeleton3 = response.data['skeletons']['quest'];
 // });
 
 let frame = 0;
@@ -646,71 +647,71 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    -----------------------------------------------------------------*/
 
-   let showMenu = p => {
-      for (let n = 0 ; n < 4 ; n++) {
-         m.save();
-            m.multiply(state.avatarMatrixForward);
-            m.translate(p);
-            m.rotateQ(input.RC.orientation());
-            m.translate(menuX[n], menuY[n], 0);
-            m.scale(.03, .03, .03);
-            drawShape(menuShape[n], n == menuChoice ? [1,.5,.5] : [1,1,1]);
-         m.restore();
-      }
-   }
+   // let showMenu = p => {
+   //    for (let n = 0 ; n < 4 ; n++) {
+   //       m.save();
+   //          m.multiply(state.avatarMatrixForward);
+   //          m.translate(p);
+   //          m.rotateQ(input.RC.orientation());
+   //          m.translate(menuX[n], menuY[n], 0);
+   //          m.scale(.03, .03, .03);
+   //          drawShape(menuShape[n], n == menuChoice ? [1,.5,.5] : [1,1,1]);
+   //       m.restore();
+   //    }
+   // }
 
-    /*-----------------------------------------------------------------
+   //  /*-----------------------------------------------------------------
 
-    drawTable() just happens to model the physical size and shape of the
-    tables in my lab (measured in meters). If you want to model physical
-    furniture, you will probably want to do something different.
+   //  drawTable() just happens to model the physical size and shape of the
+   //  tables in my lab (measured in meters). If you want to model physical
+   //  furniture, you will probably want to do something different.
 
-    -----------------------------------------------------------------*/
+   //  -----------------------------------------------------------------*/
 
-   let drawCamera = id => {
-      m.save();
-         m.translate(0,0,.1).scale(.1);
-         drawShape(CG.cube, [.5,.5,.5]);
-      m.restore();
-      m.save();
-         m.translate(0,0,-.05).scale(.05);
-         drawShape(CG.cylinder, [.5,.5,.5]);
-      m.restore();
-      m.save();
-         m.translate(0,0,-.1).scale(.04,.04,.001);
-         drawShape(CG.cylinder, [-1,-1,-1]);
-      m.restore();
-   }
+   // let drawCamera = id => {
+   //    m.save();
+   //       m.translate(0,0,.1).scale(.1);
+   //       drawShape(CG.cube, [.5,.5,.5]);
+   //    m.restore();
+   //    m.save();
+   //       m.translate(0,0,-.05).scale(.05);
+   //       drawShape(CG.cylinder, [.5,.5,.5]);
+   //    m.restore();
+   //    m.save();
+   //       m.translate(0,0,-.1).scale(.04,.04,.001);
+   //       drawShape(CG.cylinder, [-1,-1,-1]);
+   //    m.restore();
+   // }
 
-   let drawStool = id => {
-      m.save();
-         m.translate(0, STOOL_HEIGHT/2, 0);
-         m.rotateX(Math.PI/2);
-         m.scale(STOOL_RADIUS, STOOL_RADIUS, STOOL_HEIGHT/2);
-         drawShape(CG.roundedCylinder, [.2,.2,.2]);
-      m.restore();
-   }
+   // let drawStool = id => {
+   //    m.save();
+   //       m.translate(0, STOOL_HEIGHT/2, 0);
+   //       m.rotateX(Math.PI/2);
+   //       m.scale(STOOL_RADIUS, STOOL_RADIUS, STOOL_HEIGHT/2);
+   //       drawShape(CG.roundedCylinder, [.2,.2,.2]);
+   //    m.restore();
+   // }
 
-   let drawTable = id => {
-      m.save();
-         m.translate(0, TABLE_HEIGHT - TABLE_THICKNESS/2, 0);
-         m.scale(TABLE_DEPTH/2, TABLE_THICKNESS/2, TABLE_WIDTH/2);
-         drawShape(CG.cube, [1,1,1], 0);
-      m.restore();
-      m.save();
-         let h  = (TABLE_HEIGHT - TABLE_THICKNESS) / 2;
-         let dx = (TABLE_DEPTH  - LEG_THICKNESS  ) / 2;
-         let dz = (TABLE_WIDTH  - LEG_THICKNESS  ) / 2;
-         for (let x = -dx ; x <= dx ; x += 2 * dx)
-         for (let z = -dz ; z <= dz ; z += 2 * dz) {
-            m.save();
-               m.translate(x, h, z);
-               m.scale(LEG_THICKNESS/2, h, LEG_THICKNESS/2);
-               drawShape(CG.cube, [.5,.5,.5]);
-            m.restore();
-         }
-      m.restore();
-   }
+   // let drawTable = id => {
+   //    m.save();
+   //       m.translate(0, TABLE_HEIGHT - TABLE_THICKNESS/2, 0);
+   //       m.scale(TABLE_DEPTH/2, TABLE_THICKNESS/2, TABLE_WIDTH/2);
+   //       drawShape(CG.cube, [1,1,1], 0);
+   //    m.restore();
+   //    m.save();
+   //       let h  = (TABLE_HEIGHT - TABLE_THICKNESS) / 2;
+   //       let dx = (TABLE_DEPTH  - LEG_THICKNESS  ) / 2;
+   //       let dz = (TABLE_WIDTH  - LEG_THICKNESS  ) / 2;
+   //       for (let x = -dx ; x <= dx ; x += 2 * dx)
+   //       for (let z = -dz ; z <= dz ; z += 2 * dz) {
+   //          m.save();
+   //             m.translate(x, h, z);
+   //             m.scale(LEG_THICKNESS/2, h, LEG_THICKNESS/2);
+   //             drawShape(CG.cube, [.5,.5,.5]);
+   //          m.restore();
+   //       }
+   //    m.restore();
+   // }
 
    let drawHeadset = (position, orientation) => {
       m.save();
@@ -745,19 +746,19 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    let drawSkeleton = (data, color, mode = 'all') => {
 
-      const totalFrames = payload_skeleton['frames'].length;
-      const targetFrameRate = 30;
-      const originalFrameRate = 30;
+      const totalFrames = data.frames.length;
+      const targetFrameRate = 72;
+      const originalFrameRate = 72;
 
       const currFrame = Math.floor(frame * targetFrameRate / originalFrameRate) % totalFrames;
       const nextFrame = Math.floor(frame * targetFrameRate / originalFrameRate + 1) % totalFrames;
-      // frame++;
+
       // const duration = ticksPerSecond * totalFrames;
       // const frame5 = Math.floor(Math.fmod(t, duration));
       prevTime = t;
       const deltaTime = t - prevTime;
 
-      const frameData = data.frames[frame++ % totalFrames];
+      const frameData = data.frames[frame % totalFrames];
       frame++;
       const nextFrameData = data.frames[nextFrame];
 
@@ -777,10 +778,11 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
                m.scale(.045,.045,.045);
 
-               if (i < 5)
-                  drawShape(CG.sphere, [0,1,0]);
-               else
-                  drawShape(CG.sphere, [0,0,1]);
+               drawShape(CG.sphere, color)
+               // if (i < 5)
+               //    drawShape(CG.sphere, [0,1,0]);
+               // else
+               //    drawShape(CG.sphere, [0,0,1]);
             m.restore();
          }
       }
@@ -856,89 +858,89 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    -----------------------------------------------------------------*/
     
-   let drawController = (pos, rot, hand, isPressed) => {
-      m.save();
-         m.translate(pos);
-         m.rotateQ(rot);
-         m.translate(0,.02,-.005);
-         m.rotateX(.75);
-         m.save();
-               m.translate(0,0,-.0095).scale(.004,.004,.003);
-               drawShape(CG.sphere, isPressed ? [10,0,0] : [.5,0,0]);
-         m.restore();
-         m.save();
-               m.translate(0,0,-.01).scale(.04,.04,.13);
-               drawShape(CG.torus1, [0,0,0]);
-         m.restore();
-         m.save();
-               m.translate(0,-.0135,-.008).scale(.04,.0235,.0015);
-               drawShape(CG.cylinder, [0,0,0]);
-         m.restore();
-         m.save();
-               m.translate(0,-.01,.03).scale(.012,.02,.037);
-               drawShape(CG.cylinder, [0,0,0]);
-         m.restore();
-         m.save();
-               m.translate(0,-.01,.067).scale(.012,.02,.023);
-               drawShape(CG.sphere, [0,0,0]);
-         m.restore();
-      m.restore();
-   }
+   // let drawController = (pos, rot, hand, isPressed) => {
+   //    m.save();
+   //       m.translate(pos);
+   //       m.rotateQ(rot);
+   //       m.translate(0,.02,-.005);
+   //       m.rotateX(.75);
+   //       m.save();
+   //             m.translate(0,0,-.0095).scale(.004,.004,.003);
+   //             drawShape(CG.sphere, isPressed ? [10,0,0] : [.5,0,0]);
+   //       m.restore();
+   //       m.save();
+   //             m.translate(0,0,-.01).scale(.04,.04,.13);
+   //             drawShape(CG.torus1, [0,0,0]);
+   //       m.restore();
+   //       m.save();
+   //             m.translate(0,-.0135,-.008).scale(.04,.0235,.0015);
+   //             drawShape(CG.cylinder, [0,0,0]);
+   //       m.restore();
+   //       m.save();
+   //             m.translate(0,-.01,.03).scale(.012,.02,.037);
+   //             drawShape(CG.cylinder, [0,0,0]);
+   //       m.restore();
+   //       m.save();
+   //             m.translate(0,-.01,.067).scale(.012,.02,.023);
+   //             drawShape(CG.sphere, [0,0,0]);
+   //       m.restore();
+   //    m.restore();
+   // }
 
    // DRAW AN OBJECT AS THOUGH IT IS REFLECTED IN AN MIRROR ALIGNED WITH THE XY PLANE AT Z==z.
 
-   let drawInMirror = (z, drawProc) => {
-      m.save();
-         m.translate(0,0,2 * z);
-         m.scale(1,1,-1);
-         state.isMirror = true;
-         drawProc();
-         state.isMirror = false;
-      m.restore();
-   }
+   // let drawInMirror = (z, drawProc) => {
+   //    m.save();
+   //       m.translate(0,0,2 * z);
+   //       m.scale(1,1,-1);
+   //       state.isMirror = true;
+   //       drawProc();
+   //       state.isMirror = false;
+   //    m.restore();
+   // }
 
-   let drawAvatar = () => {
-      m.save();
-         m.multiply(state.avatarMatrixForward);
-         drawHeadset(input.HS.position(), input.HS.orientation());
-      m.restore();
-      m.save();
-         let P = state.position;
-         m.translate(-P[0],-P[1],-P[2]);
-         m.rotateY(-state.turnAngle);
-         m.rotateX(-state.tiltAngle);
-         m.save();
-            m.multiply(state.avatarMatrixForward);
-            drawController(input.LC.position(), input.LC.orientation(), 0, input.LC.isDown());
-            drawController(input.RC.position(), input.RC.orientation(), 1, input.RC.isDown());
-         m.restore();
-      m.restore();
-   }
+   // let drawAvatar = () => {
+   //    m.save();
+   //       m.multiply(state.avatarMatrixForward);
+   //       drawHeadset(input.HS.position(), input.HS.orientation());
+   //    m.restore();
+   //    m.save();
+   //       let P = state.position;
+   //       m.translate(-P[0],-P[1],-P[2]);
+   //       m.rotateY(-state.turnAngle);
+   //       m.rotateX(-state.tiltAngle);
+   //       m.save();
+   //          m.multiply(state.avatarMatrixForward);
+   //          drawController(input.LC.position(), input.LC.orientation(), 0, input.LC.isDown());
+   //          drawController(input.RC.position(), input.RC.orientation(), 1, input.RC.isDown());
+   //       m.restore();
+   //    m.restore();
+   // }
 
-   if (input.LC) {
-      drawInMirror(-1, drawAvatar);
+   // if (input.LC) {
+   //    drawInMirror(-1, drawAvatar);
 
-      if (isMiniature) {
-         m.save();
-            m.multiply(state.avatarMatrixForward);
-            drawHeadset(input.HS.position(), input.HS.orientation());
-         m.restore();
-      }         
+   //    if (isMiniature) {
+   //       m.save();
+   //          m.multiply(state.avatarMatrixForward);
+   //          drawHeadset(input.HS.position(), input.HS.orientation());
+   //       m.restore();
+   //    }         
 
-      m.save();
-         let P = state.position;
-         m.translate(-P[0],-P[1],-P[2]);
-         m.rotateY(-state.turnAngle);
-         m.rotateX(-state.tiltAngle);
-         m.save();
-            m.multiply(state.avatarMatrixForward);
-            drawController(input.LC.position(), input.LC.orientation(), 0, input.LC.isDown());
-            drawController(input.RC.position(), input.RC.orientation(), 1, input.RC.isDown());
-         m.restore();
-         if (enableModeler && input.RC.isDown())
-            showMenu(input.RC.position());
-      m.restore();
-   }
+   //    m.save();
+   //       let P = state.position;
+   //       m.translate(-P[0],-P[1],-P[2]);
+   //       m.rotateY(-state.turnAngle);
+   //       m.rotateX(-state.tiltAngle);
+   //       m.save();
+   //          m.multiply(state.avatarMatrixForward);
+   //          drawController(input.LC.position(), input.LC.orientation(), 0, input.LC.isDown());
+   //          drawController(input.RC.position(), input.RC.orientation(), 1, input.RC.isDown());
+   //       m.restore();
+   //       if (enableModeler && input.RC.isDown())
+   //          showMenu(input.RC.position());
+   //    m.restore();
+   // }
 
    /*-----------------------------------------------------------------
 
@@ -950,18 +952,18 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    -----------------------------------------------------------------*/
 
-   for (let n = 0 ; n < MR.objs.length ; n++) {
-      let obj = MR.objs[n];
-      m.save();
-         m.multiply(state.avatarMatrixForward);
-         m.translate(obj.position);
-         m.rotateQ(obj.orientation);
-         m.scale(.03,.03,.03);
-         drawShape(obj.shape, n==0 ? [1,.5,.5] : [1,1,1]);
-      m.restore();
-   }
+   // for (let n = 0 ; n < MR.objs.length ; n++) {
+   //    let obj = MR.objs[n];
+   //    m.save();
+   //       m.multiply(state.avatarMatrixForward);
+   //       m.translate(obj.position);
+   //       m.rotateQ(obj.orientation);
+   //       m.scale(.03,.03,.03);
+   //       drawShape(obj.shape, n==0 ? [1,.5,.5] : [1,1,1]);
+   //    m.restore();
+   // }
 
-   m.translate(0, -EYE_HEIGHT, 0);
+   // m.translate(0, -EYE_HEIGHT, 0);
  
    /*-----------------------------------------------------------------
 
@@ -1071,15 +1073,28 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    //    state.isToon = false;
    // m.restore();
 
-   const offsetTrack = [0, 0, -1];
+   const offsetTrack1 = [0, 0, -1];
+   const offsetTrack2 = [0, 0, -2];
    // drawFivePoints(payload_skeleton, [1,0,0]);
    state.isToon = true;
+
+   m.save();
+   // m.identity();
    m.translate([0,0,-2]);
    drawSkeleton(payload_skeleton, [1, 0, 0]);
-   // m.save();
-   //    m.translate(offsetTrack);
-   //    drawSkeleton(payload_skeleton2, [0, 0, 1]);
-   // m.restore();
+   m.restore();
+   m.save();
+      m.translate(offsetTrack1);
+      drawSkeleton(payload_skeleton2, [0, 0, 1]);
+   m.restore();
+
+   m.save();
+   m.translate([-1.5,0,-2.9]);
+
+      m.rotateY(Math.PI/2);
+      // m.translate(offsetTrack2);
+      drawSkeleton(payload_skeleton3, [0, 1, 1]);
+   m.restore();
    state.isToon = false;
 
    /*-----------------------------------------------------------------
