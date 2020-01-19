@@ -100,6 +100,8 @@ export function pollAvatarData() {
             const avatar_message = {
             type: "avatar",
             user: MR.playerid,
+            // The Date.now() method returns the number of milliseconds elapsed since January 1, 1970
+            timestamp: Date.now(),
             state: {
                 mode: MR.UserType.vr,
                 pos: CG.matrixTransform(MR.avatarMatrixForward, headsetPos),
