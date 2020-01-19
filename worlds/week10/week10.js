@@ -2,7 +2,6 @@
 
 import {Lock} from "../../lib/core/lock.js";
 
-
 /*--------------------------------------------------------------------------------
 
 The proportions below just happen to match the dimensions of my physical space
@@ -28,7 +27,7 @@ const TABLE_WIDTH      = inchesToMeters( 60);
 const TABLE_THICKNESS  = inchesToMeters( 11/8);
 const LEG_THICKNESS    = inchesToMeters(  2.5);
 
-const HYPERCUBE_POSITION = [0,EYE_HEIGHT,-1];
+const HYPERCUBE_POSITION = [0,EYE_HEIGHT,-.5];
 const HYPERCUBE_SCALE    = 0.2;
 
 let enableModeler = true;
@@ -729,6 +728,24 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    -----------------------------------------------------------------*/
     
+   let getControllerBeamPoint = (C, t) => {
+     let P = state.position;
+     m.save();
+         m.translate(-P[0],-P[1],-P[2]);
+         m.rotateY(-state.turnAngle);
+         m.rotateX(-state.tiltAngle);
+         m.multiply(state.avatarMatrixForward);
+
+         m.translate(C.position());
+         m.rotateQ(C.orientation());
+         m.translate(0,.02,-.005);
+         m.rotateX(.75);
+         m.translate(0,0,-.0095 - t);
+	 P = m.transform([0,0,0]);
+      m.restore();
+      return P;
+   }
+
    let drawController = (pos, rot, hand, isPressed) => {
       m.save();
          m.translate(pos);
@@ -810,6 +827,23 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          m.restore();
          if (enableModeler && input.RC.isDown())
             showMenu(input.RC.position());
+      m.restore();
+   }
+
+   let bounce = t => {
+      t = (2 * t) % 2;
+      t = t < 1 ? t : 2 - t;
+      return 1 - t * t;
+   }
+
+   // SEE IF WE HAVE A CORRECT UNDERSTANDING OF THE CONTROLLER TIP POSITION.
+
+   if (input.LC) {
+      m.save();
+         m.translate(getControllerBeamPoint(input.LC, .3 * bounce(state.time)));
+	 m.rotateY(state.time);
+         m.scale(.021);
+         drawShape(CG.sphere, [2,2,2]);
       m.restore();
    }
 
@@ -982,22 +1016,25 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       }
    }
 
-/*
    // HYPERCUBE IN A 4D TRACKBALL
 
    {
+      let isControllerInHypercube = false;
       if (input.LC && input.LC.isDown()) {
          let D = CG.scale(CG.subtract(input.LC.tip(), HYPERCUBE_POSITION), 1 / HYPERCUBE_SCALE);
-         if (norm(D) > 1) {
+         if (CG.norm(D) < 1) {
+            isControllerInHypercube = true;
             if (input.D !== undefined)
                rot4.rotate(input.D, D);
-            input.D = D;
+            input.D = D.slice();
          }
          else
             delete input.D;
       }
 
-      rot4.rotate([0,-.5,0],[0,-.499,0]);
+      if (isControllerInHypercube)
+         rot4.rotate([-.101,0,.9],[-.1,0,.9]);
+
       let U = rot4.hypercube();
       let H = rot4.transformedHypercube();
 
@@ -1013,14 +1050,13 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
                m.scale(s);
                s = Math.pow(s + .1, 3);
                m.translate([v[0],v[1],v[2]]).scale(.1);
-               drawShape(CG.cube, [s * (.5 + .4 * u[0]),
+               drawShape(CG.cube, [1,1,1]/*[s * (.5 + .4 * u[0]),
                                    s * (.5 + .4 * u[1]),
-                                   s * (.5 + .4 * u[2])]);
+                                   s * (.5 + .4 * u[2])]*/);
             m.restore();
          }
       m.restore();
    }
-*/
 }
 
 function onEndFrame(t, state) {

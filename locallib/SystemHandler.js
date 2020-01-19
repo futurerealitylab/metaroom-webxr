@@ -102,11 +102,17 @@ export function pollAvatarData() {
             user: MR.playerid,
             state: {
                 mode: MR.UserType.vr,
-                pos: CG.matrixTransform(MR.avatarMatrixForward, headsetPos),
+
+                //pos: CG.matrixTransform(MR.avatarMatrixForward, headsetPos),
+                pos: CG.matrixTransform(MR.avatarMatrixInverse, headsetPos),
+
                 rot: headsetRot,
                 controllers: {
                 left: {
-                    pos: CG.matrixTransform(MR.avatarMatrixForward, [
+
+                    //pos: CG.matrixTransform(MR.avatarMatrixForward, [
+                    pos: CG.matrixTransform(MR.avatarMatrixInverse, [
+
                         controllerLeftPos[0],
                         controllerLeftPos[1],
                         controllerLeftPos[2]
@@ -127,7 +133,10 @@ export function pollAvatarData() {
                     analogy: controllerLeft.axes[1]
                 },
                 right: {
-                    pos: CG.matrixTransform(MR.avatarMatrixForward, [
+
+                    //pos: CG.matrixTransform(MR.avatarMatrixForward, [
+                    pos: CG.matrixTransform(MR.avatarMatrixInverse, [
+
                         controllerRightPos[0],
                         controllerRightPos[1],
                         controllerRightPos[2]
