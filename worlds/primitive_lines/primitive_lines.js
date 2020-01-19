@@ -1,5 +1,7 @@
 "use strict";
 
+import * as mem from "/lib/core/memory.js";
+
 
 async function initCommon(state) {
     PR = await MR.dynamicImport(
@@ -26,9 +28,10 @@ async function setup(state) {
 
 
     state.render = {
-        paths : new PR.PathRenderer_GL()
+        pathsDynamic : new PR.PathRenderer_GL(),
+        pathsStatic : new PR.PathRenderer_GL()
     };
-    await state.render.paths.init(gl);
+    await state.render.pathsDynamic.init(gl);
 
     state.cursor = ScreenCursor.trackCursor(MR.getCanvas());
 }
@@ -55,7 +58,7 @@ function onStartFrame(t, state) {
     gl.enable(gl.CULL_FACE);
     
 
-    const pr = state.render.paths;
+    const pr = state.render.pathsDynamic;
 
     pr.beginPass();
     pr.fxDefault();
@@ -63,19 +66,18 @@ function onStartFrame(t, state) {
     const DEPTH = sin01(timeS);
 
     // multiple ways to do the same thing:
-    const PATHS             = 0;
+    const PEN               = 0;
     const SEGMENTS          = 1;
     const EXPLICIT_TYPES    = 2;
     const EXPLICIT_VERTICES = 3;
     const EXPLICIT_DATA     = 4;
 
-    const example = EXPLICIT_VERTICES;
-
+    const example = PEN;
 
 
     switch (example) {
     // using the metaphor of a pen/cursor
-    case PATHS: {
+    case PEN: {
         // this sets a default global color
         pr.color(1, 0, 0, 1);
 
@@ -247,7 +249,7 @@ function updateViewProjection(projMat, viewMat, state, info) {
 function onDraw(t, projMat, viewMat, state, info) {
     updateViewProjection(projMat, viewMat, state, info);
 
-    const pr = state.render.paths;
+    const pr = state.render.pathsDynamic;
 
     // can be called multiple times with
     // the same data so you don't need to re-upload
@@ -260,7 +262,7 @@ function onDraw(t, projMat, viewMat, state, info) {
 function onEndFrame(t, state) {
     // this assumes the lines will
     // be regenerated every frame
-    state.render.paths.endPassReset();
+    state.render.pathsDynamic.endPassReset();
 
     // this doesn't (use this for static data)
     // state.render.paths.end()
