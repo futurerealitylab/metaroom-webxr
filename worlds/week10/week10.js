@@ -40,11 +40,11 @@ axios.get('assets/data-output.json').then((response) => {
    payload_skeleton = response.data['skeletons']['connor'];
 });
 
-// axios.get('assets/pressurepose-data2.json').then((response) => {
-//    payload_skeleton = response.data['skeletons']['truth'];
-//    payload_skeleton2 = response.data['skeletons']['predicted'];
-//    payload_skeleton3 = response.data['skeletons']['quest'];
-// });
+axios.get('assets/pressurepose-data3.json').then((response) => {
+   payload_skeleton = response.data['skeletons']['truth'];
+   payload_skeleton2 = response.data['skeletons']['predicted'];
+   payload_skeleton3 = response.data['skeletons']['quest'];
+});
 
 let frame = 0;
 
@@ -65,6 +65,12 @@ let noise = new ImprovedNoise();
 let m = new Matrix();
 let prevTime = 0.0;
 
+let elapsedTime = 0;
+let frameCount = 0;
+
+let now = new Date().getTime();;
+let then = 0;
+let fps = 0;
 let rot4 = new Rot4();
 
 /*--------------------------------------------------------------------------------
@@ -744,23 +750,38 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
    Math.fmod = function (a,b) { return Number((a - (Math.floor(a / b) * b)).toPrecision(8)); };
 
+   then = now;
+   now = new Date().getTime();
+   frameCount++;
+   const deltaTime = now - then; 
+   elapsedTime += deltaTime;
+   
+   if (elapsedTime >= 1000) {
+      fps = frameCount;
+      frameCount = 0;
+      elapsedTime -= 1000;
+   }
+
+   // console.log(fps);
+
    let drawSkeleton = (data, color, mode = 'all') => {
 
       const totalFrames = data.frames.length;
-      const targetFrameRate = 72;
-      const originalFrameRate = 72;
+      const targetFrameRate = 60;
+      const originalFrameRate = data.fps;
+
+      const frameTicks = Math.floor(originalFrameRate / targetFrameRate);
 
       const currFrame = Math.floor(frame * targetFrameRate / originalFrameRate) % totalFrames;
       const nextFrame = Math.floor(frame * targetFrameRate / originalFrameRate + 1) % totalFrames;
 
       // const duration = ticksPerSecond * totalFrames;
       // const frame5 = Math.floor(Math.fmod(t, duration));
-      prevTime = t;
-      const deltaTime = t - prevTime;
 
       const frameData = data.frames[frame % totalFrames];
-      frame++;
-      const nextFrameData = data.frames[nextFrame];
+      frame += 1;
+      // console.log(frameTicks);
+      // const nextFrameData = data.frames[nextFrame];
 
       if (frameData == null) {
          return;
@@ -1084,12 +1105,24 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    drawSkeleton(payload_skeleton, [1, 0, 0]);
    m.restore();
    m.save();
+   
       m.translate(offsetTrack1);
-      drawSkeleton(payload_skeleton2, [0, 0, 1]);
+      // drawSkeleton(payload_skeleton2, [0, 0, 1]);
+      // console.log(payload_skeleton2.frames[frame % payload_skeleton2.frames.length])
+      m.translate(payload_skeleton2.frames[frame % payload_skeleton2.frames.length][15]);
+      m.scale(0.05,0.05,0.05);
+      
+      drawShape(CG.sphere, [0,0,1]);
+   m.restore();
+   m.save();
+      m.translate(offsetTrack1);
+      m.translate(payload_skeleton2.frames[frame % payload_skeleton2.frames.length][20]);
+      m.scale(0.05,0.05,0.05);
+      drawShape(CG.sphere, [0,0,1]);
    m.restore();
 
    m.save();
-   m.translate([-1.5,0,-2.9]);
+   m.translate([-1.5,0,-1.8]);
 
       m.rotateY(Math.PI/2);
       // m.translate(offsetTrack2);
