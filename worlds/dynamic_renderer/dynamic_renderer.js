@@ -2,38 +2,50 @@
 
 import * as mem from "/lib/core/memory.js";
 
+// Toby's renderer / The renderer
+let Render;
+let tr;
 
 async function initCommon(state) {
-    PR = await MR.dynamicImport(
-        "/lib/graphics/path_renderer.js"
+    Render = await MR.dynamicImport(
+        "/lib/graphics/renderer_wgl.js"
     );
+    tr = Render.Renderer;
 }
 
 async function onReload(state) {
-    state.render.paths.reset();
+    state.render.pathsDynamic.rewindToStart();
 
     await initCommon(state);
 }
 
 async function onExit(state) {
-    state.render.paths.reset();
-    state.render.paths.deinit();
+    state.render.pathsDynamic.rewindToStart();
+    state.render.pathsDynamic.deinit();
 }
 
-let PR;
-async function setup(state) {
-    hotReloadFile(getPath('primitive_lines.js'));
+async function initRenderer(state) {
+    // initialize shared info between
+    // all instances of the renderer TODO(TR): make
+    // it unnecessary to have multiple instances
 
-    await initCommon(state);
-
+    await tr.initSystem({ctx : gl});
 
     state.render = {
-        pathsDynamic : new PR.PathRenderer_GL(),
-        pathsStatic : new PR.PathRenderer_GL()
+        pathsDynamic : new tr(),
+        pathsStatic  : new tr()
     };
     await state.render.pathsDynamic.init(gl);
 
     state.cursor = ScreenCursor.trackCursor(MR.getCanvas());
+}
+
+async function setup(state) {
+    hotReloadFile(getPath('dynamic_renderer.js'));
+
+    await initCommon(state);
+
+    await initRenderer(state);
 }
 
 function sin01(val) {
@@ -72,7 +84,7 @@ function onStartFrame(t, state) {
     const EXPLICIT_VERTICES = 3;
     const EXPLICIT_DATA     = 4;
 
-    const example = PEN;
+    const example = 0;
 
 
     switch (example) {
@@ -94,19 +106,24 @@ function onStartFrame(t, state) {
             // this does the commented-out steps above
             pr.beginPathAt(0, 0, DEPTH); 
 
-            pr.pathToColor(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 1.0, 0.0, 0.0, 1.0); // [A, B)
+            pr.pathTo(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 1.0, 0.0, 0.0, 1.0); // [A, B)
 
-            pr.pathToColor(0.5, 0.0, DEPTH, 0.0, 1.0, 0.0, 1.0); // [B, C)
-            pr.closePathColor(0.0, 0.0, 1.0, 1.0);
-            pr.pathToColor(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            pr.endPathColor(1.0, 1.0, 1.0, 0.5); // C] must include the endpoint
+            // "EX" variants of functions require the caller to pass
+            // all arguments explicitly - this overrides the global
+            // settings such as "color". I prefer this to the global
+            // settings since I don't need to track what the global state
+            // actually is. All the information is here in-place
+            pr.pathToEX(0.5, 0.0, DEPTH, 0.0, 1.0, 0.0, 1.0); // [B, C)
+            pr.closePathEX(0.0, 0.0, 1.0, 1.0);
+            pr.pathToEX(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
+            pr.endPathEX(1.0, 1.0, 1.0, 0.5); // C] must include the endpoint
         }
         {
             pr.modeTriangles();
 
             pr.beginPath();
-            pr.pathToColor(-0.5, -1.0 + DEPTH / 4, DEPTH, 1.0, 1.0, 1.0, 0.27);
-            pr.pathToColor(0.5, -1.0, DEPTH, 0.0, 1.0, 0.0, 1.0);
+            pr.pathToEX(-0.5, -1.0 + DEPTH / 4, DEPTH, 1.0, 1.0, 1.0, 0.27);
+            pr.pathToEX(0.5, -1.0, DEPTH, 0.0, 1.0, 0.0, 1.0);
 
             pr.color(0.7, 0.0, 1.0, 1.0);
 
@@ -114,16 +131,16 @@ function onStartFrame(t, state) {
 
             pr.color(0.2, 0.0, 1.0, 1.0);
             
-            pr.pathTo(0.0, -.2 - DEPTH / 7, DEPTH);
+            pr.pathToEX(0.0, -.2 - DEPTH / 7, DEPTH);
 
-            pr.endPathColor(1.0, 0.0, 0.0, 1.0);
+            pr.endPathEX(1.0, 0.0, 0.0, 1.0);
         }
         {
             pr.modePrimitiveLines();
 
             pr.beginPath();
-            pr.pathToColor(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            pr.endPathColor(1.0, 1.0, 1.0, 0.5);
+            pr.pathToEX(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
+            pr.endPathEX(1.0, 1.0, 1.0, 0.5);
         }
         break;
     }
@@ -139,19 +156,19 @@ function onStartFrame(t, state) {
         // in pixels for now
         pr.lineWidth(1);
         {
-            pr.pushSegmentColor(
+            pr.pushSegmentEX(
                 0.0, 0.0, DEPTH,                             1.0, 0.0, 0.0, 1.0,
                 0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH,     0.0, 1.0, 0.0, 1.0
             );
-            pr.pushSegmentColor(
+            pr.pushSegmentEX(
                 0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH,     0.0, 1.0, 0.0, 1.0,
                 0.5, 0.0, DEPTH,                             0.0, 0.0, 1.0, 1.0
             );
-            pr.pushSegmentColor(
+            pr.pushSegmentEX(
                 0.5, 0.0, DEPTH,                             0.0, 0.0, 1.0, 1.0,
                 0, 0, DEPTH,                                 1.0, 0.0, 0.0, 1.0
             );
-            pr.pushSegmentColor(
+            pr.pushSegmentEX(
                 0, 0, DEPTH,                                 1.0, 0.0, 0.0, 1.0,
                 -0.5, -0.5, DEPTH,                           1.0, 1.0, 1.0, 0.5
             );
@@ -170,12 +187,12 @@ function onStartFrame(t, state) {
         {
             pr.beginPathAt(0, 0, DEPTH); 
 
-            pr.lineToColor(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 1.0, 0.0, 0.0, 1.0); // [A, B)
+            pr.lineToEX(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 1.0, 0.0, 0.0, 1.0); // [A, B)
 
-            pr.lineToColor(0.5, 0.0, DEPTH, 0.0, 1.0, 0.0, 1.0); // [B, C)
-            pr.closeLineColor(0.0, 0.0, 1.0, 1.0);
-            pr.lineToColor(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            pr.endPathColor(1.0, 1.0, 1.0, 0.5); // C] must include the endpoint
+            pr.lineToEX(0.5, 0.0, DEPTH, 0.0, 1.0, 0.0, 1.0); // [B, C)
+            pr.closeLineEX(0.0, 0.0, 1.0, 1.0);
+            pr.lineToEX(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
+            pr.endPathEX(1.0, 1.0, 1.0, 0.5); // C] must include the endpoint
         }
         break;
     } 
@@ -187,28 +204,28 @@ function onStartFrame(t, state) {
         pr.lineWidth(1);
         {
             pr.beginLine();
-            pr.pushLineVertexColor(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            pr.pushLineVertexColor(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
-            pr.pushLineVertexColor(0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
+            pr.pushLineVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+            pr.pushLineVertexEX(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
+            pr.pushLineVertexEX(0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
             // TODO way to reuse a vertex
-            pr.pushLineVertexColor(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            pr.pushLineVertexColor(-0.5, -0.5, DEPTH, 1.0, 1.0, 1.0, 0.5);
+            pr.pushLineVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+            pr.pushLineVertexEX(-0.5, -0.5, DEPTH, 1.0, 1.0, 1.0, 0.5);
             pr.endLine();
 
             pr.beginLine();
-            pr.pushArrayLineVertexInterleavedColor([
-                -0.5,0.5,DEPTH, 0,0,1,1,
-                -.5,-.5,DEPTH, 0,1,0,1,
-                .5,-.5,DEPTH, 1,0,0,1,
-                .5,.5,DEPTH, 0,0,1,1,
-                0,0,DEPTH, 1,1,1,1,
+            pr.pushArrayLineVertexInterleavedEX([
+                -0.5,  0.5, DEPTH,  0.0, 0.0, 1.0, 1.0,
+                -0.5, -0.5, DEPTH,  0.0, 1.0, 0.0, 1.0,
+                 0.5, -0.5, DEPTH,  1.0, 0.0, 0.0, 1.0,
+                 0.5,  0.5, DEPTH,  0.0, 0.0, 1.0, 1.0,
+                 0.0,  0.0, DEPTH,  1.0, 1.0, 1.0, 1.0,
             ]);
 
-            // pr.pushLineVertexColor(-0.5,0.5,DEPTH, 0,0,1,1);
-            // pr.pushLineVertexColor( -.5,-.5,DEPTH, 0,1,0,1);
-            // pr.pushLineVertexColor(.5,-.5,DEPTH, 1,0,0,1);
-            // pr.pushLineVertexColor(.5,.5,DEPTH, 0,0,1,1);
-            // pr.pushLineVertexColor(0,0,DEPTH, 1,1,1,1);
+            // pr.pushLineVertexEX(-0.5,0.5,DEPTH, 0,0,1,1);
+            // pr.pushLineVertexEX( -.5,-.5,DEPTH, 0,1,0,1);
+            // pr.pushLineVertexEX(.5,-.5,DEPTH, 1,0,0,1);
+            // pr.pushLineVertexEX(.5,.5,DEPTH, 0,0,1,1);
+            // pr.pushLineVertexEX(0,0,DEPTH, 1,1,1,1);
 
             pr.endLine();
         }
@@ -228,14 +245,14 @@ function onStartFrame(t, state) {
         // in pixels for now
         pr.lineWidth(1);
         {
-            pr.pushVertexColor(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            pr.pushVertexColor(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
-                pr.pushVertexColor(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
-            pr.pushVertexColor(0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
-                pr.pushVertexColor(0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
-            pr.pushVertexColor(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
-                pr.pushVertexColor(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            pr.pushVertexColor(-0.5, -0.5, DEPTH, 1.0, 1.0, 1.0, 0.5);
+            pr.pushVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+            pr.pushVertexEX(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
+                pr.pushVertexEX(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
+            pr.pushVertexEX(0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
+                pr.pushVertexEX(0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
+            pr.pushVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+                pr.pushVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+            pr.pushVertexEX(-0.5, -0.5, DEPTH, 1.0, 1.0, 1.0, 0.5);
         }
         break;
     }
@@ -262,24 +279,24 @@ function onDraw(t, projMat, viewMat, state, info) {
 function onEndFrame(t, state) {
     // this assumes the lines will
     // be regenerated every frame
-    state.render.pathsDynamic.endPassReset();
+    state.render.pathsDynamic.endPassRewindToStart();
 
     // this doesn't (use this for static data)
-    // state.render.paths.end()
+    // state.render.paths.endPass()
 }
 
 export default function main() {
     const def = {
-        name: 'primitive lines',
-        setup: setup,
-        onStartFrame: onStartFrame,
+        name           : 'dynamic renderer',
+        setup          : setup,
+        onStartFrame   : onStartFrame,
         onStartFrameXR : onStartFrame,
-        onEndFrame: onEndFrame,
-        onEndFrameXR : onEndFrame,
-        onDraw: onDraw,
-        onDrawXR: onDraw,
-        onReload: onReload,
-        onExit: onExit
+        onEndFrame     : onEndFrame,
+        onEndFrameXR   : onEndFrame,
+        onDraw         : onDraw,
+        onDrawXR       : onDraw,
+        onReload       : onReload,
+        onExit         : onExit
     };
 
     return def;
