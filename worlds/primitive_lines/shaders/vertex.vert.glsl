@@ -4,8 +4,8 @@ precision highp float;
 // debug line shader
 
 // input vertex
-layout(location = 0) in  vec3 aPos;
-layout(location = 1) in  vec4 aColor;
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec4 aColor;
 
 // interpolated vertex position
 out vec3 vPos;
@@ -20,7 +20,7 @@ uniform mat4 uProj;
 void main(void) 
 {
     vec4 worldPos = uModel * vec4(aPos, 1.0);
-    vec4 pos      = uProj * uView * uModel * vec4(aPos, 1.0);
+    vec4 pos      = uProj * uView * worldPos;
     
     vPos      = pos.xyz;
     vWorldPos = worldPos.xyz;
