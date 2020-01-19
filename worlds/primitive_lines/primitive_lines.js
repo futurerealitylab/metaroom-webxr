@@ -69,7 +69,7 @@ function onStartFrame(t, state) {
     const EXPLICIT_VERTICES = 3;
     const EXPLICIT_DATA     = 4;
 
-    const example = PATHS;
+    const example = EXPLICIT_VERTICES;
 
 
 
@@ -191,6 +191,23 @@ function onStartFrame(t, state) {
             // TODO way to reuse a vertex
             pr.pushLineVertexColor(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
             pr.pushLineVertexColor(-0.5, -0.5, DEPTH, 1.0, 1.0, 1.0, 0.5);
+            pr.endLine();
+
+            pr.beginLine();
+            pr.pushArrayLineVertexInterleavedColor([
+                -0.5,0.5,DEPTH, 0,0,1,1,
+                -.5,-.5,DEPTH, 0,1,0,1,
+                .5,-.5,DEPTH, 1,0,0,1,
+                .5,.5,DEPTH, 0,0,1,1,
+                0,0,DEPTH, 1,1,1,1,
+            ]);
+
+            // pr.pushLineVertexColor(-0.5,0.5,DEPTH, 0,0,1,1);
+            // pr.pushLineVertexColor( -.5,-.5,DEPTH, 0,1,0,1);
+            // pr.pushLineVertexColor(.5,-.5,DEPTH, 1,0,0,1);
+            // pr.pushLineVertexColor(.5,.5,DEPTH, 0,0,1,1);
+            // pr.pushLineVertexColor(0,0,DEPTH, 1,1,1,1);
+
             pr.endLine();
         }
         break;
