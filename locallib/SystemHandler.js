@@ -119,6 +119,10 @@ export function pollAvatarData() {
                         controllerLeftRot[2],
                         controllerLeftRot[3]
                     ],
+                    angularAcceleration: [controllerLeft.pose.angularAcceleration[0],controllerLeft.pose.angularAcceleration[1],controllerLeft.pose.angularAcceleration[2]],
+                    angularVelocity: [controllerLeft.pose.angularVelocity[0],controllerLeft.pose.angularVelocity[1],controllerLeft.pose.angularVelocity[2]],
+                    linearAcceleration: [controllerLeft.pose.linearAcceleration[0],controllerLeft.pose.linearAcceleration[1],controllerLeft.pose.linearAcceleration[2]],
+                    linearVelocity: [controllerLeft.pose.linearVelocity[0],controllerLeft.pose.linearVelocity[1],controllerLeft.pose.linearVelocity[2]],
                     analog: controllerLeftButtons[0].pressed,
                     trigger: controllerLeftButtons[1].pressed,
                     sideTrigger: controllerLeftButtons[2].pressed,
@@ -140,6 +144,10 @@ export function pollAvatarData() {
                         controllerRightRot[2],
                         controllerRightRot[3]
                     ],
+                    angularAcceleration: [controllerRight.pose.angularAcceleration[0],controllerRight.pose.angularAcceleration[1],controllerRight.pose.angularAcceleration[2]],
+                    angularVelocity: [controllerRight.pose.angularVelocity[0],controllerRight.pose.angularVelocity[1],controllerRight.pose.angularVelocity[2]],
+                    linearAcceleration: [controllerRight.pose.linearAcceleration[0],controllerRight.pose.linearAcceleration[1],controllerRight.pose.linearAcceleration[2]],
+                    linearVelocity: [controllerRight.pose.linearVelocity[0],controllerRight.pose.linearVelocity[1],controllerRight.pose.linearVelocity[2]],
                     analog: controllerRightButtons[0].pressed,
                     trigger: controllerRightButtons[1].pressed,
                     sideTrigger: controllerRightButtons[2].pressed,
