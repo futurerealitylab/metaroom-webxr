@@ -3,14 +3,16 @@
 import * as mem from "/lib/core/memory.js";
 
 // Toby's renderer / The renderer
-let Render;
-let tr;
+let RenderLib; // module
+let TR; // module alias
+let tr; // the renderer type
 
 async function initCommon(state) {
-    Render = await MR.dynamicImport(
+    RenderLib = await MR.dynamicImport(
         "/lib/graphics/renderer_wgl.js"
     );
-    tr = Render.Renderer;
+    TR = RenderLib;
+    tr = RenderLib.Renderer;
 }
 
 async function onReload(state) {
@@ -131,7 +133,7 @@ function onStartFrame(t, state) {
 
             pr.color(0.2, 0.0, 1.0, 1.0);
             
-            pr.pathToEX(0.0, -.2 - DEPTH / 7, DEPTH);
+            pr.pathTo(0.0, -.2 - DEPTH / 7, DEPTH);
 
             pr.endPathEX(1.0, 0.0, 0.0, 1.0);
         }
@@ -245,14 +247,26 @@ function onStartFrame(t, state) {
         // in pixels for now
         pr.lineWidth(1);
         {
-            pr.pushVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            pr.pushVertexEX(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
-                pr.pushVertexEX(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
-            pr.pushVertexEX(0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
-                pr.pushVertexEX(0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
-            pr.pushVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
-                pr.pushVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            pr.pushVertexEX(-0.5, -0.5, DEPTH, 1.0, 1.0, 1.0, 0.5);
+            // methods:
+            // pr.pushVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+            // pr.pushVertexEX(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
+            //     pr.pushVertexEX(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
+            // pr.pushVertexEX(0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
+            //     pr.pushVertexEX(0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
+            // pr.pushVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+            //     pr.pushVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+            // pr.pushVertexEX(-0.5, -0.5, DEPTH, 1.0, 1.0, 1.0, 0.5);
+
+            // free-floating function version (reloadable, easier to iterate):
+            TR.pushVertexEX(pr, 0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+            TR.pushVertexEX(pr, 0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
+                TR.pushVertexEX(pr, 0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
+            TR.pushVertexEX(pr, 0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
+                TR.pushVertexEX(pr, 0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
+            TR.pushVertexEX(pr, 0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+                TR.pushVertexEX(pr, 0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+            TR.pushVertexEX(pr, -0.5, -0.5, DEPTH, 1.0, 1.0, 1.0, 0.5);
+
         }
         break;
     }
@@ -264,7 +278,12 @@ function updateViewProjection(projMat, viewMat, state, info) {
     gl.uniformMatrix4fv(state.uProjLoc, false, projMat);
 }
 function onDraw(t, projMat, viewMat, state, info) {
-    updateViewProjection(projMat, viewMat, state, info);
+    const timeS = t / 1000.0;
+
+    // TODO need to set transformations in the renderer
+    viewMat = [1,0,0,0, 0,1,0,0, 0,0,1,0, Math.cos(timeS),Math.sin(timeS),0,1];
+    gl.uniformMatrix4fv(state.uModelLoc, false, [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+    updateViewProjection([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]/*projMat*/, [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1], state, info);
 
     const pr = state.render.pathsDynamic;
 
