@@ -48,16 +48,17 @@ async function setup(state) {
     await initCommon(state);
 
     await initRenderer(state);
+
+    state.m = new Matrix();
 }
 
 function sin01(val) {
     return (Math.sin(val) + 1.0) / 2.0;
 }
 
-function onStartFrame(t, state) {
-    const timeS = t / 1000.0;
+function onStartFrame(t, state, info) {
 
-    gl.viewport(0, 0, MR.getCanvas().width, MR.getCanvas().height);
+    const timeS = t / 1000.0;
 
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
@@ -76,8 +77,16 @@ function onStartFrame(t, state) {
 
     pr.beginPass();
     pr.fxDefault();
+}
 
-    const DEPTH = sin01(timeS);
+function onDraw(t, projMat, viewMat, state, info) {
+    console.group("WEE");
+    const timeS = t / 1000.0;
+
+    const pr = state.render.pathsDynamic;
+
+
+    const DEPTH = -4;
 
     // multiple ways to do the same thing:
     const PEN               = 0;
@@ -86,9 +95,22 @@ function onStartFrame(t, state) {
     const EXPLICIT_VERTICES = 3;
     const EXPLICIT_DATA     = 4;
 
-    const example = 0;
+    const example = PEN;
+
+    const m = state.m;
+
+    m.save();
+
+    pr.modelMatrix(m.value());
 
 
+    m.save();
+        m.translate(-Math.cos(timeS), -0.5 * Math.sin(timeS), -1 - Math.cos(timeS));
+        pr.viewMatrix(m.value());
+    m.restore();
+
+    pr.projectionMatrix(projMat);
+    
     switch (example) {
     // using the metaphor of a pen/cursor
     case PEN: {
@@ -123,6 +145,13 @@ function onStartFrame(t, state) {
         {
             pr.modeTriangles();
 
+            m.save();
+                m.translate(-1, 0, 0);
+                pr.modelMatrix(m.value());
+            m.restore();
+
+
+
             pr.beginPath();
             pr.pathToEX(-0.5, -1.0 + DEPTH / 4, DEPTH, 1.0, 1.0, 1.0, 0.27);
             pr.pathToEX(0.5, -1.0, DEPTH, 0.0, 1.0, 0.0, 1.0);
@@ -139,7 +168,6 @@ function onStartFrame(t, state) {
         }
         {
             pr.modePrimitiveLines();
-
             pr.beginPath();
             pr.pathToEX(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
             pr.endPathEX(1.0, 1.0, 1.0, 0.5);
@@ -271,28 +299,17 @@ function onStartFrame(t, state) {
         break;
     }
     }
-}
-
-function updateViewProjection(projMat, viewMat, state, info) {
-    gl.uniformMatrix4fv(state.uViewLoc, false, viewMat);
-    gl.uniformMatrix4fv(state.uProjLoc, false, projMat);
-}
-function onDraw(t, projMat, viewMat, state, info) {
-    const timeS = t / 1000.0;
-
-    // TODO need to set transformations in the renderer
-    viewMat = [1,0,0,0, 0,1,0,0, 0,0,1,0, Math.cos(timeS),Math.sin(timeS),0,1];
-    gl.uniformMatrix4fv(state.uModelLoc, false, [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
-    updateViewProjection([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]/*projMat*/, [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1], state, info);
-
-    const pr = state.render.pathsDynamic;
 
     // can be called multiple times with
     // the same data so you don't need to re-upload
     // static data! -- We can have multiple renderer instances
     // of the path renderer
     // e.g. one to to hold static data and one to hold dynamic data
-    pr.draw();
+    TR.draw(pr);
+
+    m.restore();
+
+    console.groupEnd();
 }
 
 function onEndFrame(t, state) {

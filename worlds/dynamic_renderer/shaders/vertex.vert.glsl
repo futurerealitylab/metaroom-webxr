@@ -26,8 +26,5 @@ void main(void)
     vWorldPos = worldPos.xyz;
     vColor    = aColor;
 
-    // temp
-    gl_Position = vec4(aPos.xyz, 1.0);
-
-    // gl_Position = pos;
+    gl_Position = pos;
 }
