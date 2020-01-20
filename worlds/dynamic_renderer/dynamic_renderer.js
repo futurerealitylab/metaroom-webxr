@@ -80,7 +80,7 @@ function onStartFrame(t, state, info) {
 }
 
 function onDraw(t, projMat, viewMat, state, info) {
-
+    console.log(info.viewIdx);
     const timeS = t / 1000.0;
 
     const sin01Time = math.sin01(timeS);
@@ -333,10 +333,9 @@ function onDraw(t, projMat, viewMat, state, info) {
     // of the path renderer
     // e.g. one to to hold static data and one to hold dynamic data
     TR.draw(pr);
+    pr.rewindToStart();
 
     m.restore();
-
-    console.groupEnd();
 }
 
 function onEndFrame(t, state) {
