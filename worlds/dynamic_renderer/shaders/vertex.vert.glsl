@@ -17,6 +17,8 @@ uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProj;
 
+uniform float uTime;
+
 void main(void) 
 {
     vec4 worldPos = uModel * vec4(aPos, 1.0);

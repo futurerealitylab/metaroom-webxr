@@ -1,6 +1,7 @@
 "use strict";
 
-import * as mem from "/lib/core/memory.js";
+import * as mem  from "/lib/core/memory.js";
+import * as math from "./math/math.js";
 
 // Toby's renderer / The renderer
 let RenderLib; // module
@@ -45,56 +46,59 @@ async function initRenderer(state) {
 async function setup(state) {
     hotReloadFile(getPath('dynamic_renderer.js'));
 
+    CanvasUtil.resize(MR.getCanvas(), 1280 / 2, 720 / 2);
+
     await initCommon(state);
 
     await initRenderer(state);
 
     state.m = new Matrix();
-}
 
-function sin01(val) {
-    return (Math.sin(val) + 1.0) / 2.0;
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthFunc(gl.LEQUAL);
+    gl.enable(gl.CULL_FACE);
+
+    gl.clearColor(0.0, 0.3, 0.3, 1.0);
 }
 
 function onStartFrame(t, state, info) {
 
     const timeS = t / 1000.0;
 
-    gl.enable(gl.DEPTH_TEST);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
-
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.clearColor(0.0, 0.3, 0.3, 1.0);
-
-    gl.depthFunc(gl.LEQUAL);
-
-    gl.enable(gl.CULL_FACE);
-    
 
     const pr = state.render.pathsDynamic;
 
+    // call this when you want to start a drawing pass
     pr.beginPass();
+    // use the default shader (will add more to the renderer)
     pr.fxDefault();
+    // update the global time
+    pr.updateGlobalTimeSeconds(timeS);
 }
 
 function onDraw(t, projMat, viewMat, state, info) {
-    console.group("WEE");
+
     const timeS = t / 1000.0;
+
+    const sin01Time = math.sin01(timeS);
+    const sinTime = Math.sin(timeS);
+    const cosTime = Math.cos(timeS);
 
     const pr = state.render.pathsDynamic;
 
-
     const DEPTH = -4;
 
-    // multiple ways to do the same thing:
+    // multiple ways to draw (PEN is the most complete example)
     const PEN               = 0;
     const SEGMENTS          = 1;
     const EXPLICIT_TYPES    = 2;
     const EXPLICIT_VERTICES = 3;
     const EXPLICIT_DATA     = 4;
 
+    // set "example" to one of the constants above
     const example = PEN;
 
     const m = state.m;
@@ -103,11 +107,14 @@ function onDraw(t, projMat, viewMat, state, info) {
 
     pr.modelMatrix(m.value());
 
-
-    m.save();
-        m.translate(-Math.cos(timeS), -0.5 * Math.sin(timeS), -1 - Math.cos(timeS));
-        pr.viewMatrix(m.value());
-    m.restore();
+    if (MR.VRIsActive()) {
+        pr.viewMatrix(viewMat);
+    } else {
+        m.save();
+            m.translate(-cosTime, -0.5 * sinTime, -1 - cosTime);
+            pr.viewMatrix(m.value());
+        m.restore();
+    }
 
     pr.projectionMatrix(projMat);
     
@@ -116,7 +123,6 @@ function onDraw(t, projMat, viewMat, state, info) {
     case PEN: {
         // this sets a default global color
         pr.color(1, 0, 0, 1);
-
 
         {
             pr.modePrimitiveLines(); 
@@ -127,10 +133,10 @@ function onDraw(t, projMat, viewMat, state, info) {
             //pr.moveTo(0, 0, DEPTH); // start cursor at A
             //pr.beginPath();
 
-            // this does the commented-out steps above
+            // this is equivalent to the commented-out steps above
             pr.beginPathAt(0, 0, DEPTH); 
 
-            pr.pathTo(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 1.0, 0.0, 0.0, 1.0); // [A, B)
+            pr.pathTo(0.5, 0.5 - 0.5 * sinTime, DEPTH, 1.0, 0.0, 0.0, 1.0); // [A, B)
 
             // "EX" variants of functions require the caller to pass
             // all arguments explicitly - this overrides the global
@@ -146,28 +152,49 @@ function onDraw(t, projMat, viewMat, state, info) {
             pr.modeTriangles();
 
             m.save();
-                m.translate(-1, 0, 0);
+                m.translate(-0.5, -0.5, DEPTH);
+                m.rotateZ(timeS);
+                m.translate(0.5, 0.5, -DEPTH);
                 pr.modelMatrix(m.value());
             m.restore();
-
-
 
             pr.beginPath();
             pr.pathToEX(-0.5, -1.0 + DEPTH / 4, DEPTH, 1.0, 1.0, 1.0, 0.27);
             pr.pathToEX(0.5, -1.0, DEPTH, 0.0, 1.0, 0.0, 1.0);
-
-            pr.color(0.7, 0.0, 1.0, 1.0);
-
-            pr.pathTo(0.5, -.2, DEPTH);
-
-            pr.color(0.2, 0.0, 1.0, 1.0);
             
-            pr.pathTo(0.0, -.2 - DEPTH / 7, DEPTH);
+            pr.color(0.7, 0.0, 1.0, 1.0);
+            pr.endPath();
+
+            m.save();
+                m.translate(-0.5, -0.5, DEPTH);
+                m.rotateY(timeS * 2);
+                m.translate(0.5, 0.5, -DEPTH);
+                pr.modelMatrix(m.value());
+            m.restore();
+
+            // two sides (instead of disabling culling): 
+            // (TODO: option to generate both sides upon call to endPath?)
+            pr.beginPath();
+
+                pr.pathTo(0.5 + 2 * sin01Time, -0.2, DEPTH);
+                pr.color(0.2, 0.0, 1.0, 1.0);
+                pr.pathTo(0.0, -0.2 - DEPTH / 7, DEPTH);
 
             pr.endPathEX(1.0, 0.0, 0.0, 1.0);
+            pr.beginPath();
+
+                pr.pathToEX(0.5 + 2 * sin01Time, -0.2, DEPTH, 1.0, 0.0, 0.0, 1.0);
+                pr.color(0.2, 0.0, 1.0, 1.0);
+                pr.pathTo(0.5, -1.0, DEPTH);
+
+            pr.endPathEX(0.7, 0.0, 1.0, 1.0);
+            
+            // TODO coordinate stack to return here
+            pr.moveTo(0.0, -0.2 - DEPTH / 7, DEPTH);
         }
         {
             pr.modePrimitiveLines();
+            
             pr.beginPath();
             pr.pathToEX(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
             pr.endPathEX(1.0, 1.0, 1.0, 0.5);
