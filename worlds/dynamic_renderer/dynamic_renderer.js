@@ -331,6 +331,8 @@ function onDraw(t, projMat, viewMat, state, info) {
     // static data! -- We can have multiple renderer instances
     // of the path renderer
     // e.g. one to to hold static data and one to hold dynamic data
+
+    TR.update(pr);
     TR.draw(pr);
     pr.rewindToStart();
 
