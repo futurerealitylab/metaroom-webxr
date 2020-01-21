@@ -99,58 +99,45 @@ function ControllerHandler(controller) {
    let wasDown = false;
 }
 
-// (New Info): constants can be reloaded without worry
-// let VERTEX_SIZE = 8;
-
-// (New Info): temp save modules as global "namespaces" upon loads
-// let gfx;
-
-// (New Info):
-// handle reloading of imports (called in setup() and in onReload())
+let RenderLib; // module
+let RN;        // module alias
+let drend;     // render static type (constructor)
 async function initCommon(state) {
-   // (New Info): use the previously loaded module saved in state, use in global scope
-   // TODO automatic re-setting of loaded libraries to reduce boilerplate?
-   // gfx = state.gfx;
-   // state.m = new CG.Matrix();
-   // noise = state.noise;
+    RenderLib = await MR.dynamicImport(
+        "/lib/render/dynamic_renderer_wgl.js"
+    );
+    RN = RenderLib;
+    drend = RenderLib.Renderer;
 }
 
-// (New Info):
 async function onReload(state) {
-   // called when this file is reloaded
-   // re-initialize imports, objects, and state here as needed
-   await initCommon(state);
+   // dynamic renderer (updates per-frame)
+   state.dr.rewindToStart();
 
-   // Note: you can also do some run-time scripting here.
-   // For example, do some one-time modifications to some objects during
-   // a performance, then remove the code before subsequent reloads
-   // i.e. like coding in the browser console
+   await initCommon(state);
 }
 
-// (New Info):
 async function onExit(state) {
-   // called when world is switched
-   // de-initialize / close scene-specific resources here
-   console.log("Goodbye! =)");
+   state.dr.rewindToStart();
+   state.dr.deinit();
+}
+
+async function initRenderer(state) {
+   // init system (shared between instances)
+   await drend.initSystem({ctx : gl});
+   state.dr = new drend();
+   // init the instance
+   await state.dr.init(gl);
 }
 
 async function setup(state) {
    hotReloadFile(getPath('week10.js'));
-   // (New Info): Here I am loading the graphics module once
-   // This is for the sake of example:
-   // I'm making the arbitrary decision not to support
-   // reloading for this particular module. Otherwise, you should
-   // do the import in the "initCommon" function that is also called
-   // in onReload, just like the other import done in initCommon
-   // the gfx module is saved to state so I can recover it
-   // after a reload
-   // state.gfx = await MR.dynamicImport(getPath('lib/graphics.js'));
+
    state.noise = new ImprovedNoise();
    await initCommon(state);
 
-   // (New Info): input state in a sub-object that can be cached
-   // for convenience
-   // e.g. const input = state.input; 
+   await initRenderer(state);
+
    state.input = {
       turnAngle : 0,
       tiltAngle : 0,
@@ -407,8 +394,8 @@ function onStartFrame(t, state) {
 
 // SET UNIFORMS AND GRAPHICAL STATE BEFORE DRAWING.
 
-   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
    gl.uniform3fv(state.uCursorLoc, cursorXYZ);
    gl.uniform1f (state.uTimeLoc  , state.time);
