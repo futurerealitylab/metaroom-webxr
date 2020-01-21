@@ -10,7 +10,7 @@ let tr; // the renderer type
 
 async function initCommon(state) {
     RenderLib = await MR.dynamicImport(
-        "/lib/graphics/renderer_wgl.js"
+        "/lib/render/dynamic_renderer_wgl.js"
     );
     TR = RenderLib;
     tr = RenderLib.Renderer;
