@@ -80,7 +80,6 @@ function onStartFrame(t, state, info) {
 }
 
 function onDraw(t, projMat, viewMat, state, info) {
-    console.log(info.viewIdx);
     const timeS = t / 1000.0;
 
     const sin01Time = math.sin01(timeS);
@@ -128,7 +127,7 @@ function onDraw(t, projMat, viewMat, state, info) {
             pr.modePrimitiveLines(); 
 
             // in pixels for now
-            pr.lineWidth(1);
+            pr.lineWidth(7);
 
             //pr.moveTo(0, 0, DEPTH); // start cursor at A
             //pr.beginPath();
@@ -211,7 +210,7 @@ function onDraw(t, projMat, viewMat, state, info) {
 
         pr.modePrimitiveLines(); 
         // in pixels for now
-        pr.lineWidth(1);
+        pr.lineWidth(7);
         {
             pr.pushSegmentEX(
                 0.0, 0.0, DEPTH,                             1.0, 0.0, 0.0, 1.0,
@@ -240,7 +239,7 @@ function onDraw(t, projMat, viewMat, state, info) {
 
         pr.modePrimitiveLines(); 
         // in pixels for now
-        pr.lineWidth(1);
+        pr.lineWidth(7);
         {
             pr.beginPathAt(0, 0, DEPTH); 
 
@@ -258,7 +257,7 @@ function onDraw(t, projMat, viewMat, state, info) {
     case EXPLICIT_VERTICES: {
         pr.modePrimitiveLines(); 
         // in pixels for now
-        pr.lineWidth(1);
+        pr.lineWidth(7);
         {
             pr.beginLine();
             pr.pushLineVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
@@ -300,7 +299,7 @@ function onDraw(t, projMat, viewMat, state, info) {
     case EXPLICIT_DATA: {
         pr.modePrimitiveLines(); 
         // in pixels for now
-        pr.lineWidth(1);
+        pr.lineWidth(7);
         {
             // methods:
             // pr.pushVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
