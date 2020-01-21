@@ -36,9 +36,9 @@ let enableModeler = true;
 let payload_skeleton = null;
 let payload_skeleton2 = null;
 let payload_skeleton3 = null;
-axios.get('assets/data-output.json').then((response) => {
-   payload_skeleton = response.data['skeletons']['connor'];
-});
+// axios.get('assets/data-output.json').then((response) => {
+   // payload_skeleton = response.data['skeletons']['connor'];
+// });
 
 axios.get('assets/pressurepose-data3.json').then((response) => {
    payload_skeleton = response.data['skeletons']['truth'];
@@ -1102,8 +1102,12 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    m.save();
    // m.identity();
    m.translate([0,0,-2]);
-   drawSkeleton(payload_skeleton, [1, 0, 0]);
+   drawSkeleton(payload_skeleton, [0, 0, 1]);
    m.restore();
+   m.save();
+      m.translate(offsetTrack1);
+      // drawSkeleton(payload_skeleton2, [0, 0, 1]);
+   m.restore()
    m.save();
    
       m.translate(offsetTrack1);
@@ -1112,13 +1116,13 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       m.translate(payload_skeleton2.frames[frame % payload_skeleton2.frames.length][15]);
       m.scale(0.05,0.05,0.05);
       
-      drawShape(CG.sphere, [0,0,1]);
+      drawShape(CG.sphere, [1,0,0]);
    m.restore();
    m.save();
       m.translate(offsetTrack1);
       m.translate(payload_skeleton2.frames[frame % payload_skeleton2.frames.length][20]);
       m.scale(0.05,0.05,0.05);
-      drawShape(CG.sphere, [0,0,1]);
+      drawShape(CG.sphere, [1,0,0]);
    m.restore();
 
    m.save();
@@ -1126,7 +1130,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
 
       m.rotateY(Math.PI/2);
       // m.translate(offsetTrack2);
-      drawSkeleton(payload_skeleton3, [0, 1, 1]);
+      drawSkeleton(payload_skeleton3, [0, 1, 1], 'joints');
    m.restore();
    state.isToon = false;
 
