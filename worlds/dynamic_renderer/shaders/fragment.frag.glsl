@@ -1,5 +1,6 @@
 #version 300 es
 precision highp float;
+#include<pnoise>
 
 in vec3 vPos;
 in vec3 vWorldPos;

@@ -63,44 +63,45 @@ async function setup(state) {
     gl.clearColor(0.0, 0.3, 0.3, 1.0);
 }
 
+
+const ident = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+
+
 function onStartFrame(t, state, info) {
 
     const timeS = t / 1000.0;
+
+    const sin01Time = math.sin01(timeS);
+    const sinTime = Math.sin(timeS);
+    const cosTime = Math.cos(timeS);
+    const DEPTH = -4;
+
+    // system examples begin: ////////////////////////////////
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     const pr = state.render.pathsDynamic;
 
-    // call this when you want to start a drawing pass
-    pr.beginPass();
     // use the default shader (will add more to the renderer)
+    // TODO(TR): make it easier to track the shader / attributes being used
     pr.fxDefault();
     // update the global time
     pr.updateGlobalTimeSeconds(timeS);
 
-    const sin01Time = math.sin01(timeS);
-    const sinTime = Math.sin(timeS);
-    const cosTime = Math.cos(timeS);
-
-    const DEPTH = -4;
-
-    // multiple ways to draw (PEN is the most complete example)
-    const PEN               = 0;
-    const SEGMENTS          = 1;
-    const EXPLICIT_TYPES    = 2;
-    const EXPLICIT_VERTICES = 3;
-    const EXPLICIT_DATA     = 4;
-
-    // set "example" to one of the constants above
-    const example = PEN;
-
     const m = state.m;
-
     m.save();
 
     pr.modelMatrix(m.value());
 
     if (MR.VRIsActive()) {
+        // this is a "local" view matrix, there are "global" view
+        // and projection matrices that represent the final
+        // transformation needed for "immersive mode". This
+        // is to support rendering to texture, which may require
+        // a view matrix to look at some other part of the scene
+        // and blit the resulting image to a surface. Then you'd
+        // use that surface in a final rendering of the scene
+        // (see onDraw for those global matrix settings)
         pr.viewMatrix(ident);
     } else {
         m.save();
@@ -110,88 +111,29 @@ function onStartFrame(t, state, info) {
     }
 
     pr.projectionMatrix(ident);
-    
-    switch (example) {
+
+    // the following are examples of different APIs
+    // built atop the renderer. They range from high-level to explicit
+    // - explicit or somewhere in-between is preferable for the bulk of rendering,
+    // for real-time drawing in XR-style cases, the high-level pen API might make
+    // the most sense. The renderer lets you choose whether to keep or discard
+    // specific regions of data from frame-to-frame (static or dynamic)
+    // multiple ways to draw (PEN is the most complete example)
+    const PEN               = 0;
+    const SEGMENTS          = 1;
+    const EXPLICIT_TYPES    = 2;
+    const EXPLICIT_VERTICES = 3;
+    const EXPLICIT_DATA     = 4;
+
+    // set the switch to one of the values above 
+    // (PEN, ...)
+    switch (0) {
     // using the metaphor of a pen/cursor
-    case PEN: {
-        // this sets a default global color
-        pr.color(1, 0, 0, 1);
+    default /*PEN*/ : {
+        penExample(
+            state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH
+        );
 
-        {
-            pr.modePrimitiveLines(); 
-
-            // in pixels for now
-            pr.lineWidth(7);
-
-            //pr.moveTo(0, 0, DEPTH); // start cursor at A
-            //pr.beginPath();
-
-            // this is equivalent to the commented-out steps above
-            pr.beginPathAt(0, 0, DEPTH); 
-
-            pr.pathTo(0.5, 0.5 - 0.5 * sinTime, DEPTH, 1.0, 0.0, 0.0, 1.0); // [A, B)
-
-            // "EX" variants of functions require the caller to pass
-            // all arguments explicitly - this overrides the global
-            // settings such as "color". I prefer this to the global
-            // settings since I don't need to track what the global state
-            // actually is. All the information is here in-place
-            pr.pathToEX(0.5, 0.0, DEPTH, 0.0, 1.0, 0.0, 1.0); // [B, C)
-            pr.closePathEX(0.0, 0.0, 1.0, 1.0);
-            pr.pathToEX(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            pr.endPathEX(1.0, 1.0, 1.0, 0.5); // C] must include the endpoint
-        }
-        {
-            pr.modeTriangles();
-
-            m.save();
-                m.translate(-0.5, -0.5, DEPTH);
-                m.rotateZ(timeS);
-                m.translate(0.5, 0.5, -DEPTH);
-                pr.modelMatrix(m.value());
-            m.restore();
-
-            pr.beginPath();
-            pr.pathToEX(-0.5, -1.0 + DEPTH / 4, DEPTH, 1.0, 1.0, 1.0, 0.27);
-            pr.pathToEX(0.5, -1.0, DEPTH, 0.0, 1.0, 0.0, 1.0);
-            
-            pr.color(0.7, 0.0, 1.0, 1.0);
-            pr.endPath();
-
-            m.save();
-                m.translate(-0.5, -0.5, DEPTH);
-                m.rotateY(timeS * 2);
-                m.translate(0.5, 0.5, -DEPTH);
-                pr.modelMatrix(m.value());
-            m.restore();
-
-            // two sides (instead of disabling culling): 
-            // (TODO: option to generate both sides upon call to endPath?)
-            pr.beginPath();
-
-                pr.pathTo(0.5 + 2 * sin01Time, -0.2, DEPTH);
-                pr.color(0.2, 0.0, 1.0, 1.0);
-                pr.pathTo(0.0, -0.2 - DEPTH / 7, DEPTH);
-
-            pr.endPathEX(1.0, 0.0, 0.0, 1.0);
-            pr.beginPath();
-
-                pr.pathToEX(0.5 + 2 * sin01Time, -0.2, DEPTH, 1.0, 0.0, 0.0, 1.0);
-                pr.color(0.2, 0.0, 1.0, 1.0);
-                pr.pathTo(0.5, -1.0, DEPTH);
-
-            pr.endPathEX(0.7, 0.0, 1.0, 1.0);
-            
-            // TODO coordinate stack to return here
-            pr.moveTo(0.0, -0.2 - DEPTH / 7, DEPTH);
-        }
-        {
-            pr.modePrimitiveLines();
-            
-            pr.beginPath();
-            pr.pathToEX(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            pr.endPathEX(1.0, 1.0, 1.0, 0.5);
-        }
         break;
     }
     // specify lines and triangles
@@ -199,86 +141,28 @@ function onStartFrame(t, state, info) {
     // a pen -- this is the most "explicit" and possibly
     // fastest way of doing things without just specifying individual vertices
     case SEGMENTS: {
-        // this sets a default global color
-        pr.color(1, 0, 0, 1);
-
-        pr.modePrimitiveLines(); 
-        // in pixels for now
-        pr.lineWidth(7);
-        {
-            pr.pushSegmentEX(
-                0.0, 0.0, DEPTH,                             1.0, 0.0, 0.0, 1.0,
-                0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH,     0.0, 1.0, 0.0, 1.0
-            );
-            pr.pushSegmentEX(
-                0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH,     0.0, 1.0, 0.0, 1.0,
-                0.5, 0.0, DEPTH,                             0.0, 0.0, 1.0, 1.0
-            );
-            pr.pushSegmentEX(
-                0.5, 0.0, DEPTH,                             0.0, 0.0, 1.0, 1.0,
-                0, 0, DEPTH,                                 1.0, 0.0, 0.0, 1.0
-            );
-            pr.pushSegmentEX(
-                0, 0, DEPTH,                                 1.0, 0.0, 0.0, 1.0,
-                -0.5, -0.5, DEPTH,                           1.0, 1.0, 1.0, 0.5
-            );
-        }
+        segmentsExample(
+            state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH
+        );
+ 
         break;
     }
     // this is a fast-track to the specific primitive you want
     // to draw with the virtual pen
     case EXPLICIT_TYPES: {
-        // this sets a default global color
-        pr.color(1, 0, 0, 1);
+        explicitTypesExample(
+            state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH
+        );
 
-        pr.modePrimitiveLines(); 
-        // in pixels for now
-        pr.lineWidth(7);
-        {
-            pr.beginPathAt(0, 0, DEPTH); 
-
-            pr.lineToEX(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 1.0, 0.0, 0.0, 1.0); // [A, B)
-
-            pr.lineToEX(0.5, 0.0, DEPTH, 0.0, 1.0, 0.0, 1.0); // [B, C)
-            pr.closeLineEX(0.0, 0.0, 1.0, 1.0);
-            pr.lineToEX(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            pr.endPathEX(1.0, 1.0, 1.0, 0.5); // C] must include the endpoint
-        }
         break;
     } 
     // construct a line using vertices
     // implementation hidden
     case EXPLICIT_VERTICES: {
-        pr.modePrimitiveLines(); 
-        // in pixels for now
-        pr.lineWidth(7);
-        {
-            pr.beginLine();
-            pr.pushLineVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            pr.pushLineVertexEX(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
-            pr.pushLineVertexEX(0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
-            // TODO way to reuse a vertex
-            pr.pushLineVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            pr.pushLineVertexEX(-0.5, -0.5, DEPTH, 1.0, 1.0, 1.0, 0.5);
-            pr.endLine();
+        explicitVerticesExample(
+            state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH
+        );
 
-            pr.beginLine();
-            pr.pushArrayLineVertexInterleavedEX([
-                -0.5,  0.5, DEPTH,  0.0, 0.0, 1.0, 1.0,
-                -0.5, -0.5, DEPTH,  0.0, 1.0, 0.0, 1.0,
-                 0.5, -0.5, DEPTH,  1.0, 0.0, 0.0, 1.0,
-                 0.5,  0.5, DEPTH,  0.0, 0.0, 1.0, 1.0,
-                 0.0,  0.0, DEPTH,  1.0, 1.0, 1.0, 1.0,
-            ]);
-
-            // pr.pushLineVertexEX(-0.5,0.5,DEPTH, 0,0,1,1);
-            // pr.pushLineVertexEX( -.5,-.5,DEPTH, 0,1,0,1);
-            // pr.pushLineVertexEX(.5,-.5,DEPTH, 1,0,0,1);
-            // pr.pushLineVertexEX(.5,.5,DEPTH, 0,0,1,1);
-            // pr.pushLineVertexEX(0,0,DEPTH, 1,1,1,1);
-
-            pr.endLine();
-        }
         break;
     }
     // push vertex data into the buffer,
@@ -291,31 +175,9 @@ function onStartFrame(t, state, info) {
     // triangle- or SDF-based lines without changing the API
     // STILL it's useful to have this option
     case EXPLICIT_DATA: {
-        pr.modePrimitiveLines(); 
-        // in pixels for now
-        pr.lineWidth(7);
-        {
-            // methods:
-            // pr.pushVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            // pr.pushVertexEX(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
-            //     pr.pushVertexEX(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
-            // pr.pushVertexEX(0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
-            //     pr.pushVertexEX(0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
-            // pr.pushVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            //     pr.pushVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            // pr.pushVertexEX(-0.5, -0.5, DEPTH, 1.0, 1.0, 1.0, 0.5);
-
-            // free-floating function version (reloadable, easier to iterate):
-            TR.pushVertexEX(pr, 0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            TR.pushVertexEX(pr, 0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
-                TR.pushVertexEX(pr, 0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
-            TR.pushVertexEX(pr, 0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
-                TR.pushVertexEX(pr, 0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
-            TR.pushVertexEX(pr, 0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
-                TR.pushVertexEX(pr, 0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
-            TR.pushVertexEX(pr, -0.5, -0.5, DEPTH, 1.0, 1.0, 1.0, 0.5);
-
-        }
+        explicitDataExample(
+            state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH
+        );
         break;
     }
     }
@@ -327,69 +189,42 @@ function onStartFrame(t, state, info) {
     // static data! -- We can have multiple renderer instances
     // of the path renderer
     // e.g. one to to hold static data and one to hold dynamic data
-
-    TR.update(pr);
+    TR.uploadData(pr);
 }
 
-const ident = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
 
-/**
- * Multiplies two mat4s
- *
- * @param {mat4} out the receiving matrix
- * @param {mat4} a the first operand
- * @param {mat4} b the second operand
- * @returns {mat4} out
- */
-function multiply(out, a, b) {
-    let a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
-    let a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
-    let a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
-    let a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
-
-    // Cache only the current line of the second matrix
-    let b0  = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
-    out[0] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
-    out[1] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
-    out[2] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
-    out[3] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
-
-    b0 = b[4]; b1 = b[5]; b2 = b[6]; b3 = b[7];
-    out[4] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
-    out[5] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
-    out[6] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
-    out[7] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
-
-    b0 = b[8]; b1 = b[9]; b2 = b[10]; b3 = b[11];
-    out[8] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
-    out[9] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
-    out[10] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
-    out[11] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
-
-    b0 = b[12]; b1 = b[13]; b2 = b[14]; b3 = b[15];
-    out[12] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
-    out[13] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
-    out[14] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
-    out[15] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
-    return out;
-}
 
 function onDraw(t, projMat, viewMat, state, info) {
-
     const pr = state.render.pathsDynamic;
+
+    pr.beginRenderPass();
 
     pr.projectionMatrixGlobal(projMat);
     pr.viewMatrixGlobal(viewMat);
 
     TR.draw(pr);
+
+    pr.endRenderPass();
 }
 
 function onEndFrame(t, state) {
+
     // this assumes the lines will
     // be regenerated every frame
-    state.render.pathsDynamic.endPassRewindToStart();
-    // this doesn't (use this for static data)
-    // state.render.paths.endPass()
+    state.render.pathsDynamic.rewindToStart();
+
+    // In future iterations, you'll be able to rewind
+    // to a specifc spot in case you'd like to keep part of the buffer
+    // static. Alternatively, you'll be able to specify entire buffers
+    // to reserve for static or dynamic data, which you'll be able to
+    // select via calls such as draw(layerBatchIdx, ...)
+    //
+    // after calls to endPath and the similar functions, you'll also be able
+    // to get a handle to that region in the buffer, which you can name or
+    // "rewind to". 
+    // e.g.
+    // const handle = TR.endPath(renderer, ..); ... TR.rewindTo(renderer, handle);
+
 }
 
 export default function main() {
@@ -407,4 +242,193 @@ export default function main() {
     };
 
     return def;
+}
+
+// example functions
+function penExample(state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH) {
+    // this sets a default global color
+    pr.color(1, 0, 0, 1);
+
+    {
+        pr.modePrimitiveLines(); 
+
+        // in pixels for now
+        pr.lineWidth(7);
+
+        //pr.moveTo(0, 0, DEPTH); // start cursor at A
+        //pr.beginPath();
+
+        // this is equivalent to the commented-out steps above
+        pr.beginPathAt(0, 0, DEPTH); 
+
+        pr.pathTo(0.5, 0.5 - 0.5 * sinTime, DEPTH, 1.0, 0.0, 0.0, 1.0); // [A, B)
+
+        // "EX" variants of functions require the caller to pass
+        // all arguments explicitly - this overrides the global
+        // settings such as "color". I prefer this to the global
+        // settings since I don't need to track what the global state
+        // actually is. All the information is here in-place
+        pr.pathToEX(0.5, 0.0, DEPTH, 0.0, 1.0, 0.0, 1.0); // [B, C)
+        pr.closePathEX(0.0, 0.0, 1.0, 1.0);
+        pr.pathToEX(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
+        pr.endPathEX(1.0, 1.0, 1.0, 0.5); // C] must include the endpoint
+    }
+    {
+        pr.modeTriangles();
+
+        m.save();
+            m.translate(-0.5, -0.5, DEPTH);
+            m.rotateZ(timeS);
+            m.translate(0.5, 0.5, -DEPTH);
+            pr.modelMatrix(m.value());
+        m.restore();
+
+        pr.beginPath();
+        pr.pathToEX(-0.5, -1.0 + DEPTH / 4, DEPTH, 1.0, 1.0, 1.0, 0.27);
+        pr.pathToEX(0.5, -1.0, DEPTH, 0.0, 1.0, 0.0, 1.0);
+        
+        pr.color(0.7, 0.0, 1.0, 1.0);
+        pr.endPath();
+
+        m.save();
+            m.translate(-0.5, -0.5, DEPTH);
+            m.rotateY(timeS * 2);
+            m.translate(0.5, 0.5, -DEPTH);
+            pr.modelMatrix(m.value());
+        m.restore();
+
+        // two sides (instead of disabling culling): 
+        // (TODO: option to generate both sides upon call to endPath?)
+        pr.beginPath();
+
+            pr.pathTo(0.5 + 2 * sin01Time, -0.2, DEPTH);
+            pr.color(0.2, 0.0, 1.0, 1.0);
+            pr.pathTo(0.0, -0.2 - DEPTH / 7, DEPTH);
+
+        pr.endPathEX(1.0, 0.0, 0.0, 1.0);
+        pr.beginPath();
+
+            pr.pathToEX(0.5 + 2 * sin01Time, -0.2, DEPTH, 1.0, 0.0, 0.0, 1.0);
+            pr.color(0.2, 0.0, 1.0, 1.0);
+            pr.pathTo(0.5, -1.0, DEPTH);
+
+        pr.endPathEX(0.7, 0.0, 1.0, 1.0);
+        
+        // TODO coordinate stack to return here
+        pr.moveTo(0.0, -0.2 - DEPTH / 7, DEPTH);
+    }
+    {
+        pr.modePrimitiveLines();
+        
+        pr.beginPath();
+        pr.pathToEX(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
+        pr.endPathEX(1.0, 1.0, 1.0, 0.5);
+    }
+}
+
+function segmentsExample(state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH) {
+    // this sets a default global color
+    pr.color(1, 0, 0, 1);
+
+    pr.modePrimitiveLines(); 
+    // in pixels for now
+    pr.lineWidth(7);
+    {
+        pr.pushSegmentEX(
+            0.0, 0.0, DEPTH,                             1.0, 0.0, 0.0, 1.0,
+            0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH,     0.0, 1.0, 0.0, 1.0
+        );
+        pr.pushSegmentEX(
+            0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH,     0.0, 1.0, 0.0, 1.0,
+            0.5, 0.0, DEPTH,                             0.0, 0.0, 1.0, 1.0
+        );
+        pr.pushSegmentEX(
+            0.5, 0.0, DEPTH,                             0.0, 0.0, 1.0, 1.0,
+            0, 0, DEPTH,                                 1.0, 0.0, 0.0, 1.0
+        );
+        pr.pushSegmentEX(
+            0, 0, DEPTH,                                 1.0, 0.0, 0.0, 1.0,
+            -0.5, -0.5, DEPTH,                           1.0, 1.0, 1.0, 0.5
+        );
+    }
+}
+
+function explicitTypesExample(state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH) {
+    // this sets a default global color
+    pr.color(1, 0, 0, 1);
+
+    pr.modePrimitiveLines(); 
+    // in pixels for now
+    pr.lineWidth(7);
+    {
+        pr.beginPathAt(0, 0, DEPTH); 
+
+        pr.lineToEX(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 1.0, 0.0, 0.0, 1.0); // [A, B)
+
+        pr.lineToEX(0.5, 0.0, DEPTH, 0.0, 1.0, 0.0, 1.0); // [B, C)
+        pr.closeLineEX(0.0, 0.0, 1.0, 1.0);
+        pr.lineToEX(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
+        pr.endPathEX(1.0, 1.0, 1.0, 0.5); // C] must include the endpoint
+    }
+}
+
+function explicitVerticesExample(state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH) {
+    pr.modePrimitiveLines(); 
+    // in pixels for now
+    pr.lineWidth(7);
+    {
+        TR.beginLine(pr);
+        pr.pushLineVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+        pr.pushLineVertexEX(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
+        pr.pushLineVertexEX(0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
+        // TODO way to reuse a vertex
+        pr.pushLineVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+        pr.pushLineVertexEX(-0.5, -0.5, DEPTH, 1.0, 1.0, 1.0, 0.5);
+        TR.endLine(pr);
+
+        TR.beginLine(pr);
+        pr.pushArrayLineVertexInterleavedEX([
+            -0.5,  0.5, DEPTH,  0.0, 0.0, 1.0, 1.0,
+            -0.5, -0.5, DEPTH,  0.0, 1.0, 0.0, 1.0,
+             0.5, -0.5, DEPTH,  1.0, 0.0, 0.0, 1.0,
+             0.5,  0.5, DEPTH,  0.0, 0.0, 1.0, 1.0,
+             0.0,  0.0, DEPTH,  1.0, 1.0, 1.0, 1.0,
+        ]);
+
+        // pr.pushLineVertexEX(-0.5,0.5,DEPTH, 0,0,1,1);
+        // pr.pushLineVertexEX( -.5,-.5,DEPTH, 0,1,0,1);
+        // pr.pushLineVertexEX(.5,-.5,DEPTH, 1,0,0,1);
+        // pr.pushLineVertexEX(.5,.5,DEPTH, 0,0,1,1);
+        // pr.pushLineVertexEX(0,0,DEPTH, 1,1,1,1);
+
+        TR.endLine(pr);
+    }
+}
+
+function explicitDataExample(state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH) {
+    pr.modePrimitiveLines(); 
+    // in pixels for now
+    pr.lineWidth(7);
+    {
+        // methods:
+        // pr.pushVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+        // pr.pushVertexEX(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
+        //     pr.pushVertexEX(0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
+        // pr.pushVertexEX(0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
+        //     pr.pushVertexEX(0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
+        // pr.pushVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+        //     pr.pushVertexEX(0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+        // pr.pushVertexEX(-0.5, -0.5, DEPTH, 1.0, 1.0, 1.0, 0.5);
+
+        // free-floating function version (reloadable, easier to iterate):
+        TR.pushVertexEX(pr, 0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+        TR.pushVertexEX(pr, 0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
+            TR.pushVertexEX(pr, 0.5, 0.5 - 0.5 * Math.sin(timeS), DEPTH, 0.0, 1.0, 0.0, 1.0);
+        TR.pushVertexEX(pr, 0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
+            TR.pushVertexEX(pr, 0.5, 0.0, DEPTH, 0.0, 0.0, 1.0, 1.0);
+        TR.pushVertexEX(pr, 0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+            TR.pushVertexEX(pr, 0, 0, DEPTH, 1.0, 0.0, 0.0, 1.0);
+        TR.pushVertexEX(pr, -0.5, -0.5, DEPTH, 1.0, 1.0, 1.0, 0.5);
+
+    }
 }
