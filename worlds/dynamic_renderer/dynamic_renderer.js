@@ -320,6 +320,8 @@ function onStartFrame(t, state, info) {
     }
     }
 
+    m.restore();
+
     // can be called multiple times with
     // the same data so you don't need to re-upload
     // static data! -- We can have multiple renderer instances
@@ -386,8 +388,6 @@ function onEndFrame(t, state) {
     // this assumes the lines will
     // be regenerated every frame
     state.render.pathsDynamic.endPassRewindToStart();
-    const m = state.m;
-    m.restore();
     // this doesn't (use this for static data)
     // state.render.paths.endPass()
 }
