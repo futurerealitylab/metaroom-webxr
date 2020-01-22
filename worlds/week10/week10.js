@@ -547,10 +547,14 @@ function onDraw(t, projMat, viewMat, state, info) {
       return;
 
    m.identity();
-
-   m.rotateX(state.tiltAngle);
-   m.rotateY(state.turnAngle);
-   m.translate(state.position);
+   if (!MR.VRIsActive()) {
+      m.save();
+         m.rotateX(state.tiltAngle);
+         m.rotateY(state.turnAngle);
+         m.translate(state.position);
+         viewMat = m.value();
+      m.restore();
+   }
 
    // FIRST DRAW THE SCENE FULL SIZE.
 
