@@ -47,6 +47,8 @@ async function initRenderer(state) {
 async function setup(state) {
     hotReloadFile(getPath('dynamic_renderer.js'));
 
+    ShaderTextEditor.hideEditor();
+
     CanvasUtil.resize(MR.getCanvas(), 1280 / 2, 720 / 2);
 
     await initCommon(state);

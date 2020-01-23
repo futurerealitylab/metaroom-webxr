@@ -334,7 +334,7 @@ async function setup(state) {
 
     // Editor Specific:
     // editor library function for loading shader snippets from files on disk
-    let libSources = await ShaderTextEditor.loadShader(gl, "libs", [
+    let libSources = await ShaderTextEditor.loadAndRegisterShader(gl, "libs", [
         { 
             key : "pnoise", path : "shaders/noise.glsl", foldDefault : true
         },     
@@ -348,9 +348,9 @@ async function setup(state) {
 
     // Editor Specific:
     // load vertex and fragment shaders from disk, register with the editor
-    // (You can also use ShaderTextEditor.registerShaderForLiveEditing to load a shader string
+    // (You can also use ShaderTextEditor.registerShader to load a shader string
     // created in the program
-    let shaderSource = await ShaderTextEditor.loadAndRegisterShaderForLiveEditing(
+    let shaderSource = await ShaderTextEditor.loadShader(
         // gl context
         gl,
         // name of shader as it should appear in the editor
@@ -385,7 +385,7 @@ async function setup(state) {
                 }
 
                 // uses a preprocessor for custom extensions to GLSL
-                ShaderTextEditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+                ShaderTextEditor.preprocessCompileValidateStrings(
                     output[0],
                     output[1],
                     libMap

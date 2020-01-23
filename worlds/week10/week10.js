@@ -154,6 +154,8 @@ async function initRenderer(state) {
 async function setup(state) {
    hotReloadFile(getPath('week10.js'));
 
+   ShaderTextEditor.showEditor();
+
    state.noise = new ImprovedNoise();
    state.rot4 = new Rot4();
    await initCommon(state);
@@ -197,7 +199,7 @@ async function setup(state) {
                            stageCode.substring(hdrEndIdx + 1);
          }
       }
-      ShaderTextEditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+      ShaderTextEditor.preprocessCompileValidateStrings(
          output[0],
          output[1],
          libMap
@@ -1304,7 +1306,7 @@ function onEndFrame(t, state) {
    // per-frame data
    state.dr.rewindToStart();
 
-   pollAvatarData();
+   //pollAvatarData();
 
    /*-----------------------------------------------------------------
 

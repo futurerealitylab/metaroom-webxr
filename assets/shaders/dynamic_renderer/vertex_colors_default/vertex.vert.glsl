@@ -1,8 +1,6 @@
 #version 300 es
 precision highp float;
 
-// debug line shader
-
 // input vertex
 layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec4 aColor;

@@ -87,7 +87,7 @@ async function setup(state, info) {
     const canvas = MR.getCanvas();
     state.gpuInfo = gpulib.defaultInitGPUState(gpu, info, canvas);
     // load a shader compiler (in this case, for GLSL)
-    await gpulib.loadShaderCompiler(state.gpuInfo);
+    await gpulib.loadAndRegisterShaderCompiler(state.gpuInfo);
 
     {
         const ubo = new MyUniformBufferObject();

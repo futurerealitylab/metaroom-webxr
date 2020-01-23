@@ -27,7 +27,7 @@ async function setup(state) {
         throw new Error("Could not load shader library");
 
     // load vertex and fragment shaders from the server, register with the editor
-    let shaderSource = await ShaderTextEditor.loadAndRegisterShaderForLiveEditing(
+    let shaderSource = await ShaderTextEditor.loadShader(
         gl,
         "mainShader",
         { 
@@ -46,7 +46,7 @@ async function setup(state) {
                                     stageCode.substring(hdrEndIdx + 1);
                     }
                 }
-                ShaderTextEditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+                ShaderTextEditor.preprocessCompileValidateStrings(
                     output[0],
                     output[1],
                     libMap

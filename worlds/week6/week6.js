@@ -272,7 +272,7 @@ async function setup(state) {
         throw new Error("Could not load shader library");
     }
 
-        let shaderSource = await ShaderTextEditor.loadAndRegisterShaderForLiveEditing(
+        let shaderSource = await ShaderTextEditor.loadShader(
             // gl context
             gl,
             // name of shader as it should appear in the editor
@@ -306,7 +306,7 @@ async function setup(state) {
                     }
 
                     // uses a preprocessor for custom extensions to GLSL
-                    ShaderTextEditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+                    ShaderTextEditor.preprocessCompileValidateStrings(
                         output[0],
                         output[1],
                         libMap
