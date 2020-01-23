@@ -155,7 +155,7 @@ export class Shader {
     }
 }
 
-export async function loadAndRegisterShaderCompiler(state) {
+export async function loadShaderCompiler(state) {
     state.shaderCompilerModule = await import(
         "https://unpkg.com/@webgpu/glslang@0.0.12/dist/web-devel/glslang.js"
     );
