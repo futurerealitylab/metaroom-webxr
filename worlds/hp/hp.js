@@ -1,4 +1,6 @@
-"use strict"
+"use strict";
+
+import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 const cos = Math.cos;
 const sin = Math.sin;
@@ -418,7 +420,7 @@ async function setup(state) {
     state.fog_color = [53.0 / 255.0, 81.0 / 255.0, 192.0 / 255.0, 1.0];
 
     // load initial images, then continue setup after waiting is done
-    const images = await imgutil.loadImagesPromise([
+    const images = await imgutil.loadImagesAsync([
         getPath("resources/textures/brick.png"),
         getPath("resources/textures/polkadots_transparent.png"),
         getPath("resources/textures/wood.png")
@@ -490,7 +492,7 @@ async function setup(state) {
                     state.program = program;
 
                     // initialize uniforms (store them in the object passed-in)
-                    GFX.getAndStoreIndividualUniformLocations(gl, program, state);
+                    GFX.getUniformLocations(gl, program, state);
 
                     // uncomment the line below to get the maximum number of 
                     // texture image units available for your GPU hardware

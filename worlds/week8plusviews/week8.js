@@ -1,4 +1,6 @@
-"use strict"
+"use strict";
+
+import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 let cubeVertices  = null;
 let m             = null;
@@ -13,12 +15,12 @@ const FRICTION    = 0.002;
 async function setup(state) {
     hotReloadFile(getPath('week8.js'));
 
-    const images = await imgutil.loadImagesPromise([
+    const images = await imgutil.loadImagesAsync([
        getPath("./../../assets/textures/brick.png"),
        getPath("./../../assets/textures/tiles.jpg"),
     ]);
 
-    let libSources = await ShaderTextEditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+    let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [
         { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true }, 
     ]);
     if (! libSources)

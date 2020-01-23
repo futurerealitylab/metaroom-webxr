@@ -1,5 +1,6 @@
-"use strict"
+"use strict";
 
+import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {Lock} from "../../lib/core/lock.js";
 
 /*--------------------------------------------------------------------------------
@@ -27,10 +28,13 @@ const TABLE_WIDTH      = inchesToMeters( 60);
 const TABLE_THICKNESS  = inchesToMeters( 11/8);
 const LEG_THICKNESS    = inchesToMeters(  2.5);
 
+const TABLETOP_CLONE_SCALE = .1392;
+
 const HYPERCUBE_POSITION = [0,EYE_HEIGHT,0];
 const HYPERCUBE_SCALE    = 0.2;
 
 let enableModeler = true;
+let enablePathRenderer = true;
 
 /*Example Grabble Object*/
 let grabbableCube = new Obj(CG.torus);
@@ -48,7 +52,7 @@ const WOOD = 0,
 let noise = new ImprovedNoise();
 let m = new Matrix();
 
-let rot4 = new Rot4();
+
 
 /*--------------------------------------------------------------------------------
 
@@ -99,15 +103,20 @@ function ControllerHandler(controller) {
    let wasDown = false;
 }
 
-let RenderLib; // module
-let RN;        // module alias
+let rot4;
+
+let DRend;     // module
+let DR;        // module alias
 let drend;     // render static type (constructor)
+
 async function initCommon(state) {
-    RenderLib = await MR.dynamicImport(
+    DRend = await MR.dynamicImport(
         "/lib/render/dynamic_renderer_wgl.js"
     );
-    RN = RenderLib;
-    drend = RenderLib.Renderer;
+    DR = DRend;
+    drend = DR.Renderer;
+
+    rot4 = state.rot4;
 }
 
 async function onReload(state) {
@@ -115,6 +124,8 @@ async function onReload(state) {
    state.dr.rewindToStart();
 
    await initCommon(state);
+
+   myRenderPipeline = state.myRenderPipeline;
 }
 
 async function onExit(state) {
@@ -122,18 +133,29 @@ async function onExit(state) {
    state.dr.deinit();
 }
 
+let myRenderPipeline;
+// temp, will be internal state
+function bindRenderPipeline(pip) {
+   gl.cullFace(pip.cull_mode);
+}
 async function initRenderer(state) {
    // init system (shared between instances)
    await drend.initSystem({ctx : gl});
    state.dr = new drend();
    // init the instance
    await state.dr.init(gl);
+
+   myRenderPipeline = {
+      cull_mode : gl.BACK
+   };
+   state.myRenderPipeline = myRenderPipeline;
 }
 
 async function setup(state) {
    hotReloadFile(getPath('week10.js'));
 
    state.noise = new ImprovedNoise();
+   state.rot4 = new Rot4();
    await initCommon(state);
 
    await initRenderer(state);
@@ -148,15 +170,14 @@ async function setup(state) {
    }
 
    // I propose adding a dictionary mapping texture strings to locations, so that drawShapes becomes clearer
-   const images = await imgutil.loadImagesPromise([
-      getPath("../../assets/textures/wood.png"),
-      getPath("../../assets/textures/tiles.jpg"),
-      getPath("../../assets/textures/noisy_bump.jpg")
+   const images = await imgutil.loadImagesAsync([
+      "/assets/textures/wood.png",
+      "/assets/textures/tiles.jpg",
+      "/assets/textures/noisy_bump.jpg"
    ]);
 
-   let libSources = await ShaderTextEditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+   let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [
       { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true },
-      { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
    ]);
    if (! libSources)
       throw new Error("Could not load shader library");
@@ -184,49 +205,46 @@ async function setup(state) {
    }
 
    // load vertex and fragment shaders from the server, register with the editor
-   let shaderSource = await ShaderTextEditor.loadAndRegisterShaderForLiveEditing(
+   let shaderSource = await ShaderTextEditor.loadShader(
       gl,
-      "mainShader",
-      {   
-         // (New Info): example of how the pre-compilation function callback
-         // could be in the standard library instead if I put the function defintion
-         // elsewhere
+      "main",
+      {  
          onNeedsCompilationDefault : onNeedsCompilationDefault,
          onAfterCompilation : (program) => {
-               gl.useProgram(state.program = program);
-               state.uBrightnessLoc = gl.getUniformLocation(program, 'uBrightness');
-               state.uColorLoc      = gl.getUniformLocation(program, 'uColor');
-               state.uCursorLoc     = gl.getUniformLocation(program, 'uCursor');
-               state.uModelLoc      = gl.getUniformLocation(program, 'uModel');
-               state.uProjLoc       = gl.getUniformLocation(program, 'uProj');
-               state.uTexScale      = gl.getUniformLocation(program, 'uTexScale');
-               state.uTexIndexLoc   = gl.getUniformLocation(program, 'uTexIndex');
-               state.uTimeLoc       = gl.getUniformLocation(program, 'uTime');
-               state.uToonLoc       = gl.getUniformLocation(program, 'uToon');
-               state.uViewLoc       = gl.getUniformLocation(program, 'uView');
-                     state.uTexLoc = [];
-                     for (let n = 0 ; n < 8 ; n++) {
-                        state.uTexLoc[n] = gl.getUniformLocation(program, 'uTex' + n);
-                        gl.uniform1i(state.uTexLoc[n], n);
-                     }
+            gl.useProgram(state.program = program);
+            state.uBrightnessLoc = gl.getUniformLocation(program, 'uBrightness');
+            state.uColorLoc      = gl.getUniformLocation(program, 'uColor');
+            state.uCursorLoc     = gl.getUniformLocation(program, 'uCursor');
+            state.uModelLoc      = gl.getUniformLocation(program, 'uModel');
+            state.uProjLoc       = gl.getUniformLocation(program, 'uProj');
+            state.uTexScale      = gl.getUniformLocation(program, 'uTexScale');
+            state.uTexIndexLoc   = gl.getUniformLocation(program, 'uTexIndex');
+            state.uTimeLoc       = gl.getUniformLocation(program, 'uTime');
+            state.uToonLoc       = gl.getUniformLocation(program, 'uToon');
+            state.uViewLoc       = gl.getUniformLocation(program, 'uView');
+            state.uTexLoc = [];
+            for (let n = 0 ; n < 8 ; n++) {
+               state.uTexLoc[n] = gl.getUniformLocation(program, 'uTex' + n);
+               gl.uniform1i(state.uTexLoc[n], n);
+            }
          } 
       },
       {
          paths : {
-               vertex   : "shaders/vertex.vert.glsl",
-               fragment : "shaders/fragment.frag.glsl"
+            vertex   : "shaders/vertex.vert.glsl",
+            fragment : "shaders/fragment.frag.glsl"
          },
-         foldDefault : {
-               vertex   : true,
-               fragment : false
-         }
+         foldDefault : {vertex : true, fragment : true}
       }
    );
    if (! shaderSource)
       throw new Error("Could not load shader");
 
-   state.cursor = ScreenCursor.trackCursor(MR.getCanvas());
-
+   state.vao = gl.createVertexArray();
+   // this records the attributes we set along
+   // with the vbos we point the attribute pointers to
+   gl.bindVertexArray(state.vao);
+   gl.useProgram(state.program);
 
    state.buffer = gl.createBuffer();
    gl.bindBuffer(gl.ARRAY_BUFFER, state.buffer);
@@ -249,7 +267,6 @@ async function setup(state) {
    gl.enableVertexAttribArray(aUV);
    gl.vertexAttribPointer(aUV , 2, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 9);
 
-
    for (let i = 0 ; i < images.length ; i++) {
       gl.activeTexture (gl.TEXTURE0 + i);
       gl.bindTexture   (gl.TEXTURE_2D, gl.createTexture());
@@ -260,16 +277,6 @@ async function setup(state) {
       gl.texImage2D    (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, images[i]);
       gl.generateMipmap(gl.TEXTURE_2D);
    }
-
-   // (New Info): editor state in a sub-object that can be cached
-   // for convenience
-   // e.g. const editor = state.editor; 
-   // state.editor = {
-   //     menuShape : [gfx.cube, gfx.sphere, gfx.cylinder, gfx.torus],
-   //     objs : [],
-   //     menuChoice : -1,
-   //     enableModeler : false
-   // };
 
    state.calibrationCount = 0;
 
@@ -316,6 +323,155 @@ function sendSpawnMessage(object) {
       };
    MR.syncClient.send(response);
 }
+const ident = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+
+function enqueuePathRenderingData(state, dr, time) {
+   if (!enablePathRenderer) {
+      return;
+   }
+
+   // use the default shader for this renderer
+   // (vertex-colored flat shapes, no lighting) 
+   // shader stage files located in "/assets/shaders"
+   dr.fxDefault();
+   // update the global time
+   dr.updateGlobalTimeSeconds(state.time);
+
+   m.save();
+      m.identity();
+
+      dr.modelMatrix(m.value());
+      m.rotateX(state.tiltAngle);
+      m.rotateY(state.turnAngle);
+      m.translate(state.position);
+
+      dr.viewMatrix(m.value());
+      dr.projectionMatrix(ident);
+
+      m.restore();
+   m.save();
+      m.identity();
+
+   
+
+   //dr.color(1, 0, 0, 1);
+
+   // if you want lines:
+   //dr.modePrimitiveLines();
+   //dr.lineWidth(4); // width is only 1 on most devices, variable on Quest
+   // triangles:
+   // dr.modeTriangles();
+
+   
+   // TODO follow the examples to see what can be done here
+   // see /worlds/dynamic_renderer/dynamic_renderer.js for examples of
+   // what to do here. Specifically, find the function calls in each case
+   // of the switch statement on line 130
+
+// state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH
+   penExample(state, m, dr, time, 
+      (Math.sin(time) + 1.0) / 2.0,
+      Math.sin(time), Math.cos(time), -1
+   );
+
+   DR.uploadData(dr);
+}
+
+function penExample(state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH) {
+    // this sets a default global color
+    pr.color(1, 0, 0, 1);
+
+    m.save();
+
+    const ts = [0.5, 0.5, -DEPTH];
+
+    {
+        pr.modePrimitiveLines(); 
+
+        // in pixels for now
+        pr.lineWidth(7);
+
+        //pr.moveTo(0, 0, DEPTH); // start cursor at A
+        //pr.beginPath();
+
+        // this is equivalent to the commented-out steps above
+        pr.beginPathAt(0, 0, DEPTH); 
+
+        pr.pathTo(0.5, 0.5 - 0.5 * sinTime, DEPTH, 1.0, 0.0, 0.0, 1.0); // [A, B)
+
+        // "EX" variants of functions require the caller to pass
+        // all arguments explicitly - this overrides the global
+        // settings such as "color". I prefer this to the global
+        // settings since I don't need to track what the global state
+        // actually is. All the information is here in-place
+        pr.pathToEX(0.5, 0.0, DEPTH, 0.0, 1.0, 0.0, 1.0); // [B, C)
+        pr.closePathEX(0.0, 0.0, 1.0, 1.0);
+        pr.pathToEX(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
+        pr.endPathEX(1.0, 1.0, 1.0, 0.5); // C] must include the endpoint
+    }
+    {
+        pr.modeTriangles();
+
+        m.save();
+            m.translate(-ts[0], -ts[1], -ts[2]);
+            m.rotateZ(timeS);
+            m.translate(ts[0], ts[1], ts[2]);
+            pr.modelMatrix(m.value());
+        m.restore();
+
+        pr.beginPath();
+        pr.pathToEX(-0.5, -1.0 + DEPTH / 4, DEPTH, 1.0, 1.0, 1.0, 0.27);
+        pr.pathToEX(0.5, -1.0, DEPTH, 0.0, 1.0, 0.0, 1.0);
+        
+        pr.color(0.7, 0.0, 1.0, 1.0);
+        pr.endPath();
+
+        m.save();
+            m.translate(-ts[0], -ts[1], -ts[2]);
+            m.rotateY(timeS * 2);
+            m.translate(ts[0], ts[1], ts[2]);
+            pr.modelMatrix(m.value());
+        m.restore();
+
+        // two sides (instead of disabling culling): 
+        // (TODO: option to generate both sides upon call to endPath?)
+        pr.beginPath();
+
+            pr.pathTo(0.5 + 2 * sin01Time, -0.2, DEPTH);
+            pr.color(0.2, 0.0, 1.0, 1.0);
+            pr.pathTo(0.0, -0.2 - DEPTH / 7, DEPTH);
+
+        pr.endPathEX(1.0, 0.0, 0.0, 1.0);
+        pr.beginPath();
+
+            pr.pathToEX(0.5 + 2 * sin01Time, -0.2, DEPTH, 1.0, 0.0, 0.0, 1.0);
+            pr.color(0.2, 0.0, 1.0, 1.0);
+            pr.pathTo(0.5, -1.0, DEPTH);
+
+        pr.endPathEX(0.7, 0.0, 1.0, 1.0);
+        
+        // TODO coordinate stack to return here
+        pr.moveTo(0.0, -0.2 - DEPTH / 7, DEPTH);
+    }
+    {
+        pr.modePrimitiveLines();
+        
+        pr.beginPath();
+        pr.pathToEX(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
+        pr.endPathEX(1.0, 1.0, 1.0, 0.5);
+    }
+
+    m.restore();
+}
+
+// class Time {
+//    constructor() {
+//       this.s      = 0;
+//       this.ms     = 0;
+//       this.msprev = 0;
+//       this.dt     = 0;
+//    }
+// }
 
 function onStartFrame(t, state) {
 
@@ -355,16 +511,20 @@ function onStartFrame(t, state) {
       }
    }
 
-// KEEP TRACK OF TIME IN SECONDS SINCE THE CLIENT STARTED.
+// // KEEP TRACK OF TIME IN SECONDS SINCE THE CLIENT STARTED.
 
-   if (! state.tStart)
+   if (! state.tStart) {
       state.tStart = t;
+      state.tPrev = t;
+   }
    state.time = (t - state.tStart) / 1000;
+   state.dt = (t - state.tPrev) / 1000;
+   state.tPrev = t;
 
-// NOTE: CURSOR AND KEYBOARD INPUT ARE NOT RELEVANT WHEN CLIENT IS A VR HEADSET.
+// // NOTE: CURSOR AND KEYBOARD INPUT ARE NOT RELEVANT WHEN CLIENT IS A VR HEADSET.
 
    let cursorValue = () => {
-      let p = state.cursor.position(), canvas = MR.getCanvas();
+      let p = input.cursor.position(), canvas = MR.getCanvas();
       return [ p[0] / canvas.clientWidth * 2 - 1, 1 - p[1] / canvas.clientHeight * 2, p[2] ];
    }
 
@@ -381,30 +541,16 @@ function onStartFrame(t, state) {
 
    if (state.position === undefined)
       state.position = [0,0,0];
-   let fx = -.01 * Math.sin(state.turnAngle),
-       fz =  .01 * Math.cos(state.turnAngle);
+   let fx = -5 * Math.sin(state.turnAngle),
+       fz =  5 * Math.cos(state.turnAngle);
    let moveBy = (dx,dz) => {
-      state.position[0] += dx;
-      state.position[2] += dz;
+      state.position[0] += dx * state.dt;
+      state.position[2] += dz * state.dt;
    };
    if (Input.keyIsDown(Input.KEY_UP   )) moveBy( fx, fz);
    if (Input.keyIsDown(Input.KEY_DOWN )) moveBy(-fx,-fz);
    if (Input.keyIsDown(Input.KEY_LEFT )) moveBy( fz,-fx);
    if (Input.keyIsDown(Input.KEY_RIGHT)) moveBy(-fz, fx);
-
-// SET UNIFORMS AND GRAPHICAL STATE BEFORE DRAWING.
-
-   gl.clearColor(0.0, 0.0, 0.0, 1.0);
-   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-   gl.uniform3fv(state.uCursorLoc, cursorXYZ);
-   gl.uniform1f (state.uTimeLoc  , state.time);
-
-   gl.enable(gl.DEPTH_TEST);
-   gl.enable(gl.CULL_FACE);
-   gl.enable(gl.BLEND);
-   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
 
    /*-----------------------------------------------------------------
 
@@ -477,6 +623,7 @@ function onStartFrame(t, state) {
       }
    }
 
+
     /*-----------------------------------------------------------------
 
     This function releases stale locks. Stale locks are locks that
@@ -494,6 +641,28 @@ function onStartFrame(t, state) {
     -----------------------------------------------------------------*/
 
     pollGrab(state);
+
+
+   // SET UNIFORMS AND GRAPHICAL STATE BEFORE DRAWING.
+   gl.clearColor(0.429, 0.808, 0.93, 1.0);
+   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+   gl.useProgram(state.program);
+   gl.uniform3fv(state.uCursorLoc, cursorXYZ);
+   gl.uniform1f (state.uTimeLoc  , state.time);
+
+   gl.enable(gl.DEPTH_TEST);
+   gl.enable(gl.CULL_FACE);
+   gl.enable(gl.BLEND);
+   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+   /*----------------------------------
+   enqueue data for dynamic geometry (e.g. lines and triangles),
+   this only needs to be called once-per frame
+   since the same data can be reused with different
+   view and projection matrices
+   ------------------------------------*/
+   enqueuePathRenderingData(state, state.dr, state.time);
 }
 
 let menuX = [-.2,-.1,-.2,-.1];
@@ -535,9 +704,7 @@ function Obj(shape) {
 }
 
 function onDraw(t, projMat, viewMat, state, info) {
-
    // IF THE HEADSET IS JUST SITTING IDLE, DON'T DRAW ANYTHING.
-
    if (state.input.brightness == 0)
       return;
 
@@ -558,12 +725,19 @@ function onDraw(t, projMat, viewMat, state, info) {
    m.save();
       m.translate(HALL_WIDTH/2 - TABLE_DEPTH/2, -TABLE_HEIGHT*1.048, TABLE_WIDTH/6.7);
       m.rotateY(Math.PI);
-      m.scale(.1392);
+      // TABLETOP_CLONE_SCALE
+      // constant declared at top of file
+      // so we don't need to change the value across all instances
+      m.scale(TABLETOP_CLONE_SCALE); 
       myDraw(t, projMat, viewMat, state, info, true);
    m.restore();
 }
 
 function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
+   gl.bindVertexArray(state.vao);
+   gl.bindBuffer(gl.ARRAY_BUFFER, state.buffer);
+   gl.useProgram(state.program);
+
    viewMat = CG.matrixMultiply(viewMat, state.avatarMatrixInverse);
    gl.uniformMatrix4fv(state.uViewLoc, false, viewMat);
    gl.uniformMatrix4fv(state.uProjLoc, false, projMat);
@@ -585,8 +759,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    -----------------------------------------------------------------*/
 
    let drawShape = (shape, color, texture, textureScale) => {
-      let drawArrays = () => gl.drawArrays(shape == CG.cube ||
-                                           shape == CG.quad ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+      let drawArrays = () => gl.drawArrays(shape == CG.cube || shape == CG.quad ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
       gl.uniform1f(state.uBrightnessLoc, input.brightness === undefined ? 1 : input.brightness);
       gl.uniform4fv(state.uColorLoc, color.length == 4 ? color : color.concat([1]));
       gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
@@ -602,7 +775,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          gl.uniform1f (state.uToonLoc, 0);
       }
       if (state.isMirror) gl.cullFace(gl.FRONT);
-      drawArrays();
+         drawArrays();
       gl.cullFace(gl.BACK);
       prev_shape = shape;
    }
@@ -828,7 +1001,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
    if (input.LC) {
       m.save();
          m.translate(getControllerBeamPoint(input.LC, .3 * bounce(state.time)));
-	 m.rotateY(state.time);
+	      m.rotateY(state.time);
          m.scale(.021);
          drawShape(CG.sphere, [2,2,2]);
       m.restore();
@@ -869,7 +1042,7 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       let dy = isMiniature ? 0 : HALL_WIDTH/2;
       m.translate(0, dy, 0);
       m.scale(-HALL_WIDTH/2, -dy, -HALL_LENGTH/2);
-      drawShape(CG.cube, [1,1,1], 1,4, 2,4);
+      drawShape(CG.cube, [0.8,0.8,1,1], 1,4, 2,4);
    m.restore();
 
    /*-----------------------------------------------------------------
@@ -1031,28 +1204,106 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
          m.translate(HYPERCUBE_POSITION);
          //m.rotateY(state.time);
          m.scale(HYPERCUBE_SCALE);
-	 let drawVertex = P => {
-	    m.save();
-               m.scale(1 / (1 - .2 * P[3])).translate([P[0],P[1],P[2]]).scale(.03);
+      	let drawVertex = P => {
+      	   m.save();
+               m.scale(1 / (1 - .2 * P[3])).
+                  translate([P[0],P[1],P[2]]).
+                  scale(.03);
+
                drawShape(CG.cube, [0,1,2]);
             m.restore();
-	 }
-         for (let n = 0 ; n < H.vertices.length ; n++)
-	    drawVertex(H.vertices[n]);
-	 for (let n = 0 ; n < H.edges.length ; n++) {
+      	}
+         for (let n = 0 ; n < H.vertices.length ; n++) {
+   	      drawVertex(H.vertices[n]);
+         }
+   	   for (let n = 0 ; n < H.edges.length ; n++) {
             let a = H.vertices[H.edges[n][0]],
-	        b = H.vertices[H.edges[n][1]];
-            for (let t = 1/10 ; t < 1 ; t += 1/10)
-	       drawVertex([ a[0] * (1-t) + b[0] * t,
-	                    a[1] * (1-t) + b[1] * t,
-			    a[2] * (1-t) + b[2] * t,
-			    a[3] * (1-t) + b[3] * t ]);
-	 }
+   	          b = H.vertices[H.edges[n][1]];
+            for (let t = 1/10 ; t < 1 ; t += 1/10) {
+   	         drawVertex([
+                  a[0] * (1-t) + b[0] * t,
+   	            a[1] * (1-t) + b[1] * t,
+   			      a[2] * (1-t) + b[2] * t,
+   			      a[3] * (1-t) + b[3] * t]
+               );
+            }
+   	   }
       m.restore();
    }
+
+
+   // path line rendering
+   drawPaths(state, state.dr, projMat, viewMat, isMiniature);
+}
+
+let m2 = new Matrix();
+class Transform {
+   constructor() {
+      this.position    = new Float32Array(3);
+      this.rotation    = new Float32Array(3);
+      this.scale       = new Float32Array(3);
+   }
+}
+const gizmoXform = new Transform();
+
+function drawPaths(state, dr, projMat, viewMat, isMiniature) {
+   if (!enablePathRenderer) {
+      return;
+   }
+
+   gizmoXform.position[0] = 0;
+   gizmoXform.position[1] = 1.7;
+   gizmoXform.position[2] = 0;
+   gizmoXform.rotation[0] = 0;
+   gizmoXform.rotation[1] = 0;
+   gizmoXform.rotation[2] = 0;
+   gizmoXform.scale[0]    = 1;
+   gizmoXform.scale[1]    = 1;
+   gizmoXform.scale[2]    = 1;
+
+   DR.beginRenderPass(dr);
+   bindRenderPipeline(myRenderPipeline);
+
+      dr.projectionMatrixGlobal(projMat);
+      dr.viewMatrixGlobal(viewMat);
+
+      
+      m2.save();
+      m2.identity();
+      
+      if (isMiniature) {
+         m2.translate(HALL_WIDTH/2 - TABLE_DEPTH/2, -TABLE_HEIGHT*1.048, TABLE_WIDTH/6.7);
+         m2.rotateY(Math.PI);
+         m2.scale(TABLETOP_CLONE_SCALE);   
+      }
+      m2.translate(
+         gizmoXform.position[0], 
+         gizmoXform.position[1],
+         gizmoXform.position[2]
+      );
+      m2.rotateX(
+         gizmoXform.rotation[0],
+      );
+      m2.scale(
+         gizmoXform.scale[0],
+         gizmoXform.scale[1],
+         gizmoXform.scale[2]
+      );
+      dr.modelMatrixGlobal(m2.value());
+
+      m2.restore();
+
+      DR.draw(dr);
+
+   DR.endRenderPass(dr);
 }
 
 function onEndFrame(t, state) {
+   // reset the dynamic renderer to start
+   // since this instance is used for
+   // per-frame data
+   state.dr.rewindToStart();
+
    pollAvatarData();
 
    /*-----------------------------------------------------------------
@@ -1125,22 +1376,15 @@ function onEndFrame(t, state) {
 
 export default function main() {
    const def = {
-      name: 'YOUR_NAME_HERE week10',
+      name: 'week10',
       setup: setup,
       onStartFrame: onStartFrame,
+      onStartFrameXR: onStartFrame,
       onEndFrame: onEndFrame,
+      onEndFrameXR: onEndFrame,
       onDraw: onDraw,
-
-      // (New Info): New callbacks:
-
-      // VR-specific drawing callback
-      // e.g. for when the UI must be different 
-      //      in VR than on desktop
-      //      currently setting to the same callback as on desktop
       onDrawXR: onDraw,
-      // call upon reload
       onReload: onReload,
-      // call upon world exit
       onExit: onExit
    };
 

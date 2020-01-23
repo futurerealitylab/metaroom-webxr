@@ -1,4 +1,6 @@
-"use strict"
+"use strict";
+
+import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 // don't remove "use strict"
 
@@ -326,13 +328,13 @@ async function setup(state) {
     // but they won't work with the editor
     //
     // see function initGLContext(target, contextNames, contextOptions)
-    //     function addShader(program, type, src, errRecord)
-    //     function createShaderProgramFromStrings(vertSrc, fragSrc, errRecord)
+    //     function addShaderModule(program, type, src, errRecord)
+    //     function compileValidateStrings(vertSrc, fragSrc, errRecord)
     // and others for examples
 
     // Editor Specific:
     // editor library function for loading shader snippets from files on disk
-    let libSources = await ShaderTextEditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+    let libSources = await ShaderTextEditor.loadShader(gl, "libs", [
         { 
             key : "pnoise", path : "shaders/noise.glsl", foldDefault : true
         },     

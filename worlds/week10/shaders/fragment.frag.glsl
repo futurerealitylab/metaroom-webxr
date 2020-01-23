@@ -28,6 +28,9 @@ uniform sampler2D uTex0;
 uniform sampler2D uTex1;
 uniform sampler2D uTex2;
 
+#define COUNT_TEXTURES (3)
+uniform sampler2D uTex[COUNT_TEXTURES];
+
 out vec4 fragColor;    // RESULT WILL GO HERE
 
 vec3 bumpTexture(vec3 normal, vec4 bump) {

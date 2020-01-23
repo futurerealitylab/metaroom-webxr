@@ -1,4 +1,6 @@
-"use strict"
+"use strict";
+
+import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 /*
    Things you might want to try:
@@ -104,12 +106,12 @@ async function setup(state) {
         RC : null
     }
 
-    const images = await imgutil.loadImagesPromise([
+    const images = await imgutil.loadImagesAsync([
        getPath("textures/wood.png"),
        getPath("textures/tiles.jpg"),
     ]);
 
-    let libSources = await ShaderTextEditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+    let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [
         { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true },
         { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
     ]);

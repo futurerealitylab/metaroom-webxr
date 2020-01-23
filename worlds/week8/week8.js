@@ -1,4 +1,4 @@
-"use strict"
+"use strict";
 ////////////////////////////// MATRIX SUPPORT
 
 let cos = t => Math.cos(t);
@@ -63,12 +63,12 @@ let cubeVertices = createCubeVertices();
 async function setup(state) {
     hotReloadFile(getPath('week8.js'));
 
-    const images = await imgutil.loadImagesPromise([
+    const images = await imgutil.loadImagesAsync([
        getPath("./../../assets/textures/brick.png"),
        getPath("./../../assets/textures/tiles.jpg"),
     ]);
 
-    let libSources = await ShaderTextEditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+    let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [
         { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true },
         { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
     ]);
