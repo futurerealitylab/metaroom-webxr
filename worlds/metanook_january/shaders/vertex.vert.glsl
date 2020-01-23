@@ -33,8 +33,9 @@ void main(void) {
     vXY = pos.xy / pos.z;
     vP = pos.xyz;
     vPos = aPos;
-    vNor = (vec4(aNor, 0.) * inverse(uModel)).xyz;
-    vTan = (vec4(aTan, 0.) * inverse(uModel)).xyz;
+    mat4 invModel = inverse(uModel);
+    vNor = (vec4(aNor, 0.) * invModel).xyz;
+    vTan = (vec4(aTan, 0.) * invModel).xyz;
     vBin = cross(vNor, vTan);
     vUV = aUV * vec2(1.,-1.) + vec2(0.,1.);
     gl_Position = pos + uToon * vec4(normalize(vNor).xy, 0.,0.);

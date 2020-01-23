@@ -1,4 +1,6 @@
-"use strict"
+"use strict";
+
+import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 const cos = Math.cos;
 const sin = Math.sin;
@@ -418,7 +420,7 @@ async function setup(state) {
     state.fog_color = [53.0 / 255.0, 81.0 / 255.0, 192.0 / 255.0, 1.0];
 
     // load initial images, then continue setup after waiting is done
-    const images = await imgutil.loadImagesPromise([
+    const images = await imgutil.loadImagesAsync([
         getPath("resources/textures/brick.png"),
         getPath("resources/textures/polkadots_transparent.png"),
         getPath("resources/textures/wood.png")
@@ -437,7 +439,7 @@ async function setup(state) {
     // non-Meta_Room-controlled state. 
     state.images = images;
 
-    let libSources = await ShaderTextEditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+    let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [
         { 
             key : "pnoise", path : "shaders/noise.glsl", foldDefault : true
         },     
@@ -446,7 +448,7 @@ async function setup(state) {
         throw new Error("Could not load shader library");
     }
 
-        let shaderSource = await ShaderTextEditor.loadAndRegisterShaderForLiveEditing(
+        let shaderSource = await ShaderTextEditor.loadShader(
             // gl context
             gl,
             // name of shader as it should appear in the editor
@@ -480,7 +482,7 @@ async function setup(state) {
                     }
 
                     // uses a preprocessor for custom extensions to GLSL
-                    ShaderTextEditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+                    ShaderTextEditor.preprocessCompileValidateStrings(
                         output[0],
                         output[1],
                         libMap
@@ -490,7 +492,7 @@ async function setup(state) {
                     state.program = program;
 
                     // initialize uniforms (store them in the object passed-in)
-                    GFX.getAndStoreIndividualUniformLocations(gl, program, state);
+                    GFX.getUniformLocations(gl, program, state);
 
                     // uncomment the line below to get the maximum number of 
                     // texture image units available for your GPU hardware

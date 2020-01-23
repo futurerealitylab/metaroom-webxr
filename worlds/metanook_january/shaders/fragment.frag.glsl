@@ -30,20 +30,6 @@ uniform sampler2D uTex2;
 
 out vec4 fragColor;    // RESULT WILL GO HERE
 
-float noize(vec3 v) {
-   vec4 r[2];
-   const mat4 E = mat4(0.,0.,0.,0., 0.,.5,.5,0., .5,0.,.5,0., .5,.5,0.,0.);
-   for (int j = 0 ; j < 2 ; j++)
-   for (int i = 0 ; i < 4 ; i++) {
-      vec3 p = .6 * v + E[i].xyz, C = floor(p), P = p-C-.5, A = abs(P);
-      C += mod(C.x+C.y+C.z+float(j),2.) * step(max(A.yzx,A.zxy),A)*sign(P);
-      vec3 D = 43758. * sin(13. * (2.1*C     + 3.2*C.xzy + 4.3*float(i)) +
-                            78. * (1.2*C.yzx + 2.3*C.zxy + 3.4*float(j)));
-      r[j][i] = dot(P=p-C-.5,fract(D)-.5) * pow(max(0.,1.-2.*dot(P,P)),4.);
-   }
-   return 6.5 * (r[0].x+r[0].y+r[0].z+r[0].w+r[1].x+r[1].y+r[1].z+r[1].w);
-}
-
 vec3 bumpTexture(vec3 normal, vec4 bump) {
    return normalize((.5-bump.x) * normalize(vTan) + (.5-bump.y) * normalize(vBin) + (.5-bump.z) * normal);
 }
@@ -85,14 +71,7 @@ void main() {
     color += phong(Ldir[0], Lrgb[0], normal, diffuse, specular, p);
     color += phong(Ldir[1], Lrgb[1], normal, diffuse, specular, p);
 
-    float alpha = uColor.a;
-    if (alpha < 1.) {
-       vec2 uv = 2. * (vUV - vec2(.5,.5)) / alpha;
-       float t = 1. - dot(uv, uv);
-       alpha = .3 * t * (.5 + .5 * noize(100. * vP));
-    }
-
-    fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), alpha) * uBrightness;
+    fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), uColor.a) * uBrightness;
     if (uTexIndex == 0) fragColor *= texture(uTex0, vUV * uTexScale);
     if (uTexIndex == 1) fragColor *= texture(uTex1, vUV * uTexScale);
     if (uTexIndex == 2) fragColor *= texture(uTex2, vUV * uTexScale);

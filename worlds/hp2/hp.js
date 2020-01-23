@@ -1,4 +1,6 @@
-"use strict"
+"use strict";
+
+import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 // math utilities ///////////////////////////////////////////////////////////////
 const cos = Math.cos;
@@ -373,7 +375,7 @@ async function setup(state) {
     state.fog_color = [53.0 / 255.0, 81.0 / 255.0, 192.0 / 255.0, 1.0];
 
     // load initial images, then continue setup after waiting is done
-    const images = await imgutil.loadImagesPromise([
+    const images = await imgutil.loadImagesAsync([
         getPath("assets/textures/brick.png"),
         getPath("assets/textures/polkadots_transparent.png"),
         getPath("assets/textures/wood.png")
@@ -383,7 +385,7 @@ async function setup(state) {
     state.video = GFX.setupVideo(getPath("resources/textures/bla2.mp4"));
     state.images = images;
 
-    let libSources = await ShaderTextEditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+    let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [
         { 
             key : "pnoise", path : "shaders/noise.glsl", foldDefault : true
         },     
@@ -392,7 +394,7 @@ async function setup(state) {
         throw new Error("Could not load shader library");
     }
 
-        let shaderSource = await ShaderTextEditor.loadAndRegisterShaderForLiveEditing(
+        let shaderSource = await ShaderTextEditor.loadShader(
             // gl context
             gl,
             // name of shader as it should appear in the editor
@@ -418,7 +420,7 @@ async function setup(state) {
                     }
 
                     // uses a preprocessor for custom extensions to GLSL
-                    ShaderTextEditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+                    ShaderTextEditor.preprocessCompileValidateStrings(
                         output[0],
                         output[1],
                         libMap
@@ -428,7 +430,7 @@ async function setup(state) {
                     state.program = program;
 
                     // initialize uniforms (store them in the object passed-in)
-                    GFX.getAndStoreIndividualUniformLocations(gl, program, state);
+                    GFX.getUniformLocations(gl, program, state);
 
                     // uncomment the line below to get the maximum number of 
                     // texture image units available for your GPU hardware

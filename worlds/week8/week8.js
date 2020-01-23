@@ -1,4 +1,4 @@
-"use strict"
+"use strict";
 ////////////////////////////// MATRIX SUPPORT
 
 let cos = t => Math.cos(t);
@@ -63,12 +63,12 @@ let cubeVertices = createCubeVertices();
 async function setup(state) {
     hotReloadFile(getPath('week8.js'));
 
-    const images = await imgutil.loadImagesPromise([
+    const images = await imgutil.loadImagesAsync([
        getPath("./../../assets/textures/brick.png"),
        getPath("./../../assets/textures/tiles.jpg"),
     ]);
 
-    let libSources = await ShaderTextEditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+    let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [
         { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true },
         { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
     ]);
@@ -76,7 +76,7 @@ async function setup(state) {
         throw new Error("Could not load shader library");
 
     // load vertex and fragment shaders from the server, register with the editor
-    let shaderSource = await ShaderTextEditor.loadAndRegisterShaderForLiveEditing(
+    let shaderSource = await ShaderTextEditor.loadShader(
         gl,
         "mainShader",
         { 
@@ -95,7 +95,7 @@ async function setup(state) {
                                     stageCode.substring(hdrEndIdx + 1);
                     }
                 }
-                ShaderTextEditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+                ShaderTextEditor.preprocessCompileValidateStrings(
                     output[0],
                     output[1],
                     libMap

@@ -2,6 +2,7 @@
 
 import * as mem  from "/lib/core/memory.js";
 import * as math from "./math/math.js";
+import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 // Toby's renderer / The renderer
 let RenderLib; // module
@@ -45,6 +46,8 @@ async function initRenderer(state) {
 
 async function setup(state) {
     hotReloadFile(getPath('dynamic_renderer.js'));
+
+    ShaderTextEditor.hideEditor();
 
     CanvasUtil.resize(MR.getCanvas(), 1280 / 2, 720 / 2);
 

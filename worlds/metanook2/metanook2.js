@@ -1,4 +1,6 @@
-"use strict"
+"use strict";
+
+import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 // NOTE TO ALEX AND BEN: LOOK FOR THE STRING "avatarMatrix"
 
@@ -36,12 +38,12 @@ let lathe = CG.createMeshVertices(10, 16, CG.uvToLathe,
 async function setup(state) {
     hotReloadFile(getPath('metanook2.js'));
 
-    const images = await imgutil.loadImagesPromise([
+    const images = await imgutil.loadImagesAsync([
        getPath("./../../assets/textures/wood.png"),
        getPath("./../../assets/textures/tiles.jpg"),
     ]);
 
-    let libSources = await ShaderTextEditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+    let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [
         { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true },
         { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
     ]);
@@ -49,7 +51,7 @@ async function setup(state) {
         throw new Error("Could not load shader library");
 
     // load vertex and fragment shaders from the server, register with the editor
-    let shaderSource = await ShaderTextEditor.loadAndRegisterShaderForLiveEditing(
+    let shaderSource = await ShaderTextEditor.loadShader(
         gl,
         "mainShader",
         { 
@@ -68,7 +70,7 @@ async function setup(state) {
                                     stageCode.substring(hdrEndIdx + 1);
                     }
                 }
-                ShaderTextEditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+                ShaderTextEditor.preprocessCompileValidateStrings(
                     output[0],
                     output[1],
                     libMap

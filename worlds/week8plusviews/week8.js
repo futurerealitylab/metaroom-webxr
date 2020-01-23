@@ -1,4 +1,6 @@
-"use strict"
+"use strict";
+
+import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 let cubeVertices  = null;
 let m             = null;
@@ -13,19 +15,19 @@ const FRICTION    = 0.002;
 async function setup(state) {
     hotReloadFile(getPath('week8.js'));
 
-    const images = await imgutil.loadImagesPromise([
+    const images = await imgutil.loadImagesAsync([
        getPath("./../../assets/textures/brick.png"),
        getPath("./../../assets/textures/tiles.jpg"),
     ]);
 
-    let libSources = await ShaderTextEditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+    let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [
         { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true }, 
     ]);
     if (! libSources)
         throw new Error("Could not load shader library");
 
     // load vertex and fragment shaders from the server, register with the editor
-    let shaderSource = await ShaderTextEditor.loadAndRegisterShaderForLiveEditing(
+    let shaderSource = await ShaderTextEditor.loadShader(
         gl,
         "mainShader",
         { 
@@ -44,7 +46,7 @@ async function setup(state) {
                                     stageCode.substring(hdrEndIdx + 1);
                     }
                 }
-                ShaderTextEditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+                ShaderTextEditor.preprocessCompileValidateStrings(
                     output[0],
                     output[1],
                     libMap

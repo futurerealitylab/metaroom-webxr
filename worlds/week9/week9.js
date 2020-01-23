@@ -1,4 +1,6 @@
-"use strict"
+"use strict";
+
+import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 /*
    Things you might want to try:
@@ -104,12 +106,12 @@ async function setup(state) {
         RC : null
     }
 
-    const images = await imgutil.loadImagesPromise([
+    const images = await imgutil.loadImagesAsync([
        getPath("textures/wood.png"),
        getPath("textures/tiles.jpg"),
     ]);
 
-    let libSources = await ShaderTextEditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
+    let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [
         { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true },
         { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
     ]);
@@ -132,7 +134,7 @@ async function setup(state) {
                             stageCode.substring(hdrEndIdx + 1);
             }
         }
-        ShaderTextEditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+        ShaderTextEditor.preprocessCompileValidateStrings(
             output[0],
             output[1],
             libMap
@@ -140,7 +142,7 @@ async function setup(state) {
     }
 
     // load vertex and fragment shaders from the server, register with the editor
-    let shaderSource = await ShaderTextEditor.loadAndRegisterShaderForLiveEditing(
+    let shaderSource = await ShaderTextEditor.loadShader(
         gl,
         "mainShader",
         {   
