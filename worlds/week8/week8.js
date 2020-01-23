@@ -1,6 +1,8 @@
 "use strict";
 
+import * as assetutil from "/lib/util/asset.js";
 import * as img from "/lib/util/image.js";
+import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 ////////////////////////////// MATRIX SUPPORT
 
 let cos = t => Math.cos(t);

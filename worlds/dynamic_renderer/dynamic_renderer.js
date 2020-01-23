@@ -2,6 +2,7 @@
 
 import * as mem  from "/lib/core/memory.js";
 import * as math from "./math/math.js";
+import * as assetutil from "/lib/util/asset.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 // Toby's renderer / The renderer
