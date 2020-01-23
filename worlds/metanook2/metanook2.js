@@ -1,5 +1,6 @@
 "use strict";
 
+import * as img from "/lib/util/image.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 // NOTE TO ALEX AND BEN: LOOK FOR THE STRING "avatarMatrix"
@@ -38,7 +39,7 @@ let lathe = CG.createMeshVertices(10, 16, CG.uvToLathe,
 async function setup(state) {
     hotReloadFile(getPath('metanook2.js'));
 
-    const images = await imgutil.loadImagesAsync([
+    const images = await img.loadImagesAsync([
        getPath("./../../assets/textures/wood.png"),
        getPath("./../../assets/textures/tiles.jpg"),
     ]);

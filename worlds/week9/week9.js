@@ -1,5 +1,6 @@
 "use strict";
 
+import * as img from "/lib/util/image.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 /*
@@ -106,7 +107,7 @@ async function setup(state) {
         RC : null
     }
 
-    const images = await imgutil.loadImagesAsync([
+    const images = await img.loadImagesAsync([
        getPath("textures/wood.png"),
        getPath("textures/tiles.jpg"),
     ]);

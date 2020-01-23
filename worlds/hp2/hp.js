@@ -1,5 +1,6 @@
 "use strict";
 
+import * as img from "/lib/util/image.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 // math utilities ///////////////////////////////////////////////////////////////
@@ -375,7 +376,7 @@ async function setup(state) {
     state.fog_color = [53.0 / 255.0, 81.0 / 255.0, 192.0 / 255.0, 1.0];
 
     // load initial images, then continue setup after waiting is done
-    const images = await imgutil.loadImagesAsync([
+    const images = await img.loadImagesAsync([
         getPath("assets/textures/brick.png"),
         getPath("assets/textures/polkadots_transparent.png"),
         getPath("assets/textures/wood.png")

@@ -1,5 +1,6 @@
 "use strict";
 
+import * as img from "/lib/util/image.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 // don't remove "use strict"

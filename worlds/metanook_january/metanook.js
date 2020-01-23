@@ -1,5 +1,6 @@
 "use strict";
 
+import * as img from "/lib/util/image.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {Lock} from "../../lib/core/lock.js";
 
@@ -172,7 +173,7 @@ async function setup(state) {
    }
 
    // I propose adding a dictionary mapping texture strings to locations, so that drawShapes becomes clearer
-   const images = await imgutil.loadImagesAsync([
+   const images = await img.loadImagesAsync([
       "/assets/textures/wood.png",
       "/assets/textures/tiles.jpg",
       "/assets/textures/noisy_bump.jpg"

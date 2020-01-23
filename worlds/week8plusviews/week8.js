@@ -1,5 +1,6 @@
 "use strict";
 
+import * as img from "/lib/util/image.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 let cubeVertices  = null;
@@ -15,7 +16,7 @@ const FRICTION    = 0.002;
 async function setup(state) {
     hotReloadFile(getPath('week8.js'));
 
-    const images = await imgutil.loadImagesAsync([
+    const images = await img.loadImagesAsync([
        getPath("./../../assets/textures/brick.png"),
        getPath("./../../assets/textures/tiles.jpg"),
     ]);

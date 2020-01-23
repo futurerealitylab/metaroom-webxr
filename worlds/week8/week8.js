@@ -1,4 +1,6 @@
 "use strict";
+
+import * as img from "/lib/util/image.js";
 ////////////////////////////// MATRIX SUPPORT
 
 let cos = t => Math.cos(t);
@@ -63,7 +65,7 @@ let cubeVertices = createCubeVertices();
 async function setup(state) {
     hotReloadFile(getPath('week8.js'));
 
-    const images = await imgutil.loadImagesAsync([
+    const images = await img.loadImagesAsync([
        getPath("./../../assets/textures/brick.png"),
        getPath("./../../assets/textures/tiles.jpg"),
     ]);
