@@ -98,67 +98,68 @@ export function pollAvatarData() {
                             5: home button
             */
             const avatar_message = {
-            type: "avatar",
-            user: MR.playerid,
-            // The Date.now() method returns the number of milliseconds elapsed since January 1, 1970
-            timestamp: Date.now(),
-            state: {
-                mode: MR.UserType.vr,
-                pos: CG.matrixTransform(MR.avatarMatrixForward, headsetPos),
-                rot: headsetRot,
-                controllers: {
-                left: {
-                    pos: CG.matrixTransform(MR.avatarMatrixForward, [
-                        controllerLeftPos[0],
-                        controllerLeftPos[1],
-                        controllerLeftPos[2]
-                    ]),
-                    rot: [
-                        controllerLeftRot[0],
-                        controllerLeftRot[1],
-                        controllerLeftRot[2],
-                        controllerLeftRot[3]
-                    ],
-                    angularAcceleration: [controllerLeft.pose.angularAcceleration[0],controllerLeft.pose.angularAcceleration[1],controllerLeft.pose.angularAcceleration[2]],
-                    angularVelocity: [controllerLeft.pose.angularVelocity[0],controllerLeft.pose.angularVelocity[1],controllerLeft.pose.angularVelocity[2]],
-                    linearAcceleration: [controllerLeft.pose.linearAcceleration[0],controllerLeft.pose.linearAcceleration[1],controllerLeft.pose.linearAcceleration[2]],
-                    linearVelocity: [controllerLeft.pose.linearVelocity[0],controllerLeft.pose.linearVelocity[1],controllerLeft.pose.linearVelocity[2]],
-                    analog: controllerLeftButtons[0].pressed,
-                    trigger: controllerLeftButtons[1].pressed,
-                    sideTrigger: controllerLeftButtons[2].pressed,
-                    x: controllerLeftButtons[3].pressed,
-                    y: controllerLeftButtons[4].pressed,
-                    home: controllerLeftButtons[5].pressed,
-                    analogx: controllerLeft.axes[0],
-                    analogy: controllerLeft.axes[1]
-                },
-                right: {
-                    pos: CG.matrixTransform(MR.avatarMatrixForward, [
-                        controllerRightPos[0],
-                        controllerRightPos[1],
-                        controllerRightPos[2]
-                    ]),
-                    rot: [
-                        controllerRightRot[0],
-                        controllerRightRot[1],
-                        controllerRightRot[2],
-                        controllerRightRot[3]
-                    ],
-                    angularAcceleration: [controllerRight.pose.angularAcceleration[0],controllerRight.pose.angularAcceleration[1],controllerRight.pose.angularAcceleration[2]],
-                    angularVelocity: [controllerRight.pose.angularVelocity[0],controllerRight.pose.angularVelocity[1],controllerRight.pose.angularVelocity[2]],
-                    linearAcceleration: [controllerRight.pose.linearAcceleration[0],controllerRight.pose.linearAcceleration[1],controllerRight.pose.linearAcceleration[2]],
-                    linearVelocity: [controllerRight.pose.linearVelocity[0],controllerRight.pose.linearVelocity[1],controllerRight.pose.linearVelocity[2]],
-                    analog: controllerRightButtons[0].pressed,
-                    trigger: controllerRightButtons[1].pressed,
-                    sideTrigger: controllerRightButtons[2].pressed,
-                    x: controllerRightButtons[3].pressed,
-                    y: controllerRightButtons[4].pressed,
-                    home: controllerRightButtons[5].pressed,
-                    analogx: controllerRight.axes[0],
-                    analogy: controllerRight.axes[1]
+                type: "avatar",
+                user: MR.playerid,
+                // The Date.now() method returns the number of milliseconds elapsed since January 1, 1970
+                timestamp: Date.now(),
+                state: {
+                    mode: MR.UserType.vr,
+                    calibMatrix: MR.avatarMatrixForward,
+                    pos: [headsetPos[0],headsetPos[1],headsetPos[2]],
+                    rot: [headsetRot[0], headsetRot[1], headsetRot[2], headsetRot[3]],
+                    controllers: {
+                    left: {
+                        pos: [
+                            controllerLeftPos[0],
+                            controllerLeftPos[1],
+                            controllerLeftPos[2]
+                        ],
+                        rot: [
+                            controllerLeftRot[0],
+                            controllerLeftRot[1],
+                            controllerLeftRot[2],
+                            controllerLeftRot[3]
+                        ],
+                        angularAcceleration: [controllerLeft.pose.angularAcceleration[0],controllerLeft.pose.angularAcceleration[1],controllerLeft.pose.angularAcceleration[2]],
+                        angularVelocity: [controllerLeft.pose.angularVelocity[0],controllerLeft.pose.angularVelocity[1],controllerLeft.pose.angularVelocity[2]],
+                        linearAcceleration: [controllerLeft.pose.linearAcceleration[0],controllerLeft.pose.linearAcceleration[1],controllerLeft.pose.linearAcceleration[2]],
+                        linearVelocity: [controllerLeft.pose.linearVelocity[0],controllerLeft.pose.linearVelocity[1],controllerLeft.pose.linearVelocity[2]],
+                        analog: controllerLeftButtons[0].pressed,
+                        trigger: controllerLeftButtons[1].pressed,
+                        sideTrigger: controllerLeftButtons[2].pressed,
+                        x: controllerLeftButtons[3].pressed,
+                        y: controllerLeftButtons[4].pressed,
+                        home: controllerLeftButtons[5].pressed,
+                        analogx: controllerLeft.axes[0],
+                        analogy: controllerLeft.axes[1]
+                    },
+                    right: {
+                        pos: [
+                            controllerRightPos[0],
+                            controllerRightPos[1],
+                            controllerRightPos[2]
+                        ],
+                        rot: [
+                            controllerRightRot[0],
+                            controllerRightRot[1],
+                            controllerRightRot[2],
+                            controllerRightRot[3]
+                        ],
+                        angularAcceleration: [controllerRight.pose.angularAcceleration[0],controllerRight.pose.angularAcceleration[1],controllerRight.pose.angularAcceleration[2]],
+                        angularVelocity: [controllerRight.pose.angularVelocity[0],controllerRight.pose.angularVelocity[1],controllerRight.pose.angularVelocity[2]],
+                        linearAcceleration: [controllerRight.pose.linearAcceleration[0],controllerRight.pose.linearAcceleration[1],controllerRight.pose.linearAcceleration[2]],
+                        linearVelocity: [controllerRight.pose.linearVelocity[0],controllerRight.pose.linearVelocity[1],controllerRight.pose.linearVelocity[2]],
+                        analog: controllerRightButtons[0].pressed,
+                        trigger: controllerRightButtons[1].pressed,
+                        sideTrigger: controllerRightButtons[2].pressed,
+                        x: controllerRightButtons[3].pressed,
+                        y: controllerRightButtons[4].pressed,
+                        home: controllerRightButtons[5].pressed,
+                        analogx: controllerRight.axes[0],
+                        analogy: controllerRight.axes[1]
+                    }
+                    }
                 }
-                }
-            }
             };
 
             if (MR.playerid == -1) {
