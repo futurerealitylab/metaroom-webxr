@@ -1,7 +1,7 @@
 "use strict";
 
-import * as assetutil from "/lib/util/asset.js";
 import * as img from "/lib/util/image.js";
+import * as assetutil from "/lib/util/asset.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 // NOTE TO ALEX AND BEN: LOOK FOR THE STRING "avatarMatrix"
