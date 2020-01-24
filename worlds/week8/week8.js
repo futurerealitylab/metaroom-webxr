@@ -1,5 +1,6 @@
 "use strict";
 
+import * as path from "/lib/util/path.js";
 import * as assetutil from "/lib/util/asset.js";
 import * as img from "/lib/util/image.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
@@ -65,11 +66,11 @@ let cubeVertices = createCubeVertices();
 ////////////////////////////// SCENE SPECIFIC CODE
 
 async function setup(state) {
-    hotReloadFile(getPath('week8.js'));
+    hotReloadFile(path.getLocalPath('week8.js'));
 
     const images = await img.loadImagesAsync([
-       getPath("./../../assets/textures/brick.png"),
-       getPath("./../../assets/textures/tiles.jpg"),
+       path.getLocalPath("./../../assets/textures/brick.png"),
+       path.getLocalPath("./../../assets/textures/tiles.jpg"),
     ]);
 
     let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [

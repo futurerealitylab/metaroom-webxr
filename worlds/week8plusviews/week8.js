@@ -1,5 +1,6 @@
 "use strict";
 
+import * as path from "/lib/util/path.js";
 import * as assetutil from "/lib/util/asset.js";
 import * as img from "/lib/util/image.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
@@ -15,11 +16,11 @@ const FRICTION    = 0.002;
 ////////////////////////////// SCENE SPECIFIC CODE
 
 async function setup(state) {
-    hotReloadFile(getPath('week8.js'));
+    hotReloadFile(path.getLocalPath('week8.js'));
 
     const images = await img.loadImagesAsync([
-       getPath("./../../assets/textures/brick.png"),
-       getPath("./../../assets/textures/tiles.jpg"),
+       path.getLocalPath("./../../assets/textures/brick.png"),
+       path.getLocalPath("./../../assets/textures/tiles.jpg"),
     ]);
 
     let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [
@@ -120,16 +121,16 @@ async function setup(state) {
     Input.initKeyEvents();
 
     // load modules (assuming these won't be reloaded for now for simplicity)
-    state.gfx = await MR.dynamicImport(getPath("lib/graphics.js"));
+    state.gfx = await MR.dynamicImport(path.getLocalPath("lib/graphics.js"));
     gfx = state.gfx;
     // module containing default camera/movement controllers
     state.MovementController = await MR.dynamicImport(
-        getPath("lib/simple_movement_controller.js")
+        path.getLocalPath("lib/simple_movement_controller.js")
     );
 
     // week 9 K.P. VR controller object type, takes a controller + matrix
     state.OCTouchControllerHandler = await MR.dynamicImport(
-        getPath("lib/MetaNook_OCtouchcontroller.js")
+        path.getLocalPath("lib/MetaNook_OCtouchcontroller.js")
     ).ControllerHandler;
 
     // create a matrix stack

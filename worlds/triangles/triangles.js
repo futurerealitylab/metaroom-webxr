@@ -1,5 +1,6 @@
 "use strict";
 
+import * as path from "/lib/util/path.js";
 import * as canvasutil from "/lib/util/canvas.js";
 import * as assetutil from "/lib/util/asset.js";
 import * as img from "/lib/util/image.js";
@@ -298,7 +299,7 @@ function onReload() {
 // for convenience, e.g. if you want to attach objects to a single package for organization
 // For simple programs, globals are fine.
 async function setup(state) {
-    hotReloadFile(getPath("triangles.js"));
+    hotReloadFile(path.getLocalPath("triangles.js"));
     canvasutil.resize(MR.getCanvas(), 1280, 720);
 
     // MR.server.subsLocal.subscribe("Update_File", (filename, args) => {

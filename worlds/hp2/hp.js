@@ -1,5 +1,6 @@
 "use strict";
 
+import * as path from "/lib/util/path.js";
 import * as canvasutil from "/lib/util/canvas.js";
 import * as assetutil from "/lib/util/asset.js";
 import * as img from "/lib/util/image.js";
@@ -251,12 +252,12 @@ async function onReload(state) {
     // for example
     //console.log("onReload start");
     let myModule = null;
-    myModule = await MR.dynamicImport(getPath("matrix.js"));
+    myModule = await MR.dynamicImport(path.getLocalPath("matrix.js"));
     matrixModule = myModule;
     Mat          = matrixModule.Matrix;
     //console.log("matrix.js");
         
-    myModule = await MR.dynamicImport(getPath("geometry.js"))
+    myModule = await MR.dynamicImport(path.getLocalPath("geometry.js"))
     geometryModule  = myModule;
     cubeVertexData  = geometryModule.cubeVertexData;
     cubeIndexData   = geometryModule.cubeIndexData;
@@ -264,7 +265,7 @@ async function onReload(state) {
     cubeIndexCount  = geometryModule.cubeIndexCount;
     //console.log("geometry.js");
 
-    myModule = await MR.dynamicImport(getPath("simple_movement_controller.js"))
+    myModule = await MR.dynamicImport(path.getLocalPath("simple_movement_controller.js"))
     
     moveControllerModule = myModule;
     MovementController   = myModule.SimpleMovementController;
@@ -279,20 +280,20 @@ async function onReload(state) {
 async function setup(state) {
     canvasutil.resize(MR.getCanvas(), 1280, 720);
     
-    hotReloadFile(getPath("hp.js"));
+    hotReloadFile(path.getLocalPath("hp.js"));
 
     // load modules
-    matrixModule = await import(getPath("matrix.js"));
+    matrixModule = await import(path.getLocalPath("matrix.js"));
     Mat          = matrixModule.Matrix;
     state.M      = new matrixModule.Dynamic_Matrix4x4_Stack();
 
-    geometryModule  = await import(getPath("geometry.js"));
+    geometryModule  = await import(path.getLocalPath("geometry.js"));
     cubeVertexData  = geometryModule.cubeVertexData;
     cubeIndexData   = geometryModule.cubeIndexData;
     cubeVertexCount = geometryModule.cubeVertexCount;
     cubeIndexCount  = geometryModule.cubeIndexCount;
 
-    moveControllerModule = await import(getPath("simple_movement_controller.js"));  
+    moveControllerModule = await import(path.getLocalPath("simple_movement_controller.js"));  
     MovementController       = moveControllerModule.SimpleMovementController;
 
     state.cursor = ScreenCursor.trackCursor(MR.getCanvas());
@@ -379,13 +380,13 @@ async function setup(state) {
 
     // load initial images, then continue setup after waiting is done
     const images = await img.loadImagesAsync([
-        getPath("assets/textures/brick.png"),
-        getPath("assets/textures/polkadots_transparent.png"),
-        getPath("assets/textures/wood.png")
+        path.getLocalPath("assets/textures/brick.png"),
+        path.getLocalPath("assets/textures/polkadots_transparent.png"),
+        path.getLocalPath("assets/textures/wood.png")
     ]);
 
     state.videoTexture = GFX.initVideoTexture(gl, gl.TEXTURE3);
-    state.video = GFX.setupVideo(getPath("resources/textures/bla2.mp4"));
+    state.video = GFX.setupVideo(path.getLocalPath("resources/textures/bla2.mp4"));
     state.images = images;
 
     let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [

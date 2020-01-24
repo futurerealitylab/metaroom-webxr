@@ -1,5 +1,6 @@
 "use strict";
 
+import * as path from "/lib/util/path.js";
 import * as assetutil from "/lib/util/asset.js";
 import * as img from "/lib/util/image.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
@@ -154,7 +155,7 @@ async function initRenderer(state) {
 }
 
 async function setup(state) {
-   hotReloadFile(getPath('week10.js'));
+   hotReloadFile(path.getLocalPath('week10.js'));
 
    ShaderTextEditor.showEditor();
 

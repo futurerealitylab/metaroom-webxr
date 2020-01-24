@@ -1,6 +1,9 @@
 "use strict";
 
+
 import {GPU_API_TYPE} from "/lib/core/gpu/gpu.js";
+
+import * as path from "/lib/util/path.js";
 import * as canvasutil from "/lib/util/canvas.js";
 
 import * as geo       from "./geometry.js";
@@ -76,7 +79,7 @@ class MyUniformBufferObject {
 }
 
 async function setup(state, info) {
-    hotReloadFile(getPath('main.js'));
+    hotReloadFile(path.getLocalPath('main.js'));
 
     canvasutil.resize(MR.getCanvas(), 1280, 720);
 
