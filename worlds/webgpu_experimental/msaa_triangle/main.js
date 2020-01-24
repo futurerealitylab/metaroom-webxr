@@ -193,7 +193,7 @@ function onDraw(t, projMat, viewMat, state, info) {
 }
 
 function onEndFrame(t, state, info) {
-    Input.gamepadStateChanged = false;
+    Input.setGamepadStateChanged(false);
 }
 
 export default function main() {

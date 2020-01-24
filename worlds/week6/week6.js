@@ -6,6 +6,7 @@ import * as img           from "/lib/util/image.js";
 import * as Shader        from "/lib/core/gpu/webgl_shader_util.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {ScreenCursor}     from "/lib/input/cursor.js";
+import * as Input         from "/lib/input/input.js";
 
 const cos = Math.cos;
 const sin = Math.sin;

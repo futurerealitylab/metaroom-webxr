@@ -6,6 +6,7 @@ import * as mem           from "/lib/core/memory.js";
 import * as assetutil     from "/lib/util/asset.js";
 import * as Shader        from "/lib/core/gpu/webgl_shader_util.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
+import {ScreenCursor}     from "/lib/input/cursor.js";
 
 import * as math          from "./math/math.js";
 
