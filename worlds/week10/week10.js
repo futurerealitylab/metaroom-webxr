@@ -7,6 +7,7 @@ import {ShaderTextEditor}    from "/lib/core/shader_text_editor.js";
 import * as Shader           from "/lib/core/gpu/webgl_shader_util.js";
 import {Lock}                from "../../lib/core/lock.js";
 import {SpatialAudioContext} from "/lib/media/audio.js";
+import {ScreenCursor}        from "/lib/input/cursor.js";
 
 /*--------------------------------------------------------------------------------
 

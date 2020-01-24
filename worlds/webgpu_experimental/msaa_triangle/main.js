@@ -1,14 +1,14 @@
 "use strict";
 
 
-import {GPU_API_TYPE} from "/lib/core/gpu/gpu.js";
+import {GPU_API_TYPE}  from "/lib/core/gpu/gpu.js";
 
 import * as path       from "/lib/util/path.js";
 import * as canvasutil from "/lib/util/canvas.js";
 
-import * as geo       from "./geometry.js";
-import * as gpulib    from "./gpu_lib.js";
-import * as render    from "./render.js";
+import * as geo        from "./geometry.js";
+import * as gpulib     from "./gpu_lib.js";
+import * as render     from "./render.js";
 
 // up-to-date as of January 14, 2020
 
