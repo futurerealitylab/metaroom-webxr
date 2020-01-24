@@ -1,6 +1,8 @@
 "use strict";
 
 import {GPU_API_TYPE} from "/lib/core/gpu/gpu.js";
+import * as canvasutil from "/lib/util/canvas.js";
+
 import * as geo       from "./geometry.js";
 import * as gpulib    from "./gpu_lib.js";
 import * as render    from "./render.js";
@@ -76,7 +78,7 @@ class MyUniformBufferObject {
 async function setup(state, info) {
     hotReloadFile(getPath('main.js'));
 
-    CanvasUtil.resize(MR.getCanvas(), 1280, 720);
+    canvasutil.resize(MR.getCanvas(), 1280, 720);
 
     gpu = gl;
 
@@ -119,7 +121,7 @@ async function setup(state, info) {
     }
 
 
-    CanvasUtil.setOnResizeEventHandler((target, width, height, oldWidth, oldHeight) => {
+    canvasutil.setOnResizeEventHandler((target, width, height, oldWidth, oldHeight) => {
         const gpuInfo = state.gpuInfo;
         
         const Api = gpuInfo;

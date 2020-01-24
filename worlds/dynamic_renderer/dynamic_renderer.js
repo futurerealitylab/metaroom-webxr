@@ -1,5 +1,6 @@
 "use strict";
 
+import * as canvasutil from "/lib/util/canvas.js";
 import * as mem  from "/lib/core/memory.js";
 import * as math from "./math/math.js";
 import * as assetutil from "/lib/util/asset.js";
@@ -50,7 +51,7 @@ async function setup(state) {
 
     ShaderTextEditor.hideEditor();
 
-    CanvasUtil.resize(MR.getCanvas(), 1280 / 2, 720 / 2);
+    canvasutil.resize(MR.getCanvas(), 1280 / 2, 720 / 2);
 
     await initCommon(state);
 

@@ -1,5 +1,6 @@
 "use strict";
 
+import * as canvasutil from "/lib/util/canvas.js";
 import * as assetutil from "/lib/util/asset.js";
 import * as img from "/lib/util/image.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
@@ -298,7 +299,7 @@ function onReload() {
 // For simple programs, globals are fine.
 async function setup(state) {
     hotReloadFile(getPath("triangles.js"));
-    CanvasUtil.resize(MR.getCanvas(), 1280, 720);
+    canvasutil.resize(MR.getCanvas(), 1280, 720);
 
     // MR.server.subsLocal.subscribe("Update_File", (filename, args) => {
     //     if (args.file !== filename) {
@@ -478,7 +479,7 @@ async function setup(state) {
 
 
     // update resolution upon resize
-    CanvasUtil.setOnResizeEventHandler((cvs, w, h) => {
+    canvasutil.setOnResizeEventHandler((cvs, w, h) => {
         gl.uniform2fv(state.uResolutionLoc, new Float32Array([w, h]));
         // aspect ratio
         gl.uniform1f(state.uAspectLoc, cvs.clientWidth / cvs.clientHeight);

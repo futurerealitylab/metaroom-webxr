@@ -1,5 +1,6 @@
 "use strict";
 
+import * as canvasutil from "/lib/util/canvas.js";
 import * as assetutil from "/lib/util/asset.js";
 import * as img from "/lib/util/image.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
@@ -276,7 +277,7 @@ async function onReload(state) {
 // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
 // (return JavaScript "Promises" like in loadImages())
 async function setup(state) {
-    CanvasUtil.resize(MR.getCanvas(), 1280, 720);
+    canvasutil.resize(MR.getCanvas(), 1280, 720);
     
     hotReloadFile(getPath("hp.js"));
 
