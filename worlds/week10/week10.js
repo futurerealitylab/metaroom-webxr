@@ -5,6 +5,7 @@ import * as assetutil from "/lib/util/asset.js";
 import * as img from "/lib/util/image.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {Lock} from "../../lib/core/lock.js";
+import {SpatialAudioContext} from "/lib/media/audio.js";
 
 /*--------------------------------------------------------------------------------
 
