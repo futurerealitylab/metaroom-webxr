@@ -3,6 +3,7 @@
 import * as path from "/lib/util/path.js";
 import * as img from "/lib/util/image.js";
 import * as assetutil from "/lib/util/asset.js";
+import * as Shader    from "/lib/core/gpu/webgl_shader_util.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import * as canvasutil from "/lib/util/canvas.js";
 
@@ -496,7 +497,7 @@ async function setup(state) {
                     state.program = program;
 
                     // initialize uniforms (store them in the object passed-in)
-                    GFX.getUniformLocations(gl, program, state);
+                    Shader.getUniformLocations(gl, program, state);
 
                     // uncomment the line below to get the maximum number of 
                     // texture image units available for your GPU hardware

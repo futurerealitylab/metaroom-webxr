@@ -4,6 +4,7 @@ import * as path from "/lib/util/path.js";
 import * as canvasutil from "/lib/util/canvas.js";
 import * as assetutil from "/lib/util/asset.js";
 import * as img from "/lib/util/image.js";
+import * as Shader    from "/lib/core/gpu/webgl_shader_util.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 // math utilities ///////////////////////////////////////////////////////////////
@@ -385,8 +386,8 @@ async function setup(state) {
         path.getLocalPath("assets/textures/wood.png")
     ]);
 
-    state.videoTexture = GFX.initVideoTexture(gl, gl.TEXTURE3);
-    state.video = GFX.setupVideo(path.getLocalPath("resources/textures/bla2.mp4"));
+    state.videoTexture = Shader.initVideoTexture(gl, gl.TEXTURE3);
+    state.video = Shader.setupVideo(path.getLocalPath("resources/textures/bla2.mp4"));
     state.images = images;
 
     let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [
@@ -434,7 +435,7 @@ async function setup(state) {
                     state.program = program;
 
                     // initialize uniforms (store them in the object passed-in)
-                    GFX.getUniformLocations(gl, program, state);
+                    Shader.getUniformLocations(gl, program, state);
 
                     // uncomment the line below to get the maximum number of 
                     // texture image units available for your GPU hardware
@@ -1358,7 +1359,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         // NOTE: not yet synchronized
         {   
 
-            GFX.updateVideoTexture(gl, state.videoTexture, state.video);
+            Shader.updateVideoTexture(gl, state.videoTexture, state.video);
             
             // Note: we could choose to optimize memory use further by using 
             // UNSIGNED_BYTE since we have so few indices (< 255),
