@@ -1,6 +1,10 @@
 "use strict";
 
+import * as path from "/lib/util/path.js";
+import * as img from "/lib/util/image.js";
+import * as assetutil from "/lib/util/asset.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
+import * as canvasutil from "/lib/util/canvas.js";
 
 const cos = Math.cos;
 const sin = Math.sin;
@@ -230,11 +234,11 @@ let Mat             = null;
 let M               = null;
 
 async function onReload(state) {
-    return MR.dynamicImport(getPath("matrix.js")).then((myModule) => {
+    return MR.dynamicImport(path.getLocalPath("matrix.js")).then((myModule) => {
         matrixModule = myModule;
         Mat          = matrixModule.Matrix;
     }).then(() => {
-        MR.dynamicImport(getPath("geometry.js")).then((myModule) => {
+        MR.dynamicImport(path.getLocalPath("geometry.js")).then((myModule) => {
             geometryModule  = myModule;
             cubeVertexData  = geometryModule.cubeVertexData;
             cubeIndexData   = geometryModule.cubeIndexData;
@@ -325,15 +329,15 @@ function updateVideoTexture(gl, texture, video) {
 // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
 // (return JavaScript "Promises" like in loadImages())
 async function setup(state) {
-    CanvasUtil.resize(MR.getCanvas(), 1280, 720);
+    canvasutil.resize(MR.getCanvas(), 1280, 720);
     
-    hotReloadFile(getPath("hp.js"));
+    hotReloadFile(path.getLocalPath("hp.js"));
 
-    matrixModule = await import(getPath("matrix.js"));
+    matrixModule = await import(path.getLocalPath("matrix.js"));
     Mat          = matrixModule.Matrix;
     state.M      = new matrixModule.Dynamic_Matrix4x4_Stack();
 
-    geometryModule  = await import(getPath("geometry.js"));
+    geometryModule  = await import(path.getLocalPath("geometry.js"));
     cubeVertexData  = geometryModule.cubeVertexData;
     cubeIndexData   = geometryModule.cubeIndexData;
     cubeVertexCount = geometryModule.cubeVertexCount;
@@ -420,14 +424,14 @@ async function setup(state) {
     state.fog_color = [53.0 / 255.0, 81.0 / 255.0, 192.0 / 255.0, 1.0];
 
     // load initial images, then continue setup after waiting is done
-    const images = await imgutil.loadImagesAsync([
-        getPath("resources/textures/brick.png"),
-        getPath("resources/textures/polkadots_transparent.png"),
-        getPath("resources/textures/wood.png")
+    const images = await img.loadImagesAsync([
+        path.getLocalPath("resources/textures/brick.png"),
+        path.getLocalPath("resources/textures/polkadots_transparent.png"),
+        path.getLocalPath("resources/textures/wood.png")
     ]);
 
     state.videoTexture = initVideoTexture(gl);
-    state.video = setupVideo(getPath("resources/textures/bla2.mp4"));
+    state.video = setupVideo(path.getLocalPath("resources/textures/bla2.mp4"));
 
     // this line only executes after the images are loaded asynchronously
     // "await" is syntactic sugar that makes the code continue to look linear (avoid messy callbacks or "then" clauses)

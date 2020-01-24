@@ -1,7 +1,12 @@
 "use strict";
 
+import * as path from "/lib/util/path.js";
+import * as assetutil from "/lib/util/asset.js";
+import * as img from "/lib/util/image.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {Lock} from "../../lib/core/lock.js";
+import {SpatialAudioContext} from "/lib/media/audio.js";
+
 
 /*--------------------------------------------------------------------------------
 
@@ -152,7 +157,7 @@ async function initRenderer(state) {
 }
 
 async function setup(state) {
-   hotReloadFile(getPath('metanook.js'));
+   hotReloadFile(path.getLocalPath('metanook.js'));
 
    ShaderTextEditor.showEditor();
 
@@ -172,7 +177,7 @@ async function setup(state) {
    }
 
    // I propose adding a dictionary mapping texture strings to locations, so that drawShapes becomes clearer
-   const images = await imgutil.loadImagesAsync([
+   const images = await img.loadImagesAsync([
       "/assets/textures/wood.png",
       "/assets/textures/tiles.jpg",
       "/assets/textures/noisy_bump.jpg"

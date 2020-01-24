@@ -1,5 +1,8 @@
 "use strict";
 
+import * as path from "/lib/util/path.js";
+import * as assetutil from "/lib/util/asset.js";
+import * as img from "/lib/util/image.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 const cos = Math.cos;
@@ -180,11 +183,11 @@ let Mat             = null;
 let M               = null;
 
 async function onReload(state) {
-    return MR.dynamicImport(getPath("matrix.js")).then((myModule) => {
+    return MR.dynamicImport(path.getLocalPath("matrix.js")).then((myModule) => {
         matrixModule = myModule;
         Mat          = matrixModule.Matrix;
     }).then(() => {
-        MR.dynamicImport(getPath("geometry.js")).then((myModule) => {
+        MR.dynamicImport(path.getLocalPath("geometry.js")).then((myModule) => {
             geometryModule  = myModule;
             cubeVertexData  = geometryModule.cubeVertexData;
             cubeIndexData   = geometryModule.cubeIndexData;
@@ -197,13 +200,13 @@ async function onReload(state) {
 // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
 // (return JavaScript "Promises" like in loadImages())
 async function setup(state) {
-    hotReloadFile(getPath("week6.js"));
+    hotReloadFile(path.getLocalPath("week6.js"));
 
-    matrixModule = await import(getPath("matrix.js"));
+    matrixModule = await import(path.getLocalPath("matrix.js"));
     Mat          = matrixModule.Matrix;
     state.M      = new matrixModule.Dynamic_Matrix4x4_Stack();
 
-    geometryModule  = await import(getPath("geometry.js"));
+    geometryModule  = await import(path.getLocalPath("geometry.js"));
     cubeVertexData  = geometryModule.cubeVertexData;
     cubeIndexData   = geometryModule.cubeIndexData;
     cubeVertexCount = geometryModule.cubeVertexCount;
@@ -247,10 +250,10 @@ async function setup(state) {
     state.fog_color = [53.0 / 255.0, 81.0 / 255.0, 192.0 / 255.0, 1.0];
 
     // load initial images, then continue setup after waiting is done
-    const images = await imgutil.loadImagesAsync([
-        getPath("./../../assets/textures/brick.png"),
-        getPath("./../../assets/textures/polkadots_transparent.png"),
-        getPath("./../../assets/textures/wood.png")
+    const images = await img.loadImagesAsync([
+        path.getLocalPath("./../../assets/textures/brick.png"),
+        path.getLocalPath("./../../assets/textures/polkadots_transparent.png"),
+        path.getLocalPath("./../../assets/textures/wood.png")
     ]);
 
     // this line only executes after the images are loaded asynchronously

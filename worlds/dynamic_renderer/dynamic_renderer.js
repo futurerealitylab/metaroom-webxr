@@ -1,7 +1,10 @@
 "use strict";
 
-import * as mem  from "/lib/core/memory.js";
-import * as math from "./math/math.js";
+import * as path           from "/lib/util/path.js";
+import * as canvasutil    from "/lib/util/canvas.js";
+import * as mem           from "/lib/core/memory.js";
+import * as math          from "./math/math.js";
+import * as assetutil     from "/lib/util/asset.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 
 // Toby's renderer / The renderer
@@ -45,11 +48,11 @@ async function initRenderer(state) {
 }
 
 async function setup(state) {
-    hotReloadFile(getPath('dynamic_renderer.js'));
+    hotReloadFile(path.getLocalPath('dynamic_renderer.js'));
 
     ShaderTextEditor.hideEditor();
 
-    CanvasUtil.resize(MR.getCanvas(), 1280 / 2, 720 / 2);
+    canvasutil.resize(MR.getCanvas(), 1280 / 2, 720 / 2);
 
     await initCommon(state);
 
