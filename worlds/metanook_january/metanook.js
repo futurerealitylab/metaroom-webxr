@@ -469,7 +469,43 @@ function penExample(state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH) {
         pr.pathToEX(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
         pr.endPathEX(1.0, 1.0, 1.0, 0.5);
     }
+    m.restore();
+    m.save();
+    {
+        m.identity();
+        pr.modelMatrix(m.value());
+        pr.modeTriangles();
+        DR.beginTriangles(pr);
 
+        const w = 0.7;
+        const y = 2.1;
+        const ydown = -4;
+        const rounds = 16;
+
+        let z  = w * Math.cos(0);
+        let x  = w * Math.sin(0);
+        let z1 = 0;
+        let x1 = 0;
+        const radsPerRound = 2 * Math.PI / rounds;
+        for (let i = 1; i < rounds + 1; i += 1) {
+            z1 = w * Math.cos(i * radsPerRound);
+            x1 = w * Math.sin(i * radsPerRound);
+            
+            pr.moveTo(0, y, 0);
+            DR.triangleToEX(pr, 
+                x, ydown, z, 
+                x1, ydown, z1,
+                0.92, 1.0, 1.0, 1.0,
+                0.92, 1.0, 1.0, 0.0,
+                0.92, 1.0, 1.0, 0.0
+            );
+
+            x = x1;
+            z = z1;
+        }
+        DR.endTriangles(pr);
+
+    }
     m.restore();
 }
 
@@ -1283,7 +1319,7 @@ function drawPaths(state, dr, projMat, viewMat, isMiniature) {
       if (isMiniature) {
          m2.translate(HALL_WIDTH/2 - TABLE_DEPTH/2, -TABLE_HEIGHT*1.048, TABLE_WIDTH/6.7);
          m2.rotateY(Math.PI);
-         m2.scale(TABLETOP_CLONE_SCALE);   
+         m2.scale(TABLETOP_CLONE_SCALE);
       }
       m2.translate(
          gizmoXform.position[0], 
@@ -1302,7 +1338,9 @@ function drawPaths(state, dr, projMat, viewMat, isMiniature) {
 
       m2.restore();
 
+      gl.disable(gl.CULL_FACE);
       DR.draw(dr);
+      gl.enable(gl.CULL_FACE);
 
    DR.endRenderPass(dr);
 }
