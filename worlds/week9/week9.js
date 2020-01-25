@@ -1,9 +1,11 @@
 "use strict";
 
-import * as path from "/lib/util/path.js";
-import * as assetutil from "/lib/util/asset.js";
-import * as img from "/lib/util/image.js";
+import * as path          from "/lib/util/path.js";
+import * as assetutil     from "/lib/util/asset.js";
+import * as img           from "/lib/util/image.js";
+import * as Shader        from "/lib/core/gpu/webgl_shader_util.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
+import {ScreenCursor}     from "/lib/input/cursor.js";
 
 /*
    Things you might want to try:

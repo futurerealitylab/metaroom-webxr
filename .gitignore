@@ -84,3 +84,5 @@ typings/
 .dynamodb/
 
 *.DS_Store
+
+*.mrconf.*

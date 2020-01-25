@@ -1,11 +1,14 @@
 "use strict";
 
-import * as path from "/lib/util/path.js";
-import * as assetutil from "/lib/util/asset.js";
-import * as img from "/lib/util/image.js";
-import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
-import {Lock} from "../../lib/core/lock.js";
+import * as path             from "/lib/util/path.js";
+import * as assetutil        from "/lib/util/asset.js";
+import * as img              from "/lib/util/image.js";
+import {ShaderTextEditor}    from "/lib/core/shader_text_editor.js";
+import * as Shader           from "/lib/core/gpu/webgl_shader_util.js";
+import {Lock}                from "../../lib/core/lock.js";
 import {SpatialAudioContext} from "/lib/media/audio.js";
+import {ScreenCursor}        from "/lib/input/cursor.js";
+import * as Input            from "/lib/input/input.js";
 
 /*--------------------------------------------------------------------------------
 
@@ -1377,7 +1380,7 @@ function onEndFrame(t, state) {
    if (input.LC) input.LC.onEndFrame();
    if (input.RC) input.RC.onEndFrame();
 
-   Input.gamepadStateChanged = false;
+   Input.setGamepadStateChanged(false);
 }
 
 export default function main() {
