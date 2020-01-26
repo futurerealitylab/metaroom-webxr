@@ -52,7 +52,7 @@ async function initRenderer(state) {
 }
 
 async function setup(state) {
-    ld.hotReloadFile(path.getLocalPath('dynamic_renderer.js'));
+    ld.hotReloadFile(path.getMainFilePath());
 
     ShaderTextEditor.hideEditor();
 

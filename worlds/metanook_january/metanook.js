@@ -160,17 +160,17 @@ async function initRenderer(state) {
 }
 
 async function setup(state) {
-  ld.hotReloadFile(path.getLocalPath('metanook.js'));
+    ld.hotReloadFile(path.getMainFilePath());
 
-   ShaderTextEditor.showEditor();
+    ShaderTextEditor.showEditor();
 
-   state.noise = new ImprovedNoise();
-   state.rot4 = new Rot4();
-   await initCommon(state);
+    state.noise = new ImprovedNoise();
+    state.rot4 = new Rot4();
+    await initCommon(state);
 
-   await initRenderer(state);
+    await initRenderer(state);
 
-   state.input = {
+    state.input = {
       turnAngle : 0,
       tiltAngle : 0,
       cursor : ScreenCursor.trackCursor(MR.getCanvas()),
