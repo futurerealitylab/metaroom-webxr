@@ -504,6 +504,32 @@ function penExample(state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH) {
             z = z1;
         }
         DR.endTriangles(pr);
+        pr.moveTo(0, 0, 0);
+
+        m.save();
+            m.identity();
+            m.translate(-0.37, -3.44, 2.95);
+            pr.modelMatrix(m.value());
+        m.restore();
+
+        pr.color(0.4, 0, 1, 1.0);
+        DR.beginTriangles(pr);
+        pr.cursor().autoRestoreZ = true;
+        const stairCount = (12 * ((Math.sin(state.time * 2) + 1.0) / 2.0));
+        const stairFloored = Math.floor(stairCount);
+        const remainder = stairCount - stairFloored;
+        for (let i = 0; i < stairFloored; i += 1) {
+            DR.boxToRelative(pr, -0.2, 0.12, 1);
+        }
+        if (remainder > 0.0) {
+            pr.color(1, 0, 1, remainder);
+            DR.boxToRelative(pr, -0.2, 0.12, 1);
+        }
+        pr.cursor().autoRestoreZ = false;
+
+
+        DR.endTriangles(pr);
+
 
     }
     m.restore();
@@ -1337,10 +1363,9 @@ function drawPaths(state, dr, projMat, viewMat, isMiniature) {
       dr.modelMatrixGlobal(m2.value());
 
       m2.restore();
-
-      gl.disable(gl.CULL_FACE);
-      DR.draw(dr);
-      gl.enable(gl.CULL_FACE);
+        
+        gl.cullFace(gl.BACK);
+        DR.draw(dr);
 
    DR.endRenderPass(dr);
 }
