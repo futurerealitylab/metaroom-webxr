@@ -775,7 +775,8 @@ function Obj(shape) {
 }
 
 function onDraw(t, projMat, viewMat, state, info) {
-   // IF THE HEADSET IS JUST SITTING IDLE, DON'T DRAW ANYTHING.
+   
+
    if (state.input.brightness == 0)
       return;
 

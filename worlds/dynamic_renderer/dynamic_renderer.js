@@ -52,6 +52,7 @@ async function initRenderer(state) {
 }
 
 async function setup(state) {
+    console.log(path.getMainFilePath())
     ld.hotReloadFile(path.getMainFilePath());
 
     ShaderTextEditor.hideEditor();
