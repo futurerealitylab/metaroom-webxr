@@ -775,8 +775,6 @@ function Obj(shape) {
 }
 
 function onDraw(t, projMat, viewMat, state, info) {
-   
-
    if (state.input.brightness == 0)
       return;
 

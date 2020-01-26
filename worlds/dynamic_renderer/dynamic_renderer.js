@@ -9,24 +9,28 @@ import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {ScreenCursor}     from "/lib/input/cursor.js";
 import * as ld            from "/lib/core/code_loader.js";
 
-import * as math          from "./math/math.js";
-
+// cpp -P -H -nostdinc dynamic_renderer.js bla.js
 // Toby's renderer / The renderer
 let RenderLib; // module
 let TR; // module alias
 let tr; // the renderer type
+let math;
 
 async function initCommon(state) {
     RenderLib = await MR.dynamicImport(
         "/lib/render/dynamic_renderer_wgl.js"
     );
-    TR = RenderLib;
-    tr = RenderLib.Renderer;
+    TR   = RenderLib;
+    tr   = RenderLib.Renderer;
+    math = await MR.dynamicImport(path.getLocalPath("math/math.js"));
+    
+
+
+    console.log(TR.NEW);
 }
 
 async function onReload(state) {
     state.render.pathsDynamic.rewindToStart();
-
     await initCommon(state);
 }
 
@@ -52,8 +56,13 @@ async function initRenderer(state) {
 }
 
 async function setup(state) {
-    console.log(path.getMainFilePath())
-    ld.hotReloadFile(path.getMainFilePath());
+    ld.hotReloadFile(
+        path.getMainFilePath(),
+        [   
+            {path : path.getLocalPath("math/math.js")},
+            {path : "lib/render/dynamic_renderer_wgl.js"},
+        ]
+    );
 
     ShaderTextEditor.hideEditor();
 

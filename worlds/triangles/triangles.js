@@ -304,22 +304,6 @@ async function setup(state) {
    ld.hotReloadFile(path.getLocalPath("triangles.js"));
     canvasutil.resize(MR.getCanvas(), 1280, 720);
 
-    // MR.server.subsLocal.subscribe("Update_File", (filename, args) => {
-    //     if (args.file !== filename) {
-    //         // console.log("file does not match");
-    //         return;
-    //     }
-
-    //     MR.wrangler.reloadGeneration += 1;
-
-    //     import(window.location.href + filename + "?generation=" + MR.wrangler.reloadGeneration).then(
-    //         (world) => {
-    //             const conf = world.default();
-    //             MR.wrangler.onReload(conf);
-    //         }).catch(err => { console.error(err); });
-
-    // }, saveTo);
-
 
     let cursorValue = () => {
        let p = cursor.position(), canvas = MR.getCanvas();
