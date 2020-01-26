@@ -469,7 +469,69 @@ function penExample(state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH) {
         pr.pathToEX(-0.5, -0.5, DEPTH, 1.0, 0.0, 0.0, 1.0);
         pr.endPathEX(1.0, 1.0, 1.0, 0.5);
     }
+    m.restore();
+    m.save();
+    {
+        m.identity();
+        pr.modelMatrix(m.value());
+        pr.modeTriangles();
+        DR.beginTriangles(pr);
 
+        const w = 0.7;
+        const y = 2.1;
+        const ydown = -4;
+        const rounds = 16;
+
+        let z  = w * Math.cos(0);
+        let x  = w * Math.sin(0);
+        let z1 = 0;
+        let x1 = 0;
+        const radsPerRound = 2 * Math.PI / rounds;
+        for (let i = 1; i < rounds + 1; i += 1) {
+            z1 = w * Math.cos(i * radsPerRound);
+            x1 = w * Math.sin(i * radsPerRound);
+            
+            pr.moveTo(0, y, 0);
+            DR.triangleToEX(pr, 
+                x, ydown, z, 
+                x1, ydown, z1,
+                0.92, 1.0, 1.0, 1.0,
+                0.92, 1.0, 1.0, 0.0,
+                0.92, 1.0, 1.0, 0.0
+            );
+
+            x = x1;
+            z = z1;
+        }
+        DR.endTriangles(pr);
+        pr.moveTo(0, 0, 0);
+
+        m.save();
+            m.identity();
+            m.translate(-0.37, -3.44, 2.95);
+            pr.modelMatrix(m.value());
+        m.restore();
+
+        pr.color(0.4, 0, 1, 1.0);
+        DR.beginTriangles(pr);
+        pr.cursor().autoRestoreZ = true;
+        const stairCount = (12 * ((Math.sin(state.time * 2) + 1.0) / 2.0));
+        const stairFloored = Math.floor(stairCount);
+        const remainder = stairCount - stairFloored;
+        for (let i = 0; i < stairFloored; i += 1) {
+            DR.boxToRelative(pr, -0.2, 0.12, 1);
+        }
+        if (remainder > 0.0) {
+            pr.color(1, 0, 1, remainder);
+            DR.boxToRelative(pr, -0.2, 0.12, 1);
+        }
+        pr.cursor().autoRestoreZ = false;
+
+
+        DR.endTriangles(pr);
+
+
+    }
     m.restore();
 }
 
@@ -1283,7 +1345,7 @@ function drawPaths(state, dr, projMat, viewMat, isMiniature) {
       if (isMiniature) {
          m2.translate(HALL_WIDTH/2 - TABLE_DEPTH/2, -TABLE_HEIGHT*1.048, TABLE_WIDTH/6.7);
          m2.rotateY(Math.PI);
-         m2.scale(TABLETOP_CLONE_SCALE);   
+         m2.scale(TABLETOP_CLONE_SCALE);
       }
       m2.translate(
          gizmoXform.position[0], 
@@ -1301,8 +1363,9 @@ function drawPaths(state, dr, projMat, viewMat, isMiniature) {
       dr.modelMatrixGlobal(m2.value());
 
       m2.restore();
-
-      DR.draw(dr);
+        
+        gl.cullFace(gl.BACK);
+        DR.draw(dr);
 
    DR.endRenderPass(dr);
 }
