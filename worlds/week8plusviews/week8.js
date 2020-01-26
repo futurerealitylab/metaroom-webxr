@@ -7,6 +7,7 @@ import * as Shader        from "/lib/core/gpu/webgl_shader_util.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {ScreenCursor}     from "/lib/input/cursor.js";
 import * as Input         from "/lib/input/input.js";
+import * as ld            from "/lib/core/code_loader.js";
 
 let cubeVertices  = null;
 let m             = null;
@@ -19,7 +20,7 @@ const FRICTION    = 0.002;
 ////////////////////////////// SCENE SPECIFIC CODE
 
 async function setup(state) {
-    hotReloadFile(path.getLocalPath('week8.js'));
+   ld.hotReloadFile(path.getLocalPath('week8.js'));
 
     const images = await img.loadImagesAsync([
        path.getLocalPath("./../../assets/textures/brick.png"),

@@ -7,6 +7,7 @@ import * as assetutil     from "/lib/util/asset.js";
 import * as Shader        from "/lib/core/gpu/webgl_shader_util.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {ScreenCursor}     from "/lib/input/cursor.js";
+import * as ld            from "/lib/core/code_loader.js";
 
 import * as math          from "./math/math.js";
 
@@ -51,7 +52,7 @@ async function initRenderer(state) {
 }
 
 async function setup(state) {
-    hotReloadFile(path.getLocalPath('dynamic_renderer.js'));
+    ld.hotReloadFile(path.getLocalPath('dynamic_renderer.js'));
 
     ShaderTextEditor.hideEditor();
 

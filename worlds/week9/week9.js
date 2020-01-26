@@ -6,6 +6,7 @@ import * as img           from "/lib/util/image.js";
 import * as Shader        from "/lib/core/gpu/webgl_shader_util.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {ScreenCursor}     from "/lib/input/cursor.js";
+import * as ld            from "/lib/core/code_loader.js";
 
 /*
    Things you might want to try:
@@ -87,7 +88,7 @@ async function onExit(state) {
 }
 
 async function setup(state) {
-    hotReloadFile(path.getLocalPath('week9.js'));
+    ld.hotReloadFile(path.getLocalPath('week9.js'));
     // (New Info): Here I am loading the graphics module once
     // This is for the sake of example:
     // I'm making the arbitrary decision not to support

@@ -7,6 +7,7 @@ import * as Shader        from "/lib/core/gpu/webgl_shader_util.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {ScreenCursor}     from "/lib/input/cursor.js";
 import * as Input         from "/lib/input/input.js";
+import * as ld            from "/lib/core/code_loader.js";
 
 const cos = Math.cos;
 const sin = Math.sin;
@@ -203,7 +204,7 @@ async function onReload(state) {
 // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
 // (return JavaScript "Promises" like in loadImages())
 async function setup(state) {
-    hotReloadFile(path.getLocalPath("week6.js"));
+   ld.hotReloadFile(path.getLocalPath("week6.js"));
 
     matrixModule = await import(path.getLocalPath("matrix.js"));
     Mat          = matrixModule.Matrix;

@@ -8,6 +8,7 @@ import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import * as canvasutil    from "/lib/util/canvas.js";
 import {ScreenCursor}     from "/lib/input/cursor.js";
 import * as Input         from "/lib/input/input.js";
+import * as ld            from "/lib/core/code_loader.js";
 
 const cos = Math.cos;
 const sin = Math.sin;
@@ -334,7 +335,7 @@ function updateVideoTexture(gl, texture, video) {
 async function setup(state) {
     canvasutil.resize(MR.getCanvas(), 1280, 720);
     
-    hotReloadFile(path.getLocalPath("hp.js"));
+   ld.hotReloadFile(path.getLocalPath("hp.js"));
 
     matrixModule = await import(path.getLocalPath("matrix.js"));
     Mat          = matrixModule.Matrix;

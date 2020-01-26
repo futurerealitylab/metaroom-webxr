@@ -7,7 +7,8 @@ import * as img           from "/lib/util/image.js";
 import * as Shader        from "/lib/core/gpu/webgl_shader_util.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {ScreenCursor}     from "/lib/input/cursor.js";
-import * as Input         from "/lib/input/input.js"
+import * as Input         from "/lib/input/input.js";
+import * as ld            from "/lib/core/code_loader.js";
 
 // math utilities ///////////////////////////////////////////////////////////////
 const cos = Math.cos;
@@ -283,7 +284,7 @@ async function onReload(state) {
 async function setup(state) {
     canvasutil.resize(MR.getCanvas(), 1280, 720);
     
-    hotReloadFile(path.getLocalPath("hp.js"));
+   ld.hotReloadFile(path.getLocalPath("hp.js"));
 
     // load modules
     matrixModule = await import(path.getLocalPath("matrix.js"));
