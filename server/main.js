@@ -323,7 +323,7 @@ try {
 
     const watcher = chokidar.watch('file', {
       ignored: /(^|[\/\\])\../,
-      persistent: true
+      persistent: true,
     });
 
     const log = console.log.bind(console);
@@ -349,7 +349,8 @@ try {
         });
       })
       .on('unlink', path => log(`File ${path} has been removed`))
-      .on('unwatch', path => log(`File ${path} has been removed`));
+      .on('unwatch', path => log(`File ${path} has been removed`))
+      .on('error', error => log(`Watcher error: ${error}`))
 
     const toInit = new Map();
     let timerID = null;
@@ -440,6 +441,7 @@ try {
                 }
                 case "Watch_Files": {
                     console.log("Watch_Files command received");
+                    console.log(msg.files);
                     watcher.add(msg.files);
 
                     break;

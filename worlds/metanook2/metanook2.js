@@ -43,16 +43,16 @@ let lathe = CG.createMeshVertices(10, 16, CG.uvToLathe,
 ////////////////////////////// SCENE SPECIFIC CODE
 
 async function setup(state) {
-   ld.hotReloadFile(path.getLocalPath('metanook2.js'));
+   ld.hotReloadFile(path.fromLocalPath('metanook2.js'));
 
     const images = await img.loadImagesAsync([
-       path.getLocalPath("./../../assets/textures/wood.png"),
-       path.getLocalPath("./../../assets/textures/tiles.jpg"),
+       path.fromLocalPath("./../../assets/textures/wood.png"),
+       path.fromLocalPath("./../../assets/textures/tiles.jpg"),
     ]);
 
     let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [
         { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true },
-        { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
+           
     ]);
     if (! libSources)
         throw new Error("Could not load shader library");

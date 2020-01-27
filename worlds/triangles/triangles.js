@@ -301,7 +301,7 @@ function onReload() {
 // for convenience, e.g. if you want to attach objects to a single package for organization
 // For simple programs, globals are fine.
 async function setup(state) {
-   ld.hotReloadFile(path.getLocalPath("triangles.js"));
+   ld.hotReloadFile(path.fromLocalPath("triangles.js"));
     canvasutil.resize(MR.getCanvas(), 1280, 720);
 
 
