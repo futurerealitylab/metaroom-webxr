@@ -1,5 +1,6 @@
 "use strict";
 
+// static imports
 import * as path          from "/lib/util/path.js";
 import * as canvasutil    from "/lib/util/canvas.js";
 import * as mem           from "/lib/core/memory.js";
@@ -7,25 +8,25 @@ import * as assetutil     from "/lib/util/asset.js";
 import * as Shader        from "/lib/core/gpu/webgl_shader_util.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {ScreenCursor}     from "/lib/input/cursor.js";
-
-import * as math          from "./math/math.js";
-
-// Toby's renderer / The renderer
-let RenderLib; // module
-let TR; // module alias
+import * as ld            from "/lib/core/code_loader.js";
+// variables for dynamic imports 
+let TR; // module (Toby's renderer / The renderer)
 let tr; // the renderer type
+let math;
+
+// cpp -P -H -nostdinc dynamic_renderer.js bla.js
 
 async function initCommon(state) {
-    RenderLib = await MR.dynamicImport(
+    // re-import dynamic imports
+    TR = await MR.dynamicImport(
         "/lib/render/dynamic_renderer_wgl.js"
     );
-    TR = RenderLib;
-    tr = RenderLib.Renderer;
+    tr   = TR.Renderer;
+    math = await MR.dynamicImport("/lib/math/math.js");
 }
 
 async function onReload(state) {
     state.render.pathsDynamic.rewindToStart();
-
     await initCommon(state);
 }
 
@@ -51,7 +52,14 @@ async function initRenderer(state) {
 }
 
 async function setup(state) {
-    hotReloadFile(path.getLocalPath('dynamic_renderer.js'));
+    ld.hotReloadFile(
+        path.getMainFilePath(),
+        [   
+            // local version {path : path.fromLocalPath("math/math.js")},
+            {path : "lib/math/math.js"},
+            {path : "lib/render/dynamic_renderer_wgl.js"},
+        ]
+    );
 
     ShaderTextEditor.hideEditor();
 

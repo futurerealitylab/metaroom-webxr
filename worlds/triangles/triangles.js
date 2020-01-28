@@ -6,6 +6,7 @@ import * as assetutil     from "/lib/util/asset.js";
 import * as img           from "/lib/util/image.js";
 import * as Shader        from "/lib/core/gpu/webgl_shader_util.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
+import * as ld            from "/lib/core/code_loader.js";
 
 // don't remove "use strict"
 
@@ -300,24 +301,8 @@ function onReload() {
 // for convenience, e.g. if you want to attach objects to a single package for organization
 // For simple programs, globals are fine.
 async function setup(state) {
-    hotReloadFile(path.getLocalPath("triangles.js"));
+   ld.hotReloadFile(path.fromLocalPath("triangles.js"));
     canvasutil.resize(MR.getCanvas(), 1280, 720);
-
-    // MR.server.subsLocal.subscribe("Update_File", (filename, args) => {
-    //     if (args.file !== filename) {
-    //         // console.log("file does not match");
-    //         return;
-    //     }
-
-    //     MR.wrangler.reloadGeneration += 1;
-
-    //     import(window.location.href + filename + "?generation=" + MR.wrangler.reloadGeneration).then(
-    //         (world) => {
-    //             const conf = world.default();
-    //             MR.wrangler.onReload(conf);
-    //         }).catch(err => { console.error(err); });
-
-    // }, saveTo);
 
 
     let cursorValue = () => {

@@ -7,6 +7,7 @@ import * as Shader        from "/lib/core/gpu/webgl_shader_util.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {ScreenCursor}     from "/lib/input/cursor.js";
 import * as Input         from "/lib/input/input.js";
+import * as ld            from "/lib/core/code_loader.js";
 
 let cubeVertices  = null;
 let m             = null;
@@ -19,11 +20,11 @@ const FRICTION    = 0.002;
 ////////////////////////////// SCENE SPECIFIC CODE
 
 async function setup(state) {
-    hotReloadFile(path.getLocalPath('week8.js'));
+   ld.hotReloadFile(path.fromLocalPath('week8.js'));
 
     const images = await img.loadImagesAsync([
-       path.getLocalPath("./../../assets/textures/brick.png"),
-       path.getLocalPath("./../../assets/textures/tiles.jpg"),
+       path.fromLocalPath("./../../assets/textures/brick.png"),
+       path.fromLocalPath("./../../assets/textures/tiles.jpg"),
     ]);
 
     let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [
@@ -124,16 +125,16 @@ async function setup(state) {
     Input.initKeyEvents();
 
     // load modules (assuming these won't be reloaded for now for simplicity)
-    state.gfx = await MR.dynamicImport(path.getLocalPath("lib/graphics.js"));
+    state.gfx = await MR.dynamicImport(path.fromLocalPath("lib/graphics.js"));
     gfx = state.gfx;
     // module containing default camera/movement controllers
     state.MovementController = await MR.dynamicImport(
-        path.getLocalPath("lib/simple_movement_controller.js")
+        path.fromLocalPath("lib/simple_movement_controller.js")
     );
 
     // week 9 K.P. VR controller object type, takes a controller + matrix
     state.OCTouchControllerHandler = await MR.dynamicImport(
-        path.getLocalPath("lib/MetaNook_OCtouchcontroller.js")
+        path.fromLocalPath("lib/MetaNook_OCtouchcontroller.js")
     ).ControllerHandler;
 
     // create a matrix stack

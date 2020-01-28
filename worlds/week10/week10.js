@@ -9,6 +9,7 @@ import {Lock}                from "../../lib/core/lock.js";
 import {SpatialAudioContext} from "/lib/media/audio.js";
 import {ScreenCursor}        from "/lib/input/cursor.js";
 import * as Input            from "/lib/input/input.js";
+import * as ld               from "/lib/core/code_loader.js";
 
 /*--------------------------------------------------------------------------------
 
@@ -159,7 +160,7 @@ async function initRenderer(state) {
 }
 
 async function setup(state) {
-   hotReloadFile(path.getLocalPath('week10.js'));
+  ld.hotReloadFile(path.fromLocalPath('week10.js'));
 
    ShaderTextEditor.showEditor();
 

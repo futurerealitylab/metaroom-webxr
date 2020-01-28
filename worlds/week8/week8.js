@@ -1,10 +1,11 @@
 "use strict";
 
-import * as path from "/lib/util/path.js";
-import * as assetutil from "/lib/util/asset.js";
-import * as img from "/lib/util/image.js";
-import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
+import * as path             from "/lib/util/path.js";
+import * as assetutil        from "/lib/util/asset.js";
+import * as img              from "/lib/util/image.js";
+import {ShaderTextEditor}    from "/lib/core/shader_text_editor.js";
 import {SpatialAudioContext} from "/lib/media/audio.js";
+import * as ld               from "/lib/core/code_loader.js";
 
 ////////////////////////////// MATRIX SUPPORT
 
@@ -68,16 +69,16 @@ let cubeVertices = createCubeVertices();
 ////////////////////////////// SCENE SPECIFIC CODE
 
 async function setup(state) {
-    hotReloadFile(path.getLocalPath('week8.js'));
+   ld.hotReloadFile(path.fromLocalPath('week8.js'));
 
     const images = await img.loadImagesAsync([
-       path.getLocalPath("./../../assets/textures/brick.png"),
-       path.getLocalPath("./../../assets/textures/tiles.jpg"),
+       path.fromLocalPath("./../../assets/textures/brick.png"),
+       path.fromLocalPath("./../../assets/textures/tiles.jpg"),
     ]);
 
     let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [
         { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true },
-        { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
+           
     ]);
     if (! libSources)
         throw new Error("Could not load shader library");

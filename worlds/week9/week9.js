@@ -6,6 +6,7 @@ import * as img           from "/lib/util/image.js";
 import * as Shader        from "/lib/core/gpu/webgl_shader_util.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {ScreenCursor}     from "/lib/input/cursor.js";
+import * as ld            from "/lib/core/code_loader.js";
 
 /*
    Things you might want to try:
@@ -46,7 +47,7 @@ let gfx;
 // handle reloading of imports (called in setup() and in onReload())
 async function initCommon(state) {
     MNcontroller = await MR.dynamicImport(
-        path.getLocalPath('lib/MetaNook_OCtouchcontroller.js')
+        path.fromLocalPath('lib/MetaNook_OCtouchcontroller.js')
     );
     // (New Info): use the previously loaded module saved in state, use in global scope
     // TODO automatic re-setting of loaded libraries to reduce boilerplate?
@@ -87,7 +88,7 @@ async function onExit(state) {
 }
 
 async function setup(state) {
-    hotReloadFile(path.getLocalPath('week9.js'));
+    ld.hotReloadFile(path.fromLocalPath('week9.js'));
     // (New Info): Here I am loading the graphics module once
     // This is for the sake of example:
     // I'm making the arbitrary decision not to support
@@ -96,7 +97,7 @@ async function setup(state) {
     // in onReload, just like the other import done in initCommon
     // the gfx module is saved to state so I can recover it
     // after a reload
-    state.gfx = await MR.dynamicImport(path.getLocalPath('lib/graphics.js'));
+    state.gfx = await MR.dynamicImport(path.fromLocalPath('lib/graphics.js'));
     await initCommon(state);
 
     // (New Info): input state in a sub-object that can be cached
@@ -112,13 +113,13 @@ async function setup(state) {
     }
 
     const images = await img.loadImagesAsync([
-       path.getLocalPath("textures/wood.png"),
-       path.getLocalPath("textures/tiles.jpg"),
+       path.fromLocalPath("textures/wood.png"),
+       path.fromLocalPath("textures/tiles.jpg"),
     ]);
 
     let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [
         { key : "pnoise"    , path : "shaders/noise.glsl"     , foldDefault : true },
-        { key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true },      
+           
     ]);
     if (! libSources)
         throw new Error("Could not load shader library");

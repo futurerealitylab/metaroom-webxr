@@ -7,6 +7,7 @@ import * as Shader        from "/lib/core/gpu/webgl_shader_util.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {ScreenCursor}     from "/lib/input/cursor.js";
 import * as Input         from "/lib/input/input.js";
+import * as ld            from "/lib/core/code_loader.js";
 
 const cos = Math.cos;
 const sin = Math.sin;
@@ -186,11 +187,11 @@ let Mat             = null;
 let M               = null;
 
 async function onReload(state) {
-    return MR.dynamicImport(path.getLocalPath("matrix.js")).then((myModule) => {
+    return MR.dynamicImport(path.fromLocalPath("matrix.js")).then((myModule) => {
         matrixModule = myModule;
         Mat          = matrixModule.Matrix;
     }).then(() => {
-        MR.dynamicImport(path.getLocalPath("geometry.js")).then((myModule) => {
+        MR.dynamicImport(path.fromLocalPath("geometry.js")).then((myModule) => {
             geometryModule  = myModule;
             cubeVertexData  = geometryModule.cubeVertexData;
             cubeIndexData   = geometryModule.cubeIndexData;
@@ -203,13 +204,13 @@ async function onReload(state) {
 // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
 // (return JavaScript "Promises" like in loadImages())
 async function setup(state) {
-    hotReloadFile(path.getLocalPath("week6.js"));
+   ld.hotReloadFile(path.fromLocalPath("week6.js"));
 
-    matrixModule = await import(path.getLocalPath("matrix.js"));
+    matrixModule = await import(path.fromLocalPath("matrix.js"));
     Mat          = matrixModule.Matrix;
     state.M      = new matrixModule.Dynamic_Matrix4x4_Stack();
 
-    geometryModule  = await import(path.getLocalPath("geometry.js"));
+    geometryModule  = await import(path.fromLocalPath("geometry.js"));
     cubeVertexData  = geometryModule.cubeVertexData;
     cubeIndexData   = geometryModule.cubeIndexData;
     cubeVertexCount = geometryModule.cubeVertexCount;
@@ -254,9 +255,9 @@ async function setup(state) {
 
     // load initial images, then continue setup after waiting is done
     const images = await img.loadImagesAsync([
-        path.getLocalPath("./../../assets/textures/brick.png"),
-        path.getLocalPath("./../../assets/textures/polkadots_transparent.png"),
-        path.getLocalPath("./../../assets/textures/wood.png")
+        path.fromLocalPath("./../../assets/textures/brick.png"),
+        path.fromLocalPath("./../../assets/textures/polkadots_transparent.png"),
+        path.fromLocalPath("./../../assets/textures/wood.png")
     ]);
 
     // this line only executes after the images are loaded asynchronously

@@ -79,7 +79,7 @@ class MyUniformBufferObject {
 }
 
 async function setup(state, info) {
-    hotReloadFile(path.getLocalPath('main.js'));
+   ld.hotReloadFile(path.fromLocalPath('main.js'));
 
     canvasutil.resize(MR.getCanvas(), 1280, 720);
 

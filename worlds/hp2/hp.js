@@ -7,7 +7,8 @@ import * as img           from "/lib/util/image.js";
 import * as Shader        from "/lib/core/gpu/webgl_shader_util.js";
 import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {ScreenCursor}     from "/lib/input/cursor.js";
-import * as Input         from "/lib/input/input.js"
+import * as Input         from "/lib/input/input.js";
+import * as ld            from "/lib/core/code_loader.js";
 
 // math utilities ///////////////////////////////////////////////////////////////
 const cos = Math.cos;
@@ -255,12 +256,12 @@ async function onReload(state) {
     // for example
     //console.log("onReload start");
     let myModule = null;
-    myModule = await MR.dynamicImport(path.getLocalPath("matrix.js"));
+    myModule = await MR.dynamicImport(path.fromLocalPath("matrix.js"));
     matrixModule = myModule;
     Mat          = matrixModule.Matrix;
     //console.log("matrix.js");
         
-    myModule = await MR.dynamicImport(path.getLocalPath("geometry.js"))
+    myModule = await MR.dynamicImport(path.fromLocalPath("geometry.js"))
     geometryModule  = myModule;
     cubeVertexData  = geometryModule.cubeVertexData;
     cubeIndexData   = geometryModule.cubeIndexData;
@@ -268,7 +269,7 @@ async function onReload(state) {
     cubeIndexCount  = geometryModule.cubeIndexCount;
     //console.log("geometry.js");
 
-    myModule = await MR.dynamicImport(path.getLocalPath("simple_movement_controller.js"))
+    myModule = await MR.dynamicImport(path.fromLocalPath("simple_movement_controller.js"))
     
     moveControllerModule = myModule;
     MovementController   = myModule.SimpleMovementController;
@@ -283,20 +284,20 @@ async function onReload(state) {
 async function setup(state) {
     canvasutil.resize(MR.getCanvas(), 1280, 720);
     
-    hotReloadFile(path.getLocalPath("hp.js"));
+   ld.hotReloadFile(path.fromLocalPath("hp.js"));
 
     // load modules
-    matrixModule = await import(path.getLocalPath("matrix.js"));
+    matrixModule = await import(path.fromLocalPath("matrix.js"));
     Mat          = matrixModule.Matrix;
     state.M      = new matrixModule.Dynamic_Matrix4x4_Stack();
 
-    geometryModule  = await import(path.getLocalPath("geometry.js"));
+    geometryModule  = await import(path.fromLocalPath("geometry.js"));
     cubeVertexData  = geometryModule.cubeVertexData;
     cubeIndexData   = geometryModule.cubeIndexData;
     cubeVertexCount = geometryModule.cubeVertexCount;
     cubeIndexCount  = geometryModule.cubeIndexCount;
 
-    moveControllerModule = await import(path.getLocalPath("simple_movement_controller.js"));  
+    moveControllerModule = await import(path.fromLocalPath("simple_movement_controller.js"));  
     MovementController       = moveControllerModule.SimpleMovementController;
 
     state.cursor = ScreenCursor.trackCursor(MR.getCanvas());
@@ -383,13 +384,13 @@ async function setup(state) {
 
     // load initial images, then continue setup after waiting is done
     const images = await img.loadImagesAsync([
-        path.getLocalPath("assets/textures/brick.png"),
-        path.getLocalPath("assets/textures/polkadots_transparent.png"),
-        path.getLocalPath("assets/textures/wood.png")
+        path.fromLocalPath("assets/textures/brick.png"),
+        path.fromLocalPath("assets/textures/polkadots_transparent.png"),
+        path.fromLocalPath("assets/textures/wood.png")
     ]);
 
     state.videoTexture = Shader.initVideoTexture(gl, gl.TEXTURE3);
-    state.video = Shader.setupVideo(path.getLocalPath("resources/textures/bla2.mp4"));
+    state.video = Shader.setupVideo(path.fromLocalPath("resources/textures/bla2.mp4"));
     state.images = images;
 
     let libSources = await ShaderTextEditor.loadLibs(gl, "libs", [

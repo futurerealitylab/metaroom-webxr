@@ -9,6 +9,7 @@ import {Lock}                from "../../lib/core/lock.js";
 import {SpatialAudioContext} from "/lib/media/audio.js";
 import {ScreenCursor}        from "/lib/input/cursor.js";
 import * as Input            from "/lib/input/input.js";
+import * as ld               from "/lib/core/code_loader.js";
 
 /*--------------------------------------------------------------------------------
 
@@ -159,17 +160,17 @@ async function initRenderer(state) {
 }
 
 async function setup(state) {
-   hotReloadFile(path.getLocalPath('metanook.js'));
+    ld.hotReloadFile(path.getMainFilePath());
 
-   ShaderTextEditor.showEditor();
+    ShaderTextEditor.showEditor();
 
-   state.noise = new ImprovedNoise();
-   state.rot4 = new Rot4();
-   await initCommon(state);
+    state.noise = new ImprovedNoise();
+    state.rot4 = new Rot4();
+    await initCommon(state);
 
-   await initRenderer(state);
+    await initRenderer(state);
 
-   state.input = {
+    state.input = {
       turnAngle : 0,
       tiltAngle : 0,
       cursor : ScreenCursor.trackCursor(MR.getCanvas()),
@@ -472,38 +473,8 @@ function penExample(state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH) {
     m.restore();
     m.save();
     {
-        m.identity();
-        pr.modelMatrix(m.value());
         pr.modeTriangles();
-        DR.beginTriangles(pr);
 
-        const w = 0.7;
-        const y = 2.1;
-        const ydown = -4;
-        const rounds = 16;
-
-        let z  = w * Math.cos(0);
-        let x  = w * Math.sin(0);
-        let z1 = 0;
-        let x1 = 0;
-        const radsPerRound = 2 * Math.PI / rounds;
-        for (let i = 1; i < rounds + 1; i += 1) {
-            z1 = w * Math.cos(i * radsPerRound);
-            x1 = w * Math.sin(i * radsPerRound);
-            
-            pr.moveTo(0, y, 0);
-            DR.triangleToEX(pr, 
-                x, ydown, z, 
-                x1, ydown, z1,
-                0.92, 1.0, 1.0, 1.0,
-                0.92, 1.0, 1.0, 0.0,
-                0.92, 1.0, 1.0, 0.0
-            );
-
-            x = x1;
-            z = z1;
-        }
-        DR.endTriangles(pr);
         pr.moveTo(0, 0, 0);
 
         m.save();
@@ -514,23 +485,52 @@ function penExample(state, m, pr, timeS, sin01Time, sinTime, cosTime, DEPTH) {
 
         pr.color(0.4, 0, 1, 1.0);
         DR.beginTriangles(pr);
-        pr.cursor().autoRestoreZ = true;
-        const stairCount = (12 * ((Math.sin(state.time * 2) + 1.0) / 2.0));
-        const stairFloored = Math.floor(stairCount);
-        const remainder = stairCount - stairFloored;
-        for (let i = 0; i < stairFloored; i += 1) {
-            DR.boxToRelative(pr, -0.2, 0.12, 1);
-        }
-        if (remainder > 0.0) {
-            pr.color(1, 0, 1, remainder);
-            DR.boxToRelative(pr, -0.2, 0.12, 1);
-        }
-        pr.cursor().autoRestoreZ = false;
-
+            pr.cursor().autoRestoreZ = true;
+            const stairCount = (12 * ((Math.sin(state.time * 2) + 1.0) / 2.0));
+            const stairFloored = Math.floor(stairCount);
+            const remainder = stairCount - stairFloored;
+            for (let i = 0; i < stairFloored; i += 1) {
+                DR.boxToRelative(pr, -0.2, 0.12, 1);
+            }
+            if (remainder > 0.0) {
+                pr.color(1, 0, 1, remainder);
+                DR.boxToRelative(pr, -0.2, 0.12, 1);
+            }
+            pr.cursor().autoRestoreZ = false;
 
         DR.endTriangles(pr);
 
+        m.identity();
+        pr.modelMatrix(m.value());
+        DR.beginTriangles(pr);
 
+            const w = 0.7;
+            const y = 2.1;
+            const ydown = -4;
+            const rounds = 16;
+
+            let z  = w * Math.cos(0);
+            let x  = w * Math.sin(0);
+            let z1 = 0;
+            let x1 = 0;
+            const radsPerRound = 2 * Math.PI / rounds;
+            for (let i = 1; i < rounds + 1; i += 1) {
+                z1 = w * Math.cos(i * radsPerRound);
+                x1 = w * Math.sin(i * radsPerRound);
+                
+                pr.moveTo(0, y, 0);
+                DR.triangleToEX(pr, 
+                    x, ydown, z, 
+                    x1, ydown, z1,
+                    0.92, 1.0, 1.0, 1.0,
+                    0.92, 1.0, 1.0, 0.0,
+                    0.92, 1.0, 1.0, 0.0
+                );
+
+                x = x1;
+                z = z1;
+            }
+        DR.endTriangles(pr);
     }
     m.restore();
 }
@@ -775,7 +775,6 @@ function Obj(shape) {
 }
 
 function onDraw(t, projMat, viewMat, state, info) {
-   // IF THE HEADSET IS JUST SITTING IDLE, DON'T DRAW ANYTHING.
    if (state.input.brightness == 0)
       return;
 
