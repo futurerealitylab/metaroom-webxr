@@ -13,6 +13,8 @@ const WebSocket = require('ws');
 const argparse  = require('argparse');
 const path      = require('path');
 const chokidar  = require('chokidar');
+const exec      = require('child_process').exec;
+
 
 const parser = new argparse.ArgumentParser({
   version : '0.0.1',
@@ -441,7 +443,7 @@ try {
                 }
                 case "Watch_Files": {
                     console.log("Watch_Files command received");
-                    console.log(msg.files);
+                    //console.log(msg.files);
                     watcher.add(msg.files);
 
                     break;
