@@ -356,6 +356,11 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
       drawStool(state, 0);
    m.restore();
 
+   m.save();
+      m.translate((HALL_WIDTH - TABLE_DEPTH) / 2, 0, -TABLE_WIDTH / 2 - STOOL_RADIUS * 1.5);
+      drawStool(state, 0);
+   m.restore();
+
    draw_two_link_inverse_kinematics(state);  
 
    /*-----------------------------------------------------------------
@@ -398,6 +403,56 @@ function myDraw(t, projMat, viewMat, state, eyeIdx, isMiniature) {
             drawCamera(state);
          m.restore();
       }
+   }
+
+   // HYPERCUBE IN A 4D TRACKBALL
+
+   {
+      let isControllerInHypercube = false;
+      if (input.LC && input.LC.isDown()) {
+         let D = CG.scale(CG.subtract(input.LC.tip(), HYPERCUBE_POSITION), 1 / HYPERCUBE_SCALE);
+         if (CG.norm(D) < 1) {
+            isControllerInHypercube = true;
+            if (input.D !== undefined)
+               rot4.rotate(input.D, D);
+            input.D = D.slice();
+         }
+         else
+            delete input.D;
+      }
+      // if (isControllerInHypercube)
+      //   rot4.rotate([-.101,0,.9],[-.1,0,.9]);
+      let U = rot4.hypercube();
+      let H = rot4.transformedHypercube();
+
+      rot4.rotate([-.104,0,0],[-.1,0,0]);
+
+      m.save();
+         m.translate(HYPERCUBE_POSITION);
+         //m.rotateY(state.time);
+         m.scale(HYPERCUBE_SCALE);
+         let drawVertex = P => {
+            m.save();
+               m.scale(1 / (1 - .2 * P[3])).
+                  translate([P[0],P[1],P[2]]).
+                  scale(.03);
+
+               drawShape(state, CG.cube, [0,1,2]);
+            m.restore();
+         }
+         for (let n = 0 ; n < H.vertices.length ; n++)
+            drawVertex(H.vertices[n]);
+
+         for (let n = 0 ; n < H.edges.length ; n++) {
+            let a = H.vertices[H.edges[n][0]],
+                b = H.vertices[H.edges[n][1]];
+            for (let t = 1/10 ; t < 1 ; t += 1/10)
+               drawVertex([ a[0] * (1-t) + b[0] * t,
+                            a[1] * (1-t) + b[1] * t,
+                            a[2] * (1-t) + b[2] * t,
+                            a[3] * (1-t) + b[3] * t ]);
+         }
+      m.restore();
    }
 
 }
