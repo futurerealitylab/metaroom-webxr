@@ -77,13 +77,13 @@ export class BasicFirstPerson {
 
             const vt = (forward + backward);
 
-            if (vt != 0.0) {
+            //if (vt != 0.0) {
                 const hcomp = ACC * ax * vt;
                 const vcomp = ACC * az * vt;
 
                 v[0] -= hcomp * deltaTime;
                 v[2] += vcomp * deltaTime;
-            }
+            //}
         }
 
         // clamp speed
@@ -100,6 +100,16 @@ export class BasicFirstPerson {
         this.angularVelocity *= drag;
         if (Math.abs(this.angularVelocity) < 0.001) {
             this.angularVelocity = 0.0;
+        }
+
+        if (Math.abs(v[0]) < 0.01) {
+            v[0] = 0;
+        }
+        if (Math.abs(v[1]) < 0.01) {
+            v[1] = 0;
+        }
+        if (Math.abs(v[2]) < 0.01) {
+            v[2] = 0;
         }
 
         const pos = this.position;
