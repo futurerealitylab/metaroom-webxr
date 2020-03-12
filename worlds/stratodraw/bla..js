@@ -10,13 +10,11 @@ import {ShaderTextEditor} from "/lib/core/shader_text_editor.js";
 import {ScreenCursor}     from "/lib/input/cursor.js";
 import * as ld            from "/lib/core/code_loader.js";
 import * as Input         from "/lib/input/input.js";
-import * as _             from "/lib/third-party/gl-matrix-min.js";
-let la = glMatrix;
+import * as ma            from "/lib/third-party/gl-matrix-min.js";
 
 import {
-    WorldCamera as Camera
-} from "./movement/camera.js";
-
+    BasicFirstPerson as FPSViewController
+} from "./movement/simple_movement_controller.js";
 // variables for dynamic imports 
 let TR; // module (Toby's renderer / The renderer)
 let tr; // the renderer type
@@ -124,8 +122,8 @@ async function setup(state) {
     state.input.cursor.hide();
 
 
-    state.viewCam = new Camera({
-        startPosition  : [0.0, 0.5, 10],
+    state.viewCam = new FPSViewController({
+        startPosition  : [0.0, 0.0, 10],
         acceleration   : 100.0,
         maxSpeed       : 7
     });
@@ -156,8 +154,8 @@ async function setup(state) {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthFunc(gl.LEQUAL);
-    //gl.enable(gl.CULL_FACE);
-    //gl.cullFace(gl.BACK);
+    gl.enable(gl.CULL_FACE);
+    gl.cullFace(gl.BACK);
 
 
     state.pen = new Pen(); 
@@ -293,28 +291,14 @@ Pen.syntheticUpdate = function(self, sx, sy) {
 const ident = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
 
 function updateWorld(clock, state, info) {
-    // state.viewCam.update(
-    //     clock.timestep,
-    //     FRICTION,
-    //     -Input.keyIsDown(Input.KEY_LEFT),
-    //      Input.keyIsDown(Input.KEY_RIGHT),
-    //     -Input.keyIsDown(Input.KEY_UP),
-    //      Input.keyIsDown(Input.KEY_DOWN),
-    //      Input.keyIsDown(Input.KEY_SHIFT),
-    // );
-
-    Camera.move(
-        state.viewCam,
+    state.viewCam.update(
         clock.timestep,
         FRICTION,
-        -Input.keyIsDown(Input.KEY_A),
-         Input.keyIsDown(Input.KEY_D),
-        -Input.keyIsDown(Input.KEY_W),
-         Input.keyIsDown(Input.KEY_S),
+        -Input.keyIsDown(Input.KEY_LEFT),
+         Input.keyIsDown(Input.KEY_RIGHT),
+        -Input.keyIsDown(Input.KEY_UP),
+         Input.keyIsDown(Input.KEY_DOWN),
          Input.keyIsDown(Input.KEY_SHIFT),
-         (Input.keyIsDown(Input.KEY_CONTROL)) ? state.input.cursor.position()[0] - state.input.cursor.prevPosition()[0] : 0,
-         (Input.keyIsDown(Input.KEY_CONTROL)) ? state.input.cursor.position()[1] - state.input.cursor.prevPosition()[1] : 0,
-         200.0
     );
 }
 const dim = 70;
@@ -325,10 +309,15 @@ function updateRenderData(clock, state, info, rd) {
     m.save();
         m.identity();
 
-        rd.viewMatrixGlobal(Camera.calculate_matrix_transform(
-            state.viewCam
-        ));
+        m.rotateX(state.viewCam.rotationX());
+        m.rotateY(state.viewCam.rotationY());
+        m.translate(
+            state.viewCam.translationX(),
+            state.viewCam.translationY(),
+            state.viewCam.translationZ(),
+        );
 
+        rd.viewMatrixGlobal(new Float32Array(m.value()));
         state.transform.view = new Float32Array(m.value());
     m.restore();
 
@@ -406,6 +395,19 @@ function updateRenderData(clock, state, info, rd) {
 
             if (true) {
 
+                // m.save();
+                //     m.identity();
+                //     m.rotateX(state.viewCam.rotationX());
+                //     m.rotateY(state.viewCam.rotationY());
+                //     m.translate(
+                //         state.viewCam.translationX(),
+                //         state.viewCam.translationY(),
+                //         state.viewCam.translationZ(),
+                //     );
+                //     m.invert()
+                //     rd.modelMatrix(m.value());
+                // m.restore();
+
                 rd.color(0.0, 0.0, 0.0, 0.5);
                 rd.moveTo(0.0, 0.0, 0.0);
                 TR.beginLines(rd)
@@ -475,10 +477,12 @@ function updateRenderData(clock, state, info, rd) {
 }
 
 const mouse = new Float32Array(3);
+let pos;
+let ppos;
 const cposbuf          = [0, 0, 0];
 const pcposbuf         = [0, 0, 0];
 const orthoWindowScale = .56;
-const viewScale        = 8;
+const viewScale        = 1;
 
 function onStartFrame(t, state, info) {
     window.time = t;
@@ -494,16 +498,20 @@ function onStartFrame(t, state, info) {
 
     const input  = state.input;
     const cursor = input.cursor;
+    
+    if (Input.keyWentDown(Input.KEY_ZERO)) {
+        state.viewCam.reset();
+    }
 
     const cvs = MR.getCanvas();
     const w = cvs.width;
     const h = cvs.height;
 
-    const pos  = cursor.position();
+    pos  = cursor.position();
     mouse.set(pos);
     cposbuf[0] = pos[0] / w * 2 - 1;
     cposbuf[1] = 1 - pos[1] / h * 2;
-    const ppos = cursor.prevPosition();
+    ppos = cursor.prevPosition();
     pcposbuf[0] = ppos[0] / w * 2 - 1;
     pcposbuf[1] = 1 - ppos[1] / h * 2;
 
@@ -512,15 +520,8 @@ function onStartFrame(t, state, info) {
         input.tiltAngle += Math.PI/2 * (cposbuf[1] - pcposbuf[1]);
     }
         
-    if (Input.keyWentDown(Input.KEY_RIGHT)) {
-        Camera.rotate_y(state.viewCam, -Math.PI/4);
-    }
-    if (Input.keyWentDown(Input.KEY_LEFT)) {
-        Camera.rotate_y(state.viewCam, Math.PI/4);
-    }
-    if (Input.keyWentDown(Input.KEY_0)) {
-        Camera.reset_transform(state.viewCam, state.viewCam.startPosition, glMatrix.quat.create());
-    }
+    
+
 
     // trying to do a fixed-timestep simulation,
     // prevent floating point errors by using
@@ -534,20 +535,9 @@ function onStartFrame(t, state, info) {
         updateWorld(clock, state, info);
     }
 
-    if (pos[2] == 1) {
-        const justDown = (pos[2] == 1 && (pos[2] != ppos[2]));
 
-        const cvs    = MR.getCanvas();
-        const aspect = cvs.width / cvs.height;
 
-        Pen.update(state.pen,
-            [pos[0] / orthoWindowScale, 
-            ((cvs.height) - 
-            ((cvs.height - pos[1]) / orthoWindowScale)) + (((state.viewCam.translationY() * cvs.height * 0.5 * orthoWindowScale) / orthoWindowScale) / viewScale)], justDown
-        );
-    }
 
-    updateRenderData(clock, state, info, state.renderer);
 
     gl.clearColor(0.529, 0.808, 0.922, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -558,8 +548,22 @@ function updateWorldXR(clock, state, info) {
 function onStartFrameXR(t, state, info) {
 }
 
+let snapToGrid = function(val,gridSize = 1){
+    var snap_candidate = gridSize * Math.round(val/gridSize);
+    if (Math.abs(val-snap_candidate) < 2) {
+        return snap_candidate;
+    }
+    else {
+        return null;
+    }
+};
+
 function onDraw(t, projMat, viewMat, state, info) {
     const rd = state.renderer;
+
+  
+
+    const clock = state.clock;
 
     TR.beginRenderPass(rd);
     for (let i = 0; i < 2; i += 1) {
@@ -570,14 +574,14 @@ function onDraw(t, projMat, viewMat, state, info) {
                 const cvs = MR.getCanvas();
 
                 const aspect = cvs.width / cvs.height;
-                const orthoMat = la.mat4.ortho(
-                    la.mat4.create(),
+                const orthoMat = glMatrix.mat4.ortho(
+                    glMatrix.mat4.create(),
                     -viewScale * aspect, viewScale * aspect,
                     -viewScale, viewScale, 0.01, 1024
                 );
 
-                projMat = la.mat4.perspective(
-                    la.mat4.create(),
+                projMat = glMatrix.mat4.perspective(
+                    glMatrix.mat4.create(),
                     Math.PI / 4,
                     aspect,
                     0.01, 1024
@@ -607,6 +611,37 @@ function onDraw(t, projMat, viewMat, state, info) {
                 views.mini,
                 unprojectOut
             )
+            let snapped = unprojectOut;
+            if (pos[2] == 1) {
+                const justDown = (pos[2] == 1 && (pos[2] != ppos[2]));
+
+                const cvs    = MR.getCanvas();
+                const aspect = cvs.width / cvs.height;
+                const bla = [1, 0, 0, 0]
+
+                snapped = [snapToGrid(unprojectOut[0]), snapToGrid(unprojectOut[1]), unprojectOut[2], 1];
+                const result = [0, 0, 0, 0]
+                const iview = mat4.create();
+                const iproj = mat4.create();
+                const outM = mat4.create();
+                glMatrix.mat4.invert(iview, state.transform.view);
+                glMatrix.mat4.invert(iproj, state.transform.projection);
+                glMatrix.mat4.multiply(outM, iproj, iview);
+                glMatrix.vec4.transformMat4(result, snapped, state.transform.view);
+
+                
+                const r0 = result[0];
+                const r1 = result[1];
+                result[0] = result[0] * 2 * cvs.width;
+                result[1] = result[1] * 2 * cvs.height;
+                result[2] = snapped[2];
+                console.log(result)
+
+                //console.log(snapped);
+                Pen.update(state.pen,
+                    result, justDown
+                );
+            }  
 
             if (ok) {
                 rd.modeTriangles();
@@ -615,17 +650,17 @@ function onDraw(t, projMat, viewMat, state, info) {
                 const pointerHalfHeight = 0.15;
                 rd.color(0, 0, 0, 1)
 
-                            //console.log(unprojectOut[0]);   
+                            //console.log(unprojectOut);   
 
                 rd.moveTo(
-                    unprojectOut[0] - pointerHalfWidth,
-                    unprojectOut[1] - pointerHalfHeight,
-                    unprojectOut[2]
+                    snapped[0] - pointerHalfWidth,
+                    snapped[1] - pointerHalfHeight,
+                    snapped[2]
                 );
                 TR.boxTo(rd, 
-                    unprojectOut[0] + pointerHalfWidth,
-                    unprojectOut[1] + pointerHalfHeight,
-                    unprojectOut[2]
+                    snapped[0] + pointerHalfWidth,
+                    snapped[1] + pointerHalfHeight,
+                    snapped[2]
                 )
                 TR.endTriangles(rd);
             }
@@ -646,6 +681,7 @@ function onDraw(t, projMat, viewMat, state, info) {
                 }
                 
             }
+            updateRenderData(clock, state, info, state.renderer);
             TR.uploadData(rd);
  
             TR.draw(rd);

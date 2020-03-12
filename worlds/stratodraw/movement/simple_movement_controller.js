@@ -1,9 +1,10 @@
 "use strict";
 
-function clamp(val,min_,max_){return Math.max(min_,Math.min(max_,val));}
+import {clamp} from "/lib/math/math.js";
 
 export class BasicFirstPerson {
     constructor(args) {
+        window.CAM = this;
         this.startPosition   = args.startPosition || [0.0, 0.0, 5.0];
         this.position        = args.position || [
             this.startPosition[0], 
