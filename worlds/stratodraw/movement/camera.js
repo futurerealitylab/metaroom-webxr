@@ -35,9 +35,9 @@ const quat = glMatrix.quat;
 const vec3 = glMatrix.vec3;
 const mat4 = glMatrix.mat4;
 
-const axis_right   = vec3.fromValues(1, 0,  0);
-const axis_up      = vec3.fromValues(0, 1,  0);
-const axis_forward = vec3.fromValues(0, 0, -1);
+export const axis_right   = vec3.fromValues(1, 0,  0);
+export const axis_up      = vec3.fromValues(0, 1,  0);
+export const axis_forward = vec3.fromValues(0, 0, -1);
 
 const scale_identity = vec3.fromValues(1, 1, 1);
 
@@ -56,12 +56,34 @@ function quaternion_up(rotation) {
 function quaternion_angle_axis(rad, axis) {
 	return quat.setAxisAngle(buf_quat, axis, rad);
 }
+function quaternion_multiply_vec3(rotation, v) {
+	return vec3.transformQuat(vec3.create(), v, rotation);
+}
 
 const FRICTION_DEFAULT       = 0.01;
 const ACCELERATION_DEFAULT   = 50.0;
 const ROTATION_SPEED_DEFAULT = 1.0;
 
 export class WorldCamera {
+
+	static rotate_around_intern(self, position, rotation, origin) {
+        console.group("origin = " + origin);
+		console.log("pos before", position, origin);
+		console.log("rotate");
+
+		origin = vec3.clone(origin);
+
+		let out;
+		out = vec3.subtract(vec3.create(), position, origin);
+		const rotated = quaternion_multiply_vec3(rotation, out);
+		//const rotated = vec3.transformMat4(out, position, mat4.fromQuat(mat4.create(), rotation));
+		console.log("rotated", rotated);
+		vec3.copy(out, rotated);
+		vec3.add(position, out, origin);
+		console.log("pos after", position, origin);
+
+		console.groupEnd();
+	}
 	static move(self, dt, friction, isLeft, isRight, isUp, isDown, isPerpendicular, 
 				cursor_dx = 0, cursor_dy = 0) {
 		// vector3
@@ -73,20 +95,34 @@ export class WorldCamera {
 
 		const direction = vec3.fromValues(0, 0, 0);
 
-		quat.multiply(rotation,
-			rotation, 
-			quaternion_angle_axis(
-				cursor_dy * ROTATION_SPEED_DEFAULT * dt,
-				axis_right
-			)
-		);
-		quat.multiply(rotation, 
-			quaternion_angle_axis(
-				cursor_dx * ROTATION_SPEED_DEFAULT * dt,
-				axis_up
-			),
-			rotation
-		);
+		if (self.rotation_is_lerping) {
+			self.elapsed_time += dt;
+
+
+			quat.slerp(rotation, self.rotation_init, self.rotation_target, self.elapsed_time / self.target_elapsed_time);
+
+			WorldCamera.rotate_around_intern(self, position, rotation, self.origin);
+
+			if (self.elapsed_time >= self.target_elapsed_time) {
+				self.elapsed_time = self.target_elapsed_time;
+				self.rotation_is_lerping = false;
+			}
+		} else {
+			quat.multiply(rotation,
+				rotation, 
+				quaternion_angle_axis(
+					cursor_dy * ROTATION_SPEED_DEFAULT * dt,
+					axis_right
+				)
+			);
+			quat.multiply(rotation, 
+				quaternion_angle_axis(
+					cursor_dx * ROTATION_SPEED_DEFAULT * dt,
+					axis_up
+				),
+				rotation
+			);
+		}
 
 		if (isPerpendicular) {
 			if (isUp) {
@@ -134,18 +170,6 @@ export class WorldCamera {
 
 		vec3.normalize(direction, direction);
 
-		/*
-		dir: Vec3;
-		if w is pressed { dir +=  quaternion_forward(camera.rotation); }
-		if s is pressed { dir += -quaternion_forward(camera.rotation); }
-		if a is pressed { dir += -quaternion_right(camera.rotation); }
-		if d is pressed { dir +=  quaternion_right(camera.rotation); }
-		dir = normalize(dir);
-		camera.velocity += dir * CAMERA_ACCELERATION * dt;
-		camera.position += camera.velocity * dt;
-		camera.velocity *= CAMERA_FRICTION;
-		*/
-
 		vec3.add(velocity, velocity, vec3.scale(buf_vec3, direction, ACCELERATION_DEFAULT * dt));
 		vec3.add(position, position, vec3.scale(buf_vec3, velocity, dt));
 		vec3.scale(velocity, velocity, Math.pow(FRICTION_DEFAULT, dt));
@@ -155,16 +179,30 @@ export class WorldCamera {
 		return quaternion_forward(self._rotation);
 	}
 
-	static rotate_y(self, rad) {
+	static rotate(self, rad, axis, center, target_elapsed_time = 0.0) {
+		self.target_elapsed_time = target_elapsed_time;
+		self.elapsed_time = 0.0;
 		const rotation = self._rotation;
-
-		quat.multiply(rotation, 
+		const rotation_init = quat.copy(quat.create(), rotation);
+		const rotation_target = quat.multiply(quat.create(), 
 			quaternion_angle_axis(
 				rad,
-				axis_up
+				axis
 			),
 			rotation
 		);
+		self.rotation_init   = rotation_init;
+		self.rotation_target = rotation_target;
+
+		if (target_elapsed_time == 0.0) {
+			quat.copy(rotation, rotation_target);
+
+			WorldCamera.rotate_around_intern(self, self._position, rotation, self.origin);
+
+			self.rotation_is_lerping = false;
+		} else {
+			self.rotation_is_lerping = true;
+		}
 	}
 
 	static calculate_matrix_transform(self) {
@@ -222,139 +260,28 @@ export class WorldCamera {
 		this.buf_position = vec3.create();
 		this.buf_rotation = quat.create();   
 
-		this.direction = vec3.create();     
+		this.direction = vec3.create();
+
+		this.origin = this._position;     
+		this.origin_buffer = vec3.create();
+
+		window.SET_ORIGIN = (origin) => {
+			WorldCamera.set_origin(this, origin);
+		}
+		window.SET_ORIGIN_TO_SELF = (origin) => {
+			WorldCamera.set_origin_to_self(this);
+		}
     }
 
-    updateWithCursor(deltaTime, friction, left_, right_, up_, down_, vertical_, xRes, yRes, cx, cy) {
-
-        // mouse controls
-        let yRot = -0.5 * Math.PI * (((cx / xRes) * 2) - 1)
-        let xRot = (0.5 * Math.PI * (((cy / yRes) * 2) - 1));
-
-        const dist2 = (xRot * xRot) + (yRot * yRot);
-
-        if (dist2 < 0.1 * 0.1) {
-            yRot = 0.0;
-            xRot = 0.0;
-        }
-
-        this.update(deltaTime, friction, left_, right_, up_, down_, vertical_, xRot, yRot);
+    static set_origin(self, origin) {
+    	self.origin = self.origin_buffer;
+    	vec3.copy(self.origin, origin)
     }
-    update(deltaTime, friction, left_, right_, up_, down_, vertical_, rotateX, rotateY) {
-        this.rotateX = rotateX || 0.0;
-        this.rotateY = rotateY || 0.0;
-
-        let up        = 0;
-        let down      = 0;
-        let left      = left_;
-        let right     = right_;
-        let forward   = up_;
-        let backward  = down_;
-
-        const v = this.velocity;
-        const ACC = this.acceleration;
-
-        if (vertical_) {
-            up       = -forward;
-            down     = -backward;
-            forward  = 0;
-            backward = 0;
-
-            const hz = left + right;
-            const vt = up + down;
-            const hypo = Math.sqrt((hz * hz) + (vt * vt));
-        
-            const hcomp = ACC * (hz / hypo);
-            const vcomp = ACC * (vt / hypo);
-
-            v[1] += ACC * vt * deltaTime;            
-        } else {
-            const hz = left + right;
-            this.angularVelocity += this.angularAcceleration * hz * deltaTime;
-
-            this.angle += this.angularVelocity * deltaTime;
-            let az = Math.cos(this.angle);
-            let ax = Math.sin(this.angle);
-
-            const vt = (forward + backward);
-
-            //if (vt != 0.0) {
-                const hcomp = ACC * ax * vt;
-                const vcomp = ACC * az * vt;
-
-                v[0] -= hcomp * deltaTime;
-                v[2] += vcomp * deltaTime;
-            //}
-        }
-
-        // clamp speed
-        const MAX_SPEED = this.maxSpeed;
-        v[0] = clamp(v[0], -MAX_SPEED, MAX_SPEED);
-        v[1] = clamp(v[1], -MAX_SPEED, MAX_SPEED);
-        v[2] = clamp(v[2], -MAX_SPEED, MAX_SPEED);
-        
-        // apply drag
-        const drag = Math.pow(friction, deltaTime);
-        v[0] *= drag;
-        v[1] *= drag;
-        v[2] *= drag;
-        this.angularVelocity *= drag;
-        if (Math.abs(this.angularVelocity) < 0.001) {
-            this.angularVelocity = 0.0;
-        }
-
-        if (Math.abs(v[0]) < 0.01) {
-            v[0] = 0;
-        }
-        if (Math.abs(v[1]) < 0.01) {
-            v[1] = 0;
-        }
-        if (Math.abs(v[2]) < 0.01) {
-            v[2] = 0;
-        }
-
-        const pos = this.position;
-        pos[0] += v[0] * deltaTime;
-        pos[1] += v[1] * deltaTime;
-        pos[2] += v[2] * deltaTime;
+    static set_origin_to_self(self) {
+    	self.origin = self._position;
     }
 
-    updateUsingDefaults(deltaTime, FRICTION, Input, cursor, cvs) {
-        if (Input.keyWentDown(Input.KEY_ZERO)) {
-            this.reset();
-            return;
-        }
 
-        // look-around with mouse cursor
-        if (cursor.z()) {
-            // press down the mouse cursor to look around in the non-VR view
-            const cpos = cursor.position();
-            this.updateWithCursor(
-                deltaTime,
-                FRICTION,
-                -Input.keyIsDown(Input.KEY_LEFT),
-                 Input.keyIsDown(Input.KEY_RIGHT),
-                -Input.keyIsDown(Input.KEY_UP),
-                 Input.keyIsDown(Input.KEY_DOWN),
-                 Input.keyIsDown(Input.KEY_SHIFT),
-                 cvs.width,
-                 cvs.height,
-                 cpos[0],
-                 cpos[1]
-            );
-        } 
-        else {
-            this.update(
-                deltaTime,
-                FRICTION,
-                -Input.keyIsDown(Input.KEY_LEFT),
-                 Input.keyIsDown(Input.KEY_RIGHT),
-                -Input.keyIsDown(Input.KEY_UP),
-                 Input.keyIsDown(Input.KEY_DOWN),
-                 Input.keyIsDown(Input.KEY_SHIFT),
-            );
-        }
-    }
 
     rotationX() {
         return this.rotateX;

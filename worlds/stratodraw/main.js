@@ -14,7 +14,10 @@ import * as _             from "/lib/third-party/gl-matrix-min.js";
 let la = glMatrix;
 
 import {
-    WorldCamera as Camera
+    WorldCamera as Camera,
+    axis_up,
+    axis_right,
+    axis_forward
 } from "./movement/camera.js";
 
 // variables for dynamic imports 
@@ -512,11 +515,18 @@ function onStartFrame(t, state, info) {
         input.tiltAngle += Math.PI/2 * (cposbuf[1] - pcposbuf[1]);
     }
         
+    const LERP_TIME = 1;
     if (Input.keyWentDown(Input.KEY_RIGHT)) {
-        Camera.rotate_y(state.viewCam, -Math.PI/4);
+        Camera.rotate(state.viewCam, -Math.PI/4, axis_up, state.viewCam._position, LERP_TIME);
     }
     if (Input.keyWentDown(Input.KEY_LEFT)) {
-        Camera.rotate_y(state.viewCam, Math.PI/4);
+        Camera.rotate(state.viewCam, Math.PI/4, axis_up, state.viewCam._position, LERP_TIME);
+    }
+    if (Input.keyWentDown(Input.KEY_UP)) {
+        Camera.rotate(state.viewCam, Math.PI/4, axis_right, state.viewCam._position, LERP_TIME);
+    }
+    if (Input.keyWentDown(Input.KEY_DOWN)) {
+        Camera.rotate(state.viewCam, -Math.PI/4, axis_right, state.viewCam._position, LERP_TIME);
     }
     if (Input.keyWentDown(Input.KEY_0)) {
         Camera.reset_transform(state.viewCam, state.viewCam.startPosition, glMatrix.quat.create());
