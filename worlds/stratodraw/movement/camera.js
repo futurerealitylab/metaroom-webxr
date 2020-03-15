@@ -69,22 +69,19 @@ export class WorldCamera {
 		if (self.rotation_is_lerping) {
 			self.elapsed_time += dt;
 
-
-			const prev_rotation = quat.clone(rotation);
-			quat.slerp(rotation, self.rotation_init, self.rotation_target, self.elapsed_time / self.target_elapsed_time);
-
-			// WorldCamera.rotate_around_intern(self, position, 
-			// 	quat.multiply(quat.create(), 
-			// 		quat.invert(quat.create(), rotation),prev_rotation
-			// 	), self.origin
-			// );
-			WorldCamera.rotate_around_intern(self, position, rotation, self.origin);
-
-
 			if (self.elapsed_time >= self.target_elapsed_time) {
 				self.elapsed_time = self.target_elapsed_time;
 				self.rotation_is_lerping = false;
 			}
+
+			const prev_rotation = quat.clone(rotation);
+			quat.slerp(rotation, self.rotation_init, self.rotation_target, self.elapsed_time / self.target_elapsed_time);
+
+			WorldCamera.rotate_around_intern(self, position, 
+				quat.multiply(quat.create(), 
+					rotation, quat.invert(quat.create(), prev_rotation)
+				), self.origin
+			);
 		} else {
 			quat.multiply(rotation,
 				rotation, 
