@@ -541,7 +541,7 @@ function onStartFrame(t, state, info) {
     // if (Input.keyWentDown(Input.KEY_0)) {
     //     Camera.reset_transform(state.viewCam, state.viewCam.startPosition, glMatrix.quat.create());
     // }
-    const LERP_TIME = 1;
+    const LERP_TIME = 0.7;
     function printRet(arg) {
         console.log(arg);
         return arg;
@@ -552,7 +552,7 @@ function onStartFrame(t, state, info) {
         Camera.rotate(state.viewCam,
             quaternion_angle_axis(
                 -Math.PI/4,
-                printRet(quaternion_multiply_vec3(state.viewCam.rotation, axis_up))
+                quaternion_multiply_vec3(state.viewCam.rotation, axis_up)
             ),
             state.viewCam._position, LERP_TIME
         );
@@ -561,7 +561,7 @@ function onStartFrame(t, state, info) {
         Camera.rotate(state.viewCam, 
             quaternion_angle_axis(
                 Math.PI/4,
-                printRet(quaternion_multiply_vec3(state.viewCam.rotation, axis_up))
+                quaternion_multiply_vec3(state.viewCam.rotation, axis_up)
             ),
             state.viewCam._position, LERP_TIME
         );
@@ -570,7 +570,7 @@ function onStartFrame(t, state, info) {
         Camera.rotate(state.viewCam, 
             quaternion_angle_axis(
                 Math.PI/4,
-                printRet(quaternion_multiply_vec3(state.viewCam.rotation, axis_right))
+                quaternion_multiply_vec3(state.viewCam.rotation, axis_right)
             ),
             state.viewCam._position, LERP_TIME
         );    
@@ -579,7 +579,7 @@ function onStartFrame(t, state, info) {
         Camera.rotate(state.viewCam, 
             quaternion_angle_axis(
                 -Math.PI/4,
-                printRet(quaternion_multiply_vec3(state.viewCam.rotation, axis_right))
+                quaternion_multiply_vec3(state.viewCam.rotation, axis_right)
             ),
             state.viewCam._position, LERP_TIME
         );    

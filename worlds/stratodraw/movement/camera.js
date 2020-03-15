@@ -287,15 +287,6 @@ export class WorldCamera {
     	self.origin = self._position;
     }
 
-
-
-    rotationX() {
-        return this.rotateX;
-    }
-    rotationY() {
-        return this.angle - this.rotateY;
-    }
-
     translationX() {
         return -this._position[0];
     }
@@ -307,42 +298,5 @@ export class WorldCamera {
     }
     translationAtDim(i) {
         return -this._position[i];
-    }
-
-    calcViewMatrixUsingDefaultMatrixStack(m) {
-        let mat = null;
-        m.save();
-        {
-            m.identity();
-            m.rotateX(
-                0,
-            );
-            m.rotateY(
-                0,
-            );
-            m.translate( 
-                0,
-                0,
-                0
-            );
-            mat = m.value();     
-        }
-        m.restore();
-
-        return mat;
-    }
-
-
-    reset() {
-        this.position[0] = this.startPosition[0];
-        this.position[1] = this.startPosition[1];
-        this.position[2] = this.startPosition[2];
-        this.angle = 0.0;
-        this.angularVelocity = 0.0;
-        this.velocity[0] = 0.0;
-        this.velocity[1] = 0.0;
-        this.velocity[2] = 0.0;
-        this.rotateX = 0;
-        this.rotateY = 0;
     }
 }
