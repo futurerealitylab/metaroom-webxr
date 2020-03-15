@@ -13,11 +13,21 @@ import * as Input         from "/lib/input/input.js";
 import * as _             from "/lib/third-party/gl-matrix-min.js";
 let la = glMatrix;
 
+const mat4 = glMatrix.mat4;
+const quat = glMatrix.quat;
+const vec3 = glMatrix.vec3;
+const vec4 = glMatrix.vec4;
+
 import {
     WorldCamera as Camera,
     axis_up,
     axis_right,
-    axis_forward
+    axis_forward,
+    quaternion_forward,
+    quaternion_right,
+    quaternion_up,
+    quaternion_angle_axis,
+    quaternion_multiply_vec3
 } from "./movement/camera.js";
 
 // variables for dynamic imports 
@@ -515,18 +525,64 @@ function onStartFrame(t, state, info) {
         input.tiltAngle += Math.PI/2 * (cposbuf[1] - pcposbuf[1]);
     }
         
+    // const LERP_TIME = 0;
+    // if (Input.keyWentDown(Input.KEY_RIGHT)) {
+    //     Camera.rotate(state.viewCam, -Math.PI/4, axis_up, state.viewCam._position, LERP_TIME);
+    // }
+    // if (Input.keyWentDown(Input.KEY_LEFT)) {
+    //     Camera.rotate(state.viewCam, Math.PI/4, axis_up, state.viewCam._position, LERP_TIME);
+    // }
+    // if (Input.keyWentDown(Input.KEY_UP)) {
+    //     Camera.rotate(state.viewCam, Math.PI/4, axis_right, state.viewCam._position, LERP_TIME);
+    // }
+    // if (Input.keyWentDown(Input.KEY_DOWN)) {
+    //     Camera.rotate(state.viewCam, -Math.PI/4, axis_right, state.viewCam._position, LERP_TIME);
+    // }
+    // if (Input.keyWentDown(Input.KEY_0)) {
+    //     Camera.reset_transform(state.viewCam, state.viewCam.startPosition, glMatrix.quat.create());
+    // }
     const LERP_TIME = 1;
+    function printRet(arg) {
+        console.log(arg);
+        return arg;
+    }
+
     if (Input.keyWentDown(Input.KEY_RIGHT)) {
-        Camera.rotate(state.viewCam, -Math.PI/4, axis_up, state.viewCam._position, LERP_TIME);
+        console.log(state.viewCam._position)
+        Camera.rotate(state.viewCam,
+            quaternion_angle_axis(
+                -Math.PI/4,
+                printRet(quaternion_multiply_vec3(state.viewCam.rotation, axis_up))
+            ),
+            state.viewCam._position, LERP_TIME
+        );
     }
     if (Input.keyWentDown(Input.KEY_LEFT)) {
-        Camera.rotate(state.viewCam, Math.PI/4, axis_up, state.viewCam._position, LERP_TIME);
+        Camera.rotate(state.viewCam, 
+            quaternion_angle_axis(
+                Math.PI/4,
+                printRet(quaternion_multiply_vec3(state.viewCam.rotation, axis_up))
+            ),
+            state.viewCam._position, LERP_TIME
+        );
     }
     if (Input.keyWentDown(Input.KEY_UP)) {
-        Camera.rotate(state.viewCam, Math.PI/4, axis_right, state.viewCam._position, LERP_TIME);
+        Camera.rotate(state.viewCam, 
+            quaternion_angle_axis(
+                Math.PI/4,
+                printRet(quaternion_multiply_vec3(state.viewCam.rotation, axis_right))
+            ),
+            state.viewCam._position, LERP_TIME
+        );    
     }
     if (Input.keyWentDown(Input.KEY_DOWN)) {
-        Camera.rotate(state.viewCam, -Math.PI/4, axis_right, state.viewCam._position, LERP_TIME);
+        Camera.rotate(state.viewCam, 
+            quaternion_angle_axis(
+                -Math.PI/4,
+                printRet(quaternion_multiply_vec3(state.viewCam.rotation, axis_right))
+            ),
+            state.viewCam._position, LERP_TIME
+        );    
     }
     if (Input.keyWentDown(Input.KEY_0)) {
         Camera.reset_transform(state.viewCam, state.viewCam.startPosition, glMatrix.quat.create());
