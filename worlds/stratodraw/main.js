@@ -730,9 +730,44 @@ function onEndFrameXR() {
 }
 
 
+function onAnimationFrame(t) {
+    const self = MR.engine;
+
+    self.time = t / 1000.0;
+    self.timeMS = t;
+
+    const gl = self.GPUCtx; 
+
+    self._animationHandle = window.requestAnimationFrame(self.config.onAnimationFrameWindow);
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    
+    const viewport = self.systemArgs.viewport;
+    viewport.x      = 0;
+    viewport.y      = 0;
+    viewport.width  = gl.drawingBufferWidth;
+    viewport.height = gl.drawingBufferHeight;
+    self.systemArgs.viewIdx = 0;
+
+    mat4.identity(self._viewMatrix);
+    
+    mat4.perspective(self._projectionMatrix, 
+        Math.PI / 4,
+        self._canvas.width / self._canvas.height,
+        0.01, 1024
+    );
+
+    Input.updateKeyState();
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    self.config.onStartFrame(t, self.customState, self.systemArgs);
+
+    self.config.onDraw(t, self._projectionMatrix, self._viewMatrix, self.customState, self.systemArgs);
+    self.config.onEndFrame(t, self.customState, self.systemArgs);
+}
+
 export default function main() {
     const def = {
-        name           : 'sd',
+        name           : 'mtt',
         setup          : setup,
         onStartFrame   : onStartFrame,
         onStartFrameXR : onStartFrame,
@@ -741,7 +776,9 @@ export default function main() {
         onDraw         : onDraw,
         onDrawXR       : onDraw,
         onReload       : onReload,
-        onExit         : onExit
+        onExit         : onExit,
+
+        onAnimationFrameWindow : onAnimationFrame
     };
 
     return def;
