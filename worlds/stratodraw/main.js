@@ -20,14 +20,7 @@ const vec4 = glMatrix.vec4;
 
 import {
     WorldCamera as Camera,
-    axis_up,
-    axis_right,
-    axis_forward,
-    quaternion_forward,
-    quaternion_right,
-    quaternion_up,
-    quaternion_angle_axis,
-    quaternion_multiply_vec3
+    set_lerp_t_procedure
 } from "./movement/camera.js";
 
 // variables for dynamic imports 
@@ -352,69 +345,6 @@ function updateRenderData(clock, state, info, rd) {
         rd.viewMatrix(m.value());
         rd.modelMatrix(m.value());
 
-        {
-            rd.modeTriangles();
-
-            rd.moveTo(0, 0, 0);
-
-            m.save();
-                m.identity();
-                m.translate(0, 0, 0);
-                rd.modelMatrix(m.value());
-            m.restore();
-
-            TR.beginTriangles(rd);
-
-                const H = 0;
-                rd.moveTo(-dim, H, -dim);
-
-                const alpha = 1.0;
-                TR.triangleToEX(rd, -dim,H, dim,  dim,H,dim,  1.0,0.0,0.0,alpha, 0.0,1.0,0.0,alpha, 0.0,0.0,1.0,alpha);
-                TR.triangleToEX(rd,  dim,H,-dim, -dim,H,-dim, 0.0,0.0,1.0,alpha, 0.0,1.0,0.0,alpha, 1.0,0.0,0.0,alpha);
-
-                rd.moveTo(0, H, 0);
-                rd.color(0.4, 0, 1, 1.0);
-                rd.cursor().autoRestoreZ = true;
-                const stairCount = 12;
-                for (let i = 0; i < stairCount; i += 1) {
-                    //TR.boxToRelative(rd, -1, 1, 1);
-                }
-                rd.cursor().autoRestoreZ = false; 
-
-                if (state.pen.buffers.length > 0) {
-                    for (let i = 0; i < state.pen.buffers.length; i += 1) {
-                        const pts = state.pen.buffers[i];
-                        if (pts && pts.length != 0) {
-                            const cvs = MR.getCanvas();
-                            const W = cvs.width;
-                            const halfW = W / 2;
-                            const H = cvs.height;
-                            const halfH = H / 2;
-                            const aspect = cvs.width / cvs.height;
-
-
-                            const ptsN = [];
-                            for (let i = 0; i < pts.length; i += 1) {
-                                ptsN.push({
-                                    x : (((pts[i].x - halfW) / halfW) * aspect) * viewScale,
-                                    y : (((H - pts[i].y) - halfH) / halfH) * viewScale
-                                });
-                            }
-
-                            rd.moveTo(ptsN[0].x, ptsN[0].y, 0);
-                            rd.cursor().autoRestoreZ = true;
-                            let I = 2;
-                            for (; I < ptsN.length; I += 2) {
-                                TR.boxTo(rd, ptsN[I].x, ptsN[I].y, 1);
-                            }
-
-                            rd.cursor().autoRestoreZ = false; 
-                        }
-                    }
-                }    
-           
-            TR.endTriangles(rd);
-
             rd.modePrimitiveLines();
 
             if (true) {
@@ -480,6 +410,74 @@ function updateRenderData(clock, state, info, rd) {
             }
 
             TR.endLines(rd);
+
+        {
+            rd.modeTriangles();
+
+            rd.moveTo(0, 0, 0);
+
+            m.save();
+                m.identity();
+                m.translate(0, 0, 0);
+                rd.modelMatrix(m.value());
+            m.restore();
+
+            TR.beginTriangles(rd);
+
+                const H = 0;
+                rd.moveTo(-dim, H, -dim);
+
+                rd.color(0.4, 0, 1, 1.0);
+
+                if (state.pen.buffers.length > 0) {
+                    for (let i = 0; i < state.pen.buffers.length; i += 1) {
+                        const pts = state.pen.buffers[i];
+                        if (pts && pts.length != 0) {
+                            const cvs = MR.getCanvas();
+                            const W = cvs.width;
+                            const halfW = W / 2;
+                            const H = cvs.height;
+                            const halfH = H / 2;
+                            const aspect = cvs.width / cvs.height;
+
+
+                            const ptsN = [];
+                            for (let i = 0; i < pts.length; i += 1) {
+                                ptsN.push({
+                                    x : (((pts[i].x - halfW) / halfW) * aspect) * viewScale,
+                                    y : (((H - pts[i].y) - halfH) / halfH) * viewScale
+                                });
+                            }
+
+                            rd.moveTo(ptsN[0].x, ptsN[0].y, 0);
+                            rd.cursor().autoRestoreZ = true;
+                            let I = 2;
+                            for (; I < ptsN.length; I += 2) {
+                                TR.boxTo(rd, ptsN[I].x, ptsN[I].y, 1);
+                            }
+
+                            rd.cursor().autoRestoreZ = false; 
+                        }
+                    }
+                }
+
+                const alpha = 0.9;
+                rd.moveTo(-dim, H, -dim);
+                TR.triangleToEX(rd, -dim,H, dim,  dim,H,dim,  1.0,0.0,0.0,alpha, 0.0,1.0,0.0,alpha, 0.0,0.0,1.0,alpha);
+                TR.triangleToEX(rd,  dim,H,-dim, -dim,H,-dim, 0.0,0.0,1.0,alpha, 0.0,1.0,0.0,alpha, 1.0,0.0,0.0,alpha);
+
+                rd.moveTo(0, H, 0);
+                
+                rd.cursor().autoRestoreZ = true;
+                const stairCount = 12;
+                for (let i = 0; i < stairCount; i += 1) {
+                    //TR.boxToRelative(rd, -1, 1, 1);
+                }
+                rd.cursor().autoRestoreZ = false;   
+           
+            TR.endTriangles(rd);
+
+
         }
  
         TR.uploadData(rd);
@@ -542,44 +540,43 @@ function onStartFrame(t, state, info) {
     //     Camera.reset_transform(state.viewCam, state.viewCam.startPosition, glMatrix.quat.create());
     // }
     const LERP_TIME = 0.7;
-    function printRet(arg) {
-        console.log(arg);
-        return arg;
-    }
+    const LOCK_ROLL = true;
+    const horizontal_rotation_axis = (LOCK_ROLL) ? quat.create() : state.viewCam.rotation;
+    set_lerp_t_procedure(math.smoothstep_0d);
 
     if (Input.keyWentDown(Input.KEY_RIGHT)) {
         console.log(state.viewCam._position)
         Camera.rotate(state.viewCam,
-            quaternion_angle_axis(
+            math.quaternion_angle_axis(
                 -Math.PI/4,
-                quaternion_multiply_vec3(state.viewCam.rotation, axis_up)
+                math.quaternion_multiply_vec3(horizontal_rotation_axis, math.axis_up)
             ),
             state.viewCam._position, LERP_TIME
         );
     }
     if (Input.keyWentDown(Input.KEY_LEFT)) {
         Camera.rotate(state.viewCam, 
-            quaternion_angle_axis(
+            math.quaternion_angle_axis(
                 Math.PI/4,
-                quaternion_multiply_vec3(state.viewCam.rotation, axis_up)
+                math.quaternion_multiply_vec3(horizontal_rotation_axis, math.axis_up)
             ),
             state.viewCam._position, LERP_TIME
         );
     }
     if (Input.keyWentDown(Input.KEY_UP)) {
         Camera.rotate(state.viewCam, 
-            quaternion_angle_axis(
+            math.quaternion_angle_axis(
                 Math.PI/4,
-                quaternion_multiply_vec3(state.viewCam.rotation, axis_right)
+                math.quaternion_multiply_vec3(state.viewCam.rotation, math.axis_right)
             ),
             state.viewCam._position, LERP_TIME
         );    
     }
     if (Input.keyWentDown(Input.KEY_DOWN)) {
         Camera.rotate(state.viewCam, 
-            quaternion_angle_axis(
+            math.quaternion_angle_axis(
                 -Math.PI/4,
-                quaternion_multiply_vec3(state.viewCam.rotation, axis_right)
+                math.quaternion_multiply_vec3(state.viewCam.rotation, math.axis_right)
             ),
             state.viewCam._position, LERP_TIME
         );    

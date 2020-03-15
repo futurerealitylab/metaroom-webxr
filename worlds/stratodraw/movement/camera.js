@@ -1,39 +1,24 @@
 "use strict";
 
-import {clamp} from "/lib/math/math.js";
+import * as math from "/lib/math/math.js";
 
 const quat = glMatrix.quat;
 const vec3 = glMatrix.vec3;
 const mat4 = glMatrix.mat4;
 
-export const axis_right   = vec3.fromValues(1, 0,  0);
-export const axis_up      = vec3.fromValues(0, 1,  0);
-export const axis_forward = vec3.fromValues(0, 0, -1);
-
-const scale_identity = vec3.fromValues(1, 1, 1);
-
-const buf_quat = quat.create();
-const buf_vec3 = vec3.create();
-
-export function quaternion_forward(rotation) {
-	return vec3.transformQuat(buf_vec3, axis_forward, rotation);
-}
-export function quaternion_right(rotation) {
-	return vec3.transformQuat(buf_vec3, axis_right, rotation);
-}
-export function quaternion_up(rotation) {
-	return vec3.transformQuat(buf_vec3, axis_up, rotation);
-}
-export function quaternion_angle_axis(rad, axis) {
-	return quat.setAxisAngle(buf_quat, axis, rad);
-}
-export function quaternion_multiply_vec3(rotation, v) {
-	return vec3.transformQuat(vec3.create(), v, rotation);
-}
-
 const FRICTION_DEFAULT       = 0.01;
 const ACCELERATION_DEFAULT   = 50.0;
 const ROTATION_SPEED_DEFAULT = 1.0;
+
+export function lerp_t_default(a, b, t) {
+	return t;
+}
+
+let lerp_t_procedure = lerp_t_default;
+
+export function set_lerp_t_procedure(proc) {
+	lerp_t_procedure = proc || lerp_t_default;
+}
 
 export class WorldCamera {
 
@@ -46,7 +31,7 @@ export class WorldCamera {
 
 		let out;
 		out = vec3.subtract(vec3.create(), position, origin);
-		const rotated = quaternion_multiply_vec3(rotation, out);
+		const rotated = math.quaternion_multiply_vec3(rotation, out);
 		//const rotated = vec3.transformMat4(out, position, mat4.fromQuat(mat4.create(), rotation));
 		//console.log("rotated", rotated);
 		vec3.copy(out, rotated);
@@ -75,7 +60,9 @@ export class WorldCamera {
 			}
 
 			const prev_rotation = quat.clone(rotation);
-			quat.slerp(rotation, self.rotation_init, self.rotation_target, self.elapsed_time / self.target_elapsed_time);
+			quat.slerp(rotation, self.rotation_init, self.rotation_target, 
+				lerp_t_procedure(0.0, 1.0, self.elapsed_time / self.target_elapsed_time)
+			);
 
 			WorldCamera.rotate_around_intern(self, position, 
 				quat.multiply(quat.create(), 
@@ -85,15 +72,15 @@ export class WorldCamera {
 		} else {
 			quat.multiply(rotation,
 				rotation, 
-				quaternion_angle_axis(
+				math.quaternion_angle_axis(
 					cursor_dy * ROTATION_SPEED_DEFAULT * dt,
-					axis_right
+					math.axis_right
 				)
 			);
 			quat.multiply(rotation, 
-				quaternion_angle_axis(
+				math.quaternion_angle_axis(
 					cursor_dx * ROTATION_SPEED_DEFAULT * dt,
-					axis_up
+					math.axis_up
 				),
 				rotation
 			);
@@ -102,56 +89,56 @@ export class WorldCamera {
 		if (isPerpendicular) {
 			if (isUp) {
 				vec3.add(direction, direction, 
-					quaternion_up(rotation)
+					math.quaternion_up(rotation)
 				);
 			}
 			if (isDown) {
 				vec3.subtract(direction, direction, 
-					quaternion_up(rotation)
+					math.quaternion_up(rotation)
 				);
 			}
 			if (isLeft) {
 				vec3.subtract(direction, direction, 
-					quaternion_right(rotation)
+					math.quaternion_right(rotation)
 				);
 			}
 			if (isRight) {
 				vec3.add(direction, direction, 
-					quaternion_right(rotation)
+					math.quaternion_right(rotation)
 				);
 			}
 		} else {
 			if (isUp) {
 				vec3.add(direction, direction, 
-					quaternion_forward(rotation)
+					math.quaternion_forward(rotation)
 				);
 			}
 			if (isDown) {
 				vec3.subtract(direction, direction, 
-					quaternion_forward(rotation)
+					math.quaternion_forward(rotation)
 				);
 			}
 			if (isLeft) {
 				vec3.subtract(direction, direction, 
-					quaternion_right(rotation)
+					math.quaternion_right(rotation)
 				);
 			}
 			if (isRight) {
 				vec3.add(direction, direction, 
-					quaternion_right(rotation)
+					math.quaternion_right(rotation)
 				);
 			}			
 		}
 
 		vec3.normalize(direction, direction);
 
-		vec3.add(velocity, velocity, vec3.scale(buf_vec3, direction, ACCELERATION_DEFAULT * dt));
-		vec3.add(position, position, vec3.scale(buf_vec3, velocity, dt));
+		vec3.add(velocity, velocity, vec3.scale(math.buf_vec3, direction, ACCELERATION_DEFAULT * dt));
+		vec3.add(position, position, vec3.scale(math.buf_vec3, velocity, dt));
 		vec3.scale(velocity, velocity, Math.pow(FRICTION_DEFAULT, dt));
 	}
 
 	static calculate_direction(self) {
-		return quaternion_forward(self.rotation);
+		return math.quaternion_forward(self.rotation);
 	}
 
 	static rotate_rad_axis(self, rad, axis, center, target_elapsed_time = 0.0) {
@@ -160,7 +147,7 @@ export class WorldCamera {
 		const rotation = self.rotation;
 		const rotation_init = quat.copy(quat.create(), rotation);
 		const rotation_target = quat.multiply(quat.create(), 
-			quaternion_angle_axis(
+			math.quaternion_angle_axis(
 				rad,
 				axis
 			),
@@ -173,7 +160,7 @@ export class WorldCamera {
 			quat.copy(rotation, rotation_target);
 
 			WorldCamera.rotate_around_intern(self, self._position, 
-				quaternion_angle_axis(rad, axis), self.origin
+				math.quaternion_angle_axis(rad, axis), self.origin
 			);
 
 			self.rotation_is_lerping = false;
@@ -217,13 +204,13 @@ export class WorldCamera {
 		const rotation = self.rotation;
 
 		vec3.negate(self.buf_position, position);
-		quat.invert(self.bufrotation, rotation);
+		quat.invert(self.buf_rotation, rotation);
 
 		const out = mat4.fromRotationTranslationScaleOrigin(
 			xform, 
-			self.bufrotation,
+			self.buf_rotation,
 			self.buf_position,
-			scale_identity,
+			math.vec3_one,
 			position
 		);
 		return out;
@@ -264,7 +251,7 @@ export class WorldCamera {
 
         this._transform = mat4.create();
 		this.buf_position = vec3.create();
-		this.bufrotation = quat.create();   
+		this.buf_rotation = quat.create();   
 
 		this.direction = vec3.create();
 
