@@ -621,6 +621,8 @@ function updateWorldXR(clock, state, info) {
 function onStartFrameXR(t, state, info) {
 }
 
+
+
 function onDraw(t, projMat, viewMat, state, info) {
     const rd = state.renderer;
 
@@ -729,7 +731,6 @@ function onEndFrame(t, state) {
 function onEndFrameXR() {
 }
 
-
 function onAnimationFrame(t) {
     const self = MR.engine;
 
@@ -739,29 +740,243 @@ function onAnimationFrame(t) {
     const gl = self.GPUCtx; 
 
     self._animationHandle = window.requestAnimationFrame(self.config.onAnimationFrameWindow);
-    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     
-    const viewport = self.systemArgs.viewport;
-    viewport.x      = 0;
-    viewport.y      = 0;
-    viewport.width  = gl.drawingBufferWidth;
-    viewport.height = gl.drawingBufferHeight;
-    self.systemArgs.viewIdx = 0;
-
-    mat4.identity(self._viewMatrix);
-    
-    mat4.perspective(self._projectionMatrix, 
-        Math.PI / 4,
-        self._canvas.width / self._canvas.height,
-        0.01, 1024
-    );
-
     Input.updateKeyState();
 
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    self.config.onStartFrame(t, self.customState, self.systemArgs);
+    // setup frame
+    {
+        const state = self.customState;
+        const info  = self.systemArgs;
 
-    self.config.onDraw(t, self._projectionMatrix, self._viewMatrix, self.customState, self.systemArgs);
+        window.time = t;
+        const clock = state.clock;
+
+        clock.timeMS = t;
+        clock.time   = t / 1000.0;
+        clock.acc    += t - clock.timePrevMS;
+
+        window.diff = t - clock.timePrevMS;
+
+        clock.timePrevMS = t;
+
+        const input  = state.input;
+        const cursor = input.cursor;
+
+        const cvs = MR.getCanvas();
+        const w = cvs.width;
+        const h = cvs.height;
+
+        const pos  = cursor.position();
+        mouse.set(pos);
+        cposbuf[0] = pos[0] / w * 2 - 1;
+        cposbuf[1] = 1 - pos[1] / h * 2;
+        const ppos = cursor.prevPosition();
+        pcposbuf[0] = ppos[0] / w * 2 - 1;
+        pcposbuf[1] = 1 - ppos[1] / h * 2;
+
+        if (cursor.z() && cursor.prevPosition()[2]) {
+            input.turnAngle -= Math.PI/2 * (cposbuf[0] - pcposbuf[0]);
+            input.tiltAngle += Math.PI/2 * (cposbuf[1] - pcposbuf[1]);
+        }
+            
+        const LERP_TIME = 0.7;
+        const LOCK_ROLL = true;
+        const horizontal_rotation_axis = (LOCK_ROLL) ? quat.create() : state.viewCam.rotation;
+        set_lerp_t_procedure(math.smoothstep_0d);
+
+        if (Input.keyWentDown(Input.KEY_RIGHT)) {
+            console.log(state.viewCam._position)
+            Camera.rotate(state.viewCam,
+                math.quaternion_angle_axis(
+                    -Math.PI/4,
+                    math.quaternion_multiply_vec3(horizontal_rotation_axis, math.axis_up)
+                ),
+                state.viewCam._position, LERP_TIME
+            );
+        }
+        if (Input.keyWentDown(Input.KEY_LEFT)) {
+            Camera.rotate(state.viewCam, 
+                math.quaternion_angle_axis(
+                    Math.PI/4,
+                    math.quaternion_multiply_vec3(horizontal_rotation_axis, math.axis_up)
+                ),
+                state.viewCam._position, LERP_TIME
+            );
+        }
+        if (Input.keyWentDown(Input.KEY_UP)) {
+            Camera.rotate(state.viewCam, 
+                math.quaternion_angle_axis(
+                    Math.PI/4,
+                    math.quaternion_multiply_vec3(state.viewCam.rotation, math.axis_right)
+                ),
+                state.viewCam._position, LERP_TIME
+            );    
+        }
+        if (Input.keyWentDown(Input.KEY_DOWN)) {
+            Camera.rotate(state.viewCam, 
+                math.quaternion_angle_axis(
+                    -Math.PI/4,
+                    math.quaternion_multiply_vec3(state.viewCam.rotation, math.axis_right)
+                ),
+                state.viewCam._position, LERP_TIME
+            );    
+        }
+        if (Input.keyWentDown(Input.KEY_0)) {
+            Camera.reset_transform(state.viewCam, state.viewCam.startPosition, glMatrix.quat.create());
+        }
+
+        // trying to do a fixed-timestep simulation,
+        // prevent floating point errors by using
+        // "integer" arithmetic
+        while (clock.acc >= clock.interval) {
+            clock.acc -= clock.interval;
+
+            clock.timeSimMS += clock.interval;
+            clock.timeSim    = clock.timeSim / 1000.0;
+
+            updateWorld(clock, state, info);
+        }
+
+        if (pos[2] == 1) {
+            const justDown = (pos[2] == 1 && (pos[2] != ppos[2]));
+
+            const cvs    = MR.getCanvas();
+            const aspect = cvs.width / cvs.height;
+
+            Pen.update(state.pen,
+                [pos[0] / orthoWindowScale, 
+                ((cvs.height) - 
+                ((cvs.height - pos[1]) / orthoWindowScale)) + (((state.viewCam.translationY() * cvs.height * 0.5 * orthoWindowScale) / orthoWindowScale) / viewScale)], justDown
+            );
+        }
+
+        gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    
+        const viewport = self.systemArgs.viewport;
+        viewport.x      = 0;
+        viewport.y      = 0;
+        viewport.width  = gl.drawingBufferWidth;
+        viewport.height = gl.drawingBufferHeight;
+        self.systemArgs.viewIdx = 0;
+
+        mat4.identity(self._viewMatrix);
+        
+        mat4.perspective(self._projectionMatrix, 
+            Math.PI / 4,
+            self._canvas.width / self._canvas.height,
+            0.01, 1024
+        );
+
+        // default framebuffer
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        updateRenderData(clock, state, info, state.renderer);
+
+        gl.clearColor(0.529, 0.808, 0.922, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);    
+    }
+    // draw
+    {
+        let projMat = self._projectionMatrix; 
+        let viewMat = self._viewMatrix; 
+        let state   = self.customState; 
+        let info    = self.systemArgs;
+
+        const rd = state.renderer;
+
+        TR.beginRenderPass(rd);
+        for (let i = 0; i < 2; i += 1) {
+            
+                bindRenderPipeline(myRenderPipeline);
+                {
+
+                    const cvs = MR.getCanvas();
+
+                    const aspect = cvs.width / cvs.height;
+                    const orthoMat = la.mat4.ortho(
+                        la.mat4.create(),
+                        -viewScale * aspect, viewScale * aspect,
+                        -viewScale, viewScale, 0.01, 1024
+                    );
+
+                    projMat = la.mat4.perspective(
+                        la.mat4.create(),
+                        Math.PI / 4,
+                        aspect,
+                        0.01, 1024
+                    );
+
+                    rd.modelMatrixGlobal(ident);
+                    state.transform.model = new Float32Array(ident);
+                    switch (i) {
+                    case 0: {
+                        rd.projectionMatrixGlobal(projMat);
+                        state.transform.projection = new Float32Array(projMat);
+
+
+
+
+                        break;
+                    }
+                    case 1: {
+                        rd.projectionMatrixGlobal(orthoMat);
+                        state.transform.projection = new Float32Array(orthoMat);
+
+                const unprojectOut = new Float32Array(4);
+                const ok = math.unproject(
+                    mouse[0], cvs.height - mouse[1], 0.0, 
+                    state.transform.view,
+                    state.transform.projection,
+                    views.mini,
+                    unprojectOut
+                )
+
+                if (ok) {
+                    rd.modeTriangles();
+                    TR.beginTriangles(rd);
+                    const pointerHalfWidth  = 0.15;
+                    const pointerHalfHeight = 0.15;
+                    rd.color(0, 0, 0, 1)
+
+                                //console.log(unprojectOut[0]);   
+
+                    rd.moveTo(
+                        unprojectOut[0] - pointerHalfWidth,
+                        unprojectOut[1] - pointerHalfHeight,
+                        unprojectOut[2]
+                    );
+                    TR.boxTo(rd, 
+                        unprojectOut[0] + pointerHalfWidth,
+                        unprojectOut[1] + pointerHalfHeight,
+                        unprojectOut[2]
+                    )
+                    TR.endTriangles(rd);
+                }
+                                  
+                        gl.enable(gl.SCISSOR_TEST);
+                        gl.viewport(views.mini[0], views.mini[1], views.mini[2], views.mini[3]);
+                        gl.scissor(views.mini[0], views.mini[1], views.mini[2], views.mini[3]);
+                        gl.clear(gl.COLOR_BUFFER_BIT);
+                        gl.disable(gl.SCISSOR_TEST);
+
+
+
+
+
+                     
+                        break;
+                    }
+                    }
+                    
+                }
+                TR.uploadData(rd);
+     
+                TR.draw(rd);
+        }
+        TR.endRenderPass(rd);
+    }
+
+
     self.config.onEndFrame(t, self.customState, self.systemArgs);
 }
 
