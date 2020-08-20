@@ -1,12 +1,17 @@
 <!DOCTYPE html>
 <head>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+<!--         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"> -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-height, height=device-width, 
+  user-scalable=no, maximum-scale=1, minimum-scale=1" />
+
+  <meta charset="UTF-8">
+
   <script src="lib/primitive/CG.js"></script>
   <script src="lib/primitive/ImprovedNoise.js"></script>
   <script src="lib/primitive/avatar.js"></script>  
-<!--   <script src="lib/primitive/drawMenu.js"></script> -->
-<!--   <script src="lib/primitive/drawFurniture.js"></script> -->
-<!--   <script src="lib/primitive/drawVRtoys.js"></script> -->
-<!--   <script src="lib/primitive/Obj.js"></script> -->
   <script src="lib/primitive/rot4.js"></script>
 
   <script type="module" src="locallib/SystemHandler.js"></script>
@@ -14,7 +19,7 @@
   <!--   System Initialization -->
   <!-- System Version Number -->
   <div id='version' value='2'></div>
-  <div id='resolution'       value='640,640'></div>
+  <div id='resolution'       value='1280,720'></div>
   <div id='server-comm-port' value='3001'></div>
   <div id='server-sync-port' value='11234'></div>
 
@@ -22,7 +27,6 @@
 <body style="background-color: black; color: white; text-emphasis-color: white;">
 <div id=output-container style="border: none solid #FFF5; position: fixed; text-align: center vertical-align: text-top; z-index: 10">
   <div id=output-surface></div>
-  <div id=output-surface2></div>
 </div>
 
   <!-- Shader Editor Areas -->
@@ -34,10 +38,11 @@
   </div>
   <!-- World Code Area -->
   <div class='worlds'>
+     <script type="module" src=worlds/chalktalk/main.js></script>
      <script type="module" src=worlds/stratodraw/main.js></script>
      <script type="module" src=worlds/metanook_january/metanook.js></script>
      <script type="module" src=worlds/dynamic_renderer/dynamic_renderer.js></script>
-    <script type="module" src=worlds/week10/week10.js></script>
+     <script type="module" src=worlds/week10/week10.js></script>
   </div>
   <!-- Program Entry-point -->
   <script type="module" src="lib/core/run.js"></script>
