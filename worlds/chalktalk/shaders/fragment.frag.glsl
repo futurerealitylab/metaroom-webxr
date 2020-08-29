@@ -47,12 +47,11 @@ vec3 phong(vec3 Ldir, vec3 Lrgb, vec3 normal, vec3 diffuse, vec3 specular, float
 }
 
 void main() {
-    fragColor = vec4(1.,0.,0.,1.);
 /*
     vec4 texture0 = texture(uTex0, vUV * uTexScale);
     vec4 texture1 = texture(uTex1, vUV * uTexScale);
     vec4 texture2 = texture(uTex2, vUV * uTexScale);
-
+*/
     vec3 ambient = .1 * uColor.rgb;
     vec3 diffuse = .5 * uColor.rgb;
     vec3 specular = vec3(.4,.4,.4);
@@ -64,16 +63,18 @@ void main() {
     Lrgb[1] = vec3(.8,.4,.1);
 
     vec3 normal = normalize(vNor);
-
+/*
     if (uBumpIndex == 0) normal = bumpTexture(normal, texture(uTex0, vUV * uBumpScale));
     if (uBumpIndex == 1) normal = bumpTexture(normal, texture(uTex1, vUV * uBumpScale));
     if (uBumpIndex == 2) normal = bumpTexture(normal, texture(uTex2, vUV * uBumpScale));
-
+*/
     vec3 color = ambient;
     color += phong(Ldir[0], Lrgb[0], normal, diffuse, specular, p);
     color += phong(Ldir[1], Lrgb[1], normal, diffuse, specular, p);
 
     fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), uColor.a) * uBrightness;
+
+/*
     if (uTexIndex == 0) fragColor *= texture(uTex0, vUV * uTexScale);
     if (uTexIndex == 1) fragColor *= texture(uTex1, vUV * uTexScale);
     if (uTexIndex == 2) fragColor *= texture(uTex2, vUV * uTexScale);

@@ -47,26 +47,28 @@ let CT = null;
  *  @param w {World_State} storage for your persistent world state
  */
 async function initCommon(_w) {
-        w = _w;
+    w = _w;
 
-        // this loads the math module
-        // if it has been changed - located at /lib/math/math.js
-        Maths   = await MR.dynamicImport("/lib/math/math.js");
-        CT      = await MR.dynamicImport(Path.fromLocalPath("/chalktalk/chalktalk.js"));
+    // this loads the math module
+    // if it has been changed - located at /lib/math/math.js
+    Maths   = await MR.dynamicImport("/lib/math/math.js");
+    CT      = await MR.dynamicImport(Path.fromLocalPath("/chalktalk/chalktalk.js"));
+
+
 }
 
-/** 
- *  setup that occurs upon reload
- *  and on reload
- *  @param w {World_State} storage for your persistent world state
- */
-async function onReload(w) {
-    await initCommon(w);
+async function loadShaders(w) {
+    const vertex   = await Asset.loadTextRelativePath("/shaders/vertex.vert.glsl");
+    const fragment = await Asset.loadTextRelativePath("/shaders/fragment.frag.glsl");
 
-    // call an onReload function you define in your local library file,
-        // useful if it's the same code in most of your projects
+    let errorStatus = {};
+    const shader = Shader.compileValidateStrings(vertex, fragment, errorStatus);
+    gl.useProgram(shader);
+    w.gl = gl;
+    w.shader = shader;
+}
 
-    w.uBrightness = gl.getUniformLocation(w.shader, 'uBrightness');
+async function initGraphicsCommon(w) {
     w.uColor      = gl.getUniformLocation(w.shader, 'uColor');
     w.uCursor     = gl.getUniformLocation(w.shader, 'uCursor');
     w.uModel      = gl.getUniformLocation(w.shader, 'uModel');
@@ -76,11 +78,29 @@ async function onReload(w) {
     w.uTime       = gl.getUniformLocation(w.shader, 'uTime');
     w.uToon       = gl.getUniformLocation(w.shader, 'uToon');
     w.uView       = gl.getUniformLocation(w.shader, 'uView');
+    w.uBrightness = gl.getUniformLocation(w.shader, "uBrightness");
     w.uTex = [];
     for (let n = 0 ; n < 8 ; n++) {
         w.uTex[n] = gl.getUniformLocation(w.shader, 'uTex' + n);
         gl.uniform1i(w.uTex[n], n);
     }
+}
+
+/** 
+ *  setup that occurs upon reload
+ *  and on reload
+ *  @param w {World_State} storage for your persistent world state
+ */
+async function onReload(w, info) {
+    await initCommon(w);
+
+    console.log(info.file);
+
+    if (info.file.endsWith(".glsl")) {
+        await loadShaders(w);
+    }
+
+    await initGraphicsCommon(w);
 }
 /** 
  *  setup that occurs upon initial setup 
@@ -94,13 +114,16 @@ async function setup(w) {
 
     // set which files to watch for reloading
     // (We can now load files other than this home world file)
-        Code_Loader.hotReloadFiles(
-        Path.getMainFilePath(),
-        [   
-            {path : "lib/math/math.js"},
-            {path : Path.fromLocalPath("chalktalk/chalktalk.js")}
-        ]
-        );
+
+    Code_Loader.hotReloadFiles(
+    Path.getMainFilePath(),
+    [   
+        {path : "lib/math/math.js"},
+        {path : Path.fromLocalPath("chalktalk/chalktalk.js")},
+        {path : Path.fromLocalPath("shaders/vertex.vert.glsl")},
+        {path : Path.fromLocalPath("shaders/fragment.frag.glsl")},
+    ]
+    );
 
     // call a setup function you define in your local library file,
     // useful if it's the same code in most of your projects
@@ -109,12 +132,12 @@ async function setup(w) {
     // like this and throw the module object away, or statically import the function at the top of this file
     (await MR.dynamicImport(Path.fromLocalPath("/prefs/setup_common.js"))).setup(w);
 
-        // initialize state common to first launch and reloading
-        await initCommon(w);
+    // initialize state common to first launch and reloading
+    await initCommon(w);
 
 
 
-        w.input = {
+    w.input = {
         turnAngle : 0,
         tiltAngle : 0,
         // get a cursor for the canvas
@@ -132,8 +155,6 @@ async function setup(w) {
 
     const gl = self.GPUCtx;
 
-        gl.clearColor(0.0, 0.7, 0.0, 1.0);
-
     w.CTScene = new CT.Scene({
         graphicsContext : gl
     });
@@ -144,14 +165,7 @@ async function setup(w) {
 
     ShaderTextEditor.hideEditor();
 
-    const vertex   = await Asset.loadTextRelativePath("/shaders/vertex.vert.glsl");
-    const fragment = await Asset.loadTextRelativePath("/shaders/fragment.frag.glsl");
-
-    let errorStatus = {};
-    const shader = Shader.compileValidateStrings(vertex, fragment, errorStatus);
-    gl.useProgram(shader);
-    w.gl = gl;
-    w.shader = shader;
+    await loadShaders(w);
 
 /*
     console.group("testing shader loading");
@@ -200,36 +214,38 @@ async function setup(w) {
       gl.generateMipmap(gl.TEXTURE_2D);
    }
 */
+   await initGraphicsCommon(w);
 
+   gl.clearColor(0.0, 0.7, 0.0, 1.0); 
    gl.enable(gl.DEPTH_TEST);
-   gl.disable(gl.CULL_FACE);
+   gl.enable(gl.CULL_FACE);
    gl.enable(gl.BLEND);
    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); 
 }
 
-   let drawShape = (shape, color, texture, textureScale) => {
-      let gl = w.gl;
-      let drawArrays = () => gl.drawArrays(shape == CG.cube || shape == CG.quad ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
-      gl.uniform1f(w.uBrightness, 1);//input.brightness === undefined ? 1 : input.brightness);
-      gl.uniform4fv(w.uColor, color.length == 4 ? color : color.concat([1]));
-      gl.uniformMatrix4fv(w.uModel, false, m.value());
-      gl.uniform1i(w.uTexIndex, texture === undefined ? -1 : texture);
-      gl.uniform1f(w.uTexScale, textureScale === undefined ? 1 : textureScale);
-      if (shape != w.prev_shape)
-         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
-      if (w.isToon) {
-         gl.uniform1f (w.uToon, .3 * CG.norm(m.value().slice(0,3)));
-         gl.cullFace(gl.FRONT);
-         drawArrays();
-         gl.cullFace(gl.BACK);
-         gl.uniform1f (w.uToon, 0);
-      }
-      if (w.isMirror)
-         gl.cullFace(gl.FRONT);
-      drawArrays();
-      gl.cullFace(gl.BACK);
-      w.prev_shape = shape;
-   }
+let drawShape = (shape, color, texture, textureScale) => {
+    let gl = w.gl;
+    let drawArrays = () => gl.drawArrays(shape == CG.cube || shape == CG.quad ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+    gl.uniform1f(w.uBrightness, 1);//input.brightness === undefined ? 1 : input.brightness);
+    gl.uniform4fv(w.uColor, color.length == 4 ? color : color.concat([1]));
+    gl.uniformMatrix4fv(w.uModel, false, m.value());
+    gl.uniform1i(w.uTexIndex, texture === undefined ? -1 : texture);
+    gl.uniform1f(w.uTexScale, textureScale === undefined ? 1 : textureScale);
+    if (shape != w.prev_shape)
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
+    if (w.isToon) {
+        gl.uniform1f (w.uToon, .3 * CG.norm(m.value().slice(0,3)));
+        gl.cullFace(gl.FRONT);
+        drawArrays();
+        gl.cullFace(gl.BACK);
+        gl.uniform1f (w.uToon, 0);
+    }
+    if (w.isMirror)
+        gl.cullFace(gl.FRONT);
+    drawArrays();
+    gl.cullFace(gl.BACK);
+    w.prev_shape = shape;
+}
 
 
 /** 
@@ -242,7 +258,7 @@ async function onExit(w) {
 
 function drawScene(time) {
     m.identity();
-    m.translate(0,0,-10 + 10 * Math.sin(3 * time));
+    m.translate(0,0,-10);
     m.rotateY(time);
     drawShape(CG.cube, [1,0,0]);
 }

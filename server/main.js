@@ -266,11 +266,11 @@ app.all('/', function(req, res, next) {
 
 if (!args.enablessl) {
     app.listen(port, () => {
-      console.log('MetaRoom server listening on port ' + port);
+      console.log('MetaRoom host server listening on port ' + port);
     });
 } else {
     server.listen(port, () => {
-      console.log('MetaRoom server listening on port ' + server.address().port);
+      console.log('MetaRoom host server listening on port ' + server.address().port);
     });
 }
 
