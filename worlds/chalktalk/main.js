@@ -29,6 +29,10 @@ import * as _             from "/lib/third-party/gl-matrix-min.js";
 let Linalg = glMatrix;
 
 
+let noise = new ImprovedNoise();
+let m = new Matrix();
+let w = null;
+
 ///////////////////////////////////////////////////////////////////
 
 // dynamic imports, global namespace variables for convenience
@@ -42,12 +46,13 @@ let CT = null;
  *  and on reload
  *  @param w {World_State} storage for your persistent world state
  */
-async function initCommon(w) {
+async function initCommon(_w) {
+        w = _w;
 
-	// this loads the math module
-	// if it has been changed - located at /lib/math/math.js
-	Maths   = await MR.dynamicImport("/lib/math/math.js");
-	CT      = await MR.dynamicImport(Path.fromLocalPath("/chalktalk/chalktalk.js"));
+        // this loads the math module
+        // if it has been changed - located at /lib/math/math.js
+        Maths   = await MR.dynamicImport("/lib/math/math.js");
+        CT      = await MR.dynamicImport(Path.fromLocalPath("/chalktalk/chalktalk.js"));
 }
 
 /** 
@@ -59,7 +64,23 @@ async function onReload(w) {
     await initCommon(w);
 
     // call an onReload function you define in your local library file,
-	// useful if it's the same code in most of your projects
+        // useful if it's the same code in most of your projects
+
+    w.uBrightness = gl.getUniformLocation(w.shader, 'uBrightness');
+    w.uColor      = gl.getUniformLocation(w.shader, 'uColor');
+    w.uCursor     = gl.getUniformLocation(w.shader, 'uCursor');
+    w.uModel      = gl.getUniformLocation(w.shader, 'uModel');
+    w.uProj       = gl.getUniformLocation(w.shader, 'uProj');
+    w.uTexScale   = gl.getUniformLocation(w.shader, 'uTexScale');
+    w.uTexIndex   = gl.getUniformLocation(w.shader, 'uTexIndex');
+    w.uTime       = gl.getUniformLocation(w.shader, 'uTime');
+    w.uToon       = gl.getUniformLocation(w.shader, 'uToon');
+    w.uView       = gl.getUniformLocation(w.shader, 'uView');
+    w.uTex = [];
+    for (let n = 0 ; n < 8 ; n++) {
+        w.uTex[n] = gl.getUniformLocation(w.shader, 'uTex' + n);
+        gl.uniform1i(w.uTex[n], n);
+    }
 }
 /** 
  *  setup that occurs upon initial setup 
@@ -67,19 +88,19 @@ async function onReload(w) {
  *  @param w {World_State} storage for your persistent world state
  */
 async function setup(w) {
+
     // refer to the backend as "self"
     const self = MR.engine;
 
-	// set which files to watch for reloading
+    // set which files to watch for reloading
     // (We can now load files other than this home world file)
-	Code_Loader.hotReloadFiles(
+        Code_Loader.hotReloadFiles(
         Path.getMainFilePath(),
         [   
             {path : "lib/math/math.js"},
             {path : Path.fromLocalPath("chalktalk/chalktalk.js")}
         ]
-    );
-
+        );
 
     // call a setup function you define in your local library file,
     // useful if it's the same code in most of your projects
@@ -88,17 +109,20 @@ async function setup(w) {
     // like this and throw the module object away, or statically import the function at the top of this file
     (await MR.dynamicImport(Path.fromLocalPath("/prefs/setup_common.js"))).setup(w);
 
-	// initialize state common to first launch and reloading
-	await initCommon(w);
+        // initialize state common to first launch and reloading
+        await initCommon(w);
 
 
 
-	w.input = {
+        w.input = {
         turnAngle : 0,
         tiltAngle : 0,
         // get a cursor for the canvas
         cursor    : ScreenCursor.trackCursor(MR.getCanvas())
     };
+
+    w.prev_shape = null;
+
     // hide the pointer
     w.input.cursor.hide();
 
@@ -108,7 +132,7 @@ async function setup(w) {
 
     const gl = self.GPUCtx;
 
-	gl.clearColor(0.0, 0.7, 0.0, 1.0);
+        gl.clearColor(0.0, 0.7, 0.0, 1.0);
 
     w.CTScene = new CT.Scene({
         graphicsContext : gl
@@ -123,13 +147,90 @@ async function setup(w) {
     const vertex   = await Asset.loadTextRelativePath("/shaders/vertex.vert.glsl");
     const fragment = await Asset.loadTextRelativePath("/shaders/fragment.frag.glsl");
 
+    let errorStatus = {};
+    const shader = Shader.compileValidateStrings(vertex, fragment, errorStatus);
+    gl.useProgram(shader);
+    w.gl = gl;
+    w.shader = shader;
+
+/*
     console.group("testing shader loading");
     {
         console.log(vertex);
         console.log(fragment);
     }
     console.groupEnd();
+*/
+
+   w.vao = gl.createVertexArray();
+   // this records the attributes we set along
+   // with the vbos we point the attribute pointers to
+   gl.bindVertexArray(w.vao);
+   gl.useProgram(w.shader);
+
+   w.buffer = gl.createBuffer();
+   gl.bindBuffer(gl.ARRAY_BUFFER, w.buffer);
+
+   let bpe = Float32Array.BYTES_PER_ELEMENT;
+
+   let aPos = gl.getAttribLocation(w.shader, 'aPos');
+   gl.enableVertexAttribArray(aPos);
+   gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 0);
+
+   let aNor = gl.getAttribLocation(w.shader, 'aNor');
+   gl.enableVertexAttribArray(aNor);
+   gl.vertexAttribPointer(aNor, 3, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 3);
+
+   let aTan = gl.getAttribLocation(w.shader, 'aTan');
+   gl.enableVertexAttribArray(aTan);
+   gl.vertexAttribPointer(aTan, 3, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 6);
+
+   let aUV  = gl.getAttribLocation(w.shader, 'aUV');
+   gl.enableVertexAttribArray(aUV);
+   gl.vertexAttribPointer(aUV , 2, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 9);
+/*
+   for (let i = 0 ; i < images.length ; i++) {
+      gl.activeTexture (gl.TEXTURE0 + i);
+      gl.bindTexture   (gl.TEXTURE_2D, gl.createTexture());
+      gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+      gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+      gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+      gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texImage2D    (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, images[i]);
+      gl.generateMipmap(gl.TEXTURE_2D);
+   }
+*/
+
+   gl.enable(gl.DEPTH_TEST);
+   gl.disable(gl.CULL_FACE);
+   gl.enable(gl.BLEND);
+   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); 
 }
+
+   let drawShape = (shape, color, texture, textureScale) => {
+      let gl = w.gl;
+      let drawArrays = () => gl.drawArrays(shape == CG.cube || shape == CG.quad ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+      gl.uniform1f(w.uBrightness, 1);//input.brightness === undefined ? 1 : input.brightness);
+      gl.uniform4fv(w.uColor, color.length == 4 ? color : color.concat([1]));
+      gl.uniformMatrix4fv(w.uModel, false, m.value());
+      gl.uniform1i(w.uTexIndex, texture === undefined ? -1 : texture);
+      gl.uniform1f(w.uTexScale, textureScale === undefined ? 1 : textureScale);
+      if (shape != w.prev_shape)
+         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
+      if (w.isToon) {
+         gl.uniform1f (w.uToon, .3 * CG.norm(m.value().slice(0,3)));
+         gl.cullFace(gl.FRONT);
+         drawArrays();
+         gl.cullFace(gl.BACK);
+         gl.uniform1f (w.uToon, 0);
+      }
+      if (w.isMirror)
+         gl.cullFace(gl.FRONT);
+      drawArrays();
+      gl.cullFace(gl.BACK);
+      w.prev_shape = shape;
+   }
+
 
 /** 
  *  de-initialization/clean-up that occurs when switching to a different world
@@ -139,13 +240,21 @@ async function onExit(w) {
 
 }
 
+function drawScene(time) {
+    m.identity();
+    m.translate(0,0,-10 + 10 * Math.sin(3 * time));
+    m.rotateY(time);
+    drawShape(CG.cube, [1,0,0]);
+}
 
 /** 
  *  animation function for a WebXR-supporting platform, using WebGL graphics
  *  @param t {Number} elapsed time in milliseconds
  */
-function animateXRWebGL(t) {
+function animateXRWebGL(t, frame) {
     const self = MR.engine;
+
+    const xrInfo  = self.xrInfo;
 
     // request next frame
     self._animationHandle = xrInfo.session.requestAnimationFrame(
@@ -156,13 +265,12 @@ function animateXRWebGL(t) {
     self.time   = t / 1000.0;
     self.timeMS = t;
 
+    const time = self.time;
+
     // this is the state variable
     const w = self.customState;
 
-    const xrInfo  = self.xrInfo;
-
     const session = frame.session;
-
     // unpack session and pose information
     const layer   = session.renderState.baseLayer;
 
@@ -225,8 +333,8 @@ function animateXRWebGL(t) {
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
   
-	// Clear the framebuffer
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        // Clear the framebuffer
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     {
         const viewport = self.systemArgs.viewport;
 
@@ -248,13 +356,19 @@ function animateXRWebGL(t) {
 
             gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
 
-            let projectionMatrix = view.projectionMatrix;
-            let cameraMatrix = view.transform.inverse.matrix;
+            let projMat = view.projectionMatrix;
+            let viewMat = view.transform.inverse.matrix;
+
+            gl.uniformMatrix4fv(w.uView, false, viewMat);
+            gl.uniformMatrix4fv(w.uProj, false, projMat);
 
 
             // per-eye rendering here in this loop configuration
             // 
             // graphics!! --------------------------------------
+
+            drawScene(time);
+
             //
             // your content here
         }
@@ -299,6 +413,9 @@ function animatePCWebGL(t) {
         0.01, 1024
     );
 
+    gl.uniformMatrix4fv(w.uView, false, self._viewMatrix);
+    gl.uniformMatrix4fv(w.uProj, false, self._projectionMatrix);
+
     Input.updateKeyState();
 
     // graphics
@@ -308,6 +425,7 @@ function animatePCWebGL(t) {
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    drawScene(self.time);
 
     // tells the input system that the end of the frame has been reached
     w.input.cursor.updateState();

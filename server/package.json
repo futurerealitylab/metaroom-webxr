@@ -9,7 +9,7 @@
   "dependencies": {
     "argparse": "^1.0.10",
     "axios": "0.19.2",
-    "chokidar": "^3.0.2",
+    "chokidar": "^3.4.2",
     "codemirror": "5.48.4",
     "express": "^4.17.1",
     "file-saver": "^2.0.2",
