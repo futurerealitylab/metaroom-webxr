@@ -23,7 +23,6 @@ import * as Code_Loader     from "/lib/core/code_loader.js";
 // input handling
 import * as Input           from "/lib/input/input.js";
 
-
 // linear algebra library (can be replaced, but is useful for now)
 import * as _             from "/lib/third-party/gl-matrix-min.js";
 let Linalg = glMatrix;
@@ -135,7 +134,8 @@ async function setup(w) {
     // initialize state common to first launch and reloading
     await initCommon(w);
 
-
+    w.m = m;
+    renderList.setWorld(w);
 
     w.input = {
         turnAngle : 0,
@@ -216,33 +216,40 @@ async function setup(w) {
 */
    await initGraphicsCommon(w);
 
-   gl.clearColor(0.0, 0.7, 0.0, 1.0); 
+   gl.clearColor(0.0, 0.35, 0.5, 1.0); 
    gl.enable(gl.DEPTH_TEST);
    gl.enable(gl.CULL_FACE);
    gl.enable(gl.BLEND);
    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); 
 }
 
-let drawShape = (shape, color, texture, textureScale) => {
+let drawShape = (shape, matrix, color, texture, textureScale) => {
     let gl = w.gl;
     let drawArrays = () => gl.drawArrays(shape == CG.cube || shape == CG.quad ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
     gl.uniform1f(w.uBrightness, 1);//input.brightness === undefined ? 1 : input.brightness);
     gl.uniform4fv(w.uColor, color.length == 4 ? color : color.concat([1]));
-    gl.uniformMatrix4fv(w.uModel, false, m.value());
+    gl.uniformMatrix4fv(w.uModel, false, matrix);
     gl.uniform1i(w.uTexIndex, texture === undefined ? -1 : texture);
     gl.uniform1f(w.uTexScale, textureScale === undefined ? 1 : textureScale);
     if (shape != w.prev_shape)
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
-    if (w.isToon) {
-        gl.uniform1f (w.uToon, .3 * CG.norm(m.value().slice(0,3)));
-        gl.cullFace(gl.FRONT);
-        drawArrays();
-        gl.cullFace(gl.BACK);
-        gl.uniform1f (w.uToon, 0);
+       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( shape ), gl.STATIC_DRAW);
+    for (let i = 0 ; i < nViews ; i++) {
+       if (nViews > 1) {
+          gl.viewport(viewport[i].x, viewport[i].y, viewport[i].width, viewport[i].height);
+          gl.uniformMatrix4fv(w.uView, false, viewMat[i]);
+          gl.uniformMatrix4fv(w.uProj, false, projMat[i]);
+       }
+       if (w.isToon) {
+          gl.uniform1f (w.uToon, .3 * CG.norm(m.value().slice(0,3)));
+          gl.cullFace(gl.FRONT);
+          drawArrays();
+          gl.cullFace(gl.BACK);
+          gl.uniform1f (w.uToon, 0);
+       }
+       if (w.isMirror)
+          gl.cullFace(gl.FRONT);
+       drawArrays();
     }
-    if (w.isMirror)
-        gl.cullFace(gl.FRONT);
-    drawArrays();
     gl.cullFace(gl.BACK);
     w.prev_shape = shape;
 }
@@ -258,9 +265,19 @@ async function onExit(w) {
 
 function drawScene(time) {
     m.identity();
-    m.translate(0,0,-10);
-    m.rotateY(time);
-    drawShape(CG.cube, [1,0,0]);
+    m.translate(0,1.0,-1.4);
+    mCube().size(1.5,.001,1.5).color(.3,.2,.1); // GROUND PLANE
+
+    mCube().move( 1,1.5,-1).turnY(time).size(.2).color(1,0,0);
+    mCube().move(-1,1.5,-1).turnY(time).size(.2).color(1,1,0);
+    mCube().move( 1,1.5, 1).turnY(time).size(.2).color(0,0,1);
+    mCube().move(-1,1.5, 1).turnY(time).size(.2).color(1,1,1);
+}
+
+function drawFrame(time) {
+    renderList.beginFrame();
+    drawScene(time);
+    renderList.endFrame(drawShape);
 }
 
 /** 
@@ -349,50 +366,34 @@ function animateXRWebGL(t, frame) {
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
   
-        // Clear the framebuffer
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    {
-        const viewport = self.systemArgs.viewport;
+    // Clear the framebuffer
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        const views     = pose.views;
-        const viewCount = views.length;
+    const views = pose.views;
+    nViews = views.length;
 
-        // in this configuration of the animation loop,
-        // for each view, we re-draw the whole screne -
-        // other configurations possible 
-        // (for example, for each object, draw every view (to avoid repeated binding))
-        for (let i = 0; i < viewCount; i += 1) {
-            self.systemArgs.viewIdx = i;
-
-            const view     = views[i];
-            const viewport = layer.getViewport(view);
-
-            self.systemArgs.view     = view;
-            self.systemArgs.viewport = viewport;
-
-            gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-
-            let projMat = view.projectionMatrix;
-            let viewMat = view.transform.inverse.matrix;
-
-            gl.uniformMatrix4fv(w.uView, false, viewMat);
-            gl.uniformMatrix4fv(w.uProj, false, projMat);
-
-
-            // per-eye rendering here in this loop configuration
-            // 
-            // graphics!! --------------------------------------
-
-            drawScene(time);
-
-            //
-            // your content here
-        }
+    for (let i = 0; i < nViews ; i++) {
+        viewport[i] = layer.getViewport(views[i]);
+        projMat [i] = views[i].projectionMatrix;
+        viewMat [i] = views[i].transform.inverse.matrix;
     }
+
+    for (let i = 0; i < nViews ; i++) {
+        self.systemArgs.viewIdx  = i;
+        self.systemArgs.view     = views[i];
+        self.systemArgs.viewport = viewport[i];
+    }
+
+    drawFrame(time);
 
     // tells the input system that the end of the frame has been reached
     Input.setGamepadStateChanged(false);
 }
+
+let nViews   = 1;
+let viewport = [null,null];
+let projMat  = [null,null];
+let viewMat  = [null,null];
 
 
 /** 
@@ -422,6 +423,7 @@ function animatePCWebGL(t) {
     self.systemArgs.viewIdx = 0;
 
     Linalg.mat4.identity(self._viewMatrix);
+    //self._viewMatrix = CG.matrixMultiply(self._viewMatrix, CG.matrixRotateY(self.time));
 
     Linalg.mat4.perspective(self._projectionMatrix, 
         Math.PI / 4,
@@ -441,7 +443,7 @@ function animatePCWebGL(t) {
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    drawScene(self.time);
+    drawFrame(self.time);
 
     // tells the input system that the end of the frame has been reached
     w.input.cursor.updateState();
