@@ -47,6 +47,7 @@ let CT = null;
  */
 async function initCommon(_w) {
     w = _w;
+    w.m = m;
 
     // this loads the math module
     // if it has been changed - located at /lib/math/math.js
@@ -134,7 +135,6 @@ async function setup(w) {
     // initialize state common to first launch and reloading
     await initCommon(w);
 
-    w.m = m;
     renderList.setWorld(w);
 
     w.input = {
@@ -266,7 +266,13 @@ async function onExit(w) {
 function drawScene(time) {
     m.identity();
     m.translate(0,1.0,-1.4);
-    mCube().size(1.5,.001,1.5).color(.3,.2,.1); // GROUND PLANE
+    mCube()                 .size(1.5,.001,1.5).color(.3,.2,.1); // GROUND PLANE
+    mCube().move(0,1.5, 1.5).size(1.5,1.5,.001).color(.5,.4,.3); // WALL
+    mCube().move(0,1.5,-1.5).size(1.5,1.5,.001).color(.5,.4,.3); // WALL
+    mCube().move( 1.5,1.5,0).size(.001,1.5,1.5).color(.5,.4,.3); // WALL
+    mCube().move(-1.5,1.5,0).size(.001,1.5,1.5).color(.5,.4,.3); // WALL
+    mCube().move(0,3,0)     .size(1.5,.001,1.5).color(.5,.4,.3); // CEILING
+    mCube().move(0,1.1,-1.5).size(.46,1.1,.02).color(.25,.1,.05); // DOOR
 
     mCube().move( 1,1.5,-1).turnY(time).size(.2).color(1,0,0);
     mCube().move(-1,1.5,-1).turnY(time).size(.2).color(1,1,0);

@@ -57,10 +57,10 @@ void main() {
     vec3 specular = vec3(.4,.4,.4);
     float p = 30.;
 
-    Ldir[0] = normalize(vec3(1.,1.,2.));
-    Ldir[1] = normalize(vec3(-1.,-1.,-1.));
-    Lrgb[0] = vec3(.6,.6,1.);
-    Lrgb[1] = vec3(.8,.4,.1);
+    Ldir[0] = normalize(vec3(1.,.5,2.));
+    Ldir[1] = normalize(vec3(-1.,-.5,-2.));
+    Lrgb[0] = vec3(.7,.75,.8);
+    Lrgb[1] = vec3(.8,.75,.7);
 
     vec3 normal = normalize(vNor);
 /*
