@@ -32,6 +32,9 @@ let noise = new ImprovedNoise();
 let m = new Matrix();
 let w = null;
 
+let leftPressed = false;
+let rightPressed = false;
+
 ///////////////////////////////////////////////////////////////////
 
 // dynamic imports, global namespace variables for convenience
@@ -223,11 +226,11 @@ async function setup(w) {
    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); 
 }
 
-let drawShape = (shape, matrix, color, texture, textureScale) => {
+let drawShape = (shape, matrix, color, opacity, texture, textureScale) => {
     let gl = w.gl;
     let drawArrays = () => gl.drawArrays(shape == CG.cube || shape == CG.quad ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
     gl.uniform1f(w.uBrightness, 1);//input.brightness === undefined ? 1 : input.brightness);
-    gl.uniform4fv(w.uColor, color.length == 4 ? color : color.concat([1]));
+    gl.uniform4fv(w.uColor, color.length == 4 ? color : color.concat([opacity === undefined ? 1 : opacity]));
     gl.uniformMatrix4fv(w.uModel, false, matrix);
     gl.uniform1i(w.uTexIndex, texture === undefined ? -1 : texture);
     gl.uniform1f(w.uTexScale, textureScale === undefined ? 1 : textureScale);
@@ -263,21 +266,57 @@ async function onExit(w) {
 
 }
 
-function drawScene(time) {
-    m.identity();
-    m.translate(0,1.0,-1.4);
-    mCube()                 .size(1.5,.001,1.5).color(.3,.2,.1); // GROUND PLANE
-    mCube().move(0,1.5, 1.5).size(1.5,1.5,.001).color(.5,.4,.3); // WALL
-    mCube().move(0,1.5,-1.5).size(1.5,1.5,.001).color(.5,.4,.3); // WALL
-    mCube().move( 1.5,1.5,0).size(.001,1.5,1.5).color(.5,.4,.3); // WALL
-    mCube().move(-1.5,1.5,0).size(.001,1.5,1.5).color(.5,.4,.3); // WALL
-    mCube().move(0,3,0)     .size(1.5,.001,1.5).color(.5,.4,.3); // CEILING
-    mCube().move(0,1.1,-1.5).size(.46,1.1,.02).color(.25,.1,.05); // DOOR
+const FEET_TO_METERS = 0.3048;
 
-    mCube().move( 1,1.5,-1).turnY(time).size(.2).color(1,0,0);
-    mCube().move(-1,1.5,-1).turnY(time).size(.2).color(1,1,0);
-    mCube().move( 1,1.5, 1).turnY(time).size(.2).color(0,0,1);
-    mCube().move(-1,1.5, 1).turnY(time).size(.2).color(1,1,1);
+function drawScene(time) {
+
+    const black     = [0,0,0];
+    const brown     = [.25,.1,.05];
+    const darkRed   = [.5,.0,.0];
+    const darkGray  = [.3,.3,.3];
+    const gray      = [.4,.4,.4];
+    const lightGray = [.5,.5,.5];
+    const beige     = [.3,.2,.1];
+    const offWhite  = [.5,.4,.3];
+    const skyBlue   = [.5,.8,1];
+
+    const dw = 2.5; // DOOR WIDTH
+    const dh = 7  ; // DOOR HEIGHT
+    const rw = 20 ; // ROOM WIDTH
+    const rh = 11 ; // ROOM HEIGHT
+    const sw = 10 ; // SAFE WIDTH
+
+    m.identity();
+    m.scale(FEET_TO_METERS);
+
+    m.translate(0,0,-sw/2);
+    mCube().move(-sw/4,0,-sw/4).size(-sw/4,.002,-sw/4).color(gray     ); // SAFE AREA
+    mCube().move( sw/4,0,-sw/4).size(-sw/4,.002,-sw/4).color(lightGray); // SAFE AREA
+    mCube().move(-sw/4,0, sw/4).size(-sw/4,.002,-sw/4).color(lightGray); // SAFE AREA
+    mCube().move( sw/4,0, sw/4).size(-sw/4,.002,-sw/4).color(gray     ); // SAFE AREA
+
+    mCube().size(rw/2,.001,rw/2).color(darkGray); // FLOOR
+
+    mCube().move(    0, rh/2, rw/2).size( rw/2, rh/2, .001).color(offWhite); // WALL
+    mCube().move(    0, rh/2,-rw/2).size( rw/2, rh/2, .001).color(offWhite); // WALL
+    mCube().move( rw/2, rh/2,  0  ).size( .001, rh/2, rw/2).color(offWhite); // WALL
+    mCube().move(-rw/2, rh/2,  0  ).size( .001, rh/2, rw/2).color(offWhite); // WALL
+    mCube().move(    0, rh  ,  0  ).size( rw/2, .001, rw/2).color(offWhite); // CEILING
+
+    mCube().move(    0,  6  , rw/2).size(  8  ,  3  , .002).color(skyBlue ); // WINDOW
+
+    mCube().move( 7.5 ,  7/2,-rw/2).size(  3/2,  7/2, .002).color(brown   ); // DOOR
+    mCube().move(-rw/2,  7/2, 7.5 ).size( .002,  7/2,  3/2).color(brown   ); // DOOR
+    mCube().move(-rw/2,  7/2,-7.5 ).size( .002,  7/2,  3/2).color(brown   ); // DOOR
+    mCube().move( rw/2,  7/2, 6.5 ).size( .002,  7/2,  3/2).color(brown   ); // DOOR
+    mCube().move( rw/2,  7/2,-6.5 ).size( .002,  7/2,  3/2).color(brown   ); // DOOR
+    mCube().move( rw/2,  4/2,   0 ).size( 1   ,  4/2,  5/2).color(brown   ); // FIREPLACE
+    mCube().move( rw/2,  3/2,   0 ).size( 1.01,  3/2,  4/2).color(black   ); // FIREPLACE
+
+    mCube    ().move( 3,3,-3).turnY(time).size(.65).color(1,0,0);
+    mSphere  ().move(-3,3,-3).turnY(time).size(1,.65,.65).color(1,1,0);
+    mCylinder().move( 3,3, 3).turnY(time).size(.65).color(0,0,1);
+    mCube    ().move(-3,3, 3).turnY(time).size(.65).color(1,1,1);
 }
 
 function drawFrame(time) {
@@ -339,10 +378,17 @@ function animateXRWebGL(t, frame) {
                         // TODO(TR): should use the transform matrices provided for position/orientation,
                         // also provides a "pointer tip" transform
                         MR.leftController = inputSource.gamepad;
+			leftPressed = false;
+			for (i = 0 ; i < MR.leftController.buttons.length ; i++)
+			   if (MR.leftController.buttons[i].isPressed) {
+			      leftPressed = true;
+			      console.log('left pressed', i);
+                           }
                         break;
                     }
                     case "right": {
                         MR.rightController = inputSource.gamepad;
+			rightPressed = MR.rightController.buttons[1].isPressed;
                         break;
                     }
                     case "none": {
