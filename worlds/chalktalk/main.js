@@ -288,8 +288,10 @@ function drawScene(time) {
 
     m.identity();
     m.scale(FEET_TO_METERS);
+    //m.translate(0,-3,-4);
 
-    m.translate(0,0,-sw/2);
+    //m.translate(0,0,-sw/2);
+
     mCube().move(-sw/4,0,-sw/4).size(-sw/4,.002,-sw/4).color(gray     ); // SAFE AREA
     mCube().move( sw/4,0,-sw/4).size(-sw/4,.002,-sw/4).color(lightGray); // SAFE AREA
     mCube().move(-sw/4,0, sw/4).size(-sw/4,.002,-sw/4).color(lightGray); // SAFE AREA
@@ -313,8 +315,8 @@ function drawScene(time) {
     mCube().move( rw/2,  4/2,   0 ).size( 1   ,  4/2,  5/2).color(brown   ); // FIREPLACE
     mCube().move( rw/2,  3/2,   0 ).size( 1.01,  3/2,  4/2).color(black   ); // FIREPLACE
 
-    mCube    ().move( 3,3,-3).turnY(time).size(.65).color(1,0,0);
-    mSphere  ().move(-3,3,-3).turnY(time).size(1,.65,.65).color(1,1,0);
+    mSphere  ().move( 3,3,-3).turnY(time).size(1,1,.65).color(1,0,0);
+    mTorus   ().move(-3,3,-3).turnY(time).size(.65).color(1,1,0);
     mCylinder().move( 3,3, 3).turnY(time).size(.65).color(0,0,1);
     mCube    ().move(-3,3, 3).turnY(time).size(.65).color(1,1,1);
 }
@@ -323,6 +325,18 @@ function drawFrame(time) {
     renderList.beginFrame();
     drawScene(time);
     renderList.endFrame(drawShape);
+}
+
+let buttonState = [[],[]];
+for (let i = 0 ; i < 7 ; i++)
+   buttonState[0][i] = buttonState[1][i] = false;
+
+let onPress = (hand, button) => {
+   console.log('pressed', hand==0 ? 'left' : 'right', 'button', button);
+}
+
+let onRelease = (hand, button) => {
+   console.log('released', hand==0 ? 'left' : 'right', 'button', button);
 }
 
 /** 
@@ -363,43 +377,24 @@ function animateXRWebGL(t, frame) {
         const inputSources = session.inputSources;
         for (let i = 0; i < inputSources.length; i += 1) {
             const inputSource = inputSources[i];
-
-            //console.log("input source found=[" + i + "]");
-            //console.log("has grip: " + (inputSource.gripSpace ? true : false));
-
             if (inputSource.gripSpace) {
-                const gripPose = frame.getPose(inputSource.gripSpace, xrInfo.immersiveRefSpace);
-                if (gripPose) {
-                    //console.log("handedness: " + inputSource.handedness);
-
-                    // TODO(TR): temporary "hack", 
-                    switch (inputSource.handedness) {
-                    case "left": {
-                        // TODO(TR): should use the transform matrices provided for position/orientation,
-                        // also provides a "pointer tip" transform
-                        MR.leftController = inputSource.gamepad;
-			leftPressed = false;
-			for (i = 0 ; i < MR.leftController.buttons.length ; i++)
-			   if (MR.leftController.buttons[i].isPressed) {
-			      leftPressed = true;
-			      console.log('left pressed', i);
-                           }
-                        break;
-                    }
-                    case "right": {
-                        MR.rightController = inputSource.gamepad;
-			rightPressed = MR.rightController.buttons[1].isPressed;
-                        break;
-                    }
-                    case "none": {
-                        break;
-                    }
-                    }
-                // If we have a grip pose use it to render a mesh showing the
-                // position of the controller.
-                // NOTE: this contains a "handedness property" so we don't have to guess. Wonderful!
-                // i.e. gripPose.transform.matrix, inputSource.handedness;
-                }
+               const gripPose = frame.getPose(inputSource.gripSpace, xrInfo.immersiveRefSpace);
+	       let gamepad = inputSource.gamepad;
+               if (gripPose) {
+	          let h = 0;
+                  switch (inputSource.handedness) {
+		  case 'left' : MR.leftController  = gamepad; break;
+		  case 'right': MR.rightController = gamepad; h = 1; break;
+		  }
+                  for (let i = 0 ; i < gamepad.buttons.length ; i++) {
+	             let button = gamepad.buttons[i];
+                     if (button.pressed && ! buttonState[h][i])
+			onPress(h, i);
+                     if (! button.pressed && buttonState[h][i])
+			onRelease(h, i);
+                     buttonState[h][i] = button.pressed;
+                  }
+               }
             }
         }
     }
