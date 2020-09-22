@@ -302,7 +302,7 @@ function drawScene(time) {
 
     m.identity();
     m.scale(FEET_TO_METERS);
-    m.translate(0,4,0);
+    m.translate(0,4.6,0);
 
     mCube().move(-sw/4,0,-sw/4).size(-sw/4,.002,-sw/4).color(gray     ); // SAFE AREA
     mCube().move( sw/4,0,-sw/4).size(-sw/4,.002,-sw/4).color(lightGray); // SAFE AREA
