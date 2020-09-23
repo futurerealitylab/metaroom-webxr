@@ -522,39 +522,40 @@ function animateXRWebGL(t, frame) {
     xrInfo.poseEXT.update(xrInfo.pose);
 
     // this crude function updates the controller state
-    function TEMPGripControllerUpdate() {
+    function gripControllerUpdate() {
         const inputSources = session.inputSources;
         for (let i = 0; i < inputSources.length; i += 1) {
             const inputSource = inputSources[i];
 
             if (inputSource.gripSpace) {
-               let gripPose = frame.getPose(inputSource.gripSpace, xrInfo.immersiveRefSpace);
-               if (gripPose)
-	         controllerMatrix[i] = gripPose.transform.matrix;
-            }
+                const gripPose = frame.getPose(
+                    inputSource.gripSpace, xrInfo.immersiveRefSpace
+                );
+	            let gamepad = inputSource.gamepad;
+                if (gripPose) {
+                    
+                    controllerMatrix[i] = gripPose.transform.matrix;
 
-            if (inputSource.gripSpace) {
-               const gripPose = frame.getPose(inputSource.gripSpace, xrInfo.immersiveRefSpace);
-	       let gamepad = inputSource.gamepad;
-               if (gripPose) {
-	          let h = 0;
-                  switch (inputSource.handedness) {
-		  case 'left' : MR.leftController  = gamepad; break;
-		  case 'right': MR.rightController = gamepad; h = 1; break;
-		  }
-                  for (let i = 0 ; i < gamepad.buttons.length ; i++) {
-	             let button = gamepad.buttons[i];
-                     if (button.pressed && ! buttonState[h][i])
-			onPress(h, i);
-                     if (! button.pressed && buttonState[h][i])
-			onRelease(h, i);
-                     buttonState[h][i] = button.pressed;
-                  }
-               }
+	                let h = 0;
+                    switch (inputSource.handedness) {
+	                case 'left' : MR.leftController  = gamepad; break;
+		            case 'right': MR.rightController = gamepad; h = 1; break;
+		            }
+                    for (let i = 0 ; i < gamepad.buttons.length ; i++) {
+	                    let button = gamepad.buttons[i];
+                        if (button.pressed && ! buttonState[h][i]) {
+			                onPress(h, i);
+                        }
+                        if (! button.pressed && buttonState[h][i]) {
+			                onRelease(h, i);
+                        }
+                        buttonState[h][i] = button.pressed;
+                    }
+                }
             }
         }
     }
-    TEMPGripControllerUpdate();
+    gripControllerUpdate();
 
     // API-specific information
     // (transforms, tracking, direct access to render state, etc.)
