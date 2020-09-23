@@ -421,11 +421,23 @@ function drawScene(time) {
     const rh = 11 ; // ROOM HEIGHT
     const sw = 10 ; // SAFE WIDTH
 
+
+    for (let i = 0 ; i < 2 ; i++)
+       if (controllerMatrix[i]) {
+          m.identity();
+          m.multiply(controllerMatrix[i]);
+	  let triggerPressed = buttonState[i][0];
+	  let gripPressed = buttonState[i][1];
+
+          mTorus().move(0,0,-.05).size(.03,.03,.033).color(triggerPressed ? 1 : 0, 0, 0);
+          mCylinder().move(0,-.01,.01).size(.02,.02,.05).color(0,0,0);
+	  let gx = gripPressed ? .01 : .013;
+          mCube().move(i==0?gx:-gx,-.01,.01).size(.01).color(gripPressed ? [1,0,0] : [.1,.1,.1]);
+       }
+
     m.identity();
     m.scale(FEET_TO_METERS);
-    //m.translate(0,-3,-4);
-
-    //m.translate(0,0,-sw/2);
+    m.translate(0,4.6,0);
 
     mCube().move(-sw/4,0,-sw/4).size(-sw/4,.002,-sw/4).color(gray     ); // SAFE AREA
     mCube().move( sw/4,0,-sw/4).size(-sw/4,.002,-sw/4).color(lightGray); // SAFE AREA
@@ -474,6 +486,8 @@ let onRelease = (hand, button) => {
    console.log('released', hand==0 ? 'left' : 'right', 'button', button);
 }
 
+let controllerMatrix = [[], []];
+
 /** 
  *  animation function for a WebXR-supporting platform, using WebGL graphics
  *  @param t {Number} elapsed time in milliseconds
@@ -512,6 +526,13 @@ function animateXRWebGL(t, frame) {
         const inputSources = session.inputSources;
         for (let i = 0; i < inputSources.length; i += 1) {
             const inputSource = inputSources[i];
+
+            if (inputSource.gripSpace) {
+               let gripPose = frame.getPose(inputSource.gripSpace, xrInfo.immersiveRefSpace);
+               if (gripPose)
+	         controllerMatrix[i] = gripPose.transform.matrix;
+            }
+
             if (inputSource.gripSpace) {
                const gripPose = frame.getPose(inputSource.gripSpace, xrInfo.immersiveRefSpace);
 	       let gamepad = inputSource.gamepad;
