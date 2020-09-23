@@ -7,6 +7,7 @@
 import * as Path            from "/lib/util/path.js";
 // for loading basic assets
 import * as Asset           from "/lib/util/asset.js";
+import * as Image           from "/lib/util/image.js";
 // for canvas interaction
 import * as Canvas          from "/lib/util/canvas.js";
 // for memory operations
@@ -70,6 +71,138 @@ async function loadShaders(w) {
     w.gl = gl;
     w.shader = shader;
 }
+
+// 1-many textures possibly combined into 1
+class TextureInfo {
+    constructor() {
+        this.name  = "";
+        this.desc  = null;
+        this.id    = TextureInfo.nextID;
+        this.createInfo = null;
+
+
+        TextureInfo.nextID += 1;
+    }
+}
+TextureInfo.nextID = 0;
+
+class TextureCatalogue {
+    constructor() {
+        //this.images = [];
+        this.textureInfoList = [];
+        this.name2id         = new Map();
+    }
+    // static addImage(cat, img) {
+    //     cat.images.push(img)
+    // }
+    // static addImages(cat, imgList) {
+    //     const images = cat.images;
+    //     for (let i = 0; i < imgList.length; i += 1) {
+    //         images.push(imgList[i]);
+    //     }
+    // }
+    // static clearImages() {
+    //     cat.images = [];
+    // }
+}
+
+class TextureCreateInfoBasic {
+    constructor(level, internalformat, format, type) {
+        this.level          = level;
+        this.internalformat = internalformat;
+        this.format         = format;
+        this.type           = type;
+    }
+}
+function uploadTexture2D(gl, info, createInfo, image) {
+    if (!createInfo) {
+        throw new Error("texture createInfo not provided");
+    }
+
+    const texInfo = info;
+
+    texInfo.desc = gl.createTexture();
+    texInfo.slot = createInfo.slot;
+
+    gl.activeTexture(createInfo.slot);
+
+    gl.bindTexture(gl.TEXTURE_2D, textInfo.desc);
+
+    for (let i = 0; i < createInfo.paramList.length; i += 1) {
+        gl.textParameteri(gl.TEXTURE_2D, createInfo.paramList[0], createInfo.paramList[1]);
+    }
+
+    gl.texImage2D(
+        gl.TEXTURE_2D,
+        createInfo.level,
+        createInfo.internalformat,
+        createInfo.format,
+        createInfo.type,
+        image
+    );
+
+
+    
+}
+
+    for (let i = 0 ; i < images.length ; i++) {
+        gl.activeTexture (gl.TEXTURE0 + i);
+        gl.bindTexture   (gl.TEXTURE_2D, gl.createTexture());
+        gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+        gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+        gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+        gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texImage2D    (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, images[i]);
+        gl.generateMipmap(gl.TEXTURE_2D);
+    }
+
+async function loadImages(w) {
+
+    let images = null;
+    try {
+        images = await Image.loadImagesAsync([
+            Path.fromLocalPath("assets/textures/wood.png"),
+
+            "assets/textures/brick.png",
+        ]);
+
+        w.textures = new TextureCatalogue();
+        //w.textures.addImage();
+    } catch (e) {
+        console.error(e);
+    }
+
+}
+
+/*
+// assume the images are named image-x.png
+for (var ii = 0; ii < numImages; ++ii) {
+  loadImage(ii);
+}
+
+function loadImage(num) {
+  var img = new Image();
+  img.onload = putImageInCanvas(img, num);
+  img.src = "image-" + num + ".png";
+}
+
+function putImageInCanvas(img, num) {
+  var x = num % across;
+  var y = Math.floor(num / across);
+
+  ctx.drawImage(img, x * width, y * height);
+
+  ++numImagesDownloaded;
+  if (numImagesDownloaded === numImages) {
+    // now make a texture from canvas.
+    var atlasTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, atlasTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE,
+                  canvas);
+    ....
+  }
+}
+*/
 
 async function initGraphicsCommon(w) {
     w.uColor      = gl.getUniformLocation(w.shader, 'uColor');
@@ -169,6 +302,8 @@ async function setup(w) {
     ShaderTextEditor.hideEditor();
 
     await loadShaders(w);
+
+    await loadTextures(w);
 
 /*
     console.group("testing shader loading");
