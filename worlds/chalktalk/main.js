@@ -72,85 +72,7 @@ async function loadShaders(w) {
     w.shader = shader;
 }
 
-// 1-many textures possibly combined into 1
-// class TextureInfo {
-//     constructor(name, id, resource) {
-//         this.name       = ;
-//         this.id         = id;
-//         this.resource   = resource;
-//     }
-// }
-
-class TextureCatalogue {
-    constructor(w = 4096, h = 4096) {
-        this.mapNameToTexture = new Map();
-        this.mapIDToTexture   = new Map();
-
-        this.freeIDs = [];
-
-        this.canvas    = document.createElement('canvas');
-        this.canvas.id = "TextureCatalogue";
-        document.body.appendChild(this.canvas);
-        this.canvas.zIndex = 10000;
-        this.ctx = this.canvas.getContext('2d');
-        this.ctx.imageSmoothingEnabled = false;
-
-        
-        this.canvas.width  = w;
-        this.canvas.height = h;
-
-        this.ctx.rect(0, 0, this.canvas.width, this.canvas.height);
-        this.ctx.globalAlpha = 0.0;
-        this.ctx.fillStyle = 'white';
-        this.ctx.fill();
-        this.ctx.globalAlpha = 1.0;
-
-        this.subTextures = [];
-    }
-
-
-    // static addImage(cat, img) {
-    //     cat.images.push(img)
-    // }
-    // static addImages(cat, imgList) {
-    //     const images = cat.images;
-    //     for (let i = 0; i < imgList.length; i += 1) {
-    //         images.push(imgList[i]);
-    //     }
-    // }
-    // static clearImages() {
-    //     cat.images = [];
-    // }
-}
-
-function acquireNextAvailID(catalogue) {
-    if (catalogue.freeIDs.length > 0) {
-        return catalogue.freeIDs.pop();
-    }
-
-    TextureCatalogue.nextAvailID += 1;
-    return TextureCatalogue.nextAvailID;
-}
-TextureCatalogue.nextAvailID = 0;
-
-function registerTextureToCatalogue(catalogue, textureInfo) {
-    textureInfo.ID = acquireNextAvailID(catalogue);
-
-    catalogue.mapNameToTexture.set(textureInfo.name, textureInfo);
-    catalogue.mapIDToTexture.set(textureInfo.ID, textureInfo);
-}
-function removeTextureFromCatalogueByID(catalogue, ID) {
-    const tex = catalogue.mapIDToSubTexture.get(ID);
-    catalogue.mapIDToTexture.delete(tex.ID);
-    catalogue.mapNameToTexture.delete(tex.name);
-    catalogue.freeIDs.push(ID);
-}
-function removeTextureFromCatalogueByName(catalogue, name) {
-    const tex = catalogue.mapNameToTexture.get(name);
-    catalogue.mapNameToTexture.delete(tex.name);    
-    catalogue.mapIDToTexture.delete(tex.ID);
-}
-
+// textures
 
 class SubTextureHandle {
     constructor() {
@@ -158,119 +80,431 @@ class SubTextureHandle {
         this.subID = 0;
         this.name  = "";
         
-        this.x = 0;
-        this.y = 0;
-
         this.u = 0;
         this.v = 0;
+
+        this.w = 0;
+        this.h = 0;
     }
 }
 class TextureHandle {
     constructor() {
-        this.ID       = 0;
-        this.resource = null;
-        this.slot     = 0;
+        this.ID          = 0;
+        this.name        = null;
+        this.resource    = null;
+        this.slot        = 0;
+        this.subTextures = [];
+        this.mapNameToSubTexture = new Map();
+    }
+
+    lookupImageByName(name) {
+        if (this.mapNameToSubTexture.has(name)) {
+            const ID = this.mapNameToSubTexture.get(name);
+            return this.subTextures[ID - 1];
+        }
+        return null;
+    }
+
+    lookupImageByID(ID) {
+        if (this.subTextures.length < ID) {
+            return null;
+        }
+
+        return this.subTextures[ID - 1];
     }
 }
 
+function deleteTexture2D(catalogue, textureInfo) {
 
-    // gl:
-    //     graphics context
-    // descriptor: 
-    //     settings for the texture
-    // srcList: 
-    //     list of images to put into the texture
-    // padding: 
-    //     number of transparent pixels with 
-    //     which to surround an individual subtexture to avoid undesired blending
-    //     (default = 8)
-function makeTexture2DWithImages(gl, catalogue, descriptor, slot, srcList, padding = 8) {
+    // 0 is the null ID
+    if (textureInfo.ID <= 0) {
+        return false;
+    }
+
+    textureInfo.subTextures = [];
+
+    const gl = catalogue.gl;
+
+    gl.deleteTexture(textureInfo.resource);
+
+    return true;
+}
+
+
+function registerTextureToCatalogue(catalogue, descriptor) {
+    const ID = acquireNextAvailID(catalogue);
+
+    while (catalogue.textures.length < ID) {
+        catalogue.textures.push(new TextureHandle());
+    }
+
+    const texHandle = catalogue.textures[ID - 1];
+
+    texHandle.ID = ID;
+    texHandle.name = descriptor.name || texHandle.ID.toString();
+
+    catalogue.mapNameToTexture.set(texHandle.name, ID);
+
+    texHandle.resource = catalogue.gl.createTexture();
+
+    return texHandle;
+}
+
+// TODO deletion - commented-out code uses non-existent fields from before some changes
+// function deleteTextureFromCatalogueByID(catalogue, ID) {
+//     const tex = catalogue.mapIDToSubTexture.get(ID);
+//     catalogue.mapIDToTexture.delete(tex.ID);
+//     catalogue.mapNameToTexture.delete(tex.name);
+//     catalogue.freeIDs.push(ID);
+
+//     if (catalogue.mapIDToSlot.has(ID)) {
+//         catalogue.mapIDToSlot.delete(ID);
+//     }
+
+//     deleteTexture2D(catalogue, tex);
+// }
+// function deleteTextureFromCatalogueByName(catalogue, name) {
+//     const tex = catalogue.mapNameToTexture.get(name);
+//     catalogue.mapNameToTexture.delete(tex.name);    
+//     catalogue.mapIDToTexture.delete(tex.ID);
+//     catalogue.mapIDToSlot.delete(tex.ID);
+
+//     if (catalogue.mapIDToSlot.has(ID)) {
+//         catalogue.mapIDToSlot.delete(ID);
+//     }
+// }
+
+class TextureCatalogue {
+    constructor(gl, w = 2048, h = 2048) {
+        this.mapNameToTexture = new Map();
+        this.mapIDToSlot = new Map();
+
+        this.freeIDs = [];
+
+        this.canvas    = document.createElement('canvas');
+        this.canvas.id = "TextureCatalogue";
+        this.canvas.zIndex = 10000;
+        this.ctx = this.canvas.getContext('2d');
+        this.ctx.imageSmoothingEnabled = false;
+
+        this.canvas.width  = w;
+        this.canvas.height = h;
+
+        this.ctx.rect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.globalAlpha = 0.0;
+        this.ctx.fillStyle = 'black';
+        this.ctx.fill();
+        this.ctx.globalAlpha = 1.0;
+
+        this.textures = [];
+
+        this.nextAvailID = 1;
+
+        this.gl = gl;
+    }
+
+    lookupByName(name) {
+        const ID = this.mapNameToTexture.get(name);
+        return this.lookupByID(ID);
+    }
+    lookupByID(ID) {
+        if (ID > this.textures.length) {
+            return null;
+        }
+        return this.textures[ID - 1];
+    }
+
+    setSlotByID(ID, slot) {
+        if (this.mapIDToSlot.has(ID)) {
+            const existingSlot = this.mapIDToSlot.get(ID);
+            if (existingSlot == slot) {
+                return;
+            } else {
+                const gl = this.gl;
+                gl.activeTexture(gl.TEXTURE0 + slot);
+                gl.bindTexture(gl.TEXTURE_2D, this.lookupByID(ID).resource);
+            }
+        } else {
+            this.mapIDToSlot.set(ID, slot);
+            gl.activeTexture(gl.TEXTURE0 + slot);
+            gl.bindTexture(gl.TEXTURE_2D, this.lookupByID(ID).resource);
+        }
+    }
+
+    getSlotByID(ID) {
+        if (this.mapIDToSlot.has(ID)) {
+            return this.mapIDToSlot.get(ID);
+        }
+        return -1;
+    }
+
+    registerTextureToCatalogue(descriptor) {
+        return registerTextureToCatalogue(this, descriptor);
+    }
+
+    // removeTextureFromCatalogueByID(ID) {
+    //     return removeTextureFromCatalogueByID(this, ID);
+    // }
+
+    // removeTextureFromCatalogueByName(name) {
+    //     return removeTextureFromCatalogueByName(this, name);
+    // }
+
+    deinit() {
+        this.canvas.width = 0;
+        this.canvas.height = 0
+        this.canvas = null;
+    }
+}
+
+function acquireNextAvailID(catalogue) {
+    if (catalogue.freeIDs.length > 0) {
+        return catalogue.freeIDs.pop();
+    }
+
+    catalogue.nextAvailID += 1;
+    return catalogue.nextAvailID - 1;
+}
+
+
+function makeSubTexture(catalogue, texHandle, srcName, u, v, w, h) {
+    const subTexture = new SubTextureHandle();
+    texHandle.subTextures.push(subTexture);
+        
+    subTexture.ID    = texHandle.ID;
+    subTexture.subID = texHandle.subTextures.length;
+
+    subTexture.name  = srcName || subTexture.subID.toString();
+        
+    subTexture.u = u;
+    subTexture.v = v;
+
+    subTexture.w = w;
+    subTexture.h = h;
+
+    texHandle.mapNameToSubTexture.set(srcName, subTexture.subID);
+
+    return subTexture;
+}
+
+// catalogue:
+//      texture catalogue storing info about textures
+// descriptor: 
+//     settings for the texture
+// srcList: 
+//     list of images to put into the texture
+// padding: 
+//     number of transparent pixels with 
+//     which to surround an individual subtexture to avoid undesired blending
+//     (default = 8)
+function makeTexture2DWithImages(catalogue, descriptor, slot, srcList, srcNameList, padding = 0, cornerWhite = false) {
     if (!descriptor) {
         throw new Error("texture descriptor not provided");
     }
+    console.log(srcList, srcNameList);
+    if (srcList.length != srcNameList.length) {
+        throw new Error("source image and source image name input lengths do not match");
+    }
 
-    const texHandle = new TextureHandle();
+    const gl = catalogue.gl;
 
+    const texHandle = registerTextureToCatalogue(catalogue, descriptor);
+    catalogue.setSlotByID(texHandle.ID, slot);
 
-    texHandle.resource = gl.createTexture();
-    texHandle.slot     = slot;
-
-    registerTextureToCatalogue(catalogue, texHandle);
 
     gl.activeTexture(gl.TEXTURE0 + slot);
-
     gl.bindTexture(gl.TEXTURE_2D, texHandle.resource);
 
     for (let i = 0; i < descriptor.paramList.length; i += 1) {
         gl.texParameteri(gl.TEXTURE_2D, descriptor.paramList[i][0], descriptor.paramList[i][1]);
     }
 
-    // heuristic: sort images by decreasing area
-    srcList.sort((a, b) => {
-        const areaA = a.width * a.height;
-        const areaB = b.width * b.height;
 
-        areaA - areaB;
-    });
-
+    // pack the textures
     {
-        let minx  = 0;
-        let miny  = 0;
-        let subID = 1;
-        const ctx = catalogue.ctx;
-        const surface = catalogue.canvas;
+        // taken from:
+        // https://github.com/mapbox/potpack
 
-        let maxy = 0;
+   
+        function potpack(boxes) {
 
-        for (let i = 0; i < srcList.length; i += 1) {
-            
-            const src = srcList[i];
+            // calculate total box area and maximum box width
+            let area = 0;
+            let maxWidth = 0;
 
-            maxy = Math.max(maxy, maxy + src.height);
+            for (const box of boxes) {
+                area += box.w * box.h;
+                maxWidth = Math.max(maxWidth, box.w);
+            }
 
-            let lastResized = 0;
-            while (minx + src.width >= catalogue.canvas.width &&
-                miny + src.height >= catalogue.canvas.height
-                ) {
-                
-                // TODO: handle 'need to resize texture' case better - for now just resize multiple times");
+            // sort the boxes for insertion by height, descending
+            boxes.sort((a, b) => b.h - a.h);
 
-                if (catalogue.canvas.width >= catalogue.canvas.height) {
-                    catalogue.canvas.height *= 2;
-                    lastResized = 2;
-                } else {
-                    catalogue.canvas.width *= 2;
-                    lastResized = 1;
+            // aim for a squarish resulting container,
+            // slightly adjusted for sub-100% space utilization
+            const startWidth = Math.max(Math.ceil(Math.sqrt(area / 0.95)), maxWidth);
+
+            // start with a single empty space, unbounded at the bottom
+            const spaces = [{x: 0, y: 0, w: startWidth, h: Infinity}];
+
+            let width = 0;
+            let height = 0;
+
+            for (const box of boxes) {
+                // look through spaces backwards so that we check smaller spaces first
+                for (let i = spaces.length - 1; i >= 0; i--) {
+                    const space = spaces[i];
+
+                    // look for empty spaces that can accommodate the current box
+                    if (box.w > space.w || box.h > space.h) continue;
+
+                    // found the space; add the box to its top-left corner
+                    // |-------|-------|
+                    // |  box  |       |
+                    // |_______|       |
+                    // |         space |
+                    // |_______________|
+                    box.x = space.x;
+                    box.y = space.y;
+
+                    height = Math.max(height, box.y + box.h);
+                    width = Math.max(width, box.x + box.w);
+
+                    if (box.w === space.w && box.h === space.h) {
+                        // space matches the box exactly; remove it
+                        const last = spaces.pop();
+                        if (i < spaces.length) spaces[i] = last;
+
+                    } else if (box.h === space.h) {
+                        // space matches the box height; update it accordingly
+                        // |-------|---------------|
+                        // |  box  | updated space |
+                        // |_______|_______________|
+                        space.x += box.w;
+                        space.w -= box.w;
+
+                    } else if (box.w === space.w) {
+                        // space matches the box width; update it accordingly
+                        // |---------------|
+                        // |      box      |
+                        // |_______________|
+                        // | updated space |
+                        // |_______________|
+                        space.y += box.h;
+                        space.h -= box.h;
+
+                    } else {
+                        // otherwise the box splits the space into two spaces
+                        // |-------|-----------|
+                        // |  box  | new space |
+                        // |_______|___________|
+                        // | updated space     |
+                        // |___________________|
+                        spaces.push({
+                            x: space.x + box.w,
+                            y: space.y,
+                            w: space.w - box.w,
+                            h: box.h
+                        });
+                        space.y += box.h;
+                        space.h -= box.h;
+                    }
+                    break;
                 }
             }
-            switch (lastResized) {
-            case 0: { 
-                break; 
+
+
+
+            
+            return {
+                w: width, // container width
+                h: height, // container height
+                fill: (area / (width * height)) || 0 // space utilization
+            };
+        }
+ 
+        {
+            const boxes = [];
+            for (let i = 0; i < srcList.length; i += 1) {
+                boxes.push({
+                    w : srcList[i].width  + padding,
+                    h : srcList[i].height + padding,
+                    i : i,
+                });
+
             }
-            case 1: {
-                break;
+
+            const packed = potpack(boxes);
+
+
+            let resized = false;
+
+            // taken from:
+            // https://www.geeksforgeeks.org/smallest-power-of-2-greater-than-or-equal-to-n/
+            function nextPowerOf2(n)  {
+                n--; 
+                n |= n >> 1; 
+                n |= n >> 2; 
+                n |= n >> 4; 
+                n |= n >> 8; 
+                n |= n >> 16; 
+                n++; 
+                return n; 
             }
-            case 2: {
-                // move by a row
-                miny += maxy + padding;
 
-                minx = 0;
-                maxy = 0;
-                break;
+
+            if (cornerWhite) {
+                packed.w = nextPowerOf2(packed.w + padding + 1);
+                packed.h = nextPowerOf2(packed.h + padding + 1);
+            } else {
+                packed.w = nextPowerOf2(packed.w);
+                packed.h = nextPowerOf2(packed.h);                
             }
+
+            const canvas = catalogue.canvas;
+
+            if (canvas.width < packed.w) {
+                canvas.width = packed.w;
+                resized = true;
+            }
+            if (canvas.height < packed.h) {
+                canvas.height = packed.h;
+                resized = true;
             }
 
-            // TODO:
-            // store info about the sub-texture here
+            const ctx = catalogue.ctx;
+            
+            if (resized) {
+                ctx.rect(0, 0, canvas.width, canvas.height);
+                ctx.globalAlpha = 0.0;
+                ctx.fillStyle = 'black';
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+            ctx.globalAlpha = 1.0;
 
+            let offset = 0;
+            if (cornerWhite) {
+                offset = padding + 4;
+                
+                ctx.fillStyle = "white"
+                ctx.fillRect(0, 0, 4, 4);
+            }
 
-            ctx.drawImage(src, minx, miny);
-
-            minx += src.width + padding;
+            for (let i = 0; i < boxes.length; i += 1) {
+                ctx.drawImage(srcList[boxes[i].i], boxes[i].x + offset, boxes[i].y + offset);
+                makeSubTexture(
+                    catalogue,
+                    texHandle,
+                    srcNameList[i],
+                    boxes[i].x,
+                    boxes[i].y,
+                    srcList[i].width, 
+                    srcList[i].height
+                );                
+            }
         }
     }
-
-
 
     gl.texImage2D(
         gl.TEXTURE_2D,
@@ -288,38 +522,6 @@ function makeTexture2DWithImages(gl, catalogue, descriptor, slot, srcList, paddi
     return texHandle;
 }
 
-
-// TODO
-function deleteTexture2D(gl, catalogue, textureInfo) {
-    // 0 is the null ID
-    if (textureInfo.textureID == 0) {
-        return;
-    }
-
-    for (let i = 0; i < textureInfo.subTextures.length; i += 1) {
-        // TODO
-    }
-
-    gl.deleteTexture(textureInfo.resource);
-}
-
-// // WebGL1:
-// void gl.texImage2D(target, level, internalformat, width, height, border, format, type, ArrayBufferView? pixels);
-// void gl.texImage2D(target, level, internalformat, format, type, ImageData? pixels);
-// void gl.texImage2D(target, level, internalformat, format, type, HTMLImageElement? pixels);
-// void gl.texImage2D(target, level, internalformat, format, type, HTMLCanvasElement? pixels);
-// void gl.texImage2D(target, level, internalformat, format, type, HTMLVideoElement? pixels);
-// void gl.texImage2D(target, level, internalformat, format, type, ImageBitmap? pixels);
-
-// // WebGL2:
-// void gl.texImage2D(target, level, internalformat, width, height, border, format, type, GLintptr offset);
-// void gl.texImage2D(target, level, internalformat, width, height, border, format, type, HTMLCanvasElement source);
-// void gl.texImage2D(target, level, internalformat, width, height, border, format, type, HTMLImageElement source); 
-// void gl.texImage2D(target, level, internalformat, width, height, border, format, type, HTMLVideoElement source); 
-// void gl.texImage2D(target, level, internalformat, width, height, border, format, type, ImageBitmap source);
-// void gl.texImage2D(target, level, internalformat, width, height, border, format, type, ImageData source);
-// void gl.texImage2D(target, level, internalformat, width, height, border, format, type, ArrayBufferView srcData, srcOffset);
-
 // returns a default-initialized texture 2D descriptor
 function makeTexture2DDescriptor(gl) {
     return  {
@@ -331,7 +533,7 @@ function makeTexture2DDescriptor(gl) {
         width          : 0,
         height         : 0,
         border         : 0,
-        name           : "",
+        name           : null,
         paramList      : [],
         slot           : 0
     };
@@ -347,70 +549,83 @@ async function loadImages(w) {
             Path.fromLocalPath("assets/textures/wood.png"),
 
             "assets/textures/brick.png",
+            Path.fromLocalPath("assets/textures/tiles.png"),
+
         ]);
 
-
-        w.textures = new TextureCatalogue();
+        // stores textures
+        w.textureCatalogue = new TextureCatalogue(gl);
         
         // texture configuration object
         const textureDesc          = makeTexture2DDescriptor(gl);
         textureDesc.generateMipmap = true;
         textureDesc.name           = 'atlas1';
+
         textureDesc.paramList.push([gl.TEXTURE_WRAP_S, gl.REPEAT]);
         textureDesc.paramList.push([gl.TEXTURE_WRAP_S, gl.REPEAT]);
         textureDesc.paramList.push([gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST]);
         textureDesc.paramList.push([gl.TEXTURE_MAG_FILTER, gl.LINEAR]);
 
-        makeTexture2DWithImages(
-            gl, 
-            // catalogie
-            w.textures, 
+        w.textureAtlas1 = makeTexture2DWithImages(
+            // catalogue to fill
+            w.textureCatalogue, 
             // config
             textureDesc,
-            // binding slot
+            // texture binding slot
             0, 
             // list of images
             images, 
-            // padding between images
+            // list of image names
+            [
+                "wood", "brick", "tiles"
+            ],
+
+            // optional args:
+
+            // padding between images (to avoid blending issues at boundaries)
             8,
+            // enable a 4x4 white square at 
+            // u,v == 0,0 so you can have one shader for 
+            // textures and non-textures 
+            // (no texture means u,v == 0,0 so you just multiply by 1,1,1,1)
+            true
         );
 
-        //w.textures.addImage();
+        // INSTRUCTIONS
+        //
+        // Just to show that this works, I attach a temporary canvas to the document,
+        // and this canvas has the texture images drawn to it (not WebGL).
+        // zoom out with command - since the images are large
+        //
+        // lookup texture atlas (one-to-many individual images):
+        //
+        // w.textureCatalogue.lookupByName("atlas1");
+        
+        //
+        // it's faster if you know the direct ID
+        // w.textureCatalogue.lookupByID(1)
+        
+        //
+        // lookup image stored in a texture atlas
+        // const texAtlas = ... some atlas
+        // const image = atlas.lookupImageByName('wood');
+
+        //
+        // direct access by ID is faster
+        //
+        // index of first image in this atlas
+        // const image = texAtlas.lookupImageByID(1)
+
+        // REMOVE THIS LINE
+        document.body.appendChild(w.textureCatalogue.canvas);
+
     } catch (e) {
         console.error(e);
     }
 
 }
 
-/*
-// assume the images are named image-x.png
-for (var ii = 0; ii < numImages; ++ii) {
-  loadImage(ii);
-}
-
-function loadImage(num) {
-  var img = new Image();
-  img.onload = putImageInCanvas(img, num);
-  img.src = "image-" + num + ".png";
-}
-
-function putImageInCanvas(img, num) {
-  var x = num % across;
-  var y = Math.floor(num / across);
-
-  ctx.drawImage(img, x * width, y * height);
-
-  ++numImagesDownloaded;
-  if (numImagesDownloaded === numImages) {
-    // now make a texture from canvas.
-    var atlasTex = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, atlasTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE,
-                  canvas);
-    ....
-  }
-}
-*/
+//
 
 async function initGraphicsCommon(w) {
     w.uColor      = gl.getUniformLocation(w.shader, 'uColor');
@@ -548,18 +763,7 @@ async function setup(w) {
    let aUV  = gl.getAttribLocation(w.shader, 'aUV');
    gl.enableVertexAttribArray(aUV);
    gl.vertexAttribPointer(aUV , 2, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 9);
-/*
-   for (let i = 0 ; i < images.length ; i++) {
-      gl.activeTexture (gl.TEXTURE0 + i);
-      gl.bindTexture   (gl.TEXTURE_2D, gl.createTexture());
-      gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-      gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-      gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-      gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.texImage2D    (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, images[i]);
-      gl.generateMipmap(gl.TEXTURE_2D);
-   }
-*/
+
    await initGraphicsCommon(w);
 
    gl.clearColor(0.0, 0.35, 0.5, 1.0); 
@@ -606,7 +810,7 @@ let drawShape = (shape, matrix, color, opacity, texture, textureScale) => {
  *  @param w {World_State} storage for your persistent world state
  */
 async function onExit(w) {
-
+    w.textureCatalogue.deinit();
 }
 
 const FEET_TO_METERS = 0.3048;
