@@ -73,25 +73,42 @@ async function loadShaders(w) {
 }
 
 // 1-many textures possibly combined into 1
-class TextureInfo {
-    constructor() {
-        this.name  = "";
-        this.desc  = null;
-        this.id    = TextureInfo.nextID;
-        this.createInfo = null;
-
-
-        TextureInfo.nextID += 1;
-    }
-}
-TextureInfo.nextID = 0;
+// class TextureInfo {
+//     constructor(name, id, resource) {
+//         this.name       = ;
+//         this.id         = id;
+//         this.resource   = resource;
+//     }
+// }
 
 class TextureCatalogue {
-    constructor() {
-        //this.images = [];
-        this.textureInfoList = [];
-        this.name2id         = new Map();
+    constructor(w = 4096, h = 4096) {
+        this.mapNameToTexture = new Map();
+        this.mapIDToTexture   = new Map();
+
+        this.freeIDs = [];
+
+        this.canvas    = document.createElement('canvas');
+        this.canvas.id = "TextureCatalogue";
+        document.body.appendChild(this.canvas);
+        this.canvas.zIndex = 10000;
+        this.ctx = this.canvas.getContext('2d');
+        this.ctx.imageSmoothingEnabled = false;
+
+        
+        this.canvas.width  = w;
+        this.canvas.height = h;
+
+        this.ctx.rect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.globalAlpha = 0.0;
+        this.ctx.fillStyle = 'white';
+        this.ctx.fill();
+        this.ctx.globalAlpha = 1.0;
+
+        this.subTextures = [];
     }
+
+
     // static addImage(cat, img) {
     //     cat.images.push(img)
     // }
@@ -106,55 +123,221 @@ class TextureCatalogue {
     // }
 }
 
-class TextureCreateInfoBasic {
-    constructor(level, internalformat, format, type) {
-        this.level          = level;
-        this.internalformat = internalformat;
-        this.format         = format;
-        this.type           = type;
+function acquireNextAvailID(catalogue) {
+    if (catalogue.freeIDs.length > 0) {
+        return catalogue.freeIDs.pop();
+    }
+
+    TextureCatalogue.nextAvailID += 1;
+    return TextureCatalogue.nextAvailID;
+}
+TextureCatalogue.nextAvailID = 0;
+
+function registerTextureToCatalogue(catalogue, textureInfo) {
+    textureInfo.ID = acquireNextAvailID(catalogue);
+
+    catalogue.mapNameToTexture.set(textureInfo.name, textureInfo);
+    catalogue.mapIDToTexture.set(textureInfo.ID, textureInfo);
+}
+function removeTextureFromCatalogueByID(catalogue, ID) {
+    const tex = catalogue.mapIDToSubTexture.get(ID);
+    catalogue.mapIDToTexture.delete(tex.ID);
+    catalogue.mapNameToTexture.delete(tex.name);
+    catalogue.freeIDs.push(ID);
+}
+function removeTextureFromCatalogueByName(catalogue, name) {
+    const tex = catalogue.mapNameToTexture.get(name);
+    catalogue.mapNameToTexture.delete(tex.name);    
+    catalogue.mapIDToTexture.delete(tex.ID);
+}
+
+
+class SubTextureHandle {
+    constructor() {
+        this.ID    = 0;
+        this.subID = 0;
+        this.name  = "";
+        
+        this.x = 0;
+        this.y = 0;
+
+        this.u = 0;
+        this.v = 0;
     }
 }
-function uploadTexture2D(gl, info, createInfo, image) {
-    if (!createInfo) {
-        throw new Error("texture createInfo not provided");
+class TextureHandle {
+    constructor() {
+        this.ID       = 0;
+        this.resource = null;
+        this.slot     = 0;
+    }
+}
+
+
+    // gl:
+    //     graphics context
+    // descriptor: 
+    //     settings for the texture
+    // srcList: 
+    //     list of images to put into the texture
+    // padding: 
+    //     number of transparent pixels with 
+    //     which to surround an individual subtexture to avoid undesired blending
+    //     (default = 8)
+function makeTexture2DWithImages(gl, catalogue, descriptor, slot, srcList, padding = 8) {
+    if (!descriptor) {
+        throw new Error("texture descriptor not provided");
     }
 
-    const texInfo = info;
+    const texHandle = new TextureHandle();
 
-    texInfo.desc = gl.createTexture();
-    texInfo.slot = createInfo.slot;
 
-    gl.activeTexture(createInfo.slot);
+    texHandle.resource = gl.createTexture();
+    texHandle.slot     = slot;
 
-    gl.bindTexture(gl.TEXTURE_2D, textInfo.desc);
+    registerTextureToCatalogue(catalogue, texHandle);
 
-    for (let i = 0; i < createInfo.paramList.length; i += 1) {
-        gl.textParameteri(gl.TEXTURE_2D, createInfo.paramList[0], createInfo.paramList[1]);
+    gl.activeTexture(gl.TEXTURE0 + slot);
+
+    gl.bindTexture(gl.TEXTURE_2D, texHandle.resource);
+
+    for (let i = 0; i < descriptor.paramList.length; i += 1) {
+        gl.texParameteri(gl.TEXTURE_2D, descriptor.paramList[i][0], descriptor.paramList[i][1]);
     }
+
+    // heuristic: sort images by decreasing area
+    srcList.sort((a, b) => {
+        const areaA = a.width * a.height;
+        const areaB = b.width * b.height;
+
+        areaA - areaB;
+    });
+
+    {
+        let minx  = 0;
+        let miny  = 0;
+        let subID = 1;
+        const ctx = catalogue.ctx;
+        const surface = catalogue.canvas;
+
+        let maxy = 0;
+
+        for (let i = 0; i < srcList.length; i += 1) {
+            
+            const src = srcList[i];
+
+            maxy = Math.max(maxy, maxy + src.height);
+
+            let lastResized = 0;
+            while (minx + src.width >= catalogue.canvas.width &&
+                miny + src.height >= catalogue.canvas.height
+                ) {
+                
+                // TODO: handle 'need to resize texture' case better - for now just resize multiple times");
+
+                if (catalogue.canvas.width >= catalogue.canvas.height) {
+                    catalogue.canvas.height *= 2;
+                    lastResized = 2;
+                } else {
+                    catalogue.canvas.width *= 2;
+                    lastResized = 1;
+                }
+            }
+            switch (lastResized) {
+            case 0: { 
+                break; 
+            }
+            case 1: {
+                break;
+            }
+            case 2: {
+                // move by a row
+                miny += maxy + padding;
+
+                minx = 0;
+                maxy = 0;
+                break;
+            }
+            }
+
+            // TODO:
+            // store info about the sub-texture here
+
+
+            ctx.drawImage(src, minx, miny);
+
+            minx += src.width + padding;
+        }
+    }
+
+
 
     gl.texImage2D(
         gl.TEXTURE_2D,
-        createInfo.level,
-        createInfo.internalformat,
-        createInfo.format,
-        createInfo.type,
-        image
+        descriptor.detailLevel,
+        descriptor.internalFormat,
+        descriptor.format,
+        descriptor.type,
+        catalogue.canvas
     );
 
-
-    
-}
-
-    for (let i = 0 ; i < images.length ; i++) {
-        gl.activeTexture (gl.TEXTURE0 + i);
-        gl.bindTexture   (gl.TEXTURE_2D, gl.createTexture());
-        gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-        gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-        gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-        gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texImage2D    (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, images[i]);
+    if (descriptor.generateMipmap) {
         gl.generateMipmap(gl.TEXTURE_2D);
     }
+
+    return texHandle;
+}
+
+
+// TODO
+function deleteTexture2D(gl, catalogue, textureInfo) {
+    // 0 is the null ID
+    if (textureInfo.textureID == 0) {
+        return;
+    }
+
+    for (let i = 0; i < textureInfo.subTextures.length; i += 1) {
+        // TODO
+    }
+
+    gl.deleteTexture(textureInfo.resource);
+}
+
+// // WebGL1:
+// void gl.texImage2D(target, level, internalformat, width, height, border, format, type, ArrayBufferView? pixels);
+// void gl.texImage2D(target, level, internalformat, format, type, ImageData? pixels);
+// void gl.texImage2D(target, level, internalformat, format, type, HTMLImageElement? pixels);
+// void gl.texImage2D(target, level, internalformat, format, type, HTMLCanvasElement? pixels);
+// void gl.texImage2D(target, level, internalformat, format, type, HTMLVideoElement? pixels);
+// void gl.texImage2D(target, level, internalformat, format, type, ImageBitmap? pixels);
+
+// // WebGL2:
+// void gl.texImage2D(target, level, internalformat, width, height, border, format, type, GLintptr offset);
+// void gl.texImage2D(target, level, internalformat, width, height, border, format, type, HTMLCanvasElement source);
+// void gl.texImage2D(target, level, internalformat, width, height, border, format, type, HTMLImageElement source); 
+// void gl.texImage2D(target, level, internalformat, width, height, border, format, type, HTMLVideoElement source); 
+// void gl.texImage2D(target, level, internalformat, width, height, border, format, type, ImageBitmap source);
+// void gl.texImage2D(target, level, internalformat, width, height, border, format, type, ImageData source);
+// void gl.texImage2D(target, level, internalformat, width, height, border, format, type, ArrayBufferView srcData, srcOffset);
+
+// returns a default-initialized texture 2D descriptor
+function makeTexture2DDescriptor(gl) {
+    return  {
+        detailLevel    : 0,
+        internalFormat : gl.RGBA,
+        format         : gl.RGBA,
+        type           : gl.UNSIGNED_BYTE,
+        generateMipmap : false,
+        width          : 0,
+        height         : 0,
+        border         : 0,
+        name           : "",
+        paramList      : [],
+        slot           : 0
+    };
+}
+
+
 
 async function loadImages(w) {
 
@@ -166,7 +349,32 @@ async function loadImages(w) {
             "assets/textures/brick.png",
         ]);
 
+
         w.textures = new TextureCatalogue();
+        
+        // texture configuration object
+        const textureDesc          = makeTexture2DDescriptor(gl);
+        textureDesc.generateMipmap = true;
+        textureDesc.name           = 'atlas1';
+        textureDesc.paramList.push([gl.TEXTURE_WRAP_S, gl.REPEAT]);
+        textureDesc.paramList.push([gl.TEXTURE_WRAP_S, gl.REPEAT]);
+        textureDesc.paramList.push([gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST]);
+        textureDesc.paramList.push([gl.TEXTURE_MAG_FILTER, gl.LINEAR]);
+
+        makeTexture2DWithImages(
+            gl, 
+            // catalogie
+            w.textures, 
+            // config
+            textureDesc,
+            // binding slot
+            0, 
+            // list of images
+            images, 
+            // padding between images
+            8,
+        );
+
         //w.textures.addImage();
     } catch (e) {
         console.error(e);
@@ -216,7 +424,7 @@ async function initGraphicsCommon(w) {
     w.uView       = gl.getUniformLocation(w.shader, 'uView');
     w.uBrightness = gl.getUniformLocation(w.shader, "uBrightness");
     w.uTex = [];
-    for (let n = 0 ; n < 8 ; n++) {
+    for (let n = 0; n < gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS); n++) {
         w.uTex[n] = gl.getUniformLocation(w.shader, 'uTex' + n);
         gl.uniform1i(w.uTex[n], n);
     }
@@ -303,7 +511,7 @@ async function setup(w) {
 
     await loadShaders(w);
 
-    await loadTextures(w);
+    await loadImages(w);
 
 /*
     console.group("testing shader loading");
