@@ -228,7 +228,7 @@ async function setup(w) {
 
 let drawShape = (shape, matrix, color, opacity, texture, textureScale) => {
     let gl = w.gl;
-    let drawArrays = () => gl.drawArrays(shape == CG.cube || shape == CG.quad ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+    let drawArrays = () => gl.drawArrays(/*shape == CG.cube ||*/ shape == CG.quad ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
     gl.uniform1f(w.uBrightness, 1);//input.brightness === undefined ? 1 : input.brightness);
     gl.uniform4fv(w.uColor, color.length == 4 ? color : color.concat([opacity === undefined ? 1 : opacity]));
     gl.uniformMatrix4fv(w.uModel, false, matrix);
@@ -302,7 +302,6 @@ function drawScene(time) {
 
     m.identity();
     m.scale(FEET_TO_METERS);
-    m.translate(0,4.6,0);
 
     mCube().move(-sw/4,0,-sw/4).size(-sw/4,.002,-sw/4).color(gray     ); // SAFE AREA
     mCube().move( sw/4,0,-sw/4).size(-sw/4,.002,-sw/4).color(lightGray); // SAFE AREA
