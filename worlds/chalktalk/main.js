@@ -775,7 +775,7 @@ async function setup(w) {
 
 let drawShape = (shape, matrix, color, opacity, texture, textureScale) => {
     let gl = w.gl;
-    let drawArrays = () => gl.drawArrays(/*shape == CG.cube ||*/ shape == CG.quad ? gl.TRIANGLES : gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+    let drawArrays = () => gl.drawArrays(gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
     gl.uniform1f(w.uBrightness, 1);//input.brightness === undefined ? 1 : input.brightness);
     gl.uniform4fv(w.uColor, color.length == 4 ? color : color.concat([opacity === undefined ? 1 : opacity]));
     gl.uniformMatrix4fv(w.uModel, false, matrix);
