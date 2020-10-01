@@ -6,6 +6,7 @@ in  vec3 aPos;
 in  vec3 aNor;
 in  vec3 aTan;
 in  vec2 aUV;
+in  vec4 aUVOff;
 
 // interpolated vertex
 out vec3 vP;
@@ -37,6 +38,12 @@ void main(void) {
     vNor = (vec4(aNor, 0.) * invModel).xyz;
     vTan = (vec4(aTan, 0.) * invModel).xyz;
     vBin = cross(vNor, vTan);
-    vUV = aUV * vec2(1.,-1.) + vec2(0.,1.);
+
+    // image_uv + mesh_uv * (image_dimensions / atlas_dimensions)
+
+    // formula for atlas
+    //vUV = (aUVOff.xy + (aUV.xy * aUVOff.zw)) * vec2(1.,-1.) + vec2(0.,1.);
+    vUV = (aUV) * vec2(1.,-1.) + vec2(0.,1.);
+    
     gl_Position = pos + uToon * vec4(normalize(vNor).xy, 0.,0.);
 }

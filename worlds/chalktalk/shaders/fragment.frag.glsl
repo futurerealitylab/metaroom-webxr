@@ -13,8 +13,11 @@ in vec3 vTan;          // TANGENT
 in vec3 vBin;          // BINORMAL
 in vec2 vUV;           // U,V
 
-vec3 Ldir[2];
-vec3 Lrgb[2];
+
+#define LDIR_MAX_COUNT (2)
+
+vec3 Ldir[LDIR_MAX_COUNT];
+vec3 Lrgb[LDIR_MAX_COUNT];
 
 uniform int uBumpIndex;
 uniform float uBumpScale;
@@ -24,9 +27,17 @@ uniform int uTexIndex;
 uniform float uTexScale;
 uniform float uBrightness;
 
+// base
 uniform sampler2D uTex0;
+// bump
 uniform sampler2D uTex1;
+// anything else ...
 uniform sampler2D uTex2;
+uniform sampler2D uTex3;
+uniform sampler2D uTex4;
+uniform sampler2D uTex5;
+uniform sampler2D uTex6;
+uniform sampler2D uTex7;
 
 out vec4 fragColor;    // RESULT WILL GO HERE
 
@@ -63,22 +74,29 @@ void main() {
     Lrgb[1] = vec3(.8,.75,.7);
 
     vec3 normal = normalize(vNor);
-/*
-    if (uBumpIndex == 0) normal = bumpTexture(normal, texture(uTex0, vUV * uBumpScale));
-    if (uBumpIndex == 1) normal = bumpTexture(normal, texture(uTex1, vUV * uBumpScale));
-    if (uBumpIndex == 2) normal = bumpTexture(normal, texture(uTex2, vUV * uBumpScale));
-*/
-    vec3 color = ambient;
-    color += phong(Ldir[0], Lrgb[0], normal, diffuse, specular, p);
-    color += phong(Ldir[1], Lrgb[1], normal, diffuse, specular, p);
 
-    fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), uColor.a) * uBrightness;
+    if (uTexIndex < 0) {
 
-/*
-    if (uTexIndex == 0) fragColor *= texture(uTex0, vUV * uTexScale);
-    if (uTexIndex == 1) fragColor *= texture(uTex1, vUV * uTexScale);
-    if (uTexIndex == 2) fragColor *= texture(uTex2, vUV * uTexScale);
-*/
+        vec3 color = ambient;
+        for (int i = 0; i < LDIR_MAX_COUNT; i += 1) {
+            color += phong(Ldir[i], Lrgb[i], normal, diffuse, specular, p);
+        }
+
+        fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), uColor.a) * uBrightness;
+
+    } else {
+
+        normal = (uBumpIndex < 0) ? normal : bumpTexture(normal, texture(uTex1, vUV));
+
+        vec3 color = ambient;
+        for (int i = 0; i < LDIR_MAX_COUNT; i += 1) {
+            color += phong(Ldir[i], Lrgb[i], normal, diffuse, specular, p);
+        }
+
+        fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), uColor.a) * uBrightness;
+
+        fragColor *= texture(uTex0, vUV);
+    }
 }
 
 
