@@ -239,11 +239,12 @@ preprocess(
             return;
         } */
 
+console.log(path.join(__dirname, 'key.pem'));
 const options = {
-  key: fs.readFileSync(path.join(__dirname, 'server.key')),
-  cert: fs.readFileSync(path.join(__dirname, 'server.crt')),
-  requestCert: false,
-  rejectUnauthorized: false
+    key: fs.readFileSync(path.join(__dirname, 'key.pem')),
+    cert: fs.readFileSync(path.join(__dirname, 'cert.pem')),
+    //   requestCert: false,
+    //   rejectUnauthorized: false
 };
 
 let app = express();
@@ -277,7 +278,8 @@ if (!args.enablessl) {
 const timeStart = Date.now();
 
 try {
-    const wss = new WebSocket.Server({ port: (port + 1)});
+    // const wss = new WebSocket.Server({ port: (port + 1) });
+    const wss = new WebSocket.Server({ server: server });
 
     function exitHandler(options, exitCode) {
         watcher.close();
