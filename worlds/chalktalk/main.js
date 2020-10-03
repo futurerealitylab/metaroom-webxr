@@ -104,7 +104,7 @@ async function loadImages(w) {
         textureDesc.name           = 'tex';
 
         textureDesc.paramList.push([gl.TEXTURE_WRAP_S, gl.REPEAT]);
-        textureDesc.paramList.push([gl.TEXTURE_WRAP_S, gl.REPEAT]);
+        textureDesc.paramList.push([gl.TEXTURE_WRAP_T, gl.REPEAT]);
         textureDesc.paramList.push([gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST]);
         textureDesc.paramList.push([gl.TEXTURE_MAG_FILTER, gl.LINEAR]);
 
