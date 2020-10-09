@@ -1,0 +1,118 @@
+function animateXRWebGL(t, frame) {
+    const self = MR.engine;
+
+    const xrInfo  = self.xrInfo;
+
+    // request next frame
+    self._animationHandle = xrInfo.session.requestAnimationFrame(
+        self.config.onAnimationFrameXR
+    );
+
+    // update time
+    self.time   = t / 1000.0;
+    self.timeMS = t;
+
+    // this is the state variable
+    const w = self.customState;
+
+    const session = frame.session;
+    // unpack session and pose information
+    const layer   = session.renderState.baseLayer;
+
+    const pose    = frame.getViewerPose(xrInfo.immersiveRefSpace);
+    xrInfo.pose = pose;
+    // updates the extended pose data
+    // containing buffer representations of position, orientation
+    xrInfo.poseEXT.update(xrInfo.pose);
+
+    // this crude function updates the controller state
+    function TEMPGripControllerUpdate() {
+        const inputSources = session.inputSources;
+        for (let i = 0; i < inputSources.length; i += 1) {
+            const inputSource = inputSources[i];
+
+            //console.log("input source found=[" + i + "]");
+            //console.log("has grip: " + (inputSource.gripSpace ? true : false));
+
+            if (inputSource.gripSpace) {
+                const gripPose = frame.getPose(inputSource.gripSpace, xrInfo.immersiveRefSpace);
+                if (gripPose) {
+                    //console.log("handedness: " + inputSource.handedness);
+
+                    // TODO(TR): temporary "hack", 
+                    switch (inputSource.handedness) {
+                    case "left": {
+                        // TODO(TR): should use the transform matrices provided for position/orientation,
+                        // also provides a "pointer tip" transform
+                        MR.leftController = inputSource.gamepad;
+                        break;
+                    }
+                    case "right": {
+                        MR.rightController = inputSource.gamepad;
+                        break;
+                    }
+                    case "none": {
+                        break;
+                    }
+                    }
+                // If we have a grip pose use it to render a mesh showing the
+                // position of the controller.
+                // NOTE: this contains a "handedness property" so we don't have to guess. Wonderful!
+                // i.e. gripPose.transform.matrix, inputSource.handedness;
+                }
+            }
+        }
+    }
+    TEMPGripControllerUpdate();
+
+    // API-specific information
+    // (transforms, tracking, direct access to render state, etc.)
+    self.systemArgs.frame = frame;
+    self.systemArgs.pose  = pose;
+    // renderState contains depthFar, depthNear
+    self.systemArgs.renderState = session.renderState;
+
+    const gl        = self.GPUCtx;
+    const glAPI     = self.gpuAPI;
+    const glCtxInfo = self.gpuCtxInfo;
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+  
+	// Clear the framebuffer
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    {
+        const viewport = self.systemArgs.viewport;
+
+        const views     = pose.views;
+        const viewCount = views.length;
+
+        // in this configuration of the animation loop,
+        // for each view, we re-draw the whole screne -
+        // other configurations possible 
+        // (for example, for each object, draw every view (to avoid repeated binding))
+        for (let i = 0; i < viewCount; i += 1) {
+            self.systemArgs.viewIdx = i;
+
+            const view     = views[i];
+            const viewport = layer.getViewport(view);
+
+            self.systemArgs.view     = view;
+            self.systemArgs.viewport = viewport;
+
+            gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+
+            let projectionMatrix = view.projectionMatrix;
+            let cameraMatrix = view.transform.inverse.matrix;
+
+
+            // per-eye rendering here in this loop configuration
+            // 
+            // graphics!! --------------------------------------
+            //
+            // your content here
+        }
+    }
+
+    // tells the input system that the end of the frame has been reached
+    Input.setGamepadStateChanged(false);
+}
