@@ -223,7 +223,7 @@ async function setup(w) {
    gl.enable(gl.DEPTH_TEST);
    gl.enable(gl.CULL_FACE);
    gl.enable(gl.BLEND);
-   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); 
+   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 }
 
 let drawShape = (shape, matrix, color, opacity, texture, textureScale) => {
@@ -334,6 +334,9 @@ function drawScene(time) {
 }
 
 function drawFrame(time) {
+    // Zhenyi
+    pollAvatarData();
+    
     renderList.beginFrame();
     drawScene(time);
     renderList.endFrame(drawShape);

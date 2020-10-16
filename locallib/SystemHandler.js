@@ -8,17 +8,17 @@ export function pollGrab(state) {
             if (checkIntersection(controller.tip(), MR.objs[i].shape))
                 if (MR.objs[i].lock.locked) {
                     MR.objs[i].position = controller.tip();
-		    MR.syncClient.send({
+                    MR.syncClient.send({
                         type: "object",
                         uid: MR.objs[i].uid,
                         state: {
-                           position: MR.objs[i].position,
-                           orientation: MR.objs[i].orientation
+                            position: MR.objs[i].position,
+                            orientation: MR.objs[i].orientation
                         },
                         lockid: MR.playerid
                     });
                 }
-		else
+                else
                     MR.objs[i].lock.request(MR.objs[i].uid);
     }
 }
@@ -26,18 +26,18 @@ export function pollGrab(state) {
 window.pollGrab = pollGrab;
 
 export function checkIntersection(P, verts) {
-    const lo = [ 10000, 10000, 10000 ],
-          hi = [-10000,-10000,-10000 ];
+    const lo = [10000, 10000, 10000],
+        hi = [-10000, -10000, -10000];
 
-    for (let i = 0 ; i < verts.length ; i += 3)
-        for (let j = 0 ; j < 3 ; j++) {
-           if (verts[i+j] < lo[j]) lo[j] = verts[i+j];
-           if (verts[i+j] > hi[j]) hi[j] = verts[i+j];
+    for (let i = 0; i < verts.length; i += 3)
+        for (let j = 0; j < 3; j++) {
+            if (verts[i + j] < lo[j]) lo[j] = verts[i + j];
+            if (verts[i + j] > hi[j]) hi[j] = verts[i + j];
         }
 
     return P[0] > lo[0] && P[0] < hi[0] &&
-           P[1] > lo[1] && P[1] < hi[1] &&
-           P[2] > lo[2] && P[2] < hi[2] ;
+        P[1] > lo[1] && P[1] < hi[1] &&
+        P[2] > lo[2] && P[2] < hi[2];
 }
 
 export function releaseLocks(state) {
@@ -62,20 +62,20 @@ export function pollAvatarData() {
             return;
         }
 
-        const pose        = poseInfo.pose;
+        const pose = poseInfo.pose;
 
         // for record of what is available
-        const xform       = pose.transform;
-        const position    = xform.position;
+        const xform = pose.transform;
+        const position = xform.position;
         const orientation = xform.orientation;
-        const matrix      = xform.matrix;
-        const inverse     = xform.inverse;
+        const matrix = xform.matrix;
+        const inverse = xform.inverse;
 
         // custom since otherwise would need to adapt to using {x:val, y:val, z:val, ...}
-        const headsetPos  = poseInfo.positionAsArray;
-        const headsetRot  = poseInfo.orientationAsArray;
+        const headsetPos = poseInfo.positionAsArray;
+        const headsetRot = poseInfo.orientationAsArray;
 
-        if (MR.leftController != null && 
+        if (MR.leftController != null &&
             MR.rightController != null) {
             //Controllers
             const controllerRight = MR.rightController;
@@ -98,66 +98,66 @@ export function pollAvatarData() {
                             5: home button
             */
             const avatar_message = {
-            type: "avatar",
-            user: MR.playerid,
-            state: {
-                mode: MR.UserType.vr,
+                type: "avatar",
+                user: MR.playerid,
+                state: {
+                    mode: MR.UserType.vr,
 
-                //pos: CG.matrixTransform(MR.avatarMatrixForward, headsetPos),
-                pos: CG.matrixTransform(MR.avatarMatrixInverse, headsetPos),
+                    //pos: CG.matrixTransform(MR.avatarMatrixForward, headsetPos),
+                    pos: CG.matrixTransform(MR.avatarMatrixInverse, headsetPos),
 
-                rot: headsetRot,
-                controllers: {
-                left: {
+                    rot: headsetRot,
+                    controllers: {
+                        left: {
 
-                    //pos: CG.matrixTransform(MR.avatarMatrixForward, [
-                    pos: CG.matrixTransform(MR.avatarMatrixInverse, [
+                            //pos: CG.matrixTransform(MR.avatarMatrixForward, [
+                            pos: CG.matrixTransform(MR.avatarMatrixInverse, [
 
-                        controllerLeftPos[0],
-                        controllerLeftPos[1],
-                        controllerLeftPos[2]
-                    ]),
-                    rot: [
-                        controllerLeftRot[0],
-                        controllerLeftRot[1],
-                        controllerLeftRot[2],
-                        controllerLeftRot[3]
-                    ],
-                    analog: controllerLeftButtons[0].pressed,
-                    trigger: controllerLeftButtons[1].pressed,
-                    sideTrigger: controllerLeftButtons[2].pressed,
-                    x: controllerLeftButtons[3].pressed,
-                    y: controllerLeftButtons[4].pressed,
-                    home: controllerLeftButtons[5].pressed,
-                    analogx: controllerLeft.axes[0],
-                    analogy: controllerLeft.axes[1]
-                },
-                right: {
+                                controllerLeftPos[0],
+                                controllerLeftPos[1],
+                                controllerLeftPos[2]
+                            ]),
+                            rot: [
+                                controllerLeftRot[0],
+                                controllerLeftRot[1],
+                                controllerLeftRot[2],
+                                controllerLeftRot[3]
+                            ],
+                            analog: controllerLeftButtons[0].pressed,
+                            trigger: controllerLeftButtons[1].pressed,
+                            sideTrigger: controllerLeftButtons[2].pressed,
+                            x: controllerLeftButtons[3].pressed,
+                            y: controllerLeftButtons[4].pressed,
+                            home: controllerLeftButtons[5].pressed,
+                            analogx: controllerLeft.axes[0],
+                            analogy: controllerLeft.axes[1]
+                        },
+                        right: {
 
-                    //pos: CG.matrixTransform(MR.avatarMatrixForward, [
-                    pos: CG.matrixTransform(MR.avatarMatrixInverse, [
+                            //pos: CG.matrixTransform(MR.avatarMatrixForward, [
+                            pos: CG.matrixTransform(MR.avatarMatrixInverse, [
 
-                        controllerRightPos[0],
-                        controllerRightPos[1],
-                        controllerRightPos[2]
-                    ]),
-                    rot: [
-                        controllerRightRot[0],
-                        controllerRightRot[1],
-                        controllerRightRot[2],
-                        controllerRightRot[3]
-                    ],
-                    analog: controllerRightButtons[0].pressed,
-                    trigger: controllerRightButtons[1].pressed,
-                    sideTrigger: controllerRightButtons[2].pressed,
-                    x: controllerRightButtons[3].pressed,
-                    y: controllerRightButtons[4].pressed,
-                    home: controllerRightButtons[5].pressed,
-                    analogx: controllerRight.axes[0],
-                    analogy: controllerRight.axes[1]
+                                controllerRightPos[0],
+                                controllerRightPos[1],
+                                controllerRightPos[2]
+                            ]),
+                            rot: [
+                                controllerRightRot[0],
+                                controllerRightRot[1],
+                                controllerRightRot[2],
+                                controllerRightRot[3]
+                            ],
+                            analog: controllerRightButtons[0].pressed,
+                            trigger: controllerRightButtons[1].pressed,
+                            sideTrigger: controllerRightButtons[2].pressed,
+                            x: controllerRightButtons[3].pressed,
+                            y: controllerRightButtons[4].pressed,
+                            home: controllerRightButtons[5].pressed,
+                            analogx: controllerRight.axes[0],
+                            analogy: controllerRight.axes[1]
+                        }
+                    }
                 }
-                }
-            }
             };
 
             if (MR.playerid == -1) {
@@ -180,10 +180,10 @@ export function pollAvatarData() {
             }
         };
         try {
-        //console.log(avatar_message);
-        MR.syncClient.send(avatar_message);
+            //console.log(avatar_message);
+            MR.syncClient.send(avatar_message);
         } catch (err) {
-        console.log(err);
+            console.log(err);
         }
     }
 }

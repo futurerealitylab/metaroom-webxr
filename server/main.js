@@ -54,7 +54,7 @@ parser.addArgument(
     ['-ssl', '--enablessl'],
     {
         help: 'enable SSL for use with HTTPS/certificates',
-        defaultValue: true
+        defaultValue: true // true if we want to use https locally, change it later
     }
 );
 parser.addArgument(
@@ -362,7 +362,7 @@ try {
         ws.index = wsIndex++;
         websocketMap.set(ws.index, ws);
 
-        console.log("connection:", ws.index);
+        console.log("connection:",ws, ws.index);
 
         worldsSources = [];
 
