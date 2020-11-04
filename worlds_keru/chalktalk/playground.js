@@ -497,6 +497,16 @@ function drawScene(time, w) {
   m.rotateY(rotY);
   m.rotateZ(rotZ);
 
+  //TEST HIERACHY
+  let ma = new Matrix();
+  console.log(" ma init" + ma);
+  ma = mCube().move(0, 3, 0).size(0.1).matrix;
+  console.log(" ma before" + ma);
+//  ma = CG.matrixMultiply(ma, CG.matrixTranslate(0, 2, 0));
+  console.log(" ma after" + ma);
+//  mSphere().move(0,1,0);
+drawShape(CG.cube, ma, [1,1,1], 1, new TextureInfo(), 0);
+
   mCube().move(0, .01, 0).size(-sw / 2, .01, -sw / 2).color(superWhite).textureView(w.textures[5].lookupImageByID(1)).textureAtlas(w.textures[5]); // SAFE AREA - RUG
   mCube().size(rw / 2, .001, rw / 2).color(superWhite).textureView(w.textures[7].lookupImageByID(1)).textureAtlas(w.textures[7]); // FLOOR
 
@@ -580,6 +590,7 @@ function drawScene(time, w) {
   mCylinder().move(-rw / 2 + 0.1, 6, 0).size(1.5, 1.5, 0.2).turnY(Math.PI / 2).color(white); // CLOCK FACE
   mCube().turnX(rotH).move(-rw / 2 + 0.3, 6 + Math.cos(rotH) * hL / 2, -Math.sin(rotH) * hL / 2).size(0.03, 0.03, hL); // HOUR HAND
   mCube().turnX(rotM).move(-rw / 2 + 0.3, 6 + Math.cos(rotM) * mL / 2, -Math.sin(rotM) * mL / 2).size(0.025, 0.025, mL); // MINUTE HAND
+
 
   // TEST EXTRUDE SHAPE
   let createCircularPath = n => {

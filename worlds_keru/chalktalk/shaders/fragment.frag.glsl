@@ -14,7 +14,7 @@ in vec3 vBin; // BINORMAL
 in vec2 vUV; // U,V
 
 
-#define LDIR_MAX_COUNT (3)
+#define LDIR_MAX_COUNT (1)
 
 vec3 Ldir[LDIR_MAX_COUNT];
 vec3 Lrgb[LDIR_MAX_COUNT];
@@ -28,6 +28,7 @@ uniform float uTexScale;
 uniform float uBrightness;
 
 uniform int uFxMode;
+uniform vec3 uWindowDir;
 
 // base
 uniform sampler2D uTex0;
@@ -95,12 +96,14 @@ void main() {
   float p = 30.;
   float pMet = 40.;
 
-  Ldir[0] = normalize(vec3(1., .5, 2.));
-  Ldir[1] = normalize(vec3(-1., -.5, -2.));
-  Ldir[2] = normalize(vec3(-1., 0, 0.5));
-  Lrgb[0] = vec3(.7, .75, .8);
-  Lrgb[1] = vec3(.8, .75, .7);
-  Lrgb[2] = vec3(.1, .15, .2);
+  Ldir[0] = normalize(uWindowDir);
+//  Ldir[1] = normalize(uWindowDir);
+//  Ldir[2] = normalize(uWindowDir);
+//  Ldir[1] = normalize(vec3(-1., -.5, -2.));
+//  Ldir[2] = normalize(vec3(-1., 0, 0.5));
+  Lrgb[0] = vec3(0.85, .75, .7);
+//  Lrgb[1] = vec3(.8, .75, .7);
+//  Lrgb[2] = vec3(.1, .15, .2);
 
   vec3 normal = normalize(vNor);
   vec3 color = ambient;
