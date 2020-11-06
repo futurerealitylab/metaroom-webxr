@@ -425,19 +425,46 @@ let   tw = 1.5; // TABLE WIDTH
 const sth = .1; // SEAT HEIGHT
 const stw = .8 ; // SEAT WIDTH
 
-function drawScene(time, w) {
-    for (let i = 0 ; i < 2 ; i++)
-       if (controllerMatrix[i]) {
-          m.identity();
-          m.multiply(controllerMatrix[i]);
-	      let triggerPressed = buttonState[i][0];
-	      let gripPressed = buttonState[i][1];
 
-          mTorus().move(0,0,-.05).size(.03,.03,.033).color(triggerPressed ? 1 : 0, 0, 0);
-          mCylinder().move(0,-.01,.01).size(.02,.02,.05).color(0,0,0);
-	      let gx = gripPressed ? .01 : .013;
-          mCube().move(i==0?gx:-gx,-.01,.01).size(.01).color(gripPressed ? [1,0,0] : [.1,.1,.1]);
-       }
+////////////////////////////////////////////////////////////////
+//
+// HANDLE CONTROLLER DRAWING AND CONTROLLER BUTTON INPUT ////////
+
+let buttonState = {left: [], right: []};
+for (let i = 0 ; i < 7 ; i++)
+   buttonState.left[i] = buttonState.right[i] = false;
+
+let onPress = (hand, button) => {
+   console.log('pressed', hand, 'button', button);
+}
+
+let onRelease = (hand, button) => {
+   console.log('released', hand, 'button', button);
+}
+
+let controllerMatrix = {left: [], right: []};
+
+function drawControllers() {
+   for (let hand in controllerMatrix)
+      if (controllerMatrix[hand]) {
+         m.identity();
+         m.multiply(controllerMatrix[hand]);
+         let triggerPressed = buttonState[hand][0];
+         let gripPressed = buttonState[hand][1];
+
+         mTorus().move(0,0,-.05).size(.03,.03,.033).color(triggerPressed ? 1 : 0, 0, 0);
+         mCylinder().move(0,-.01,.01).size(.02,.02,.05).color(0,0,1);
+         let gx = gripPressed ? .01 : .013;
+         mCube().move(hand=='left'?gx:-gx,-.01,.01).size(.01).color(gripPressed ? [1,0,0] : [.1,.1,.1]);
+   }
+
+}
+
+////////////////////////////////////////////////////////////////
+
+
+function drawScene(time, w) {
+    drawControllers();
 
     m.identity();
     m.scale(FEET_TO_METERS);
@@ -605,20 +632,6 @@ function drawFrame(time, w) {
     renderList.endFrame(drawShape);
 }
 
-let buttonState = [[],[]];
-for (let i = 0 ; i < 7 ; i++)
-   buttonState[0][i] = buttonState[1][i] = false;
-
-let onPress = (hand, button) => {
-   console.log('pressed', hand==0 ? 'left' : 'right', 'button', button);
-}
-
-let onRelease = (hand, button) => {
-   console.log('released', hand==0 ? 'left' : 'right', 'button', button);
-}
-
-let controllerMatrix = [[], []];
-
 let prevTime = 0;
 
 /**
@@ -654,8 +667,7 @@ function animateXRWebGL(t, frame) {
     // containing buffer representations of position, orientation
     xrInfo.poseEXT.update(xrInfo.pose);
 
-    // this crude function updates the controller state
-    function gripControllerUpdate() {
+    function gripControllerUpdate(frame, xrInfo) {
         const inputSources = session.inputSources;
         for (let i = 0; i < inputSources.length; i += 1) {
             const inputSource = inputSources[i];
@@ -666,29 +678,27 @@ function animateXRWebGL(t, frame) {
                 );
 	            let gamepad = inputSource.gamepad;
                 if (gripPose) {
+                    let hand = inputSource.handedness;
 
-                    controllerMatrix[i] = gripPose.transform.matrix;
+                    controllerMatrix[hand] = gripPose.transform.matrix;
 
-	                let h = 0;
                     switch (inputSource.handedness) {
 	                case 'left' : MR.leftController  = gamepad; break;
-		            case 'right': MR.rightController = gamepad; h = 1; break;
-		            }
+		        case 'right': MR.rightController = gamepad; break;
+		    }
                     for (let i = 0 ; i < gamepad.buttons.length ; i++) {
-	                    let button = gamepad.buttons[i];
-                        if (button.pressed && ! buttonState[h][i]) {
-			                onPress(h, i);
-                        }
-                        if (! button.pressed && buttonState[h][i]) {
-			                onRelease(h, i);
-                        }
-                        buttonState[h][i] = button.pressed;
+	                let button = gamepad.buttons[i];
+                        if (button.pressed && ! buttonState[hand][i])
+			    onPress(hand, i);
+                        if (! button.pressed && buttonState[hand][i])
+			    onRelease(hand, i);
+                        buttonState[hand][i] = button.pressed;
                     }
                 }
             }
         }
     }
-    gripControllerUpdate();
+    gripControllerUpdate(frame, xrInfo);
 
     // API-specific information
     // (transforms, tracking, direct access to render state, etc.)

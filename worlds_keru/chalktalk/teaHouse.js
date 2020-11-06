@@ -460,24 +460,57 @@ const sth = .1; // SEAT HEIGHT
 const stw = .8; // SEAT WIDTH
 const bcY = 17 * rh / 32 - 0.74; // BEAM CENTER Y
 const bh = 7 * rh / 16 - 0.3; // BEAM HEIGHT
-let handPos = [
-  [],
-  []
-];
 
-let pHandPos = [
-  [],
-  []
-];
-
-let grab = [false, false];
-let justGrab = [true, true];
 let grotX = 0;
 let grotY = 0;
 let moved = false;
 let movePose = [0,0,0];
 let moveMat = [];
 let detMove = [0,0,0];
+
+
+////////////////////////////////////////////////////////////////
+//
+// HANDLE CONTROLLER DRAWING AND CONTROLLER BUTTON INPUT ////////
+
+let handPos = {left: [], right: []};
+let grab = {left: false, right: false};
+let justGrab = {left: true, right: true};
+
+let controllerMatrix = {left: [], right: []};
+
+let buttonState = {left: [], right: []};
+for (let i = 0 ; i < 7 ; i++)
+   buttonState.left[i] = buttonState.right[i] = false;
+
+let onPress = (hand, button) => {
+   console.log('pressed', hand, 'button', button);
+}
+
+let onRelease = (hand, button) => {
+   console.log('released', hand, 'button', button);
+}
+
+function drawControllers() {
+   for (let hand in controllerMatrix) {
+      if (controllerMatrix[hand]) {
+         m.identity();
+         m.multiply(controllerMatrix[hand]);
+	 m.translate(0,.025,.01);
+         let triggerPressed = buttonState[hand][0];
+         let gripPressed = buttonState[hand][1];
+
+         let s = hand=='left' ? -1 : 1;
+         mTorus().move(-.012*s,-.005,-.05).turnY(.11*s).size(.03,.03,.03).color(triggerPressed ? [1,0,0] : [1,1,1]);
+         mCylinder().move(0,-.01,.01).size(.015,.02,.05).color([1,1,1]);
+         let gx = gripPressed ? .007 : .01;
+         mCube().move(-gx*s,-.01,.01).size(.01).color(gripPressed ? [1,0,0] : [1,1,1]);
+      }
+   }
+}
+
+////////////////////////////////////////////////////////////////
+
 
 
 function drawScene(time, w) {
@@ -492,18 +525,7 @@ function drawScene(time, w) {
   // let mL = 0.55; // MINUTE HAND LENGTH
   // let hL = 0.25; // HOUR HAND LENGTH
 
-  for (let i = 0; i < 2; i++)
-    if (controllerMatrix[i]) {
-      m.identity();
-      m.multiply(controllerMatrix[i]);
-      let triggerPressed = buttonState[i][0];
-      let gripPressed = buttonState[i][1];
-      handPos[i] = m.getTranslate();
-      mTorus().move(0, 0, -.05).size(.03, .03, .033).color(triggerPressed ? 1 : 0, 0, 0);
-      mCylinder().move(0, -.01, .01).size(.02, .02, .05).color(0, 0, 0);
-      let gx = gripPressed ? .01 : .013;
-      mCube().move(i == 0 ? gx : -gx, -.01, .01).size(.01).color(gripPressed ? [1, 0, 0] : [.1, .1, .1]);
-    }
+  drawControllers();
 
   m.identity();
   m.scale(FEET_TO_METERS);
@@ -544,41 +566,32 @@ function drawScene(time, w) {
   m.save();
   m.scale(0.2);
 
-  if(!grab[0] && !grab[1]){
+  if(! grab.left && ! grab.right)
     m.translate(0, 18, 10);
-  }
 
-  for(let i = 0; i < 2; i ++ ){
-    if(CG.distV3(m.getTranslate(),handPos[i])< 0.15) {  // CHECK WHETHER THE CONTROLLER HIT THE CUBE
+  for (let hand in handPos) {
+    if (CG.distV3(m.getTranslate(),handPos[hand]) < 0.15) {  // CHECK WHETHER THE CONTROLLER HIT THE CUBE
       cubeColor = highlightColor;
-      if(buttonState[i][0]) grab[i] = true;      // CHECK WHETHER THE TRIGGER IS PRESSED
+      if (buttonState[hand][0])
+         grab[hand] = true;      // CHECK WHETHER THE TRIGGER IS PRESSED
     }
 
-    if(grab[i]) {
+    if (grab[hand]) {
       moved = true;
       cubeColor = grabColor;
-      movePose = handPos[i];
-      moveMat = controllerMatrix[i];
-      // if(justGrab[i]){
-      //   for(let j = 0; j < 3; j ++ ){
-      //     detMove[j] = m.getTranslate()[j] - handPos[i][j];
-      //     movePose[j] = m.getTranslate()[j] + detMove[j];
-      //   }
-      //   justGrab[i] = false;
-      // }
+      movePose = handPos[hand];
+      moveMat = controllerMatrix[hand];
     }
 
-    if(moved){
+    if (moved) {
       m.multiply(moveMat);
       m.setTranslate(movePose);
       m.translate(0,0,-1);
     }
-    if(!buttonState[i][0]){
-      grab[i] = false;
-      justGrab[i] = true;
+    if (! buttonState[hand][0]) {
+      grab[hand] = false;
+      justGrab[hand] = true;
     }
-
-  //    pHandPos[i] = handPos[i];
   }
 
   drawShape(CG.cube, m.value(), cubeColor, 1, new TextureInfo(), 0);
@@ -753,26 +766,6 @@ function drawFrame(time, w) {
   renderList.endFrame(drawShape);
 }
 
-let buttonState = [
-  [],
-  []
-];
-for (let i = 0; i < 7; i++)
-  buttonState[0][i] = buttonState[1][i] = false;
-
-let onPress = (hand, button) => {
-  console.log('pressed', hand == 0 ? 'left' : 'right', 'button', button);
-}
-
-let onRelease = (hand, button) => {
-  console.log('released', hand == 0 ? 'left' : 'right', 'button', button);
-}
-
-let controllerMatrix = [
-  [],
-  []
-];
-
 let prevTime = 0;
 
 /**
@@ -820,28 +813,27 @@ function animateXRWebGL(t, frame) {
         );
         let gamepad = inputSource.gamepad;
         if (gripPose) {
+	  let hand = inputSource.handedness;
 
-          controllerMatrix[i] = gripPose.transform.matrix;
+          controllerMatrix[hand] = gripPose.transform.matrix;
 
-          let h = 0;
           switch (inputSource.handedness) {
             case 'left':
               MR.leftController = gamepad;
               break;
             case 'right':
               MR.rightController = gamepad;
-              h = 1;
               break;
           }
           for (let i = 0; i < gamepad.buttons.length; i++) {
             let button = gamepad.buttons[i];
-            if (button.pressed && !buttonState[h][i]) {
-              onPress(h, i);
+            if (button.pressed && !buttonState[hand][i]) {
+              onPress(hand, i);
             }
-            if (!button.pressed && buttonState[h][i]) {
-              onRelease(h, i);
+            if (!button.pressed && buttonState[hand][i]) {
+              onRelease(hand, i);
             }
-            buttonState[h][i] = button.pressed;
+            buttonState[hand][i] = button.pressed;
           }
         }
       }
