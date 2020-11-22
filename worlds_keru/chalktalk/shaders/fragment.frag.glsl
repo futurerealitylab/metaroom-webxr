@@ -121,6 +121,8 @@ void main() {
     } else if (uFxMode == 3) {      // glossy rubber
       for (int i = 0; i < LDIR_MAX_COUNT; i += 1)
         color += phongRub(Ldir[i], Lrgb[i], normal, diffuse, specular, p);
+    } else if (uFxMode == 4) {      // 2D
+        color += uColor.rgb;
     }
     fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), uColor.a) * uBrightness;
   } else {
@@ -138,6 +140,8 @@ void main() {
     } else if (uFxMode == 3) {      // glossy rubber
       for (int i = 0; i < LDIR_MAX_COUNT; i += 1)
         color += phongRub(Ldir[i], Lrgb[i], normal, diffuse, specular, p);
+    } else if (uFxMode == 4) {      // 2D
+        color += uColor.rgb;
     }
 
     fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), uColor.a) * uBrightness;
