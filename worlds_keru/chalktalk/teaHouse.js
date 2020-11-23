@@ -604,9 +604,9 @@ function drawScene(time, w) {
   // m.restore();
 
   // QUICK DEMO OF THE GLTF LOADER: CURRENTLY ONLY GET VERTEX POSITIONS
-  avocado.drawCloudPoint(mSphere,15,-1.5,3.2,0);
-  duck.drawCloudPoint(mSphere, 0.008, 0, 3, 0);
-  fox.drawCloudPoint(mSphere, 0.01, 1.5, 3.2, 0);
+  avocado.drawPointCloud(mSphere,15,-1.5,3.2,0);
+  duck.drawPointCloud(mSphere, 0.008, 0, 3, 0);
+  fox.drawPointCloud(mSphere, 0.01, 1.5, 3.2, 0);
 
   //  windowLightDir.restore();
   //  mCube().move(-2, 3, 0).turnX(time).turnY(time).size(0.5).color(white);
