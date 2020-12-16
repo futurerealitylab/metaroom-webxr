@@ -33,8 +33,8 @@ import * as Input from "/lib/input/input.js";
 
 // linear algebra library (can be replaced, but is useful for now)
 import * as _ from "/lib/third-party/gl-matrix-min.js";
-
 let Linalg = glMatrix;
+
 
 let noise = new ImprovedNoise();
 let m = new Matrix();
@@ -52,10 +52,10 @@ let windowLightDir = new Matrix();
 let Maths = null;
 // chalktalk modeler library module
 let CT = null;
-// test gltf loader
+// gltf objects
 let avocado = null;
 let duck = null;
-let fox = null;
+
 /**
  *  setup that needs occurs upon initial setup
  *  and on reload
@@ -69,6 +69,7 @@ async function initCommon(_w) {
   // if it has been changed - located at /lib/math/math.js
   Maths = await MR.dynamicImport("/lib/math/math.js");
   CT = await MR.dynamicImport(Path.fromLocalPath("/chalktalk/chalktalk.js"));
+
 
 }
 
@@ -119,6 +120,7 @@ async function loadImages(w) {
       Path.fromLocalPath("assets/textures/stone.jpg"),
       Path.fromLocalPath("assets/textures/whiteWall.jpg"),
       Path.fromLocalPath("assets/textures/tree.png"),
+      Path.fromLocalPath("assets/Avocado/glTF/Avocado_baseColor.png"),
     ]);
 
     // stores textures
@@ -142,11 +144,11 @@ async function loadImages(w) {
         length: images.length
       }, (_, i) => i),
       images, [
-        "wood", "brick", "tiles", "stones", "stones_bump", "rug1", "concrete", "woodFloor", // 0-7
-        "background", "wood1", "marble", "concrete1", "concrete2", "concrete3", "concrete4", // 8-14
-        "matisse", "bambooFloor", "woodTable", "fabricWall", "paper", "rug2", "b&wpainting", // 15-21
-        "stone", "whiteWall", "tree" // 22 -
-      ],
+      "wood", "brick", "tiles", "stones", "stones_bump", "rug1", "concrete", "woodFloor", // 0-7
+      "background", "wood1", "marble", "concrete1", "concrete2", "concrete3", "concrete4", // 8-14
+      "matisse", "bambooFloor", "woodTable", "fabricWall", "paper", "rug2", "b&wpainting", // 15-21
+      "stone", "whiteWall", "tree", "avocado" // 22 -
+    ],
       0
     );
 
@@ -219,12 +221,14 @@ async function onReload(w, info) {
   }
 
   await initGraphicsCommon(w);
+
   avocado = await Promise.resolve(gltfList.add("../../worlds_keru/chalktalk/assets/Avocado/glTF-pbrSpecularGlossiness/Avocado.gltf",
-                                   "../../worlds_keru/chalktalk/assets/Avocado/glTF-pbrSpecularGlossiness/Avocado.bin"));
-  duck = await Promise.resolve(gltfList.add("../../worlds_keru/chalktalk/assets/Duck/glTF/Duck.gltf",
-                                  "../../worlds_keru/chalktalk/assets/Duck/glTF/Duck0.bin"));
-  fox = await Promise.resolve(gltfList.add("../../worlds_keru/chalktalk/assets/Fox/glTF/Fox.gltf",
-                                  "../../worlds_keru/chalktalk/assets/Fox/glTF/Fox.bin"));
+  "../../worlds_keru/chalktalk/assets/Avocado/glTF-pbrSpecularGlossiness/Avocado.bin",
+  'avocado'));
+duck = await Promise.resolve(gltfList.add("../../worlds_keru/chalktalk/assets/Duck/glTF/Duck.gltf",
+ "../../worlds_keru/chalktalk/assets/Duck/glTF/Duck0.bin",
+ 'duck'));
+
 }
 /**
  *  setup that occurs upon initial setup
@@ -241,18 +245,18 @@ async function setup(w) {
 
   Code_Loader.hotReloadFiles(
     Path.getMainFilePath(), [{
-        path: "lib/math/math.js"
-      },
-      {
-        path: Path.fromLocalPath("chalktalk/chalktalk.js")
-      },
-      {
-        path: Path.fromLocalPath("shaders/vertex.vert.glsl")
-      },
-      {
-        path: Path.fromLocalPath("shaders/fragment.frag.glsl")
-      },
-    ]
+      path: "lib/math/math.js"
+    },
+    {
+      path: Path.fromLocalPath("chalktalk/chalktalk.js")
+    },
+    {
+      path: Path.fromLocalPath("shaders/vertex.vert.glsl")
+    },
+    {
+      path: Path.fromLocalPath("shaders/fragment.frag.glsl")
+    },
+  ]
   );
 
   // call a setup function you define in your local library file,
@@ -350,21 +354,23 @@ async function setup(w) {
   gl.enable(gl.DEPTH_TEST);
   gl.enable(gl.CULL_FACE);
   gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); 
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
   w.frameCount = 0;
+
   avocado = await Promise.resolve(gltfList.add("../../worlds_keru/chalktalk/assets/Avocado/glTF-pbrSpecularGlossiness/Avocado.gltf",
-                                   "../../worlds_keru/chalktalk/assets/Avocado/glTF-pbrSpecularGlossiness/Avocado.bin"));
-  duck = await Promise.resolve(gltfList.add("../../worlds_keru/chalktalk/assets/Duck/glTF/Duck.gltf",
-                                 "../../worlds_keru/chalktalk/assets/Duck/glTF/Duck0.bin"));
-  fox = await Promise.resolve(gltfList.add("../../worlds_keru/chalktalk/assets/Fox/glTF/Fox.gltf",
-                                 "../../worlds_keru/chalktalk/assets/Fox/glTF/Fox.bin"));
+  "../../worlds_keru/chalktalk/assets/Avocado/glTF-pbrSpecularGlossiness/Avocado.bin",
+  'avocado'));
+duck = await Promise.resolve(gltfList.add("../../worlds_keru/chalktalk/assets/Duck/glTF/Duck.gltf",
+ "../../worlds_keru/chalktalk/assets/Duck/glTF/Duck0.bin",
+ 'duck'));
 }
 
-let drawShape = (shape, matrix, color, opacity, textureInfo, fxMode) => {
+let drawShape = (shape, matrix, color, opacity, textureInfo, fxMode, triangleMode) => {
 
   let gl = w.gl;
-  let drawArrays = () => gl.drawArrays(gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+  let drawArrays = () => gl.drawArrays(triangleMode == 1 ? gl.TRIANGLES: gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+  // let drawElements = () =>
   gl.uniform1f(w.uBrightness, 1);
   gl.uniform4fv(w.uColor, color.length == 4 ? color : color.concat([opacity === undefined ? 1 : opacity]));
   gl.uniformMatrix4fv(w.uModel, false, matrix);
@@ -395,8 +401,8 @@ let drawShape = (shape, matrix, color, opacity, textureInfo, fxMode) => {
 
 
   if (shape != w.prev_shape) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, w.buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape), gl.DYNAMIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, w.buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape), gl.DYNAMIC_DRAW);
   }
   // if (textureInfo.isValid) {
   //     gl.bindBuffer(gl.ARRAY_BUFFER, w.bufferAux);
@@ -474,28 +480,56 @@ const sth = .1; // SEAT HEIGHT
 const stw = .8; // SEAT WIDTH
 const bcY = 17 * rh / 32 - 0.74; // BEAM CENTER Y
 const bh = 7 * rh / 16 - 0.3; // BEAM HEIGHT
-let handPos = [
-  [],
-  []
-];
 
-let pHandPos = [
-  [],
-  []
-];
-
-let grab = [false, false];
-let justGrab = [true, true];
 let grotX = 0;
 let grotY = 0;
 let moved = false;
 let movePose = [0, 0, 0];
 let moveMat = [];
 let detMove = [0, 0, 0];
-let gltfVertex = [];
-let gltfMesh = [];
-let loadReady = false;
-let gltfPointNum = 0;
+
+
+////////////////////////////////////////////////////////////////
+//
+// HANDLE CONTROLLER DRAWING AND CONTROLLER BUTTON INPUT ////////
+
+let handPos = { left: [], right: [] };
+let grab = { left: false, right: false };
+let justGrab = { left: true, right: true };
+
+let controllerMatrix = { left: [], right: [] };
+
+let buttonState = { left: [], right: [] };
+for (let i = 0; i < 7; i++)
+  buttonState.left[i] = buttonState.right[i] = false;
+
+let onPress = (hand, button) => {
+  console.log('pressed', hand, 'button', button);
+}
+
+let onRelease = (hand, button) => {
+  console.log('released', hand, 'button', button);
+}
+
+function drawControllers() {
+  for (let hand in controllerMatrix) {
+    if (controllerMatrix[hand]) {
+      m.identity();
+      m.multiply(controllerMatrix[hand]);
+      m.translate(0, .025, .01);
+      let triggerPressed = buttonState[hand][0];
+      let gripPressed = buttonState[hand][1];
+
+      let s = hand == 'left' ? -1 : 1;
+      mTorus().move(-.012 * s, -.005, -.05).turnY(.11 * s).size(.03, .03, .03).color(triggerPressed ? [1, 0, 0] : [1, 1, 1]);
+      mCylinder().move(0, -.01, .01).size(.015, .02, .05).color([1, 1, 1]);
+      let gx = gripPressed ? .007 : .01;
+      mCube().move(-gx * s, -.01, .01).size(.01).color(gripPressed ? [1, 0, 0] : [1, 1, 1]);
+    }
+  }
+}
+
+////////////////////////////////////////////////////////////////
 
 
 
@@ -511,18 +545,7 @@ function drawScene(time, w) {
   // let mL = 0.55; // MINUTE HAND LENGTH
   // let hL = 0.25; // HOUR HAND LENGTH
 
-  for (let i = 0; i < 2; i++)
-    if (controllerMatrix[i]) {
-      m.identity();
-      m.multiply(controllerMatrix[i]);
-      let triggerPressed = buttonState[i][0];
-      let gripPressed = buttonState[i][1];
-      handPos[i] = m.getTranslate();
-      mTorus().move(0, 0, -.05).size(.03, .03, .033).color(triggerPressed ? 1 : 0, 0, 0);
-      mCylinder().move(0, -.01, .01).size(.02, .02, .05).color(0, 0, 0);
-      let gx = gripPressed ? .01 : .013;
-      mCube().move(i == 0 ? gx : -gx, -.01, .01).size(.01).color(gripPressed ? [1, 0, 0] : [.1, .1, .1]);
-    }
+  drawControllers();
 
   m.identity();
   m.scale(FEET_TO_METERS);
@@ -556,57 +579,47 @@ function drawScene(time, w) {
   m.rotateZ(rotZ);
 
   // TEST INTERACT WITH OBJECT: WILL BE PACKED INTO A FUNCTION
-  // let cubeColor = [1, 1, 1];
-  // let highlightColor = [1, 0, 0];
-  // let grabColor = [0, 0, 2];
-  //
-  // m.save();
-  // m.scale(0.2);
-  //
-  // if (!grab[0] && !grab[1]) {
-  //   m.translate(0, 18, 10);
-  // }
-  //
-  // for (let i = 0; i < 2; i++) {
-  //   if (CG.distV3(m.getTranslate(), handPos[i]) < 0.15) { // CHECK WHETHER THE CONTROLLER HIT THE CUBE
-  //     cubeColor = highlightColor;
-  //     if (buttonState[i][0]) grab[i] = true; // CHECK WHETHER THE TRIGGER IS PRESSED
-  //   }
-  //
-  //   if (grab[i]) {
-  //     moved = true;
-  //     cubeColor = grabColor;
-  //     movePose = handPos[i];
-  //     moveMat = controllerMatrix[i];
-  //     // if(justGrab[i]){
-  //     //   for(let j = 0; j < 3; j ++ ){
-  //     //     detMove[j] = m.getTranslate()[j] - handPos[i][j];
-  //     //     movePose[j] = m.getTranslate()[j] + detMove[j];
-  //     //   }
-  //     //   justGrab[i] = false;
-  //     // }
-  //   }
-  //
-  //   if (moved) {
-  //     m.multiply(moveMat);
-  //     m.setTranslate(movePose);
-  //     m.translate(0, 0, -1);
-  //   }
-  //   if (!buttonState[i][0]) {
-  //     grab[i] = false;
-  //     justGrab[i] = true;
-  //   }
-  //
-  //   //    pHandPos[i] = handPos[i];
-  // }
+  let cubeColor = [1, 1, 1];
+  let highlightColor = [1, 0, 0];
+  let grabColor = [0, 0, 2];
 
-  // drawShape(CG.cube, m.value(), cubeColor, 1, new TextureInfo(), 0);
-  // m.restore();
+  m.save();
+  m.scale(0.2);
 
-  // QUICK DEMO OF THE GLTF LOADER: CURRENTLY ONLY GET VERTEX POSITIONS
-  avocado.drawPointCloud(mSphere,15,-1.5,3.2,0);
-  duck.drawPointCloud(mSphere, 0.008, 0, 3, 0);
-  fox.drawPointCloud(mSphere, 0.01, 1.5, 3.2, 0);
+  if (!grab.left && !grab.right)
+    m.translate(0, 18, 10);
+
+  for (let hand in handPos) {
+    if (CG.distV3(m.getTranslate(), handPos[hand]) < 0.15) {  // CHECK WHETHER THE CONTROLLER HIT THE CUBE
+      cubeColor = highlightColor;
+      if (buttonState[hand][0])
+        grab[hand] = true;      // CHECK WHETHER THE TRIGGER IS PRESSED
+    }
+
+    if (grab[hand]) {
+      moved = true;
+      cubeColor = grabColor;
+      movePose = handPos[hand];
+      moveMat = controllerMatrix[hand];
+    }
+
+    if (moved) {
+      m.multiply(moveMat);
+      m.setTranslate(movePose);
+      m.translate(0, 0, -1);
+    }
+    if (!buttonState[hand][0]) {
+      grab[hand] = false;
+      justGrab[hand] = true;
+    }
+  }
+
+  drawShape(CG.cube, m.value(), cubeColor, 1, new TextureInfo(), 0);
+  m.restore();
+
+  let avo = () => renderList.add(avocado.drawMeshData());
+  avo().move(-0.6,2.5,0).size(13).turnY(0.2*time).color(white).vtxMode(1);
+
 
   //  windowLightDir.restore();
   //  mCube().move(-2, 3, 0).turnX(time).turnY(time).size(0.5).color(white);
@@ -777,26 +790,6 @@ function drawFrame(time, w) {
   renderList.endFrame(drawShape);
 }
 
-let buttonState = [
-  [],
-  []
-];
-for (let i = 0; i < 7; i++)
-  buttonState[0][i] = buttonState[1][i] = false;
-
-let onPress = (hand, button) => {
-  console.log('pressed', hand == 0 ? 'left' : 'right', 'button', button);
-}
-
-let onRelease = (hand, button) => {
-  console.log('released', hand == 0 ? 'left' : 'right', 'button', button);
-}
-
-let controllerMatrix = [
-  [],
-  []
-];
-
 let prevTime = 0;
 
 /**
@@ -844,28 +837,27 @@ function animateXRWebGL(t, frame) {
         );
         let gamepad = inputSource.gamepad;
         if (gripPose) {
+          let hand = inputSource.handedness;
 
-          controllerMatrix[i] = gripPose.transform.matrix;
+          controllerMatrix[hand] = gripPose.transform.matrix;
 
-          let h = 0;
           switch (inputSource.handedness) {
             case 'left':
               MR.leftController = gamepad;
               break;
             case 'right':
               MR.rightController = gamepad;
-              h = 1;
               break;
           }
           for (let i = 0; i < gamepad.buttons.length; i++) {
             let button = gamepad.buttons[i];
-            if (button.pressed && !buttonState[h][i]) {
-              onPress(h, i);
+            if (button.pressed && !buttonState[hand][i]) {
+              onPress(hand, i);
             }
-            if (!button.pressed && buttonState[h][i]) {
-              onRelease(h, i);
+            if (!button.pressed && buttonState[hand][i]) {
+              onRelease(hand, i);
             }
-            buttonState[h][i] = button.pressed;
+            buttonState[hand][i] = button.pressed;
           }
         }
       }

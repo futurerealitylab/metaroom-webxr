@@ -53,6 +53,7 @@ vec3 phong(vec3 Ldir, vec3 Lrgb, vec3 normal, vec3 diffuse, vec3 specular, float
   float d = dot(Ldir, normal);
   if (d > 0.)
     color += diffuse * d * Lrgb;
+
   vec3 R = 2. * normal * dot(Ldir, normal) - Ldir;
   float s = dot(R, normal);
   if (s > 0.)
