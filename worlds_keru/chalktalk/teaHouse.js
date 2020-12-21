@@ -473,7 +473,7 @@ const dw = 2.5; // DOOR WIDTH
 const dh = 7; // DOOR HEIGHT
 const rw = 20; // ROOM WIDTH
 const rh = 11; // ROOM HEIGHT
-const sw = 10; // SAFE WIDTH
+const sw = 14; // SAFE WIDTH
 let th = 0.8; // TABLE HEIGHT
 let tw = 1.7; // TABLE WIDTH
 const sth = .1; // SEAT HEIGHT
@@ -503,12 +503,45 @@ let buttonState = { left: [], right: [] };
 for (let i = 0; i < 7; i++)
   buttonState.left[i] = buttonState.right[i] = false;
 
+let flatten = 0, zScale = 1;
+let cursorPath = [];
+let tMode = 0;
+
 let onPress = (hand, button) => {
   console.log('pressed', hand, 'button', button);
+
+  if (hand == 'left' && button == 0) {
+     zScale = 1;
+     cursorPath.push([]);
+  }
+}
+
+let onDrag = (hand, button) => {
+  if (hand == 'left' && button == 0)
+     if (controllerMatrix[hand]) {
+        let P = controllerMatrix[hand].slice(12,15);
+        cursorPath[cursorPath.length-1].push(P);
+     }
 }
 
 let onRelease = (hand, button) => {
   console.log('released', hand, 'button', button);
+
+  if (hand == 'left' && button == 1) {
+     tMode = (tMode + 1) % 3;
+     switch (tMode) {
+     case 1:
+        flatten = 50;
+	break;
+     case 2:
+        cursorPath = [];
+	terrainMesh = createTerrainMesh();
+	break;
+     }
+  }
+
+  if (hand == 'right' && button == 0)
+     nMode = (nMode + 1) % 5;
 }
 
 function drawControllers() {
@@ -529,11 +562,74 @@ function drawControllers() {
   }
 }
 
+let multiline = (path,rgb,width) => {
+   for (let n = 0 ; n < path.length - 1 ; n++)
+      line(path[n], path[n+1], rgb, width);
+}
+
+let line = (a,b,rgb,width) => {
+   let c = CG.subtract(b, a);
+   width = width ? width : 0.01;
+   m.save();
+      m.translate(CG.mix(a,b,.5));
+      m.aimZ(c);
+      mTube3().color(rgb ? rgb : [1,1,1]).size(width,width,CG.norm(c)/2+width*.99);
+   m.restore();
+}
+
 ////////////////////////////////////////////////////////////////
 
 
 
-function drawScene(time, w) {
+///////// DATA FOR NOISE GRID /////////
+
+let N = 3;
+
+let vecs = [];
+for (let y = -N ; y <= N ; y++)
+for (let x = -N ; x <= N ; x++)
+   vecs.push([Math.random() - .5, Math.random() - .5]);
+
+let time = 0;
+
+let nMode = 0;
+
+let sCurve = t => t * t * (3 - 2 * t);
+ 
+let nZ = (x, y, d00, d10, d01, d11) => {
+   return 2 * (d00[0] *  x    + d00[1] *  y   ) * sCurve(1-x) * sCurve(1-y) +
+          2 * (d10[0] * (x-1) + d10[1] *  y   ) * sCurve(x  ) * sCurve(1-y) +
+          2 * (d01[0] *  x    + d01[1] * (y-1)) * sCurve(1-x) * sCurve(y  ) +
+          2 * (d11[0] * (x-1) + d11[1] * (y-1)) * sCurve(x  ) * sCurve(y  ) ;
+}
+
+let createTerrainMesh = () => {
+   let e = 1/5, si = [];
+   for (let y = -N ; y <= N ; y += 1) {
+      for (let v = 0 ; v <= 1.001 ; v += e) {
+         si.push([]);
+         for (let x = -N ; x <= N ; x += 1) {
+	    let n = (2 * N + 1) * (y + N) + (x + N);
+            for (let u = 0 ; u <= 1.001 ; u += e)
+               si[si.length-1].push([x+u,
+	                             y+v,
+				     //nZ(u,v,vecs[n],vecs[n+1],vecs[n+2*N+1],vecs[n+2*N+2])
+				     nZ(u,v, vecs[0],vecs[1],vecs[2],vecs[3])
+				    ]);
+         }
+      }
+   }
+   return CG.shapeImageToTriangleMesh(si);
+}
+
+let terrainMesh;
+
+///////////////////////////////////////
+
+
+
+function drawScene(_time, w) {
+  time = _time;
 
   // var d = new Date();
   // let hours = d.getHours() % 12;
@@ -614,24 +710,104 @@ function drawScene(time, w) {
     }
   }
 
-  drawShape(CG.cube, m.value(), cubeColor, 1, new TextureInfo(), 0);
   m.restore();
 
+ // POSITION THE ROOM WRT THE USER.
+
+ m.translate(0,2.7,1.5);
+
+
+ // NOISE GRID
+
+ if (tMode == 2) {
+ m.save();
+    m.translate(0,2,1);
+    m.rotateX(-3.14159/2);
+    m.scale(.2);
+    let n = 0;
+    for (let y = -N ; y <= N ; y += 1)
+    for (let x = -N ; x <= N ; x += 1) {
+       if (nMode < 4 && x < N) line([x,y,0],[x+1,y,0], [4,4,4]);
+       if (nMode < 4 && y < N) line([x,y,0],[x,y+1,0], [4,4,4]);
+
+       if (nMode > 0 && nMode < 4) line([x-.25,y,-vecs[n][0]/2], [x+.25,y,vecs[n][0]/2], [4,0,0]);
+
+       if (nMode > 1 && nMode < 4) line([x,y-.25,-vecs[n][1]/2], [x,y+.25,vecs[n][1]/2], [0,3,6]);
+
+/*
+       let e = 1/5;
+       if (nMode >= 3 && x < N && y < N)
+          for (let v = 0 ; v <= 1.001 ; v += e)
+          for (let u = 0 ; u <= 1.001 ; u += e) {
+	     let z00 = nZ(u  , v  , vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+	     let z10 = nZ(u+e, v  , vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+	     let z01 = nZ(u  , v+e, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+	     if (u < .99) line([x+u,y+v,z00],[x+u+e,y+v,z10],[4,2,4],.003);
+	     if (v < .99) line([x+u,y+v,z00],[x+u,y+v+e,z01],[4,2,4],.003);
+	  }
+
+*/
+       if (nMode >= 3 && x < N && y < N) {
+          let e = 1/8, f = 1/4;
+
+          for (let u = 0 ; u <= .999 ; u += e)
+          for (let v = 0 ; v <= 1.01 ; v += f) {
+	     let z0 = nZ(u  , v, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+	     let z1 = nZ(u+e, v, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+	     line([x+u,y+v,z0],[x+u+e,y+v,z1],[4,2,4],.003);
+          }
+
+          for (let v = 0 ; v <= .999 ; v += e)
+          for (let u = 0 ; u <= 1.01 ; u += f) {
+	     let z0 = nZ(u, v  , vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+	     let z1 = nZ(u, v+e, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+	     line([x+u,y+v,z0],[x+u,y+v+e,z1],[4,2,4],.004);
+          }
+       }
+
+       n++;
+    }
+/*
+    if (terrainMesh) {
+       let r = renderList.add(terrainMesh);
+       r.color(white);
+    }
+*/
+
+ m.restore();
+ }
+
+ if (flatten >= 0) {
+    zScale *= .97;
+    flatten--;
+ }
+
+ m.save();
+    m.translate(0,.5,2.5);
+    m.scale(1/FEET_TO_METERS);
+    m.translate(0,0,-.5 * sCurve(1-zScale));
+    m.scale(1,1,zScale);
+    for (let n = 0 ; n < cursorPath.length ; n++)
+       multiline(cursorPath[n],[10,0,10],.0013);
+ m.restore();
+
+/*
   let avo = () => renderList.add(avocado.drawMeshData());
   avo().move(-0.6,2.5,0).size(13).turnY(0.2*time).color(white).vtxMode(1);
-
+*/
 
   //  windowLightDir.restore();
   //  mCube().move(-2, 3, 0).turnX(time).turnY(time).size(0.5).color(white);
   mCube().move(0, .01, 0).size(-sw / 2, .01, -sw / 2).color(white).textureView(w.textures[20].lookupImageByID(1)).textureAtlas(w.textures[20]); // SAFE AREA - RUG
   mCube().size(rw / 2, .001, rw / 2).color(0.8, 0.7, 0.7).textureView(w.textures[16].lookupImageByID(1)).textureAtlas(w.textures[16]); // FLOOR
 
-  //THE WALL WITH WINDOW
+  // THE WALL WITH WINDOW
+
   mCube().move(0, rh / 2, rw).size(rw, rh, .001).color(superWhite).textureView(w.textures[24].lookupImageByID(1)).textureAtlas(w.textures[24]); // OUTDOOR VIEW
   mCube().move(0, rh / 2, rw / 2).size(rw / 2, rh / 2, .001).color(white).opacity(0.2).textureView(w.textures[19].lookupImageByID(1)).textureAtlas(w.textures[19]); // WINDOW PAPER
 
-  mCube().move(rw / 2 - rw / 8, rh / 2, rw / 2).size(rw / 8, rh / 2, .3).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL LEFT
-  mCube().move(-rw / 2 + rw / 8, rh / 2, rw / 2).size(rw / 8, rh / 2, .3).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL RIGHT
+  mCube().move(rw / 2 - rw / 8, rh / 2, rw / 2).size(rw / 8, rh / 2, .2).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL LEFT
+  mCube().move(-rw / 2 + rw / 8, rh / 2, rw / 2).size(rw / 8, rh / 2, .2).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL RIGHT
   mCube().move(0, rh - rh / 16, rw / 2).size(rw / 2, rh / 16, .3).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL UP
   mCube().move(0, 0.35, rw / 2).size(rw / 2, 0.3, .3).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL DOWN
 
@@ -642,25 +818,46 @@ function drawScene(time, w) {
   mCube().move(0, 7 * rh / 8, rw / 2).size(rw / 4 + 0.15, 0.1, .35).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // MAIN BEAM HORIZONTAL
   mCube().move(0, 0.6, rw / 2).size(rw / 4 + 0.15, 0.1, .35).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // MAIN BEAM HORIZONTAL
 
-  mCube().move(rw / 4 + 0.05, bcY, rw / 2).size(0.1, bh, 0.35).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]);
-  for (let i = 1; i < 20; i++) {
+  mCube().move(rw / 4 + 0.05, bcY, rw / 2).size(0.1, bh-.1, 0.35).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]);
+
+  for (let i = 1; i < 20; i++)
     mCube().move(rw / 4 - i * rw / 40, bcY, rw / 2).size(0.03, bh, 0.03).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // BEAM VERTICAL i
-  }
-  mCube().move(rw / 4 - rw / 2 - 0.05, bcY, rw / 2).size(0.1, bh, 0.35).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]);
+
+  mCube().move(rw / 4 - rw / 2 - 0.05, bcY, rw / 2).size(0.1, bh-.1, 0.35).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]);
+
+  // PAINTING
 
   mCube().move(0, rh / 2, -rw / 2 + 0.003).turnZ(-Math.PI / 2).size(3.2, 4.8, .0001).color(superWhite).textureView(w.textures[21].lookupImageByID(1)).textureAtlas(w.textures[21]); // PAINTING
+
+  // PAINTING FRAME
+
   mCube().move(0, rh / 2, -rw / 2 + 0.001).turnZ(-Math.PI / 2).size(3.3, 4.9, .0005).color(0.25, 0.2, 0.2).textureView(w.textures[9].lookupImageByID(1)).textureAtlas(w.textures[9]); // PAINTING FRAME
 
+  // SIDE TABLE
+
   mCube().move(0, 0.4, -7 * rw / 16).size(0.4 * rw, 0.4, rw / 16).color(white).color(darkGray).textureView(w.textures[22].lookupImageByID(1)).textureAtlas(w.textures[22]); // SIDE TABLE
+
+  // SIDE TABLE FLOOR
+
   mCube().move(0, 0.01, -3 * rw / 7).size(rw / 2, 0.01, rw / 14); // SIDE TABLE FLOOR
+
+  // SIDE TABLE ROOF
+
   mCube().move(0, 7 * rh / 8, -5 * rw / 14).size(rw / 2, rh / 8, 0.05).color(0.9, 0.8, 0.8).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // SIDE TABLE ROOF
+
+  // WALLS
 
   mCube().move(0, rh / 2, -rw / 2).size(rw / 2, rh / 2, .001).color(0.5, 0.4, 0.4).textureView(w.textures[16].lookupImageByID(1)).textureAtlas(w.textures[16]); // WALL
   mCube().move(rw / 2, rh / 2, 0).size(.001, rh / 2, rw / 2).color(superWhite).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL
   mCube().move(-rw / 2, rh / 2, 0).size(.001, rh / 2, rw / 2).color(superWhite).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL
+
+  // CEILING
+
   mCube().move(0, rh, 0).size(rw / 2, .001, rw / 2).color(white).textureView(w.textures[16].lookupImageByID(1)).textureAtlas(w.textures[16]); // CEILING
 
-  mGluedCylinder().turnX(Math.PI / 2).move(0, 13 * th / 12, 0).size(tw, tw, th / 6).color(0.35, 0.3, 0.3).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
+  // TABLE
+
+  mCube().turnX(Math.PI / 2).move(0, 13 * th / 12, 0).size(tw, tw, th / 6).color(0.35, 0.3, 0.3).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
   mDisk().move(0, 13 * th / 12 + 0.11, 0).turnX(Math.PI / 2).size(tw, tw, 0.01).color(white).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
   mCube().move(0.6 * tw, th / 2, 0.6 * tw).size(0.15, th / 2, 0.15).color(white).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
   mCube().move(0.6 * tw, th / 2, -0.6 * tw).size(0.15, th / 2, 0.15).color(white).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
@@ -668,10 +865,13 @@ function drawScene(time, w) {
   mCube().move(-0.6 * tw, th / 2, -0.6 * tw).size(0.15, th / 2, 0.15).color(white).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
   //mCube().move(0, th / 2, 0).size(tw / 1.5, th / 2, tw / 1.5).color(darkGray).textureView(w.textures[6].lookupImageByID(1)).textureAtlas(w.textures[6]); // TABLE
 
-  mRoundedCylinder().turnX(Math.PI / 2).move(-(sw / 4.5), sth, 0).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
-  mRoundedCylinder().turnX(Math.PI / 2).move((sw / 4.5), sth, 0).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
-  mRoundedCylinder().turnX(Math.PI / 2).move(0, sth, -(sw / 4.5)).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
-  mRoundedCylinder().turnX(Math.PI / 2).move(0, sth, (sw / 4.5)).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
+  // SEATS
+
+  mCube().turnX(Math.PI / 2).move(-(sw / 4.5), sth, 0).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
+  mCube().turnX(Math.PI / 2).move((sw / 4.5), sth, 0).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
+  mCube().turnX(Math.PI / 2).move(0, sth, -(sw / 4.5)).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
+  mCube().turnX(Math.PI / 2).move(0, sth, (sw / 4.5)).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
+
 
   //TEST BEZIER SPLINE
   // let path = CG.sampleBezierPath( [-1,-1/3, 1/3,   1],  // X keys
@@ -853,6 +1053,9 @@ function animateXRWebGL(t, frame) {
             let button = gamepad.buttons[i];
             if (button.pressed && !buttonState[hand][i]) {
               onPress(hand, i);
+            }
+            if (button.pressed && buttonState[hand][i]) {
+              onDrag(hand, i);
             }
             if (!button.pressed && buttonState[hand][i]) {
               onRelease(hand, i);
