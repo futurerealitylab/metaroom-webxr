@@ -274,39 +274,53 @@ function initWithAttributes(gl, attributeDescriptor, attributeState, vertexBuffe
 
 class Mesh {
   // TODO: convert all meshes into this instead of raw float arrays
-  constructor(gl, vertexAttributeDescriptor) {
-    this.attributeState = gl.createVertexArray();  
-    this.vertexBuffer   = gl.createBuffer();
+  constructor(gl, vertexAttributeDescriptor, tripleBuffering) {
+    this.gl = gl;
+    this.attributeStateList = [];//;gl.createVertexArray();  
+    this.vertexBufferList   = [];//gl.createBuffer();
 
-    initWithAttributes(gl, vertexAttributeDescriptor, this.attributeState, this.vertexBuffer);
+    this.activeAttributeState = null;
+    this.activeVertexBuffer   = null;
+
+    this.bufferIdx = 0;
+    this.bufferCount = (tripleBuffering) ? 3 : 1;
+
+    for (let i = 0; i < this.bufferCount; i += 1) {
+      this.attributeStateList.push(this.gl.createVertexArray());
+      this.vertexBufferList.push(this.gl.createBuffer());
+
+      initWithAttributes(this.gl, vertexAttributeDescriptor, this.attributeStateList[i], this.vertexBufferList[i]);
+    }
 
     this.isMesh  = true;
-    Mesh.boundBuffer         = this.vertexBuffer;
-    Mesh.boundAttributeState = this.attributeState;
+    
 
     this.data = null;
     this.activeBufferLength_ = 0;
   }
 
   bind() {
-    if (Mesh.boundAttributeState != this.attributeState) {
-      gl.bindVertexArray(this.attributeState);
-      Mesh.boundAttributeState = this.attributeState;
+    if (Mesh.boundBuffer != this.activeVertexBuffer) {
+
+      this.activeVertexBuffer   = this.vertexBufferList[this.bufferIdx];
+      this.activeAttributeState = this.attributeStateList[this.bufferIdx];
+
+      Mesg.boundBuffer = this.activeVertexBuffer;
+      this.gl.bindVertexArray(this.activeAttributeState);
+      this.gl.bindBuffer(this.activeVertexBuffer);
     }
-    
-    if (Mesh.boundBuffer != this.vertexBuffer) {
-      gl.bindBuffer(this.vertexBuffer);
-      Mesh.boundBuffer = this.vertexBuffer;
-    }    
+    this.bufferIdx = (this.bufferIdx + 1) % this.bufferCount;
   }
 
   upload(target, data, usage) {
     const oldData = this.data;
-    // temp just always upload whole data
+    // TODO temp just always upload whole data
+    // could upload to section of same buffer if there's space 
+    // (for procedural meshes)
     if (true || oldData == null || data.length > oldData) {
-      gl.bufferData(target, data, usage);
+      this.gl.bufferData(target, data, usage);
     } else {
-      gl.bufferSubData(target, 0, data);
+      this.gl.bufferSubData(target, 0, data);
     }
     this.activeBufferLength_ = data.length;
 
@@ -316,9 +330,9 @@ class Mesh {
   uploadSubArray(target, data, usage, byteOffset) {
     const oldData = this.data;
     if (oldData == null || data.length > oldData) {
-      gl.bufferData(target, data, usage);
+      this.gl.bufferData(target, data, usage);
     } else {
-      gl.bufferSubData(target, byteOffset, data);
+      this.gl.bufferSubData(target, byteOffset, data);
     }
   }
 
@@ -327,27 +341,28 @@ class Mesh {
   }
 
   dispose() {
-    gl.deleteBuffer(this.vertexBuffer);
-    gl.deleteVertexArray(this.attributeState);
+    for (let i = 0; i < this.bufferCount; i += 1) {
+      this.gl.deleteVertexArray(this.attributeStateList[i]);
+      this.gl.deleteBuffer(this.vertexBufferList[i]);
+    }
+
+
+
+    if (Mesh.boundBuffer == this.activeVertexBuffer) {
+      this.gl.bindVertexArray(null);
+      this.gl.bindBuffer(null);
+      Mesg.boundBuffer = null;
+    }
 
     this.vertexBuffer   = null;
     this.attributeState = null;
-
-    if (Mesh.boundAttributeState == this.attributeState) {
-      gl.bindVertexArray(null);
-      Mesh.boundAttributeState = null;
-    }
-    if (Mesh.boundBuffer == this.vertexBuffer) {
-      gl.bindBuffer(null);
-      Mesh.boundBuffer = null;
-    }
+    this.activeVertexBuffer = null;
+    this.activeAttributeState = null;
 
     this.data = null;
-    
   }
 }
-Mesh.boundBuffer         = null;
-Mesh.boundAttributeState = null;
+Mesh.boundBuffer = null;
 
 /**
  *  setup that occurs upon initial setup
@@ -476,7 +491,7 @@ async function setup(w) {
     ]
   };
 
-  w.dynamicMesh = new Mesh(gl, defaultVertexAttributeDescriptor);
+  w.dynamicMesh = new Mesh(gl, defaultVertexAttributeDescriptor, true);
 
 
   //let aUVOff = gl.getAttribLocation(w.shader, 'aUVOff');
@@ -501,11 +516,11 @@ duck = await Promise.resolve(gltfList.add("../../worlds_keru/chalktalk/assets/Du
  'duck'));
 }
 
-let drawArrays = (triangleMode, shape) => {
+function drawArrays(triangleMode, shape) {
   gl.drawArrays(triangleMode == 1 ? gl.TRIANGLES: gl.TRIANGLE_STRIP, 0, shape.length() / VERTEX_SIZE);
 }
 
-let drawShape = (shape, matrix, color, opacity, textureInfo, fxMode, triangleMode) => {
+function drawShape(shape, matrix, color, opacity, textureInfo, fxMode, triangleMode) {
 
   let gl = w.gl;
 
@@ -763,7 +778,90 @@ let terrainMesh;
 
 ///////////////////////////////////////
 
+let houseRenderable = null;
 
+function buildHouse() {
+/*
+  let avo = () => renderList().add(avocado.drawMeshData());
+  avo().move(-0.6,2.5,0).size(13).turnY(0.2*time).color(white).vtxMode(1);
+*/
+
+  //  windowLightDir.restore();
+  //  mCube().move(-2, 3, 0).turnX(time).turnY(time).size(0.5).color(white);
+  mCube().move(0, .01, 0).size(-sw / 2, .01, -sw / 2).color(white).textureView(w.textures[20].lookupImageByID(1)).textureAtlas(w.textures[20]); // SAFE AREA - RUG
+  mCube().size(rw / 2, .001, rw / 2).color(0.8, 0.7, 0.7).textureView(w.textures[16].lookupImageByID(1)).textureAtlas(w.textures[16]); // FLOOR
+
+  // THE WALL WITH WINDOW
+
+  mCube().move(0, rh / 2, rw).size(rw, rh, .001).color(superWhite).textureView(w.textures[24].lookupImageByID(1)).textureAtlas(w.textures[24]); // OUTDOOR VIEW
+  mCube().move(0, rh / 2, rw / 2).size(rw / 2, rh / 2, .001).color(white).opacity(0.2).textureView(w.textures[19].lookupImageByID(1)).textureAtlas(w.textures[19]); // WINDOW PAPER
+
+  mCube().move(rw / 2 - rw / 8, rh / 2, rw / 2).size(rw / 8, rh / 2, .2).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL LEFT
+  mCube().move(-rw / 2 + rw / 8, rh / 2, rw / 2).size(rw / 8, rh / 2, .2).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL RIGHT
+  mCube().move(0, rh - rh / 16, rw / 2).size(rw / 2, rh / 16, .3).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL UP
+  mCube().move(0, 0.35, rw / 2).size(rw / 2, 0.3, .3).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL DOWN
+
+  mCube().move(0, bcY, rw / 2).size(0.1, bh, .1).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // MAIN BEAM VERTICAL
+  mCube().move(0, bcY, rw / 2).size(rw / 4, 0.05, .05).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // MAIN BEAM HORIZONTAL
+  mCube().move(0, bcY + rh / 4, rw / 2).size(rw / 4, 0.05, .05).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // MAIN BEAM HORIZONTAL
+  mCube().move(0, bcY - rh / 4, rw / 2).size(rw / 4, 0.05, .05).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // MAIN BEAM HORIZONTAL
+  mCube().move(0, 7 * rh / 8, rw / 2).size(rw / 4 + 0.15, 0.1, .35).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // MAIN BEAM HORIZONTAL
+  mCube().move(0, 0.6, rw / 2).size(rw / 4 + 0.15, 0.1, .35).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // MAIN BEAM HORIZONTAL
+
+  mCube().move(rw / 4 + 0.05, bcY, rw / 2).size(0.1, bh-.1, 0.35).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]);
+
+  for (let i = 1; i < 20; i++)
+    mCube().move(rw / 4 - i * rw / 40, bcY, rw / 2).size(0.03, bh, 0.03).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // BEAM VERTICAL i
+
+  mCube().move(rw / 4 - rw / 2 - 0.05, bcY, rw / 2).size(0.1, bh-.1, 0.35).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]);
+
+  // PAINTING
+
+  mCube().move(0, rh / 2, -rw / 2 + 0.003).turnZ(-Math.PI / 2).size(3.2, 4.8, .0001).color(superWhite).textureView(w.textures[21].lookupImageByID(1)).textureAtlas(w.textures[21]); // PAINTING
+
+  // PAINTING FRAME
+
+  mCube().move(0, rh / 2, -rw / 2 + 0.001).turnZ(-Math.PI / 2).size(3.3, 4.9, .0005).color(0.25, 0.2, 0.2).textureView(w.textures[9].lookupImageByID(1)).textureAtlas(w.textures[9]); // PAINTING FRAME
+
+  // SIDE TABLE
+
+  mCube().move(0, 0.4, -7 * rw / 16).size(0.4 * rw, 0.4, rw / 16).color(white).color(darkGray).textureView(w.textures[22].lookupImageByID(1)).textureAtlas(w.textures[22]); // SIDE TABLE
+
+  // SIDE TABLE FLOOR
+
+  mCube().move(0, 0.01, -3 * rw / 7).size(rw / 2, 0.01, rw / 14); // SIDE TABLE FLOOR
+
+  // SIDE TABLE ROOF
+
+  mCube().move(0, 7 * rh / 8, -5 * rw / 14).size(rw / 2, rh / 8, 0.05).color(0.9, 0.8, 0.8).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // SIDE TABLE ROOF
+
+  // WALLS
+
+  mCube().move(0, rh / 2, -rw / 2).size(rw / 2, rh / 2, .001).color(0.5, 0.4, 0.4).textureView(w.textures[16].lookupImageByID(1)).textureAtlas(w.textures[16]); // WALL
+  mCube().move(rw / 2, rh / 2, 0).size(.001, rh / 2, rw / 2).color(superWhite).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL
+  mCube().move(-rw / 2, rh / 2, 0).size(.001, rh / 2, rw / 2).color(superWhite).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL
+
+  // CEILING
+
+  mCube().move(0, rh, 0).size(rw / 2, .001, rw / 2).color(white).textureView(w.textures[16].lookupImageByID(1)).textureAtlas(w.textures[16]); // CEILING
+
+  // TABLE
+
+  mCube().turnX(Math.PI / 2).move(0, 13 * th / 12, 0).size(tw, tw, th / 6).color(0.35, 0.3, 0.3).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
+  mDisk().move(0, 13 * th / 12 + 0.11, 0).turnX(Math.PI / 2).size(tw, tw, 0.01).color(white).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
+  mCube().move(0.6 * tw, th / 2, 0.6 * tw).size(0.15, th / 2, 0.15).color(white).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
+  mCube().move(0.6 * tw, th / 2, -0.6 * tw).size(0.15, th / 2, 0.15).color(white).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
+  mCube().move(-0.6 * tw, th / 2, 0.6 * tw).size(0.15, th / 2, 0.15).color(white).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
+  mCube().move(-0.6 * tw, th / 2, -0.6 * tw).size(0.15, th / 2, 0.15).color(white).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
+  //mCube().move(0, th / 2, 0).size(tw / 1.5, th / 2, tw / 1.5).color(darkGray).textureView(w.textures[6].lookupImageByID(1)).textureAtlas(w.textures[6]); // TABLE
+
+  // SEATS
+
+  mCube().turnX(Math.PI / 2).move(-(sw / 4.5), sth, 0).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
+  mCube().turnX(Math.PI / 2).move((sw / 4.5), sth, 0).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
+  mCube().turnX(Math.PI / 2).move(0, sth, -(sw / 4.5)).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
+  mCube().turnX(Math.PI / 2).move(0, sth, (sw / 4.5)).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
+}
 
 function drawScene(_time, w) {
   time = _time;
@@ -781,6 +879,13 @@ function drawScene(_time, w) {
   drawControllers();
 
   m.identity();
+
+  if (houseRenderable == null) {
+    mBeginBuild();
+    buildHouse();
+    houseRenderable = mEndBuild();
+  }
+
   m.scale(FEET_TO_METERS);
 
   //QUICK NAVIGATION USING KEYS IN WEB MODE: ← LEFT, → RIGHT, ↑ FORWARD, ↓ BACK
@@ -928,86 +1033,12 @@ function drawScene(_time, w) {
        multiline(cursorPath[n],[10,0,10],.0013);
  m.restore();
 
-/*
-  let avo = () => renderList().add(avocado.drawMeshData());
-  avo().move(-0.6,2.5,0).size(13).turnY(0.2*time).color(white).vtxMode(1);
-*/
+  // draw the house
+  {
+    mList(houseRenderable);
+  }
 
-  //  windowLightDir.restore();
-  //  mCube().move(-2, 3, 0).turnX(time).turnY(time).size(0.5).color(white);
-  mCube().move(0, .01, 0).size(-sw / 2, .01, -sw / 2).color(white).textureView(w.textures[20].lookupImageByID(1)).textureAtlas(w.textures[20]); // SAFE AREA - RUG
-  mCube().size(rw / 2, .001, rw / 2).color(0.8, 0.7, 0.7).textureView(w.textures[16].lookupImageByID(1)).textureAtlas(w.textures[16]); // FLOOR
 
-  // THE WALL WITH WINDOW
-
-  mCube().move(0, rh / 2, rw).size(rw, rh, .001).color(superWhite).textureView(w.textures[24].lookupImageByID(1)).textureAtlas(w.textures[24]); // OUTDOOR VIEW
-  mCube().move(0, rh / 2, rw / 2).size(rw / 2, rh / 2, .001).color(white).opacity(0.2).textureView(w.textures[19].lookupImageByID(1)).textureAtlas(w.textures[19]); // WINDOW PAPER
-
-  mCube().move(rw / 2 - rw / 8, rh / 2, rw / 2).size(rw / 8, rh / 2, .2).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL LEFT
-  mCube().move(-rw / 2 + rw / 8, rh / 2, rw / 2).size(rw / 8, rh / 2, .2).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL RIGHT
-  mCube().move(0, rh - rh / 16, rw / 2).size(rw / 2, rh / 16, .3).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL UP
-  mCube().move(0, 0.35, rw / 2).size(rw / 2, 0.3, .3).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL DOWN
-
-  mCube().move(0, bcY, rw / 2).size(0.1, bh, .1).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // MAIN BEAM VERTICAL
-  mCube().move(0, bcY, rw / 2).size(rw / 4, 0.05, .05).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // MAIN BEAM HORIZONTAL
-  mCube().move(0, bcY + rh / 4, rw / 2).size(rw / 4, 0.05, .05).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // MAIN BEAM HORIZONTAL
-  mCube().move(0, bcY - rh / 4, rw / 2).size(rw / 4, 0.05, .05).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // MAIN BEAM HORIZONTAL
-  mCube().move(0, 7 * rh / 8, rw / 2).size(rw / 4 + 0.15, 0.1, .35).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // MAIN BEAM HORIZONTAL
-  mCube().move(0, 0.6, rw / 2).size(rw / 4 + 0.15, 0.1, .35).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // MAIN BEAM HORIZONTAL
-
-  mCube().move(rw / 4 + 0.05, bcY, rw / 2).size(0.1, bh-.1, 0.35).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]);
-
-  for (let i = 1; i < 20; i++)
-    mCube().move(rw / 4 - i * rw / 40, bcY, rw / 2).size(0.03, bh, 0.03).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // BEAM VERTICAL i
-
-  mCube().move(rw / 4 - rw / 2 - 0.05, bcY, rw / 2).size(0.1, bh-.1, 0.35).color(0.8, 0.7, 0.7).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]);
-
-  // PAINTING
-
-  mCube().move(0, rh / 2, -rw / 2 + 0.003).turnZ(-Math.PI / 2).size(3.2, 4.8, .0001).color(superWhite).textureView(w.textures[21].lookupImageByID(1)).textureAtlas(w.textures[21]); // PAINTING
-
-  // PAINTING FRAME
-
-  mCube().move(0, rh / 2, -rw / 2 + 0.001).turnZ(-Math.PI / 2).size(3.3, 4.9, .0005).color(0.25, 0.2, 0.2).textureView(w.textures[9].lookupImageByID(1)).textureAtlas(w.textures[9]); // PAINTING FRAME
-
-  // SIDE TABLE
-
-  mCube().move(0, 0.4, -7 * rw / 16).size(0.4 * rw, 0.4, rw / 16).color(white).color(darkGray).textureView(w.textures[22].lookupImageByID(1)).textureAtlas(w.textures[22]); // SIDE TABLE
-
-  // SIDE TABLE FLOOR
-
-  mCube().move(0, 0.01, -3 * rw / 7).size(rw / 2, 0.01, rw / 14); // SIDE TABLE FLOOR
-
-  // SIDE TABLE ROOF
-
-  mCube().move(0, 7 * rh / 8, -5 * rw / 14).size(rw / 2, rh / 8, 0.05).color(0.9, 0.8, 0.8).textureView(w.textures[0].lookupImageByID(1)).textureAtlas(w.textures[0]); // SIDE TABLE ROOF
-
-  // WALLS
-
-  mCube().move(0, rh / 2, -rw / 2).size(rw / 2, rh / 2, .001).color(0.5, 0.4, 0.4).textureView(w.textures[16].lookupImageByID(1)).textureAtlas(w.textures[16]); // WALL
-  mCube().move(rw / 2, rh / 2, 0).size(.001, rh / 2, rw / 2).color(superWhite).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL
-  mCube().move(-rw / 2, rh / 2, 0).size(.001, rh / 2, rw / 2).color(superWhite).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // WALL
-
-  // CEILING
-
-  mCube().move(0, rh, 0).size(rw / 2, .001, rw / 2).color(white).textureView(w.textures[16].lookupImageByID(1)).textureAtlas(w.textures[16]); // CEILING
-
-  // TABLE
-
-  mCube().turnX(Math.PI / 2).move(0, 13 * th / 12, 0).size(tw, tw, th / 6).color(0.35, 0.3, 0.3).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
-  mDisk().move(0, 13 * th / 12 + 0.11, 0).turnX(Math.PI / 2).size(tw, tw, 0.01).color(white).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
-  mCube().move(0.6 * tw, th / 2, 0.6 * tw).size(0.15, th / 2, 0.15).color(white).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
-  mCube().move(0.6 * tw, th / 2, -0.6 * tw).size(0.15, th / 2, 0.15).color(white).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
-  mCube().move(-0.6 * tw, th / 2, 0.6 * tw).size(0.15, th / 2, 0.15).color(white).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
-  mCube().move(-0.6 * tw, th / 2, -0.6 * tw).size(0.15, th / 2, 0.15).color(white).textureView(w.textures[17].lookupImageByID(1)).textureAtlas(w.textures[17]); // TABLE
-  //mCube().move(0, th / 2, 0).size(tw / 1.5, th / 2, tw / 1.5).color(darkGray).textureView(w.textures[6].lookupImageByID(1)).textureAtlas(w.textures[6]); // TABLE
-
-  // SEATS
-
-  mCube().turnX(Math.PI / 2).move(-(sw / 4.5), sth, 0).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
-  mCube().turnX(Math.PI / 2).move((sw / 4.5), sth, 0).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
-  mCube().turnX(Math.PI / 2).move(0, sth, -(sw / 4.5)).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
-  mCube().turnX(Math.PI / 2).move(0, sth, (sw / 4.5)).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
 }
 
 function drawFrame(time, w) {
