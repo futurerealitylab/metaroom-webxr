@@ -225,11 +225,76 @@ async function onReload(w, info) {
   avocado = await Promise.resolve(gltfList.add("../../worlds_keru/chalktalk/assets/Avocado/glTF-pbrSpecularGlossiness/Avocado.gltf",
   "../../worlds_keru/chalktalk/assets/Avocado/glTF-pbrSpecularGlossiness/Avocado.bin",
   'avocado'));
-duck = await Promise.resolve(gltfList.add("../../worlds_keru/chalktalk/assets/Duck/glTF/Duck.gltf",
- "../../worlds_keru/chalktalk/assets/Duck/glTF/Duck0.bin",
- 'duck'));
+  duck = await Promise.resolve(gltfList.add("../../worlds_keru/chalktalk/assets/Duck/glTF/Duck.gltf",
+  "../../worlds_keru/chalktalk/assets/Duck/glTF/Duck0.bin",
+  'duck'));
 
 }
+
+
+function initWithAttributes(gl, attributeDescriptor, attributeState, vertexBuffer) {
+  gl.bindVertexArray(attributeState);
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+  for (let i = 0; i < attributeDescriptor.attributes.length; i += 1) {
+    const attrib = attributeDescriptor.attributes[i];
+    gl.enableVertexAttribArray(attrib.shaderLocation);
+    gl.vertexAttribPointer(
+      attrib.shaderLocation,
+      attrib.componentCount,
+      attrib.format, 
+      false, 
+      attributeDescriptor.arrayStride,
+      attributeDescriptor.offset);
+  }
+}
+
+class Mesh {
+  // TODO: convert all meshes into this instead of raw float arrays
+  constructor(gl, vertexAttributeDescriptor) {
+    this.attributeState = gl.createVertexArray();  
+    this.vertexBuffer   = gl.createBuffer();
+
+    initWithAttributes(gl, vertexAttributeDescriptor, this.attributeState, this.vertexBuffer);
+
+    this.isMesh  = true;
+    Mesh.boundBuffer         = this.vertexBuffer;
+    Mesh.boundAttributeState = this.attributeState;
+  }
+
+  bind() {
+    if (Mesh.boundAttributeState != this.attributeState) {
+      gl.bindVertexArray(this.attributeState);
+      Mesh.boundAttributeState = this.attributeState;
+    }
+    
+    if (Mesh.boundBuffer != this.vertexBuffer) {
+      gl.bindBuffer(this.vertexBuffer);
+      Mesh.boundBuffer = this.vertexBuffer;
+    }    
+  }
+
+  dispose() {
+    gl.deleteBuffer(this.vertexBuffer);
+    gl.deleteVertexArray(this.attributeState);
+
+    this.vertexBuffer   = null;
+    this.attributeState = null;
+
+    if (Mesh.boundAttributeState == this.attributeState) {
+      gl.bindVertexArray(null);
+      Mesh.boundAttributeState = null;
+    }
+    if (Mesh.boundBuffer == this.vertexBuffer) {
+      gl.bindBuffer(null);
+      Mesh.boundBuffer = null;
+    }
+    
+  }
+}
+Mesh.boundBuffer         = null;
+Mesh.boundAttributeState = null;
+
 /**
  *  setup that occurs upon initial setup
  *  and on reload
@@ -320,29 +385,45 @@ async function setup(w) {
   gl.bindVertexArray(w.vao);
   gl.useProgram(w.shader);
 
-  w.buffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, w.buffer);
 
   let bpe = Float32Array.BYTES_PER_ELEMENT;
 
-  let aPos = gl.getAttribLocation(w.shader, 'aPos');
-  gl.enableVertexAttribArray(aPos);
-  gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 0);
+  const defaultVertexAttributeDescriptor = {
+    arrayStride : bpe * VERTEX_SIZE,
+    attributes : [
+      { 
+        shaderLocation : gl.getAttribLocation(w.shader, 'aPos'),
+        offset : bpe * 0,
+        format : gl.FLOAT,
 
-  let aNor = gl.getAttribLocation(w.shader, 'aNor');
-  gl.enableVertexAttribArray(aNor);
-  gl.vertexAttribPointer(aNor, 3, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 3);
+        componentCount : 3,
+      },
+      { 
+        shaderLocation : gl.getAttribLocation(w.shader, 'aNor'),
+        offset : bpe * 3,
+        format : gl.FLOAT,
 
-  let aTan = gl.getAttribLocation(w.shader, 'aTan');
-  gl.enableVertexAttribArray(aTan);
-  gl.vertexAttribPointer(aTan, 3, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 6);
+        componentCount : 3,
+      },
+      { 
+        shaderLocation : gl.getAttribLocation(w.shader, 'aTan'),
+        offset : bpe * 6,
+        format : gl.FLOAT,
 
-  let aUV = gl.getAttribLocation(w.shader, 'aUV');
-  gl.enableVertexAttribArray(aUV);
-  gl.vertexAttribPointer(aUV, 2, gl.FLOAT, false, bpe * VERTEX_SIZE, bpe * 9);
+        componentCount : 3,
+      },
+      { 
+        shaderLocation : gl.getAttribLocation(w.shader, 'aUV'),
+        offset : bpe * 9,
+        format : gl.FLOAT,
 
-  w.bufferAux = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, w.bufferAux);
+        componentCount : 2,
+      },
+    ]
+  };
+
+  w.dynamicMesh = new Mesh(gl, defaultVertexAttributeDescriptor);
+
 
   //let aUVOff = gl.getAttribLocation(w.shader, 'aUVOff');
   // gl.enableVertexAttribArray(aUVOff);
@@ -399,10 +480,9 @@ let drawShape = (shape, matrix, color, opacity, textureInfo, fxMode, triangleMod
     gl.uniform1i(w.uTexIndex, -1);
   }
 
-
   if (shape != w.prev_shape) {
-      gl.bindBuffer(gl.ARRAY_BUFFER, w.buffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape), gl.DYNAMIC_DRAW);
+      w.dynamicMesh.bind();
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape), gl.STREAM_DRAW);
   }
   // if (textureInfo.isValid) {
   //     gl.bindBuffer(gl.ARRAY_BUFFER, w.bufferAux);
@@ -505,7 +585,7 @@ for (let i = 0; i < 7; i++)
 
 let flatten = 0, zScale = 1;
 let cursorPath = [];
-let tMode = 0;
+let tMode = 2;
 
 let onPress = (hand, button) => {
   console.log('pressed', hand, 'button', button);
@@ -592,7 +672,7 @@ for (let x = -N ; x <= N ; x++)
 
 let time = 0;
 
-let nMode = 0;
+let nMode = 4;
 
 let sCurve = t => t * t * (3 - 2 * t);
  
@@ -622,7 +702,9 @@ let createTerrainMesh = () => {
    return CG.shapeImageToTriangleMesh(si);
 }
 
+
 let terrainMesh;
+  terrainMesh = createTerrainMesh();
 
 ///////////////////////////////////////
 
@@ -871,115 +953,6 @@ function drawScene(_time, w) {
   mCube().turnX(Math.PI / 2).move((sw / 4.5), sth, 0).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
   mCube().turnX(Math.PI / 2).move(0, sth, -(sw / 4.5)).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
   mCube().turnX(Math.PI / 2).move(0, sth, (sw / 4.5)).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
-
-
-  //TEST BEZIER SPLINE
-  // let path = CG.sampleBezierPath( [-1,-1/3, 1/3,   1],  // X keys
-  //                                 [ 2,   0,   2,   0],  // Y keys
-  //                                 [ 1,  -1,  -1,   1],  // Z keys
-  // 			                          60);
-  // for (let n = 0 ; n < path.length ; n++) {
-  //       mSphere().move(path[n][0], path[n][1], path[n][2]).size(.1);
-  // }
-  //
-
-  //TEST CATMULL RUM SPLINE
-  // let P = [
-  //   [-1, -1, -1],
-  //   [-2 / 3, -.3, 1],
-  //   [1 / 3, -1 / 3, 1],
-  //   [1, 1, -1],
-  //   [-1, -1, -1],
-  // ];
-  //
-  // for (let n = 0; n < P.length; n++) // SHOW KEYS AS LARGE CUBES.
-  //   mCube().move(P[n][0], P[n][1] + 3, P[n][2]).size(.03).turnX(Math.PI / 4).color(darkRed).textureView(w.textures[8].lookupImageByID(1)).textureAtlas(w.textures[8]);;
-  //
-  // for (let n = 0; n <= 50; n++) { // SHOW PATH AS SMALL CUBES.
-  //   let p = CG.evalCRSpline(P, n / 50);
-  //   mCube().move(p[0], p[1] + 3, p[2]).size(.001 * n).textureView(w.textures[8].lookupImageByID(1)).textureAtlas(w.textures[8]);
-  // }
-
-  //TEST LATHE
-  //  let vase = CG.createMeshVertices(30, 30, CG.uvToLathe, [
-  //    CG.bezierToCubic([0.3, .3, .3, .075, .2, .2, 0]), // r
-  //    CG.bezierToCubic([-1, -1, 0, .85, .92, 0.9, 0.9]) // z
-  //  ]);
-  //
-  //  let mVase = () => renderList.add(vase);
-  // mVase().turnX(-Math.PI / 2).move(0, th + 0.4, 0).color(0.01,0.01,0.01).size(0.4).fx(1);
-
-  // SCULPTURES : CURRENTLY JUST SOME CONES
-  // mCone().turnX(Math.PI/2).move(9.,1.,-9).size(0.25,0.25,1.4);
-  // mCone().turnX(Math.PI/2).move(8.2,0.8,-9).size(0.3,0.3,0.8).color(0.2,0.1,0.1);
-  // mCone().turnX(Math.PI/2).move(7,1.,-9).size(0.3,0.3,1.).color(0.4,0.4,0.4).fx(1);
-
-  // TEST MATERIALS: fx(1) - PLASTER, fx(2) - METALLIC, fx(3) - GLOSSY RUBBER
-  // mTorus().turnY(time).move(-1.5, th + 2., 0).size(0.2).color(0.2, 0.1, 0.1).fx(2);
-  // mTorus().turnY(time).move(-0.5, th + 2., 0).size(0.2).color(0.5, 0.2, 0.25);
-  // mTorus().turnY(time).move(0.5, th + 2., 0).size(0.2).color(.3, .4, .8).fx(3);
-  // mTorus().turnY(time).move(1.5, th + 2., 0).size(0.2).color(.68, .65, .65).fx(1);
-
-
-
-  // TEST EXTRUDE SHAPE
-  // let createCircularPath = n => {
-  //   let path = [];
-  //   for (let i = 0; i <= n; i++) {
-  //     let theta = 2 * Math.PI * i / n;
-  //     let c = Math.cos(theta);
-  //     let s = Math.sin(theta);
-  //     path.push([c, s, 0, c, s, 0]);
-  //   }
-  //   return path;
-  // }
-  //
-  // let createStraightPath = n => {
-  //   let path = [];
-  //   for (let i = 0; i <= n; i++) {
-  //     path.push([0, i/n, 0, 0, i/n, 0]);
-  //   }
-  //   return path;
-  // }
-  //
-  // let createRingShape = function() {
-  //   let a = .085,
-  //     b = .04,
-  //     c = .16,
-  //     A = .46,
-  //     B = .6,
-  //     C = .2;
-  //
-  //   let ringProfile = CG.sampleBezierPath(
-  //     [a, b, 0, 0, 0, 0, 0, 0, b, a, c, c, a], [A, B, B, A, C, -C, -A, -B, -B, -A, -C, C, A], [0, 0, 0, 0],
-  //     20);
-  //   return CG.extrude(ringProfile, createStraightPath(50));
-  // }
-  //
-  // let mRing = () => renderList.add(createRingShape());
-  //
-  // mRing().move(0, 3, 0).turnX(time).turnY(time).size(10, 10, 10).color(0.1, 0.1, 0.08).fx(2);
-  //
-
-  // test textured cubes
-
-  // const cycleIdx = Math.floor((w.frameCount / 60) % 3);
-  // mCube    ().move(-2,.5, -4).turnY(time).size(.65).color(1,1,1)
-  // // defines image region of texture (for now, the entire texture, always)
-  // .textureView(w.textures[5].lookupImageByID(1))
-  // // base
-  // .textureAtlas(w.textures[5])
-  // // bump
-  // .textureAtlas(w.textures[4]);
-  //
-  //
-  // mCube    ().move(-0,.5, -4).turnY(time).size(.65).color(1,1,1)
-  // .textureView(w.textures[(cycleIdx + 1) % 3].lookupImageByID(1))
-  // .textureAtlas(w.textures[(cycleIdx + 1) % 3]);
-  //
-  // mCube    ().move(2,.5, -4).turnY(time).size(.65).color(1,1,1)
-  // .textureView(w.textures[(cycleIdx + 2) % 3].lookupImageByID(1))
-  // .textureAtlas(w.textures[(cycleIdx + 2) % 3]);
 }
 
 function drawFrame(time, w) {
@@ -1128,6 +1101,7 @@ function animatePCWebGL(t) {
   window.dt = self.timeMS - prevTime;
   prevTime = self.timeMS;
 
+
   // this is the state variable
   const w = self.customState;
 
@@ -1142,7 +1116,7 @@ function animatePCWebGL(t) {
   self.systemArgs.viewIdx = 0;
 
   Linalg.mat4.identity(self._viewMatrix);
-  //self._viewMatrix = CG.matrixMultiply(self._viewMatrix, CG.matrixRotateY(self.time));
+  self._viewMatrix = CG.matrixMultiply(self._viewMatrix, CG.matrixTranslate(0.1*Math.cos(self.time), -.5 + 0.1 * Math.sin(self.time), 0));
 
   Linalg.mat4.perspective(self._projectionMatrix,
     Math.PI / 4,
