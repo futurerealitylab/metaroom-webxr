@@ -33,8 +33,31 @@ import * as Input from "/lib/input/input.js";
 
 // linear algebra library (can be replaced, but is useful for now)
 import * as _ from "/lib/third-party/gl-matrix-min.js";
-let Linalg = glMatrix;
+const Linalg = glMatrix;
 
+import {
+  list as renderList,
+  TextureInfo,
+  mCube,
+  mPoly4,
+  mPolyhedron,
+  mQuad,
+  mSquare,
+  mSphere,
+  mCylinder,
+  mRoundedCylinder,
+  mTorus,
+  mDisk,
+  mCone,
+  mTube,
+  mTube3,
+  mGluedCylinder,
+  mList,
+  mBeginBuild,   
+  mEndBuild
+} from "/lib/primitive/renderList.js";
+
+import gltfList from "/lib/primitive/gltfLoader.js"
 
 let noise = new ImprovedNoise();
 let m = new Matrix();
@@ -365,7 +388,7 @@ async function setup(w) {
   // initialize state common to first launch and reloading
   await initCommon(w);
 
-  renderList.setWorld(w);
+  renderList().setWorld(w);
 
   w.input = {
     turnAngle: 0,
@@ -399,7 +422,7 @@ async function setup(w) {
 
   await loadImages(w);
 
-  renderList.setTextureCatalogue(w.textureCatalogue);
+  renderList().setTextureCatalogue(w.textureCatalogue);
 
   /*
       console.group("testing shader loading");
@@ -617,7 +640,7 @@ for (let i = 0; i < 7; i++)
 
 let flatten = 0, zScale = 1;
 let cursorPath = [];
-let tMode = 0;
+let tMode = 2;
 
 let onPress = (hand, button) => {
   console.log('pressed', hand, 'button', button);
@@ -704,7 +727,7 @@ for (let x = -N ; x <= N ; x++)
 
 let time = 0;
 
-let nMode = 0;
+let nMode = 4;
 
 let sCurve = t => t * t * (3 - 2 * t);
  
@@ -883,7 +906,7 @@ function drawScene(_time, w) {
     }
 /*
     if (terrainMesh) {
-       let r = renderList.add(terrainMesh);
+       let r = renderList().add(terrainMesh);
        r.color(white);
     }
 */
@@ -906,7 +929,7 @@ function drawScene(_time, w) {
  m.restore();
 
 /*
-  let avo = () => renderList.add(avocado.drawMeshData());
+  let avo = () => renderList().add(avocado.drawMeshData());
   avo().move(-0.6,2.5,0).size(13).turnY(0.2*time).color(white).vtxMode(1);
 */
 
@@ -990,9 +1013,9 @@ function drawScene(_time, w) {
 function drawFrame(time, w) {
   w.frameCount += 1;
 
-  renderList.beginFrame();
+  renderList().beginFrame();
   drawScene(time, w);
-  renderList.endFrame(drawShape);
+  renderList().endFrame(drawShape);
 }
 
 let prevTime = 0;
