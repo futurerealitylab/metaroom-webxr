@@ -260,6 +260,9 @@ class Mesh {
     this.isMesh  = true;
     Mesh.boundBuffer         = this.vertexBuffer;
     Mesh.boundAttributeState = this.attributeState;
+
+    this.data = null;
+    this.activeBufferLength_ = 0;
   }
 
   bind() {
@@ -272,6 +275,32 @@ class Mesh {
       gl.bindBuffer(this.vertexBuffer);
       Mesh.boundBuffer = this.vertexBuffer;
     }    
+  }
+
+  upload(target, data, usage) {
+    const oldData = this.data;
+    // temp just always upload whole data
+    if (true || oldData == null || data.length > oldData) {
+      gl.bufferData(target, data, usage);
+    } else {
+      gl.bufferSubData(target, 0, data);
+    }
+    this.activeBufferLength_ = data.length;
+
+    this.data = data;
+  }
+
+  uploadSubArray(target, data, usage, byteOffset) {
+    const oldData = this.data;
+    if (oldData == null || data.length > oldData) {
+      gl.bufferData(target, data, usage);
+    } else {
+      gl.bufferSubData(target, byteOffset, data);
+    }
+  }
+
+  length() {
+    return this.activeBufferLength_;
   }
 
   dispose() {
@@ -289,6 +318,8 @@ class Mesh {
       gl.bindBuffer(null);
       Mesh.boundBuffer = null;
     }
+
+    this.data = null;
     
   }
 }
@@ -447,10 +478,14 @@ duck = await Promise.resolve(gltfList.add("../../worlds_keru/chalktalk/assets/Du
  'duck'));
 }
 
+let drawArrays = (triangleMode, shape) => {
+  gl.drawArrays(triangleMode == 1 ? gl.TRIANGLES: gl.TRIANGLE_STRIP, 0, shape.length() / VERTEX_SIZE);
+}
+
 let drawShape = (shape, matrix, color, opacity, textureInfo, fxMode, triangleMode) => {
 
   let gl = w.gl;
-  let drawArrays = () => gl.drawArrays(triangleMode == 1 ? gl.TRIANGLES: gl.TRIANGLE_STRIP, 0, shape.length / VERTEX_SIZE);
+
   // let drawElements = () =>
   gl.uniform1f(w.uBrightness, 1);
   gl.uniform4fv(w.uColor, color.length == 4 ? color : color.concat([opacity === undefined ? 1 : opacity]));
@@ -480,22 +515,19 @@ let drawShape = (shape, matrix, color, opacity, textureInfo, fxMode, triangleMod
     gl.uniform1i(w.uTexIndex, -1);
   }
 
-  if (shape != w.prev_shape) {
-      w.dynamicMesh.bind();
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape), gl.STREAM_DRAW);
-  }
-  // if (textureInfo.isValid) {
-  //     gl.bindBuffer(gl.ARRAY_BUFFER, w.bufferAux);
-  //     const auxData = new Float32Array(4 * (shape.length / VERTEX_SIZE));
-  //     for (let i = 0; i < auxData.length; i += 4) {
-  //         auxData[i]     = textureInfo.image.uFrac;
-  //         auxData[i + 1] = textureInfo.image.vFrac;
+  let mesh = null;
 
-  //         auxData[i + 2] = textureInfo.image.w / textureInfo.textures[0].w;
-  //         auxData[i + 3] = textureInfo.image.h / textureInfo.textures[0].h;
-  //     }
-  //     gl.bufferData(gl.ARRAY_BUFFER, auxData, gl.STREAM_DRAW);
-  // }
+  if (!shape.isMesh) {
+      mesh = w.dynamicMesh;
+      mesh.bind();
+      if (shape != w.prev_shape) {
+        mesh.upload(gl.ARRAY_BUFFER, new Float32Array(shape), gl.STREAM_DRAW);
+      }
+  } else {
+    mesh = shape;
+    mesh.bind();
+  }
+
   for (let i = 0; i < nViews; i++) {
     if (nViews > 1) {
       gl.viewport(viewport[i].x, viewport[i].y, viewport[i].width, viewport[i].height);
@@ -505,13 +537,13 @@ let drawShape = (shape, matrix, color, opacity, textureInfo, fxMode, triangleMod
     if (w.isToon) {
       gl.uniform1f(w.uToon, .3 * CG.norm(m.value().slice(0, 3)));
       gl.cullFace(gl.FRONT);
-      drawArrays();
+      drawArrays(triangleMode, mesh);
       gl.cullFace(gl.BACK);
       gl.uniform1f(w.uToon, 0);
     }
     if (w.isMirror)
       gl.cullFace(gl.FRONT);
-    drawArrays();
+    drawArrays(triangleMode, mesh);
   }
   gl.cullFace(gl.BACK);
   w.prev_shape = shape;
@@ -585,7 +617,7 @@ for (let i = 0; i < 7; i++)
 
 let flatten = 0, zScale = 1;
 let cursorPath = [];
-let tMode = 2;
+let tMode = 0;
 
 let onPress = (hand, button) => {
   console.log('pressed', hand, 'button', button);
@@ -672,7 +704,7 @@ for (let x = -N ; x <= N ; x++)
 
 let time = 0;
 
-let nMode = 4;
+let nMode = 0;
 
 let sCurve = t => t * t * (3 - 2 * t);
  
