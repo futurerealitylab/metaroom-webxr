@@ -79,6 +79,10 @@ let CT = null;
 let avocado = null;
 let duck = null;
 
+
+// set to true to enable some testing animations and functionality
+const DEBUG_MODE = true;
+
 /**
  *  setup that needs occurs upon initial setup
  *  and on reload
@@ -208,6 +212,8 @@ async function loadImages(w) {
 
 //
 
+let defaultVertexAttributeDescriptor = null;
+
 async function initGraphicsCommon(w) {
   w.uColor = gl.getUniformLocation(w.shader, 'uColor');
   w.uCursor = gl.getUniformLocation(w.shader, 'uCursor');
@@ -227,6 +233,75 @@ async function initGraphicsCommon(w) {
     w.uTex[n] = gl.getUniformLocation(w.shader, 'uTex' + n);
     gl.uniform1i(w.uTex[n], n);
   }
+
+  let bpe = Float32Array.BYTES_PER_ELEMENT;
+
+  // reusable descriptor object for setting up vertex attributes
+  defaultVertexAttributeDescriptor = {
+    arrayStride : bpe * VERTEX_SIZE,
+    attributes : [
+      { 
+        shaderLocation : gl.getAttribLocation(w.shader, 'aPos'),
+        offset : bpe * 0,
+        format : gl.FLOAT,
+
+        componentCount : 3,
+      },
+      { 
+        shaderLocation : gl.getAttribLocation(w.shader, 'aNor'),
+        offset : bpe * 3,
+        format : gl.FLOAT,
+
+        componentCount : 3,
+      },
+      { 
+        shaderLocation : gl.getAttribLocation(w.shader, 'aTan'),
+        offset : bpe * 6,
+        format : gl.FLOAT,
+
+        componentCount : 3,
+      },
+      { 
+        shaderLocation : gl.getAttribLocation(w.shader, 'aUV'),
+        offset : bpe * 9,
+        format : gl.FLOAT,
+
+        componentCount : 2,
+      },
+    ]
+  };
+
+  if (w.dynamicMesh) {
+    w.dynamicMesh.dispose();
+  }
+
+  w.dynamicMesh = new Mesh(gl, defaultVertexAttributeDescriptor, true);
+}
+
+function convertToStaticMesh(renderList) {
+  const itemInfo = renderList.getItems();
+  const items    = itemInfo.list;
+  const count    = itemInfo.count;
+
+  for (let i = 0; i < count; i += 1) {
+    const mesh = new Mesh(gl, defaultVertexAttributeDescriptor, false);
+    mesh.bind();
+    mesh.upload(gl.ARRAY_BUFFER, new Float32Array(items[i].shape), gl.STATIC_DRAW);
+    
+    items[i].mesh = mesh;
+  }
+}
+
+function initModels(w) {  
+  w.houseRenderable       = buildHouse();
+  convertToStaticMesh(w.houseRenderable);
+  w.noiseRenderableLookup = buildNoise(nModeMax + 1);
+  for (let i = 0; i < w.noiseRenderableLookup.length; i += 1) {
+    convertToStaticMesh(w.noiseRenderableLookup[i]);
+    // console.log(w.noiseRenderableLookup[i].getItems());
+  }
+
+  
 }
 
 /**
@@ -252,7 +327,11 @@ async function onReload(w, info) {
   "../../worlds_keru/chalktalk/assets/Duck/glTF/Duck0.bin",
   'duck'));
 
+  initModels(w);
 }
+
+  
+  
 
 
 function initWithAttributes(gl, attributeDescriptor, attributeState, vertexBuffer) {
@@ -279,8 +358,7 @@ class Mesh {
     this.attributeStateList = [];//;gl.createVertexArray();  
     this.vertexBufferList   = [];//gl.createBuffer();
 
-    this.activeAttributeState = null;
-    this.activeVertexBuffer   = null;
+
 
     this.bufferIdx = 0;
     this.bufferCount = (tripleBuffering) ? 3 : 1;
@@ -292,6 +370,12 @@ class Mesh {
       initWithAttributes(this.gl, vertexAttributeDescriptor, this.attributeStateList[i], this.vertexBufferList[i]);
     }
 
+    this.activeAttributeState = this.attributeStateList[0];
+    this.activeVertexBuffer   = this.vertexBufferList[0];
+
+    this.gl.bindVertexArray(this.activeAttributeState);
+    this.gl.bindBuffer(gl.ARRAY_BUFFER, this.activeVertexBuffer);
+
     this.isMesh  = true;
     
 
@@ -300,14 +384,14 @@ class Mesh {
   }
 
   bind() {
-    if (Mesh.boundBuffer != this.activeVertexBuffer) {
+    if (Mesh.boundBuffer == null || Mesh.boundBuffer != this.activeVertexBuffer) {
 
       this.activeVertexBuffer   = this.vertexBufferList[this.bufferIdx];
       this.activeAttributeState = this.attributeStateList[this.bufferIdx];
 
-      Mesg.boundBuffer = this.activeVertexBuffer;
+      Mesh.boundBuffer = this.activeVertexBuffer;
       this.gl.bindVertexArray(this.activeAttributeState);
-      this.gl.bindBuffer(this.activeVertexBuffer);
+      this.gl.bindBuffer(gl.ARRAY_BUFFER, this.activeVertexBuffer);
     }
     this.bufferIdx = (this.bufferIdx + 1) % this.bufferCount;
   }
@@ -343,15 +427,14 @@ class Mesh {
   dispose() {
     for (let i = 0; i < this.bufferCount; i += 1) {
       this.gl.deleteVertexArray(this.attributeStateList[i]);
+      this.gl.bufferData(this.gl.ARRAY_BUFFER, 0, this.gl.STATIC_DRAW);
       this.gl.deleteBuffer(this.vertexBufferList[i]);
     }
 
-
-
     if (Mesh.boundBuffer == this.activeVertexBuffer) {
       this.gl.bindVertexArray(null);
-      this.gl.bindBuffer(null);
-      Mesg.boundBuffer = null;
+      this.gl.bindBuffer(gl.ARRAY_BUFFER, 0);
+      Mesh.boundBuffer = null;
     }
 
     this.vertexBuffer   = null;
@@ -455,43 +538,7 @@ async function setup(w) {
   gl.useProgram(w.shader);
 
 
-  let bpe = Float32Array.BYTES_PER_ELEMENT;
-
-  const defaultVertexAttributeDescriptor = {
-    arrayStride : bpe * VERTEX_SIZE,
-    attributes : [
-      { 
-        shaderLocation : gl.getAttribLocation(w.shader, 'aPos'),
-        offset : bpe * 0,
-        format : gl.FLOAT,
-
-        componentCount : 3,
-      },
-      { 
-        shaderLocation : gl.getAttribLocation(w.shader, 'aNor'),
-        offset : bpe * 3,
-        format : gl.FLOAT,
-
-        componentCount : 3,
-      },
-      { 
-        shaderLocation : gl.getAttribLocation(w.shader, 'aTan'),
-        offset : bpe * 6,
-        format : gl.FLOAT,
-
-        componentCount : 3,
-      },
-      { 
-        shaderLocation : gl.getAttribLocation(w.shader, 'aUV'),
-        offset : bpe * 9,
-        format : gl.FLOAT,
-
-        componentCount : 2,
-      },
-    ]
-  };
-
-  w.dynamicMesh = new Mesh(gl, defaultVertexAttributeDescriptor, true);
+  
 
 
   //let aUVOff = gl.getAttribLocation(w.shader, 'aUVOff');
@@ -514,24 +561,36 @@ async function setup(w) {
 duck = await Promise.resolve(gltfList.add("../../worlds_keru/chalktalk/assets/Duck/glTF/Duck.gltf",
  "../../worlds_keru/chalktalk/assets/Duck/glTF/Duck0.bin",
  'duck'));
+
+
+  initModels(w);
 }
 
 function drawArrays(triangleMode, shape) {
   gl.drawArrays(triangleMode == 1 ? gl.TRIANGLES: gl.TRIANGLE_STRIP, 0, shape.length() / VERTEX_SIZE);
 }
 
-function drawShape(shape, matrix, color, opacity, textureInfo, fxMode, triangleMode) {
-
-  let gl = w.gl;
+let prevFXMode = -1;
+const fxColor = new Float32Array(4);
+let  transposeBuffer = new Float32Array(16);
+function drawShape(item, shape, matrix, color, opacity, textureInfo, fxMode, triangleMode) {
 
   // let drawElements = () =>
-  gl.uniform1f(w.uBrightness, 1);
-  gl.uniform4fv(w.uColor, color.length == 4 ? color : color.concat([opacity === undefined ? 1 : opacity]));
+  fxColor[0] = color[0];
+  fxColor[1] = color[1];
+  fxColor[2] = color[2];
+  fxColor[3] = (color.length == 4) ? color[3] : (opacity === undefined ? 1 : opacity);
+
+  gl.uniform4fv(w.uColor, fxColor);
   gl.uniformMatrix4fv(w.uModel, false, matrix);
-  gl.uniform1i(w.uFxMode, fxMode);
-  windowLightDir.set(CG.matrixTranspose(matrix));
+  if (fxMode != prevFXMode) {
+    gl.uniform1i(w.uFxMode, fxMode);
+  }
+  prevFXMode = fxMode;
+  windowLightDir.set(CG.matrixTransposeWithF32Buffer(transposeBuffer, matrix));
   windowLightDir.translate(0, rh / 2, rw / 2);
   gl.uniform3fv(w.uWindowDir, [windowLightDir.value()[12], windowLightDir.value()[13], windowLightDir.value()[14]]);
+
   if (textureInfo.isValid) {
 
     gl.uniform1i(w.uTexIndex, 0);
@@ -572,7 +631,8 @@ function drawShape(shape, matrix, color, opacity, textureInfo, fxMode, triangleM
       gl.uniformMatrix4fv(w.uView, false, viewMat[i]);
       gl.uniformMatrix4fv(w.uProj, false, projMat[i]);
     }
-    if (w.isToon) {
+    if (false && w.isToon) {
+      // TODO use persistent temp memory buffers, don't create new array slices!
       gl.uniform1f(w.uToon, .3 * CG.norm(m.value().slice(0, 3)));
       gl.cullFace(gl.FRONT);
       drawArrays(triangleMode, mesh);
@@ -585,6 +645,68 @@ function drawShape(shape, matrix, color, opacity, textureInfo, fxMode, triangleM
   }
   gl.cullFace(gl.BACK);
   w.prev_shape = shape;
+}
+
+function drawMesh(item, shape, matrix, color, opacity, textureInfo, fxMode, triangleMode) {
+
+  fxColor[0] = color[0];
+  fxColor[1] = color[1];
+  fxColor[2] = color[2];
+  fxColor[3] = (color.length == 4) ? color[3] : (opacity === undefined ? 1 : opacity);
+
+  gl.uniform4fv(w.uColor, fxColor);
+  gl.uniformMatrix4fv(w.uModel, false, matrix);
+  if (fxMode != prevFXMode) {
+    gl.uniform1i(w.uFxMode, fxMode);
+  }
+  prevFXMode = fxMode;
+  windowLightDir.set(CG.matrixTransposeWithF32Buffer(transposeBuffer, matrix));
+  windowLightDir.translate(0, rh / 2, rw / 2);
+  gl.uniform3fv(w.uWindowDir, [windowLightDir.value()[12], windowLightDir.value()[13], windowLightDir.value()[14]]);
+
+  if (textureInfo.isValid) {
+
+    gl.uniform1i(w.uTexIndex, 0);
+
+    // base texture : 0
+    // bump texture : 1
+    // ...
+    for (let i = 0; i < textureInfo.textures.length; i += 1) {
+      gl.uniform1f(w.uTexScale, textureInfo.scale);
+
+      if (w.textureCatalogue.slotToTextureID(i) != textureInfo.textures[i].ID) {
+        w.textureCatalogue.setSlotByTextureInfo(textureInfo.textures[i], i);
+      }
+    }
+
+    gl.uniform1i(w.uBumpIndex, (textureInfo.textures.length > 1) ? 0 : -1);
+
+  } else {
+    gl.uniform1i(w.uTexIndex, -1);
+  }
+
+  let mesh = item.mesh;
+  mesh.bind();
+
+  for (let i = 0; i < nViews; i++) {
+    if (nViews > 1) {
+      gl.viewport(viewport[i].x, viewport[i].y, viewport[i].width, viewport[i].height);
+      gl.uniformMatrix4fv(w.uView, false, viewMat[i]);
+      gl.uniformMatrix4fv(w.uProj, false, projMat[i]);
+    }
+    if (false && w.isToon) {
+      // TODO use persistent temp memory buffers, don't create new array slices!
+      gl.uniform1f(w.uToon, .3 * CG.norm(m.value().slice(0, 3)));
+      gl.cullFace(gl.FRONT);
+      drawArrays(triangleMode, mesh);
+      gl.cullFace(gl.BACK);
+      gl.uniform1f(w.uToon, 0);
+    }
+    if (w.isMirror)
+      gl.cullFace(gl.FRONT);
+    drawArrays(triangleMode, mesh);
+  }
+  gl.cullFace(gl.BACK);
 }
 
 
@@ -655,7 +777,8 @@ for (let i = 0; i < 7; i++)
 
 let flatten = 0, zScale = 1;
 let cursorPath = [];
-let tMode = 2;
+let tMode = DEBUG_MODE ? 2 : 0;
+let tModeMax = 2;
 
 let onPress = (hand, button) => {
   console.log('pressed', hand, 'button', button);
@@ -691,7 +814,7 @@ let onRelease = (hand, button) => {
   }
 
   if (hand == 'right' && button == 0)
-     nMode = (nMode + 1) % 5;
+     nMode = (nMode + 1) % (nModeMax + 1);
 }
 
 function drawControllers() {
@@ -742,7 +865,8 @@ for (let x = -N ; x <= N ; x++)
 
 let time = 0;
 
-let nMode = 4;
+let nMode = DEBUG_MODE ? 4 : 0;
+let nModeMax = 4;
 
 let sCurve = t => t * t * (3 - 2 * t);
  
@@ -773,14 +897,14 @@ let createTerrainMesh = () => {
 }
 
 
-let terrainMesh;
-  terrainMesh = createTerrainMesh();
+let terrainMesh = createTerrainMesh();
 
 ///////////////////////////////////////
-
-let houseRenderable = null;
-
+  
 function buildHouse() {
+
+  mBeginBuild();
+  
 /*
   let avo = () => renderList().add(avocado.drawMeshData());
   avo().move(-0.6,2.5,0).size(13).turnY(0.2*time).color(white).vtxMode(1);
@@ -861,6 +985,82 @@ function buildHouse() {
   mCube().turnX(Math.PI / 2).move((sw / 4.5), sth, 0).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
   mCube().turnX(Math.PI / 2).move(0, sth, -(sw / 4.5)).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
   mCube().turnX(Math.PI / 2).move(0, sth, (sw / 4.5)).size(stw, stw, sth).color(white).textureView(w.textures[18].lookupImageByID(1)).textureAtlas(w.textures[18]); // SEAT
+
+  return mEndBuild();
+}
+
+
+
+function buildNoise(N) {
+    let arr = new Array(N);
+    
+    for (let i = 0; i < N; i += 1) {
+      arr[i] = buildNoiseVariant(i);
+    }
+    
+    return arr;
+}
+
+function buildNoiseVariant(nMode) {
+  mBeginBuild();
+
+  m.save();
+      m.translate(0,2,1);
+      m.rotateX(-3.14159/2);
+      m.scale(.2);
+      let n = 0;
+      for (let y = -N ; y <= N ; y += 1)
+      for (let x = -N ; x <= N ; x += 1) {
+         if (nMode < 4 && x < N) line([x,y,0],[x+1,y,0], [4,4,4]);
+         if (nMode < 4 && y < N) line([x,y,0],[x,y+1,0], [4,4,4]);
+
+         if (nMode > 0 && nMode < 4) line([x-.25,y,-vecs[n][0]/2], [x+.25,y,vecs[n][0]/2], [4,0,0]);
+
+         if (nMode > 1 && nMode < 4) line([x,y-.25,-vecs[n][1]/2], [x,y+.25,vecs[n][1]/2], [0,3,6]);
+
+  /*
+         let e = 1/5;
+         if (nMode >= 3 && x < N && y < N)
+            for (let v = 0 ; v <= 1.001 ; v += e)
+            for (let u = 0 ; u <= 1.001 ; u += e) {
+         let z00 = nZ(u  , v  , vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+         let z10 = nZ(u+e, v  , vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+         let z01 = nZ(u  , v+e, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+         if (u < .99) line([x+u,y+v,z00],[x+u+e,y+v,z10],[4,2,4],.003);
+         if (v < .99) line([x+u,y+v,z00],[x+u,y+v+e,z01],[4,2,4],.003);
+      }
+
+  */
+         if (nMode >= 3 && x < N && y < N) {
+            let e = 1/8, f = 1/4;
+
+            for (let u = 0 ; u <= .999 ; u += e)
+            for (let v = 0 ; v <= 1.01 ; v += f) {
+         let z0 = nZ(u  , v, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+         let z1 = nZ(u+e, v, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+         line([x+u,y+v,z0],[x+u+e,y+v,z1],[4,2,4],.003);
+            }
+
+            for (let v = 0 ; v <= .999 ; v += e)
+            for (let u = 0 ; u <= 1.01 ; u += f) {
+         let z0 = nZ(u, v  , vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+         let z1 = nZ(u, v+e, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+         line([x+u,y+v,z0],[x+u,y+v+e,z1],[4,2,4],.004);
+            }
+         }
+
+         n++;
+      }
+  /*
+      if (terrainMesh) {
+         let r = renderList().add(terrainMesh);
+         r.color(white);
+      }
+  */
+
+   m.restore();
+
+   return mEndBuild();
 }
 
 function drawScene(_time, w) {
@@ -880,11 +1080,6 @@ function drawScene(_time, w) {
 
   m.identity();
 
-  if (houseRenderable == null) {
-    mBeginBuild();
-    buildHouse();
-    houseRenderable = mEndBuild();
-  }
 
   m.scale(FEET_TO_METERS);
 
@@ -962,61 +1157,7 @@ function drawScene(_time, w) {
  // NOISE GRID
 
  if (tMode == 2) {
- m.save();
-    m.translate(0,2,1);
-    m.rotateX(-3.14159/2);
-    m.scale(.2);
-    let n = 0;
-    for (let y = -N ; y <= N ; y += 1)
-    for (let x = -N ; x <= N ; x += 1) {
-       if (nMode < 4 && x < N) line([x,y,0],[x+1,y,0], [4,4,4]);
-       if (nMode < 4 && y < N) line([x,y,0],[x,y+1,0], [4,4,4]);
-
-       if (nMode > 0 && nMode < 4) line([x-.25,y,-vecs[n][0]/2], [x+.25,y,vecs[n][0]/2], [4,0,0]);
-
-       if (nMode > 1 && nMode < 4) line([x,y-.25,-vecs[n][1]/2], [x,y+.25,vecs[n][1]/2], [0,3,6]);
-
-/*
-       let e = 1/5;
-       if (nMode >= 3 && x < N && y < N)
-          for (let v = 0 ; v <= 1.001 ; v += e)
-          for (let u = 0 ; u <= 1.001 ; u += e) {
-	     let z00 = nZ(u  , v  , vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
-	     let z10 = nZ(u+e, v  , vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
-	     let z01 = nZ(u  , v+e, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
-	     if (u < .99) line([x+u,y+v,z00],[x+u+e,y+v,z10],[4,2,4],.003);
-	     if (v < .99) line([x+u,y+v,z00],[x+u,y+v+e,z01],[4,2,4],.003);
-	  }
-
-*/
-       if (nMode >= 3 && x < N && y < N) {
-          let e = 1/8, f = 1/4;
-
-          for (let u = 0 ; u <= .999 ; u += e)
-          for (let v = 0 ; v <= 1.01 ; v += f) {
-	     let z0 = nZ(u  , v, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
-	     let z1 = nZ(u+e, v, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
-	     line([x+u,y+v,z0],[x+u+e,y+v,z1],[4,2,4],.003);
-          }
-
-          for (let v = 0 ; v <= .999 ; v += e)
-          for (let u = 0 ; u <= 1.01 ; u += f) {
-	     let z0 = nZ(u, v  , vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
-	     let z1 = nZ(u, v+e, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
-	     line([x+u,y+v,z0],[x+u,y+v+e,z1],[4,2,4],.004);
-          }
-       }
-
-       n++;
-    }
-/*
-    if (terrainMesh) {
-       let r = renderList().add(terrainMesh);
-       r.color(white);
-    }
-*/
-
- m.restore();
+    mList(w.noiseRenderableLookup[nMode], drawShape);
  }
 
  if (flatten >= 0) {
@@ -1035,7 +1176,7 @@ function drawScene(_time, w) {
 
   // draw the house
   {
-    mList(houseRenderable);
+    mList(w.houseRenderable, drawMesh);
   }
 
 
@@ -1202,7 +1343,9 @@ function animatePCWebGL(t) {
   self.systemArgs.viewIdx = 0;
 
   Linalg.mat4.identity(self._viewMatrix);
-  self._viewMatrix = CG.matrixMultiply(self._viewMatrix, CG.matrixTranslate(0.1*Math.cos(self.time), -.5 + 0.1 * Math.sin(self.time), 0));
+  if (DEBUG_MODE) {
+    self._viewMatrix = CG.matrixMultiply(self._viewMatrix, CG.matrixTranslate(0.1*Math.cos(self.time), -.5 + 0.1 * Math.sin(self.time), 0));
+  }
 
   Linalg.mat4.perspective(self._projectionMatrix,
     Math.PI / 4,

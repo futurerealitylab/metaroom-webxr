@@ -125,7 +125,7 @@ void main() {
     } else if (uFxMode == 4) {      // 2D
         color += uColor.rgb;
     }
-    fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), uColor.a) * uBrightness;
+    fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), uColor.a);
   } else {
     normal = (uBumpIndex < 0) ? normal : bumpTexture(normal, texture(uTex1, vUV));
 
@@ -145,7 +145,7 @@ void main() {
         color += uColor.rgb;
     }
 
-    fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), uColor.a) * uBrightness;
+    fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), uColor.a);
 
     fragColor *= texture(uTex0, vUV);
   }
