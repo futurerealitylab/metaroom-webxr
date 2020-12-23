@@ -284,7 +284,12 @@ function convertToStaticMesh(renderList) {
   const count    = itemInfo.count;
 
   for (let i = 0; i < count; i += 1) {
+    if (items[i].mesh) {
+      continue;
+    }
+
     const mesh = new Mesh(gl, defaultVertexAttributeDescriptor, false);
+
     mesh.bind();
     mesh.upload(gl.ARRAY_BUFFER, new Float32Array(items[i].shape), gl.STATIC_DRAW);
     
@@ -293,15 +298,13 @@ function convertToStaticMesh(renderList) {
 }
 
 function initModels(w) {  
-  w.houseRenderable       = buildHouse();
+  w.houseRenderable = buildHouse();
   convertToStaticMesh(w.houseRenderable);
+
   w.noiseRenderableLookup = buildNoise(nModeMax + 1);
   for (let i = 0; i < w.noiseRenderableLookup.length; i += 1) {
     convertToStaticMesh(w.noiseRenderableLookup[i]);
-    // console.log(w.noiseRenderableLookup[i].getItems());
   }
-
-  
 }
 
 /**
@@ -397,6 +400,9 @@ class Mesh {
   }
 
   upload(target, data, usage) {
+    if (data.length == 0) {
+          throw new Error();
+    }
     const oldData = this.data;
     // TODO temp just always upload whole data
     // could upload to section of same buffer if there's space 
@@ -531,10 +537,6 @@ async function setup(w) {
       console.groupEnd();
   */
 
-  w.vao = gl.createVertexArray();
-  // this records the attributes we set along
-  // with the vbos we point the attribute pointers to
-  gl.bindVertexArray(w.vao);
   gl.useProgram(w.shader);
 
 
@@ -562,11 +564,20 @@ duck = await Promise.resolve(gltfList.add("../../worlds_keru/chalktalk/assets/Du
  "../../worlds_keru/chalktalk/assets/Duck/glTF/Duck0.bin",
  'duck'));
 
+  // if (!CG.cubeMesh) {
+  //   CG.cubeMesh = new Mesh(gl, defaultVertexAttributeDescriptor, false);
+  //   CG.cubeMesh.bind();
+  //   CG.cubeMesh.upload(gl.ARRAY_BUFFER, new Float32Array(CG.cube), gl.STATIC_DRAW);
+  //   CG.cubeMesh.name = "CUBE";
+  // }
 
   initModels(w);
+
+
 }
 
 function drawArrays(triangleMode, shape) {
+  drawCallCount += 1;
   gl.drawArrays(triangleMode == 1 ? gl.TRIANGLES: gl.TRIANGLE_STRIP, 0, shape.length() / VERTEX_SIZE);
 }
 
@@ -614,14 +625,14 @@ function drawShape(item, shape, matrix, color, opacity, textureInfo, fxMode, tri
 
   let mesh = null;
 
-  if (!shape.isMesh) {
+  if (shape && !shape.isMesh) {
       mesh = w.dynamicMesh;
       mesh.bind();
       if (shape != w.prev_shape) {
         mesh.upload(gl.ARRAY_BUFFER, new Float32Array(shape), gl.STREAM_DRAW);
       }
   } else {
-    mesh = shape;
+    mesh = item.mesh;
     mesh.bind();
   }
 
@@ -631,9 +642,8 @@ function drawShape(item, shape, matrix, color, opacity, textureInfo, fxMode, tri
       gl.uniformMatrix4fv(w.uView, false, viewMat[i]);
       gl.uniformMatrix4fv(w.uProj, false, projMat[i]);
     }
-    if (false && w.isToon) {
-      // TODO use persistent temp memory buffers, don't create new array slices!
-      gl.uniform1f(w.uToon, .3 * CG.norm(m.value().slice(0, 3)));
+    if (w.isToon) {
+      gl.uniform1f(w.uToon, .3 * CG.norm(m.value()));
       gl.cullFace(gl.FRONT);
       drawArrays(triangleMode, mesh);
       gl.cullFace(gl.BACK);
@@ -694,9 +704,8 @@ function drawMesh(item, shape, matrix, color, opacity, textureInfo, fxMode, tria
       gl.uniformMatrix4fv(w.uView, false, viewMat[i]);
       gl.uniformMatrix4fv(w.uProj, false, projMat[i]);
     }
-    if (false && w.isToon) {
-      // TODO use persistent temp memory buffers, don't create new array slices!
-      gl.uniform1f(w.uToon, .3 * CG.norm(m.value().slice(0, 3)));
+    if (w.isToon) {
+      gl.uniform1f(w.uToon, .3 * CG.norm(m.value()));
       gl.cullFace(gl.FRONT);
       drawArrays(triangleMode, mesh);
       gl.cullFace(gl.BACK);
@@ -808,8 +817,10 @@ let onRelease = (hand, button) => {
 	break;
      case 2:
         cursorPath = [];
-	terrainMesh = createTerrainMesh();
-	break;
+        if (terrainMesh == null) {
+	         terrainMesh = createTerrainMesh();
+        }
+	     break;
      }
   }
 
@@ -817,6 +828,11 @@ let onRelease = (hand, button) => {
      nMode = (nMode + 1) % (nModeMax + 1);
 }
 
+const gripPressedColor       = [1, 0, 0];
+const triggerPressedColor    = gripPressedColor;
+const gripNotPressedColor    = [1, 1, 1];
+const triggerNotPressedColor = gripNotPressedColor;
+const WHITE = [1, 1, 1];
 function drawControllers() {
   for (let hand in controllerMatrix) {
     if (controllerMatrix[hand]) {
@@ -827,10 +843,20 @@ function drawControllers() {
       let gripPressed = buttonState[hand][1];
 
       let s = hand == 'left' ? -1 : 1;
-      mTorus().move(-.012 * s, -.005, -.05).turnY(.11 * s).size(.03, .03, .03).color(triggerPressed ? [1, 0, 0] : [1, 1, 1]);
-      mCylinder().move(0, -.01, .01).size(.015, .02, .05).color([1, 1, 1]);
+      mTorus().move(-.012 * s, -.005, -.05)
+      .turnY(.11 * s)
+      .size(.03, .03, .03)
+      .color(triggerPressed ? triggerPressedColor : triggerNotPressedColor);
+
+      mCylinder().move(0, -.01, .01)
+      .size(.015, .02, .05)
+      .color(WHITE);
       let gx = gripPressed ? .007 : .01;
-      mCube().move(-gx * s, -.01, .01).size(.01).color(gripPressed ? [1, 0, 0] : [1, 1, 1]);
+
+      mCube()
+      .move(-gx * s, -.01, .01)
+      .size(.01)
+      .color(gripPressed ? gripPressedColor : gripNotPressedColor);
     }
   }
 }
@@ -897,7 +923,7 @@ let createTerrainMesh = () => {
 }
 
 
-let terrainMesh = createTerrainMesh();
+let terrainMesh = null;
 
 ///////////////////////////////////////
   
@@ -1063,8 +1089,17 @@ function buildNoiseVariant(nMode) {
    return mEndBuild();
 }
 
+const cubeColor = [1, 1, 1];
+const highlightColor = [1, 0, 0];
+const grabColor = [0, 0, 2];
+
+const multilineArr = [10,0,10]
+
+
+let drawCallCount = 0;
 function drawScene(_time, w) {
   time = _time;
+  drawCallCount = 0;
 
   // var d = new Date();
   // let hours = d.getHours() % 12;
@@ -1112,9 +1147,7 @@ function drawScene(_time, w) {
   m.rotateZ(rotZ);
 
   // TEST INTERACT WITH OBJECT: WILL BE PACKED INTO A FUNCTION
-  let cubeColor = [1, 1, 1];
-  let highlightColor = [1, 0, 0];
-  let grabColor = [0, 0, 2];
+
 
   m.save();
   m.scale(0.2);
@@ -1171,8 +1204,8 @@ function drawScene(_time, w) {
     m.translate(0,0,-.5 * sCurve(1-zScale));
     m.scale(1,1,zScale);
     for (let n = 0 ; n < cursorPath.length ; n++)
-       multiline(cursorPath[n],[10,0,10],.0013);
- m.restore();
+       multiline(cursorPath[n], multilineArr,.0013);
+    m.restore();
 
   // draw the house
   {
@@ -1188,6 +1221,8 @@ function drawFrame(time, w) {
   renderList().beginFrame();
   drawScene(time, w);
   renderList().endFrame(drawShape);
+
+  window.drawCallCount = drawCallCount;
 }
 
 let prevTime = 0;
@@ -1311,6 +1346,8 @@ let projMat = [null, null];
 let viewMat = [null, null];
 
 
+
+const debugRotateBuffer = CG.matrixIdentity();
 /**
  *  animation function for a PC platform, using WebGL graphics
  *  @param t {Number} elapsed time in milliseconds
@@ -1344,7 +1381,9 @@ function animatePCWebGL(t) {
 
   Linalg.mat4.identity(self._viewMatrix);
   if (DEBUG_MODE) {
-    self._viewMatrix = CG.matrixMultiply(self._viewMatrix, CG.matrixTranslate(0.1*Math.cos(self.time), -.5 + 0.1 * Math.sin(self.time), 0));
+    self._viewMatrix = CG.matrixMultiply(self._viewMatrix, CG.matrixTranslateComponentsWithBuffer(
+      debugRotateBuffer, 0.1*Math.cos(self.time), -.5 + 0.1 * Math.sin(self.time), 0)
+    );
   }
 
   Linalg.mat4.perspective(self._projectionMatrix,
