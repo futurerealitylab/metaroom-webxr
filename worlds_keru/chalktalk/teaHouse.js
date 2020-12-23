@@ -11,7 +11,8 @@ import * as Image from "/lib/util/image.js";
 // for canvas interaction
 import * as Canvas from "/lib/util/canvas.js";
 // for memory operations
-import * as Mem from "/lib/core/memory.js";
+// import * as Mem from "/lib/core/memory.js";
+
 // webgl shader utilities
 import * as Shader from "/lib/core/gpu/webgl_shader_util.js";
 // builtin integrated shader editor
@@ -56,6 +57,8 @@ import {
   mBeginBuild,   
   mEndBuild
 } from "/lib/primitive/renderList.js";
+
+import * as tmp from "/lib/primitive/temp_memory.js";
 
 import gltfList from "/lib/primitive/gltfLoader.js"
 
@@ -600,7 +603,7 @@ function drawShape(item, shape, matrix, color, opacity, textureInfo, fxMode, tri
   prevFXMode = fxMode;
   windowLightDir.set(CG.matrixTransposeWithF32Buffer(transposeBuffer, matrix));
   windowLightDir.translate(0, rh / 2, rw / 2);
-  gl.uniform3fv(w.uWindowDir, [windowLightDir.value()[12], windowLightDir.value()[13], windowLightDir.value()[14]]);
+  gl.uniform3fv(w.uWindowDir, tmp.vec3(windowLightDir.value()[12], windowLightDir.value()[13], windowLightDir.value()[14]));
 
   if (textureInfo.isValid) {
 
@@ -672,7 +675,7 @@ function drawMesh(item, shape, matrix, color, opacity, textureInfo, fxMode, tria
   prevFXMode = fxMode;
   windowLightDir.set(CG.matrixTransposeWithF32Buffer(transposeBuffer, matrix));
   windowLightDir.translate(0, rh / 2, rw / 2);
-  gl.uniform3fv(w.uWindowDir, [windowLightDir.value()[12], windowLightDir.value()[13], windowLightDir.value()[14]]);
+  gl.uniform3fv(w.uWindowDir, tmp.vec3(windowLightDir.value()[12], windowLightDir.value()[13], windowLightDir.value()[14]));
 
   if (textureInfo.isValid) {
 
@@ -1037,12 +1040,12 @@ function buildNoiseVariant(nMode) {
       let n = 0;
       for (let y = -N ; y <= N ; y += 1)
       for (let x = -N ; x <= N ; x += 1) {
-         if (nMode < 4 && x < N) line([x,y,0],[x+1,y,0], [4,4,4]);
-         if (nMode < 4 && y < N) line([x,y,0],[x,y+1,0], [4,4,4]);
+         if (nMode < 4 && x < N) line(tmp.vec3(x,y,0),tmp.vec3(x+1,y,0), tmp.vec3(4,4,4));
+         if (nMode < 4 && y < N) line(tmp.vec3(x,y,0),tmp.vec3(x,y+1,0), tmp.vec3(4,4,4));
 
-         if (nMode > 0 && nMode < 4) line([x-.25,y,-vecs[n][0]/2], [x+.25,y,vecs[n][0]/2], [4,0,0]);
+         if (nMode > 0 && nMode < 4) line(tmp.vec3(x-.25,y,-vecs[n][0]/2), tmp.vec3(x+.25,y,vecs[n][0]/2), tmp.vec3(4,0,0));
 
-         if (nMode > 1 && nMode < 4) line([x,y-.25,-vecs[n][1]/2], [x,y+.25,vecs[n][1]/2], [0,3,6]);
+         if (nMode > 1 && nMode < 4) line(tmp.vec3(x,y-.25,-vecs[n][1]/2), tmp.vec3(x,y+.25,vecs[n][1]/2), tmp.vec3(0,3,6));
 
   /*
          let e = 1/5;
@@ -1062,16 +1065,16 @@ function buildNoiseVariant(nMode) {
 
             for (let u = 0 ; u <= .999 ; u += e)
             for (let v = 0 ; v <= 1.01 ; v += f) {
-         let z0 = nZ(u  , v, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
-         let z1 = nZ(u+e, v, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
-         line([x+u,y+v,z0],[x+u+e,y+v,z1],[4,2,4],.003);
+             let z0 = nZ(u  , v, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+             let z1 = nZ(u+e, v, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+             line(tmp.vec3(x+u,y+v,z0),tmp.vec3(x+u+e,y+v,z1),tmp.vec3(4,2,4),.003);
             }
 
             for (let v = 0 ; v <= .999 ; v += e)
             for (let u = 0 ; u <= 1.01 ; u += f) {
-         let z0 = nZ(u, v  , vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
-         let z1 = nZ(u, v+e, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
-         line([x+u,y+v,z0],[x+u,y+v+e,z1],[4,2,4],.004);
+             let z0 = nZ(u, v  , vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+             let z1 = nZ(u, v+e, vecs[n], vecs[n+1], vecs[n+2*N+1], vecs[n+2*N+2]);
+             line(tmp.vec3(x+u,y+v,z0),tmp.vec3(x+u,y+v+e,z1),tmp.vec3(4,2,4),.004);
             }
          }
 
@@ -1223,6 +1226,9 @@ function drawFrame(time, w) {
   renderList().endFrame(drawShape);
 
   window.drawCallCount = drawCallCount;
+
+  // frees all temporary memory in the frame
+  tmp.freeAll();
 }
 
 let prevTime = 0;
