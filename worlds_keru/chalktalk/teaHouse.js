@@ -40,6 +40,7 @@ import {
   list as renderList,
   TextureInfo,
   mCube,
+  mFoo,
   mPoly4,
   mPolyhedron,
   mQuad,
@@ -929,6 +930,8 @@ let createTerrainMesh = () => {
 let terrainMesh = null;
 
 ///////////////////////////////////////
+
+let nCount = 0;
   
 function buildHouse() {
 
@@ -1193,8 +1196,15 @@ function drawScene(_time, w) {
  // NOISE GRID
 
  if (tMode == 2) {
-    mList(w.noiseRenderableLookup[nMode], drawShape);
+    m.save();
+       //m.translate(0, 2.0,0);
+       //m.scale(1,.5 + .5 * Math.sin(time),1);
+       //m.translate(0,-2.0,0);
+       //mList(w.noiseRenderableLookup[nMode], drawShape);
+       mFoo().move(0,2,0).turnX(-Math.PI/2).size(1,1,.5+.5*Math.sin(time)).color([10,0,10]);
+    m.restore();
  }
+
 
  if (flatten >= 0) {
     zScale *= .97;

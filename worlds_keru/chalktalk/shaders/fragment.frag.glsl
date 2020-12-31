@@ -11,8 +11,8 @@ in vec3 vPos; // POSITION
 in vec3 vNor; // NORMAL
 in vec3 vTan; // TANGENT
 in vec3 vBin; // BINORMAL
-in vec2 vUV; // U,V
-
+in vec2 vUV;  // U,V
+in vec3 vHue; // HUE
 
 #define LDIR_MAX_COUNT (1)
 
@@ -66,6 +66,7 @@ vec3 phongPlaster(vec3 Ldir, vec3 Lrgb, vec3 normal, vec3 diffuse, vec3 specular
   float d = dot(Ldir, normal);
   if (d > 0.)
     color += diffuse * d * uColor.rgb + .01 * diffuse * d * Lrgb;
+
   vec3 R = 2. * normal * dot(Ldir, normal) - Ldir;
   float s = dot(R, normal);
   if (s > 0.)
@@ -78,6 +79,7 @@ vec3 phongRub(vec3 Ldir, vec3 Lrgb, vec3 normal, vec3 diffuse, vec3 specular, fl
   float d = dot(Ldir, normal);
   if (d > 0.)
     color += diffuse * d * Lrgb;
+
   vec3 R = 2. * normal * dot(Ldir, normal) - Ldir;
   float s = dot(R, normal);
   if (s > 0.95)
@@ -86,11 +88,6 @@ vec3 phongRub(vec3 Ldir, vec3 Lrgb, vec3 normal, vec3 diffuse, vec3 specular, fl
 }
 
 void main() {
-  /*
-      vec4 texture0 = texture(uTex0, vUV * uTexScale);
-      vec4 texture1 = texture(uTex1, vUV * uTexScale);
-      vec4 texture2 = texture(uTex2, vUV * uTexScale);
-  */
   vec3 ambient = .1 * uColor.rgb;
   vec3 diffuse = .5 * uColor.rgb;
   vec3 specular = vec3(.4, .4, .4);
@@ -98,19 +95,13 @@ void main() {
   float pMet = 40.;
 
   Ldir[0] = normalize(uWindowDir);
-//  Ldir[1] = normalize(uWindowDir);
-//  Ldir[2] = normalize(uWindowDir);
-//  Ldir[1] = normalize(vec3(-1., -.5, -2.));
-//  Ldir[2] = normalize(vec3(-1., 0, 0.5));
   Lrgb[0] = vec3(0.85, .75, .7);
-//  Lrgb[1] = vec3(.8, .75, .7);
-//  Lrgb[2] = vec3(.1, .15, .2);
 
   vec3 normal = normalize(vNor);
   vec3 color = ambient;
 
   if (uTexIndex < 0) {
-    if (uFxMode == 0) {      //default
+    if (uFxMode == 0) {             //default
       for (int i = 0; i < LDIR_MAX_COUNT; i += 1)
         color += phong(Ldir[i], Lrgb[i], normal, diffuse, specular, p);
     } else if (uFxMode == 1) {      // plaster
@@ -125,11 +116,11 @@ void main() {
     } else if (uFxMode == 4) {      // 2D
         color += uColor.rgb;
     }
-    fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), uColor.a);
+    fragColor = vec4(sqrt(color.rgb * vHue) * (uToon == 0. ? 1. : 0.), uColor.a);
   } else {
     normal = (uBumpIndex < 0) ? normal : bumpTexture(normal, texture(uTex1, vUV));
 
-    if (uFxMode == 0) {      //default
+    if (uFxMode == 0) {             //default
       for (int i = 0; i < LDIR_MAX_COUNT; i += 1)
         color += phong(Ldir[i], Lrgb[i], normal, diffuse, specular, p);
     } else if (uFxMode == 1) {      // plaster
@@ -145,7 +136,7 @@ void main() {
         color += uColor.rgb;
     }
 
-    fragColor = vec4(sqrt(color.rgb) * (uToon == 0. ? 1. : 0.), uColor.a);
+    fragColor = vec4(sqrt(color.rgb * vHue) * (uToon == 0. ? 1. : 0.), uColor.a);
 
     fragColor *= texture(uTex0, vUV);
   }

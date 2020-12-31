@@ -15,6 +15,7 @@ out vec3 vNor;
 out vec3 vTan;
 out vec3 vBin;
 out vec2 vUV;
+out vec3 vHue;
 
 // interpolated cursor
 out vec3 vCursor;
@@ -45,5 +46,7 @@ void main(void) {
     //vUV = (aUVOff.xy + (aUV.xy * aUVOff.zw)) * vec2(1.,-1.) + vec2(0.,1.);
     vUV = (aUV) * vec2(1.,-1.) + vec2(0.,1.);
     
+    vHue = aTan.x < 10. ? vec3(1.,1.,1.) : aTan - vec3(10.,0.,0.);
+
     gl_Position = pos + uToon * vec4(normalize(vNor).xy, 0.,0.);
 }
